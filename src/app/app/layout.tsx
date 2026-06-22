@@ -1,10 +1,10 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { connection } from "next/server";
-import { CircleHelp, Plus } from "lucide-react";
 
 import { logout } from "@/app/actions";
-import { DesktopNav, MobileNav } from "@/components/app-shell/app-nav";
+import { AppHeader } from "@/components/app-shell/app-header";
+import { DesktopNav } from "@/components/app-shell/app-nav";
 import { Button } from "@/components/ui/button";
 import {
   hasSupabaseEnv,
@@ -98,40 +98,14 @@ export default async function AppLayout({
       </aside>
 
       <div className="lg:pl-[var(--sidebar-width)]">
-        <header className="sticky top-0 z-30 border-b border-border/60 bg-background/75 backdrop-blur-xl">
-          <div className="flex h-[var(--header-height)] items-center justify-between px-4 sm:px-6">
-            <div className="flex items-center gap-3">
-              <div className="lg:hidden">
-                <MobileNav />
-              </div>
-              <Link className="text-base font-semibold tracking-tight lg:hidden" href="/app">
-                Nestify
-              </Link>
-            </div>
-            <div className="flex items-center gap-3">
-              <Button asChild className="hidden sm:inline-flex" size="sm" variant="ghost">
-                <Link href="/app/bills#manual-bill">
-                  <Plus className="size-4" />
-                  Add
-                </Link>
-              </Button>
-              <Button asChild className="hidden sm:inline-flex" size="sm" variant="outline">
-                <Link href="/app/help">
-                  <CircleHelp className="size-4" />
-                  Ask Nestify
-                </Link>
-              </Button>
-              <span className="hidden max-w-48 truncate text-xs text-muted-foreground sm:block">
-                {user.email}
-              </span>
-              <form action={logout}>
-                <Button size="sm" type="submit" variant="ghost">
-                  Log out
-                </Button>
-              </form>
-            </div>
-          </div>
-        </header>
+        <div className="flex items-center border-b border-border/60 bg-background/78 backdrop-blur-xl">
+          <AppHeader email={user.email} />
+          <form action={logout} className="hidden pr-4 sm:block">
+            <Button size="sm" type="submit" variant="ghost">
+              Log out
+            </Button>
+          </form>
+        </div>
 
         <main className="mx-auto w-full max-w-[var(--page-max-width)] px-4 py-5 sm:px-6 lg:py-8">
           {children}
