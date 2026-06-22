@@ -3,10 +3,18 @@ import { redirect } from "next/navigation";
 import {
   AlertCircle,
   CalendarClock,
+  ChevronRight,
   Clock3,
+  FileWarning,
   FileText,
+  Hammer,
   PackageCheck,
   ReceiptText,
+  Refrigerator,
+  ShieldAlert,
+  Sparkles,
+  Wallet,
+  Wrench,
 } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
@@ -29,7 +37,11 @@ import {
   StatusBadge,
 } from "@/components/product/design-system";
 import { SubmitButton } from "@/components/submit-button";
+import { EmptyState } from "@/components/empty-state";
+import { SectionCard } from "@/components/section-card";
+import { StatusBadge as VercelStatusBadge } from "@/components/status-badge";
 import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import {
   CardContent,
   CardDescription,
@@ -776,7 +788,7 @@ export default async function AppHomePage({
     : "Here is what needs you, what your home costs, and where your records are building.";
   const dashboardStats = [
     {
-      icon: ReceiptText,
+      icon: Wallet,
       label: "Tracked this month",
       note: billRows.length
         ? `Across ${billRows.length} bill${billRows.length === 1 ? "" : "s"}`
@@ -800,8 +812,8 @@ export default async function AppHomePage({
       value: recordCount.toString(),
     },
     {
-      icon: PackageCheck,
-      label: "Open care",
+      icon: Hammer,
+      label: "Open repairs",
       note: repairIssueRows.length
         ? `${repairIssueRows.length} issue${repairIssueRows.length === 1 ? "" : "s"} tracked`
         : `${maintenanceRows.length} reminder${maintenanceRows.length === 1 ? "" : "s"}`,
@@ -810,7 +822,7 @@ export default async function AppHomePage({
   ];
 
   return (
-    <PageShell className="gap-5">
+    <PageShell className="flex flex-col gap-6 md:gap-8">
       <header className="flex flex-col gap-1">
         <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
           {home.nickname} · This week
@@ -834,375 +846,358 @@ export default async function AppHomePage({
         />
       ) : null}
 
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4 lg:gap-4">
-        {dashboardStats.map((stat) => (
-          <ProductCard key={stat.label} variant="metric">
-            <CardContent className="flex flex-col gap-3 p-4 md:p-5">
-              <div className="flex items-center justify-between gap-3">
-                <span className="text-xs font-medium text-muted-foreground">
-                  {stat.label}
-                </span>
-                <stat.icon className="size-4 text-muted-foreground" />
-              </div>
-              <div className="min-w-0">
-                <span className="block truncate text-2xl font-semibold tracking-tight">
-                  {stat.value}
-                </span>
-                <span className="block truncate text-xs text-muted-foreground">
-                  {stat.note}
-                </span>
-              </div>
-            </CardContent>
-          </ProductCard>
-        ))}
-      </div>
-
-      <ProductCard variant="hero">
-        <CardContent className="grid gap-5 p-5 sm:p-6 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
-          <div className="max-w-3xl">
-            <Badge variant={primaryAttention ? "outline" : "secondary"}>
-              {primaryAttention ? "Needs action" : "Household status"}
-            </Badge>
-            <h2 className="mt-3 text-2xl font-semibold tracking-tight sm:text-3xl">
-              {heroHeadline}
-            </h2>
-            <p className="mt-2 text-sm text-muted-foreground sm:text-base">
-              {heroSummary}
-            </p>
-            <div className="mt-5 flex flex-col gap-2 sm:flex-row">
-              {heroPrimaryAction}
-              {primaryAttention ? (
-                <SecondaryCTA asChild>
-                  <Link href={primaryAttention.href}>View related item</Link>
-                </SecondaryCTA>
-              ) : (
-                null
-              )}
-            </div>
-          </div>
-
-          {heroMetrics.length ? (
-            <div className="grid min-w-64 gap-2 rounded-2xl border bg-background/70 p-3">
-              {heroMetrics.map((metric) => (
-                <div
-                  className="flex items-center justify-between gap-4 rounded-xl px-2 py-2"
-                  key={metric.label}
-                >
-                  <div>
-                    <p className="text-sm font-medium">{metric.label}</p>
-                    <p className="text-xs text-muted-foreground">{metric.detail}</p>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <metric.icon className="size-4 text-primary" />
-                    <p className="text-lg font-semibold tracking-tight">{metric.value}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : null}
-        </CardContent>
-      </ProductCard>
-
-      {loadError ? (
-        <InsightCard
-          description={loadError.message}
-          icon={AlertCircle}
-          severity="critical"
-          title="Could not load part of your dashboard"
-        />
-      ) : null}
-
-      {showNextBestAction ? (
-        <PageSection>
-          <>
-            <SectionHeader title="Next best action" />
-            <ProductCard variant="action">
-              <CardContent className="grid gap-4 p-4 sm:p-5 lg:grid-cols-[1fr_auto] lg:items-center">
-                <div>
-                  <StatusBadge value="recommended" />
-                  <h2 className="mt-2 text-xl font-semibold tracking-tight">
-                    {nextBestAction.title}
-                  </h2>
-                  <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
-                    {nextBestAction.why}
-                  </p>
-                </div>
-                <div className="flex flex-wrap gap-2 lg:justify-end">
-                  {nextBestAction.primaryAction}
-                  {nextBestAction.secondaryAction}
-                </div>
-              </CardContent>
-            </ProductCard>
-          </>
-        </PageSection>
-      ) : null}
-
       {!hasMeaningfulHouseholdData ? (
         <>
-          <PageSection>
-            <SectionHeader title="What Nestify helps with" />
-            <ProductCard variant="record">
-              <CardContent className="grid gap-0 p-2">
-                {outcomeRows.map((item) => (
-                  <div
-                    className="grid gap-3 border-b border-border/60 px-2 py-3 last:border-b-0 sm:grid-cols-[2rem_1fr] sm:items-start"
-                    key={item.title}
-                  >
-                    <div className="flex size-8 items-center justify-center rounded-xl bg-muted text-primary">
-                      <item.icon className="size-4" />
-                    </div>
-                    <div>
-                      <p className="font-semibold">{item.title}</p>
-                      <p className="mt-1 text-sm text-muted-foreground">
-                        {item.description}
-                      </p>
-                    </div>
-                  </div>
-                ))}
-              </CardContent>
-            </ProductCard>
-          </PageSection>
+          <div className="grid gap-4 rounded-xl border bg-card p-5 md:grid-cols-[1fr_auto] md:items-center">
+            <div>
+              <h2 className="text-xl font-semibold tracking-tight">
+                Welcome to your home command center
+              </h2>
+              <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
+                Add a little about your home and Nestify will start working for you.
+              </p>
+            </div>
+            <StartSetupDialog />
+          </div>
 
-          <ProductCard variant="action">
-            <CardContent className="grid gap-4 p-4 sm:grid-cols-[1fr_auto] sm:items-center">
-              <div>
-                <p className="font-semibold">Want less manual work?</p>
-                <p className="mt-1 text-sm text-muted-foreground">
-                  Connect supported providers when available. Nestify still works manually.
-                </p>
+          <div className="grid gap-3 md:grid-cols-3">
+            {outcomeRows.slice(0, 3).map((item) => (
+              <div className="rounded-xl border bg-card p-4" key={item.title}>
+                <item.icon className="size-5 text-muted-foreground" />
+                <p className="mt-3 font-medium">{item.title}</p>
+                <p className="mt-1 text-sm text-muted-foreground">{item.description}</p>
               </div>
-              <SecondaryCTA asChild size="sm">
+            ))}
+          </div>
+
+          <SectionCard
+            title="Start here"
+            description="Connect or add one thing and the dashboard begins to fill in."
+            icon={Sparkles}
+          >
+            <div className="grid gap-3 sm:grid-cols-2">
+              <Button asChild variant="outline">
                 <Link href="/app/providers">Connect provider</Link>
-              </SecondaryCTA>
-            </CardContent>
-          </ProductCard>
+              </Button>
+              <Button asChild variant="outline">
+                <Link href="/app/documents#add-document">Save a document</Link>
+              </Button>
+              <Button asChild variant="outline">
+                <Link href="/app/maintenance#add-task">Add a task</Link>
+              </Button>
+              <Button asChild variant="outline">
+                <Link href="/app/bills#manual-bill">Add a bill</Link>
+              </Button>
+            </div>
+          </SectionCard>
         </>
       ) : (
         <>
-      {showThingsToHandle ? (
-        <PageSection>
-          <SectionHeader
-            title="Things to handle"
-            description="Active items you can clear."
-            action={
-              attentionItems.length > 4 ? (
-                <SecondaryCTA asChild size="sm">
-                  <Link href="/app/attention">View all</Link>
-                </SecondaryCTA>
-              ) : null
-            }
-          />
-          <ActionFeed
-            items={handleItems.slice(0, 3).map((item) => ({
-              action: primaryAttentionAction(item),
-              description: item.explanation,
-              icon: AlertCircle,
-              meta: item.meta ?? item.eventType.replaceAll("_", " "),
-              secondaryActions: (
-                <AttentionActionMenu
-                  context={{
-                    attentionKey: item.key,
-                    billId: item.billId,
-                    eventType: item.eventType,
-                    providerId: item.providerId,
-                    relatedId:
-                      item.documentId ?? item.taskId ?? item.issueId ?? undefined,
-                    relatedTable: item.relatedTable ?? undefined,
-                    returnPath: "/app",
-                  }}
-                  showMarkPaid={isPayableAttention(item)}
-                />
-              ),
-              severity: severityTone(item.severity),
-              title: item.title,
-            }))}
-          />
-        </PageSection>
-      ) : null}
+          <div className="grid grid-cols-2 gap-3 lg:grid-cols-4 lg:gap-4">
+            {dashboardStats.map((stat) => (
+              <Card key={stat.label}>
+                <CardContent className="flex flex-col gap-3 p-4 md:p-5">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-medium text-muted-foreground">
+                      {stat.label}
+                    </span>
+                    <stat.icon className="size-4 text-muted-foreground" />
+                  </div>
+                  <div className="flex flex-col gap-0.5">
+                    <span className="text-2xl font-semibold tracking-tight">
+                      {stat.value}
+                    </span>
+                    <span className="truncate text-xs text-muted-foreground">
+                      {stat.note}
+                    </span>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
 
-      <PageSection id="this-month">
-        <SectionHeader
-          title="This month"
-          description="How Nestify is helping across Bills, Vault, and Care."
-        />
-        <div className="grid gap-3 md:grid-cols-3">
-          <ProductCard variant="compact">
-            <CardContent className="p-4">
-              <ReceiptText className="mb-3 size-4 text-primary" />
-              <p className="font-semibold">Bills</p>
-              {billRows.length ? (
-                <p className="mt-1 text-sm text-muted-foreground">
-                  {formatAmount("CAD", monthlySummary.knownCostThisMonth)} known this month.
-                  {billsDueSoon.length ? ` ${billsDueSoon.length} due soon.` : ""}
-                </p>
-              ) : (
-                <p className="mt-1 text-sm text-muted-foreground">
-                  Not started yet.
-                </p>
-              )}
-              <SecondaryCTA asChild className="mt-4" size="sm">
-                <Link href={billRows.length ? "/app/bills" : "/app/bills#manual-bill"}>
-                  {billRows.length ? "View bills" : "Set up"}
-                </Link>
-              </SecondaryCTA>
-            </CardContent>
-          </ProductCard>
-
-          <ProductCard variant="compact">
-            <CardContent className="p-4">
-              <FileText className="mb-3 size-4 text-primary" />
-              <p className="font-semibold">Vault</p>
-              {documentRows.length ? (
-                <p className="mt-1 text-sm text-muted-foreground">
-                  {recordCount} record{recordCount === 1 ? "" : "s"} saved.
-                  {monthlySummary.latestRecordTitle ? ` Latest: ${monthlySummary.latestRecordTitle}.` : ""}
-                </p>
-              ) : (
-                <p className="mt-1 text-sm text-muted-foreground">
-                  Not started yet.
-                </p>
-              )}
-              <SecondaryCTA asChild className="mt-4" size="sm">
-                <Link href={documentRows.length ? "/app/documents" : "/app/documents#add-record"}>
-                  {documentRows.length ? "Open Vault" : "Set up"}
-                </Link>
-              </SecondaryCTA>
-            </CardContent>
-          </ProductCard>
-
-          <ProductCard variant="compact">
-            <CardContent className="p-4">
-              <PackageCheck className="mb-3 size-4 text-primary" />
-              <p className="font-semibold">Care</p>
-              {maintenanceRows.length ? (
-                <p className="mt-1 text-sm text-muted-foreground">
-                  {careDueCount} due soon.
-                  {maintenanceRows[0] ? ` Next: ${maintenanceRows[0].title}.` : ""}
-                </p>
-              ) : (
-                <p className="mt-1 text-sm text-muted-foreground">
-                  Not started yet.
-                </p>
-              )}
-              <SecondaryCTA asChild className="mt-4" size="sm">
-                <Link href={maintenanceRows.length ? "/app/maintenance" : "/app/maintenance#add-reminder"}>
-                  {maintenanceRows.length ? "Open Care" : "Set up"}
-                </Link>
-              </SecondaryCTA>
-            </CardContent>
-          </ProductCard>
-        </div>
-      </PageSection>
-
-      {showWhatChanged ? (
-        <PageSection>
-          <SectionHeader title="What changed" />
-          <ProductCard variant="record">
-            <CardContent className="p-4">
-              <div className="grid gap-0">
-                {billChangeEvents.slice(0, 4).map((event) => {
-                    const metadata = event.metadata ?? {};
-                    const previousAmount =
-                      typeof metadata.previous_amount === "number"
-                        ? metadata.previous_amount
-                        : null;
-                    const latestAmount =
-                      typeof metadata.latest_amount === "number"
-                        ? metadata.latest_amount
-                        : null;
-                    const amountChange =
-                      typeof metadata.amount_change === "number"
-                        ? metadata.amount_change
-                        : null;
-
-                    return (
-                      <div className="border-b border-border/60 py-3 last:border-b-0" key={event.id}>
-                        <div className="grid gap-3 sm:grid-cols-[1fr_auto] sm:items-center">
-                          <div>
-                            <p className="font-semibold">{event.title}</p>
-                            <p className="text-sm text-muted-foreground">{event.description}</p>
-                            {previousAmount !== null || latestAmount !== null ? (
-                              <p className="mt-2 text-xs text-muted-foreground">
-                                Previous {formatAmount("CAD", previousAmount)} · Latest{" "}
-                                {formatAmount("CAD", latestAmount)}
-                              </p>
-                            ) : null}
+          <div className="grid gap-6 lg:grid-cols-3 lg:gap-8">
+            <div className="flex flex-col gap-6 lg:col-span-2">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Needs your attention</CardTitle>
+                  <CardDescription>
+                    Ranked by urgency across bills, maintenance, and coverage.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="flex flex-col gap-2">
+                  {attentionItems.length ? (
+                    attentionItems.slice(0, 4).map((item) => (
+                      <div
+                        className="group flex items-center gap-3 rounded-xl border bg-card px-3 py-3 transition-colors hover:bg-accent/40 md:px-4"
+                        key={item.key}
+                      >
+                        <div className="flex min-w-0 flex-1 flex-col gap-1">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="truncate text-sm font-medium">
+                              {item.title}
+                            </span>
+                            <VercelStatusBadge
+                              tone={
+                                item.severity === "high"
+                                  ? "overdue"
+                                  : item.severity === "medium"
+                                    ? "due-soon"
+                                    : "upcoming"
+                              }
+                            >
+                              {item.meta ?? item.eventType.replaceAll("_", " ")}
+                            </VercelStatusBadge>
                           </div>
-                          <div className="flex flex-wrap items-center gap-2 sm:justify-end">
-                            {amountChange !== null ? (
-                              <StatusBadge
-                                value={`${amountChange > 0 ? "+" : ""}${formatAmount("CAD", amountChange)}`}
-                              />
-                            ) : null}
-                            <SecondaryCTA asChild size="sm">
-                              <Link href="/app/bills">Review</Link>
-                            </SecondaryCTA>
-                          </div>
+                          <span className="truncate text-xs text-muted-foreground">
+                            {item.explanation}
+                          </span>
                         </div>
+                        <div className="hidden shrink-0 sm:block">
+                          {primaryAttentionAction(item)}
+                        </div>
+                        <AttentionActionMenu
+                          context={{
+                            attentionKey: item.key,
+                            billId: item.billId,
+                            eventType: item.eventType,
+                            providerId: item.providerId,
+                            relatedId:
+                              item.documentId ?? item.taskId ?? item.issueId ?? undefined,
+                            relatedTable: item.relatedTable ?? undefined,
+                            returnPath: "/app",
+                          }}
+                          showMarkPaid={isPayableAttention(item)}
+                        />
                       </div>
+                    ))
+                  ) : (
+                    <EmptyState
+                      icon={PackageCheck}
+                      title="Nothing needs attention"
+                      description="Nestify will surface bills, repairs, records, and reminders here when something needs a look."
+                    />
+                  )}
+                  {attentionItems.length > 4 ? (
+                    <Button asChild variant="ghost" size="sm" className="mt-1 w-full justify-center">
+                      <Link href="/app/attention">View all reminders</Link>
+                    </Button>
+                  ) : null}
+                </CardContent>
+              </Card>
+
+              <SectionCard
+                title="Upcoming maintenance"
+                description="The next tasks to keep your home in good shape"
+                icon={CalendarClock}
+                action={
+                  <Button asChild variant="ghost" size="sm" className="text-xs">
+                    <Link href="/app/maintenance">View all</Link>
+                  </Button>
+                }
+              >
+                {maintenanceRows.length ? (
+                  <div className="flex flex-col gap-2">
+                    {maintenanceRows.slice(0, 4).map((task) => (
+                      <Link
+                        className="flex items-center justify-between gap-3 rounded-lg border bg-card px-3 py-2.5 transition-colors hover:bg-accent/40"
+                        href="/app/maintenance"
+                        key={task.id}
+                      >
+                        <div className="flex min-w-0 flex-col">
+                          <span className="truncate text-sm font-medium">
+                            {task.title}
+                          </span>
+                          <span className="text-xs text-muted-foreground">
+                            Due {formatDate(task.due_date)}
+                          </span>
+                        </div>
+                        <VercelStatusBadge
+                          tone={
+                            parseDate(task.due_date) && parseDate(task.due_date)! < today
+                              ? "overdue"
+                              : "upcoming"
+                          }
+                        />
+                      </Link>
+                    ))}
+                  </div>
+                ) : (
+                  <EmptyState
+                    icon={CalendarClock}
+                    title="No maintenance due"
+                    description="Add one recurring task to start building your home care rhythm."
+                  />
+                )}
+              </SectionCard>
+
+              <SectionCard
+                title="Warranty & document alerts"
+                description="Coverage ending and records worth adding"
+                icon={ShieldAlert}
+              >
+                <div className="flex flex-col gap-4">
+                  {inventoryRows.filter((item) => item.warranty_expires_on).length ? (
+                    <div className="flex flex-col gap-2">
+                      {inventoryRows
+                        .filter((item) => item.warranty_expires_on)
+                        .slice(0, 3)
+                        .map((item) => (
+                          <Link
+                            className="group flex items-center gap-3 rounded-lg border bg-card px-3 py-2.5 transition-colors hover:bg-accent/40"
+                            href="/app/warranties"
+                            key={item.id}
+                          >
+                            <div className="flex min-w-0 flex-1 flex-col">
+                              <span className="truncate text-sm font-medium">{item.name}</span>
+                              <span className="text-xs text-muted-foreground">
+                                {item.category ?? "Home item"} · {formatDate(item.warranty_expires_on)}
+                              </span>
+                            </div>
+                            <VercelStatusBadge tone="expiring" />
+                            <ChevronRight className="size-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
+                          </Link>
+                        ))}
+                    </div>
+                  ) : null}
+
+                  <div className="flex flex-col gap-2 rounded-lg bg-accent/40 p-3">
+                    <div className="flex items-center gap-2 text-sm font-medium">
+                      <FileWarning className="size-4 text-muted-foreground" />
+                      Suggested documents to add
+                    </div>
+                    <ul className="flex flex-col gap-1 pl-6 text-sm text-muted-foreground">
+                      {["Home warranty document", "Appliance receipts", "Property tax notice"].map((item) => (
+                        <li key={item} className="list-disc">
+                          <Link href="/app/documents#add-document" className="hover:text-foreground">
+                            {item}
+                          </Link>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+              </SectionCard>
+
+              <SectionCard
+                title="Seasonal recommendations"
+                description="Timely ideas to protect the home"
+                icon={Sparkles}
+              >
+                <div className="grid gap-3 sm:grid-cols-3">
+                  {[
+                    ["Service the AC before peak heat", "Avoid breakdowns during heat waves."],
+                    ["Clean gutters and downspouts", "Protect your roof and foundation."],
+                    ["Inspect exterior seals", "Find small gaps before storms."],
+                  ].map(([title, description]) => (
+                    <div className="rounded-lg border bg-card p-3" key={title}>
+                      <p className="text-sm font-medium">{title}</p>
+                      <p className="mt-1 text-xs text-muted-foreground">{description}</p>
+                    </div>
+                  ))}
+                </div>
+              </SectionCard>
+
+              <SectionCard
+                title="Quick actions"
+                description="Get one more thing on the record"
+              >
+                <div className="grid gap-3 sm:grid-cols-2">
+                  {[
+                    ["Add a bill", "Track a due date or reminder", ReceiptText, "/app/bills#manual-bill"],
+                    ["Save a document", "Policies, manuals, receipts", FileText, "/app/documents#add-document"],
+                    ["Add a task", "Recurring or one-off upkeep", Wrench, "/app/maintenance#add-task"],
+                    ["Log a repair", "Track a fix and contractor", Hammer, "/app/repairs#log-repair"],
+                    ["Track a warranty", "Never miss an expiry", ShieldAlert, "/app/warranties"],
+                    ["Add an appliance", "Build your home inventory", Refrigerator, "/app/appliances#add-item"],
+                  ].map(([title, description, Icon, href]) => {
+                    const IconComponent = Icon as typeof ReceiptText;
+                    return (
+                      <Link
+                        className="group flex items-center gap-3 rounded-xl border bg-card p-3 transition-colors hover:bg-accent/40"
+                        href={href as string}
+                        key={title as string}
+                      >
+                        <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-accent text-accent-foreground">
+                          <IconComponent className="size-4" />
+                        </span>
+                        <span className="min-w-0 flex-1">
+                          <span className="block truncate text-sm font-medium">{title as string}</span>
+                          <span className="block truncate text-xs text-muted-foreground">{description as string}</span>
+                        </span>
+                        <ChevronRight className="size-4 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
+                      </Link>
                     );
-                })}
-              </div>
-            </CardContent>
-          </ProductCard>
-        </PageSection>
-      ) : null}
-
-      {operatingTimeline.length ? (
-        <PageSection>
-          <SectionHeader title="Coming up" description="Due items in time order." />
-          <ProductCard variant="record">
-            <CardContent className="grid gap-0 p-2">
-              {operatingTimeline.map((item) => (
-                <div
-                  className="grid gap-3 rounded-xl px-2 py-3 transition-colors hover:bg-muted/25 sm:grid-cols-[6rem_1fr_auto] sm:items-center"
-                  key={item.id}
-                >
-                  <p className="text-sm font-medium text-muted-foreground">{item.timing}</p>
-                  <div>
-                    <p className="font-medium">{item.title}</p>
-                    <p className="text-sm text-muted-foreground">{item.detail}</p>
-                  </div>
-                  <div className="flex flex-wrap items-center gap-2 sm:justify-end">
-                    <StatusBadge value={item.type} />
-                    <SecondaryCTA asChild size="sm">
-                      <Link href={item.href}>{item.cta}</Link>
-                    </SecondaryCTA>
-                  </div>
+                  })}
                 </div>
-              ))}
-            </CardContent>
-          </ProductCard>
-        </PageSection>
-      ) : null}
+              </SectionCard>
+            </div>
 
-      {recentActivityItems.length ? (
-        <PageSection>
-          <SectionHeader title="Recent activity" />
-          <ProductCard variant="record">
-            <CardContent className="grid gap-0 p-2">
-              {recentActivityItems.map((event) => (
-                <div
-                  className="grid gap-3 rounded-xl px-2 py-3 transition-colors hover:bg-muted/25 sm:grid-cols-[1fr_auto] sm:items-center"
-                  key={event.id}
-                >
+            <div className="flex flex-col gap-6 lg:col-span-1">
+              <SectionCard title="Home health" description="How complete your home profile is">
+                <div className="flex flex-col gap-3">
                   <div>
-                    <p className="font-medium">{event.title}</p>
-                    <p className="text-sm text-muted-foreground">
-                      {event.description ?? event.source}
+                    <p className="text-2xl font-semibold tracking-tight">
+                      {connectedProviderCount}/{Math.max(providerRows.length, 1)}
                     </p>
+                    <p className="text-xs text-muted-foreground">Providers connected</p>
                   </div>
-                  <p className="text-xs text-muted-foreground">
-                    {formatDate(event.created_at.slice(0, 10))}
-                  </p>
+                  <div className="h-2 overflow-hidden rounded-full bg-muted">
+                    <div
+                      className="h-full rounded-full bg-primary"
+                      style={{
+                        width: `${Math.min(100, Math.round((connectedProviderCount / Math.max(providerRows.length, 1)) * 100))}%`,
+                      }}
+                    />
+                  </div>
+                  <Button asChild variant="outline" size="sm">
+                    <Link href="/app/providers">Review providers</Link>
+                  </Button>
                 </div>
-              ))}
-            </CardContent>
-          </ProductCard>
-        </PageSection>
-      ) : null}
+              </SectionCard>
+
+              <SectionCard title="Ask Nestify" description="Get safe next steps for home issues">
+                <div className="flex flex-col gap-3">
+                  <p className="text-sm text-muted-foreground">
+                    Describe a household problem and Nestify can help turn it into a care task or repair.
+                  </p>
+                  <Button asChild size="sm">
+                    <Link href="/app/assistant">Open assistant</Link>
+                  </Button>
+                </div>
+              </SectionCard>
+
+              <SectionCard title="Recent activity" description="The latest across your home">
+                {recentActivityItems.length ? (
+                  <div className="flex flex-col">
+                    {recentActivityItems.slice(0, 5).map((event) => (
+                      <div
+                        className="flex items-center justify-between gap-2 border-b py-2.5 first:pt-0 last:border-b-0 last:pb-0"
+                        key={event.id}
+                      >
+                        <div className="flex min-w-0 flex-col">
+                          <span className="truncate text-sm font-medium">{event.title}</span>
+                          <span className="text-xs text-muted-foreground">
+                            {event.description ?? event.source}
+                          </span>
+                        </div>
+                        <span className="shrink-0 text-xs text-muted-foreground">
+                          {formatDate(event.created_at.slice(0, 10))}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground">
+                    New bills, records, repairs, and maintenance activity will appear here.
+                  </p>
+                )}
+              </SectionCard>
+            </div>
+          </div>
         </>
       )}
     </PageShell>
   );
+
 }
