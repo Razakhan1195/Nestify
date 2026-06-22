@@ -11,6 +11,8 @@ import {
 import { DeckCredentialForm } from "@/components/providers/deck-credential-form";
 import { DeckInteractionForm } from "@/components/providers/deck-interaction-form";
 import { DeckProviderActionButton } from "@/components/providers/deck-provider-action-button";
+import { ActionFeedbackToast } from "@/components/product/action-feedback-toast";
+import { AttentionActionMenu } from "@/components/product/attention-action-menu";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -22,7 +24,10 @@ import {
 } from "@/components/ui/card";
 import { requireCurrentUserHome } from "@/lib/homes";
 import {
+  getActualProviderName,
+  getProviderSetupByPriority,
   getProviderSetupByName,
+  getProviderStatusLabel,
   requireAuthenticatedUser,
   requireOwnedProvider,
 } from "@/lib/providers";
@@ -31,7 +36,7 @@ import type { DeckInteraction } from "@/lib/deck/types";
 
 type ProviderDetailPageProps = {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ error?: string | string[] }>;
+  searchParams: Promise<{ error?: string | string[]; notice?: string | string[] }>;
 };
 
 function formatDate(value: string | null) {
@@ -44,6 +49,18 @@ function formatDate(value: string | null) {
     day: "numeric",
     year: "numeric",
   }).format(new Date(value));
+}
+
+function capabilityLabel(key: string) {
+  const labels: Record<string, string> = {
+    amount: "Bill amount",
+    due_date: "Due date",
+    pdf: "Bill PDF",
+    usage: "Usage changes",
+    billing_period: "Billing period",
+  };
+
+  return labels[key] ?? key.replaceAll("_", " ");
 }
 
 function getDeckMetadataValue(
@@ -120,11 +137,13 @@ export default async function ProviderDetailPage({
   params,
   searchParams,
 }: ProviderDetailPageProps) {
-  const [{ id }, { error }] = await Promise.all([params, searchParams]);
+  const [{ id }, { error, notice }] = await Promise.all([params, searchParams]);
   const user = await requireAuthenticatedUser();
   const home = await requireCurrentUserHome(user.id);
   const provider = await requireOwnedProvider(id, user.id);
-  const setup = getProviderSetupByName(provider.name);
+  const setup =
+    getProviderSetupByPriority(provider.provider_priority) ??
+    getProviderSetupByName(provider.name);
   const supabase = await createClient();
 
   if (provider.home_id !== home.id) {
@@ -166,6 +185,10 @@ export default async function ProviderDetailPage({
     setup?.name
   );
   const deckInteraction = getDeckInteraction(provider.deck_connection_metadata);
+  const actualProviderName = getActualProviderName(
+    provider.display_name ?? provider.name,
+    setup?.name
+  );
 
   return (
     <div className="grid gap-6">
@@ -179,10 +202,10 @@ export default async function ProviderDetailPage({
         <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div>
             <p className="text-sm font-medium text-muted-foreground">
-              Provider detail
+              {setup?.name ? `${setup.name} provider` : "Provider detail"}
             </p>
             <h1 className="mt-1 text-2xl font-semibold tracking-tight">
-              {provider.display_name ?? provider.name}
+              {actualProviderName}
             </h1>
             <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
               {setup?.value ??
@@ -190,7 +213,7 @@ export default async function ProviderDetailPage({
             </p>
           </div>
           <Badge variant={provider.requires_user_action ? "outline" : "secondary"}>
-            {provider.health_status.replaceAll("_", " ")}
+            {getProviderStatusLabel(provider.health_status)}
           </Badge>
         </div>
       </div>
@@ -204,6 +227,8 @@ export default async function ProviderDetailPage({
         </Card>
       ) : null}
 
+      <ActionFeedbackToast message={typeof notice === "string" ? notice : null} />
+
       <div className="grid gap-4 lg:grid-cols-3">
         <Card className="rounded-lg">
           <CardHeader>
@@ -212,7 +237,7 @@ export default async function ProviderDetailPage({
               Connection health
             </CardTitle>
             <CardDescription>
-              Status: {provider.connection_status.replaceAll("_", " ")}
+              Status: {getProviderStatusLabel(provider.connection_status)}
             </CardDescription>
           </CardHeader>
           <CardContent className="grid gap-3 text-sm">
@@ -291,13 +316,15 @@ export default async function ProviderDetailPage({
               <FileText className="size-5" />
               Available data
             </CardTitle>
-            <CardDescription>Signals this provider can contribute.</CardDescription>
+            <CardDescription>
+              What this connection can add to your monthly household summary.
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="flex flex-wrap gap-2">
               {Object.entries(capabilities).map(([key, enabled]) => (
                 <Badge key={key} variant={enabled ? "secondary" : "outline"}>
-                  {key.replaceAll("_", " ")}
+                  {capabilityLabel(key)}
                 </Badge>
               ))}
             </div>
@@ -309,11 +336,17 @@ export default async function ProviderDetailPage({
         <CardHeader>
           <CardTitle>Actions</CardTitle>
           <CardDescription>
-            Connect credentials through Deck Vault, then sync this provider to
-            retrieve bill data.
+            Connect through our integration partner, then sync this provider to
+            retrieve bill amount, due date, PDFs, usage where available, and
+            changes over time.
           </CardDescription>
         </CardHeader>
         <CardContent className="grid gap-4">
+          <div className="rounded-lg border bg-muted/20 px-3 py-2 text-sm text-muted-foreground">
+            Nestify uses secure provider connections through our integration
+            partner. You can disconnect anytime.
+          </div>
+
           {deckInteraction && provider.requires_user_action ? (
             <div className="rounded-lg border border-amber-200 bg-amber-50 p-4">
               <DeckInteractionForm
@@ -324,12 +357,15 @@ export default async function ProviderDetailPage({
           ) : null}
 
           {canCollectDeckCredentials ? (
-            <div className="rounded-lg border p-4">
+            <div className="rounded-lg border border-amber-200 bg-amber-50/60 p-4">
               <div className="mb-3">
-                <p className="text-sm font-medium">Durham Water login</p>
-                <p className="text-sm text-muted-foreground">
-                  Credentials are sent to Deck Vault. Dwellwise stores only the
-                  Deck credential reference.
+                <p className="text-sm font-medium text-amber-950">
+                  Pilot/dev credential flow
+                </p>
+                <p className="text-sm text-amber-900">
+                  This direct Durham Water login flow is for pilot development
+                  only. Credentials are sent to Deck Vault. Nestify stores only
+                  the Deck credential reference, not the provider password.
                 </p>
               </div>
               {hasDeckCredential ? (
@@ -358,6 +394,17 @@ export default async function ProviderDetailPage({
             >
               Disconnect
             </DeckProviderActionButton>
+            {provider.requires_user_action ||
+            ["needs_attention", "sync_failed"].includes(provider.health_status) ? (
+              <AttentionActionMenu
+                context={{
+                  attentionKey: `provider-issue-${provider.id}`,
+                  eventType: "provider_issue",
+                  providerId: provider.id,
+                  returnPath: `/app/providers/${provider.id}`,
+                }}
+              />
+            ) : null}
           </div>
         </CardContent>
       </Card>

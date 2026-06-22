@@ -18,6 +18,12 @@ const endpointByAction = {
   disconnect: "/api/deck/disconnect-provider",
 } as const;
 
+const pendingLabelByAction = {
+  connect: "Connecting...",
+  sync: "Retrying...",
+  disconnect: "Disconnecting...",
+} as const;
+
 export function DeckProviderActionButton({
   action,
   children,
@@ -64,7 +70,7 @@ export function DeckProviderActionButton({
       type="button"
       variant={variant}
     >
-      {pending ? "Working..." : children}
+      {pending ? pendingLabelByAction[action] : children}
     </Button>
   );
 }

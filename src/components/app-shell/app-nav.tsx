@@ -29,13 +29,13 @@ function NavLinks({ onMobile }: { onMobile?: boolean }) {
         const link = (
           <Link
             className={cn(
-              "flex h-10 items-center gap-3 rounded-lg px-3 text-sm font-medium text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+              "flex h-10 items-center gap-3 rounded-xl px-3 text-sm font-medium text-sidebar-foreground/70 transition-colors hover:bg-sidebar-accent/70 hover:text-sidebar-accent-foreground",
               isActive &&
-                "bg-sidebar-primary text-sidebar-primary-foreground shadow-sm hover:bg-sidebar-primary hover:text-sidebar-primary-foreground"
+                "bg-primary/10 text-sidebar-foreground ring-1 ring-primary/10 hover:bg-primary/10 hover:text-sidebar-foreground"
             )}
             href={item.href}
           >
-            <Icon className="size-4" />
+            <Icon className={cn("size-4", isActive && "text-primary")} />
             {item.title}
           </Link>
         );
@@ -60,16 +60,26 @@ export function MobileNav() {
   return (
     <Sheet>
       <SheetTrigger asChild>
-        <Button aria-label="Open navigation" size="icon" variant="outline">
+        <Button aria-label="Open navigation" size="icon" variant="ghost">
           <Menu className="size-4" />
         </Button>
       </SheetTrigger>
       <SheetContent side="left" className="w-72">
         <SheetHeader>
-          <SheetTitle>Dwellwise</SheetTitle>
+          <SheetTitle className="flex items-center gap-3 text-left">
+            <span className="flex size-9 items-center justify-center rounded-2xl bg-primary text-sm font-semibold text-primary-foreground">
+              N
+            </span>
+            <span>
+              <span className="block">Nestify</span>
+              <span className="block text-xs font-normal text-muted-foreground">
+                Household command center
+              </span>
+            </span>
+          </SheetTitle>
         </SheetHeader>
         <p className="px-4 pb-3 text-sm text-muted-foreground">
-          Your home costs, tasks, and documents in one calm place.
+          Know what is due, what changed, and where household records live.
         </p>
         <NavLinks onMobile />
       </SheetContent>

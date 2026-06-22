@@ -16,12 +16,14 @@ import {
 type MigrationRequiredCardProps = {
   detail?: string;
   error?: SchemaErrorLike | null;
+  migrationPath?: string;
   title?: string;
 };
 
 export function MigrationRequiredCard({
-  detail = "Projects, inventory, assistant, and timeline use the newer Homeowner OS tables. The app code is ready, but Supabase needs the matching migration.",
+  detail = "Projects, inventory, Help, and timeline use the newer Homeowner OS tables. The app code is ready, but Supabase needs the matching migration.",
   error,
+  migrationPath = homeownerOsMigrationPath,
   title = "Database migration required",
 }: MigrationRequiredCardProps) {
   return (
@@ -43,7 +45,7 @@ export function MigrationRequiredCard({
         <div className="rounded-lg border border-amber-200 bg-background/70 p-3">
           Run this file in the Supabase SQL Editor:
           <code className="mt-2 block overflow-x-auto rounded-md bg-amber-100 px-2 py-1 font-mono text-xs text-amber-950">
-            {homeownerOsMigrationPath}
+            {migrationPath}
           </code>
         </div>
         {error?.message ? (

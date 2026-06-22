@@ -103,7 +103,7 @@ export function DeckInteractionForm({
         <p className="text-sm text-muted-foreground">{interaction.message}</p>
         {interaction.type === "security_question" ? (
           <p className="mt-1 text-sm text-muted-foreground">
-            Deck did not provide the exact question text to Dwellwise. Use the
+            Deck did not provide the exact question text to Nestify. Use the
             question shown in the Deck session, then check the result here.
           </p>
         ) : null}
@@ -144,7 +144,7 @@ export function DeckInteractionForm({
       </div>
       <p className="text-sm text-muted-foreground">
         If you already answered this in Deck and the bill was retrieved, check
-        the Deck result to finish updating Dwellwise.
+        the Deck result to finish updating Nestify.
       </p>
       {message ? <p className="text-sm text-muted-foreground">{message}</p> : null}
     </form>

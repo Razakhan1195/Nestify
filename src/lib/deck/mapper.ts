@@ -59,14 +59,14 @@ export function mapDeckStatusToProviderState(status: DeckConnection["status"]) {
         connection_status: "disconnected",
         health_status: "needs_attention",
         requires_user_action: true,
-        user_action_message: "Provider is disconnected.",
+        user_action_message: "This provider is disconnected. Reconnect it to keep bills and PDFs up to date.",
       };
     default:
       return {
         connection_status: "needs_attention",
         health_status: "needs_attention",
         requires_user_action: true,
-        user_action_message: "Provider needs attention.",
+        user_action_message: "Review this provider connection before the next sync.",
       };
   }
 }

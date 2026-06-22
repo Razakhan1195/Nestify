@@ -24,7 +24,7 @@ export function SignupForm({ error }: SignupFormProps) {
         <CardHeader>
           <CardTitle className="text-2xl">Create your home dashboard</CardTitle>
           <CardDescription>
-            Start with the account and property basics Dwellwise needs to set
+            Start with the account and property basics Nestify needs to set
             up the right home profile after email verification.
           </CardDescription>
         </CardHeader>
@@ -217,7 +217,7 @@ export function SignupForm({ error }: SignupFormProps) {
             <ShieldCheck className="mb-2 size-5 text-primary" />
             <CardTitle className="text-base">Email verification</CardTitle>
             <CardDescription>
-              Dwellwise sends a secure verification link before the account is
+              Nestify sends a secure verification link before the account is
               ready for protected app screens.
             </CardDescription>
           </CardHeader>

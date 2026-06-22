@@ -24,7 +24,7 @@ export default async function CheckEmailPage({
     <main className="flex min-h-screen flex-col bg-muted/30">
       <div className="mx-auto flex h-16 w-full max-w-6xl items-center px-4 sm:px-6">
         <Link className="text-lg font-semibold" href="/">
-          Dwellwise
+          Nestify
         </Link>
       </div>
       <div className="flex flex-1 items-center justify-center px-4 py-10">
@@ -41,7 +41,7 @@ export default async function CheckEmailPage({
           </CardHeader>
           <CardContent className="grid gap-4 text-sm text-muted-foreground">
             <p>
-              After you click the verification link, Dwellwise will bring you
+              After you click the verification link, Nestify will bring you
               back to onboarding with your home details prefilled.
             </p>
             <div className="flex flex-col gap-2 sm:flex-row">

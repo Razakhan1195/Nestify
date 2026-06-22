@@ -68,11 +68,11 @@ const allActions = [
   },
   {
     id: "assistant",
-    title: "Log a home issue",
+    title: "Get help with an issue",
     description:
       "Capture symptoms and urgency so the issue can become a task or project later.",
-    href: "/app/assistant",
-    cta: "Log issue",
+    href: "/app/help",
+    cta: "Start issue check",
     icon: Sparkles,
   },
   {
@@ -110,7 +110,7 @@ export function OnboardingSetupPlan({
           <CardTitle>{homeName} is ready for setup</CardTitle>
           <CardDescription>
             You do not need to finish everything now. Add one useful record and
-            Dwellwise will start becoming your home memory.
+            Nestify will start becoming your home memory.
           </CardDescription>
         </CardHeader>
         <CardContent>

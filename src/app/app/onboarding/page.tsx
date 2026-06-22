@@ -130,7 +130,7 @@ export default async function OnboardingPage({
           <StepIntro
             eyebrow="Step 1 of 3"
             title="Set up your home profile"
-            description="Dwellwise organizes providers, bills, maintenance, documents, warranties, and projects around the property they belong to."
+            description="Nestify organizes providers, bills, maintenance, documents, warranties, and projects around the property they belong to."
           />
           <HomeOnboardingForm defaults={homeDefaults} />
         </>
@@ -141,7 +141,7 @@ export default async function OnboardingPage({
           <StepIntro
             eyebrow="Step 2 of 3"
             title="What do you want help with first?"
-            description="Choose the areas that feel most scattered today. Dwellwise will turn them into a practical setup plan."
+            description="Choose the areas that feel most scattered today. Nestify will turn them into a practical setup plan."
           />
           <OnboardingGoalsForm />
         </>
@@ -163,7 +163,7 @@ export default async function OnboardingPage({
           <CardHeader>
             <CardTitle>Create your home first</CardTitle>
             <CardDescription>
-              Your setup plan needs a home profile so Dwellwise knows where to
+              Your setup plan needs a home profile so Nestify knows where to
               attach bills, records, reminders, and projects.
             </CardDescription>
           </CardHeader>

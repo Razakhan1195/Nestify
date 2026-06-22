@@ -71,7 +71,7 @@ export default async function TimelinePage({ searchParams }: TimelinePageProps) 
       <PageHeader
         eyebrow="Home memory"
         title="Timeline"
-        description="Search the history of bills, documents, projects, repairs, inventory, and maintenance as Dwellwise captures more of your home."
+        description="Search the history of bills, documents, projects, repairs, inventory, and maintenance as Nestify captures more of your home."
       />
 
       {!migrationRequired ? (
@@ -96,7 +96,7 @@ export default async function TimelinePage({ searchParams }: TimelinePageProps) 
 
       {migrationRequired ? (
         <MigrationRequiredCard
-          detail="Timeline needs the Homeowner OS timeline table before Dwellwise can build a searchable history of bills, documents, repairs, inventory, and projects."
+          detail="Timeline needs the Homeowner OS timeline table before Nestify can build a searchable history of bills, documents, repairs, inventory, and projects."
           error={error}
         />
       ) : error ? (
@@ -138,7 +138,7 @@ export default async function TimelinePage({ searchParams }: TimelinePageProps) 
           description={
             query
               ? "Try a different search or add more bills, documents, projects, repairs, and maintenance records."
-              : "As you add bills, documents, projects, issues, and maintenance tasks, Dwellwise will build a searchable history of the home."
+              : "As you add bills, documents, projects, issues, and maintenance tasks, Nestify will build a searchable history of the home."
           }
         />
       ) : null}

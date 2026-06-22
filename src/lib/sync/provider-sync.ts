@@ -6,6 +6,12 @@ import {
 import type { DeckBill, DeckConnection } from "@/lib/deck/types";
 import { generateBillInsights } from "@/lib/insights/bill-insights";
 import {
+  createProviderBillEvent,
+  refreshBillIntelligenceForBill,
+  refreshMissingExpectedBillEvent,
+  refreshProviderConnectionIntelligence,
+} from "@/lib/insights/bill-intelligence";
+import {
   getProviderSetupByName,
   requireOwnedProvider,
   type ProviderRow,
@@ -100,6 +106,36 @@ async function createSyncEvent(input: {
     message: input.message,
     metadata: input.metadata ?? {},
   });
+}
+
+async function createTimelineEvent(input: {
+  userId: string;
+  homeId: string;
+  eventType: string;
+  title: string;
+  body?: string | null;
+  relatedTable?: string;
+  relatedId?: string;
+}) {
+  const supabase = await createClient();
+
+  const { error } = await supabase.from("timeline_events").insert({
+    user_id: input.userId,
+    home_id: input.homeId,
+    event_type: input.eventType,
+    title: input.title,
+    body: input.body ?? null,
+    related_table: input.relatedTable ?? null,
+    related_id: input.relatedId ?? null,
+  });
+
+  if (error) {
+    console.warn("[timeline:create] skipped timeline event", {
+      code: error.code,
+      event_type: input.eventType,
+      message: error.message,
+    });
+  }
 }
 
 export async function createProviderConnectionSession(input: {
@@ -208,6 +244,18 @@ export async function createProviderDeckCredential(input: {
     throw new Error(error.message);
   }
 
+  if (credential.status === "verified") {
+    await createTimelineEvent({
+      userId: input.userId,
+      homeId: provider.home_id,
+      eventType: "provider_connected",
+      title: "Provider connected",
+      body: provider.display_name ?? provider.name,
+      relatedTable: "providers",
+      relatedId: provider.id,
+    });
+  }
+
   await createSyncEvent({
     userId: input.userId,
     homeId: provider.home_id,
@@ -253,10 +301,18 @@ async function upsertBillAndPdf(input: {
     .eq("external_bill_id", input.bill.externalBillId)
     .maybeSingle();
 
+  const billId = existingBill?.id;
+  let savedBillId = billId;
+
   if (existingBill) {
     await supabase.from("bills").update(billRow).eq("id", existingBill.id);
   } else {
-    await supabase.from("bills").insert(billRow);
+    const { data: insertedBill } = await supabase
+      .from("bills")
+      .insert(billRow)
+      .select("id")
+      .single();
+    savedBillId = insertedBill?.id;
   }
 
   if (input.bill.pdfAvailable) {
@@ -319,6 +375,15 @@ async function upsertBillAndPdf(input: {
       await supabase.from("insights").insert(insight);
     }
   }
+
+  if (savedBillId) {
+    await refreshBillIntelligenceForBill({
+      billId: savedBillId,
+      homeId: input.provider.home_id,
+      supabase,
+      userId: input.userId,
+    });
+  }
 }
 
 async function finishProviderSync(input: {
@@ -367,6 +432,42 @@ async function finishProviderSync(input: {
     .update(providerUpdate)
     .eq("id", provider.id)
     .eq("user_id", userId);
+
+  await refreshProviderConnectionIntelligence({
+    userId,
+    homeId: provider.home_id,
+    provider: {
+      ...provider,
+      ...providerUpdate,
+    },
+    supabase,
+  });
+
+  await refreshMissingExpectedBillEvent({
+    userId,
+    homeId: provider.home_id,
+    provider: {
+      ...provider,
+      ...providerUpdate,
+    },
+    supabase,
+  });
+
+  const wasAlreadyConnected = ["connected", "healthy"].includes(
+    provider.connection_status ?? ""
+  );
+
+  if (successful && !wasAlreadyConnected) {
+    await createTimelineEvent({
+      userId,
+      homeId: provider.home_id,
+      eventType: "provider_connected",
+      title: "Provider connected",
+      body: provider.display_name ?? provider.name,
+      relatedTable: "providers",
+      relatedId: provider.id,
+    });
+  }
 
   const message =
     connection.userActionMessage ??
@@ -467,6 +568,19 @@ export async function syncProvider(input: {
       status: "failed",
       message,
       metadata: { error: message },
+    });
+
+    await createProviderBillEvent({
+      userId: input.userId,
+      homeId: provider.home_id,
+      providerId: provider.id,
+      eventType: "provider_sync_failed",
+      severity: "critical",
+      title: `${provider.display_name ?? provider.name} has a sync issue`,
+      description:
+        "Provider sync failed. Your previous bill data is still available.",
+      metadata: { error: message },
+      supabase,
     });
 
     return {

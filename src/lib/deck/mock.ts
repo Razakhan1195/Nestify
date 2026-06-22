@@ -72,6 +72,34 @@ const providerProfiles: Record<
       },
     ],
   },
+  water: {
+    category: "Water",
+    providerName: "Durham Region Water",
+    status: "connected",
+    bills: [
+      {
+        externalBillId: "durham-water-2026-06",
+        providerName: "Durham Region Water",
+        category: "Water",
+        amountDue: 231.38,
+        currency: "CAD",
+        dueDate: "2026-07-16",
+        issueDate: "2026-06-16",
+        billingPeriodStart: "2026-03-17",
+        billingPeriodEnd: "2026-06-16",
+        accountNumberMasked: "**** 4372",
+        usageAmount: 42,
+        usageUnit: "m3",
+        previousBalance: 0,
+        pdfAvailable: true,
+        lineItems: [
+          { label: "Water usage", amount: 138.82 },
+          { label: "Wastewater service", amount: 92.56 },
+        ],
+        rawData: { mockScenario: "durham_water_success" },
+      },
+    ],
+  },
   internet: {
     category: "Internet",
     providerName: "Rogers Internet",
@@ -98,13 +126,13 @@ const providerProfiles: Record<
   },
   "property tax": {
     category: "Property Tax",
-    providerName: "City Property Tax",
+    providerName: "Town of Pickering Property Tax",
     status: "no_bill_found",
     bills: [],
   },
   insurance: {
     category: "Home Insurance",
-    providerName: "Home Insurance",
+    providerName: "TD Insurance",
     status: "requires_user_action",
     bills: [],
   },
@@ -121,6 +149,7 @@ function keyFor(providerName: string, category?: string) {
 
   if (text.includes("hydro") || text.includes("electric")) return "electricity";
   if (text.includes("enbridge") || text.includes("gas")) return "natural gas";
+  if (text.includes("durham") || text.includes("water")) return "water";
   if (text.includes("rogers") || text.includes("internet")) return "internet";
   if (text.includes("tax")) return "property tax";
   if (text.includes("insurance")) return "insurance";

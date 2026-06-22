@@ -266,6 +266,107 @@ create table if not exists public.sync_events (
   updated_at timestamptz not null default now()
 );
 
+-- Attention resolutions store dismiss, handled, and snooze state for generated attention items.
+create table if not exists public.attention_resolutions (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  home_id uuid not null references public.homes(id) on delete cascade,
+  attention_key text not null,
+  event_type text not null,
+  related_table text,
+  related_id uuid,
+  resolution_status text not null default 'open',
+  dismissed_at timestamptz,
+  handled_at timestamptz,
+  snoozed_until timestamptz,
+  note text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  unique (user_id, home_id, attention_key)
+);
+
+alter table public.attention_resolutions add column if not exists resolution_status text not null default 'open';
+alter table public.attention_resolutions add column if not exists dismissed_at timestamptz;
+alter table public.attention_resolutions add column if not exists handled_at timestamptz;
+alter table public.attention_resolutions add column if not exists snoozed_until timestamptz;
+alter table public.attention_resolutions add column if not exists note text;
+
+do $$
+begin
+  if not exists (
+    select 1
+    from pg_constraint
+    where conname = 'attention_resolutions_status_check'
+      and conrelid = 'public.attention_resolutions'::regclass
+  ) then
+    alter table public.attention_resolutions
+      add constraint attention_resolutions_status_check
+      check (resolution_status in ('open', 'dismissed', 'handled', 'snoozed'));
+  end if;
+end;
+$$;
+
+-- Bill events are durable intelligence and activity records generated from bills, providers, and syncs.
+create table if not exists public.bill_events (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  home_id uuid not null references public.homes(id) on delete cascade,
+  provider_id uuid references public.providers(id) on delete set null,
+  bill_id uuid references public.bills(id) on delete cascade,
+  event_key text not null,
+  event_type text not null,
+  severity text not null default 'info',
+  title text not null,
+  description text not null,
+  metadata jsonb not null default '{}'::jsonb,
+  resolution_status text not null default 'open',
+  dismissed_at timestamptz,
+  handled_at timestamptz,
+  snoozed_until timestamptz,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  unique (user_id, home_id, event_key)
+);
+
+alter table public.bill_events add column if not exists provider_id uuid references public.providers(id) on delete set null;
+alter table public.bill_events add column if not exists bill_id uuid references public.bills(id) on delete cascade;
+alter table public.bill_events add column if not exists event_key text;
+alter table public.bill_events add column if not exists event_type text;
+alter table public.bill_events add column if not exists severity text not null default 'info';
+alter table public.bill_events add column if not exists title text;
+alter table public.bill_events add column if not exists description text;
+alter table public.bill_events add column if not exists metadata jsonb not null default '{}'::jsonb;
+alter table public.bill_events add column if not exists resolution_status text not null default 'open';
+alter table public.bill_events add column if not exists dismissed_at timestamptz;
+alter table public.bill_events add column if not exists handled_at timestamptz;
+alter table public.bill_events add column if not exists snoozed_until timestamptz;
+
+do $$
+begin
+  if not exists (
+    select 1
+    from pg_constraint
+    where conname = 'bill_events_status_check'
+      and conrelid = 'public.bill_events'::regclass
+  ) then
+    alter table public.bill_events
+      add constraint bill_events_status_check
+      check (resolution_status in ('open', 'dismissed', 'handled', 'snoozed'));
+  end if;
+
+  if not exists (
+    select 1
+    from pg_constraint
+    where conname = 'bill_events_severity_check'
+      and conrelid = 'public.bill_events'::regclass
+  ) then
+    alter table public.bill_events
+      add constraint bill_events_severity_check
+      check (severity in ('critical', 'warning', 'info', 'success'));
+  end if;
+end;
+$$;
+
 -- Monthly summaries store per-home monthly rollups for bills, maintenance, documents, and insights.
 create table if not exists public.monthly_summaries (
   id uuid primary key default gen_random_uuid(),
@@ -293,7 +394,9 @@ values
   ('Security'),
   ('Water Heater Rental'),
   ('Waste'),
-  ('Other')
+  ('Rent / landlord'),
+  ('Other'),
+  ('Other service')
 on conflict (name) do nothing;
 
 comment on table public.profiles is 'Stores one application profile per authenticated Supabase user.';
@@ -305,6 +408,10 @@ comment on table public.documents is 'Stores metadata for household files such a
 comment on table public.maintenance_tasks is 'Tracks recurring upkeep, repairs, and seasonal home work.';
 comment on table public.insights is 'Stores generated or curated observations about a user home.';
 comment on table public.sync_events is 'Records imports, refreshes, and integration activity for auditability.';
+comment on table public.attention_resolutions is 'Stores dismiss, handled, and snooze state for generated home attention items without deleting source records.';
+comment on table public.bill_events is 'Stores durable bill intelligence and activity events for dashboard attention, history, and review workflows.';
+comment on column public.bill_events.event_key is 'Stable generated key used to dedupe recurring bill intelligence events.';
+comment on column public.bill_events.resolution_status is 'Resolution state for the generated bill event: open, dismissed, handled, or snoozed.';
 comment on table public.monthly_summaries is 'Stores per-home monthly rollups for bills, maintenance, documents, and insights.';
 
 drop trigger if exists set_profiles_updated_at on public.profiles;
@@ -352,6 +459,16 @@ create trigger set_sync_events_updated_at
 before update on public.sync_events
 for each row execute function public.set_updated_at();
 
+drop trigger if exists set_attention_resolutions_updated_at on public.attention_resolutions;
+create trigger set_attention_resolutions_updated_at
+before update on public.attention_resolutions
+for each row execute function public.set_updated_at();
+
+drop trigger if exists set_bill_events_updated_at on public.bill_events;
+create trigger set_bill_events_updated_at
+before update on public.bill_events
+for each row execute function public.set_updated_at();
+
 drop trigger if exists set_monthly_summaries_updated_at on public.monthly_summaries;
 create trigger set_monthly_summaries_updated_at
 before update on public.monthly_summaries
@@ -390,6 +507,17 @@ create index if not exists insights_home_id_idx on public.insights(home_id);
 create index if not exists sync_events_user_id_idx on public.sync_events(user_id);
 create index if not exists sync_events_home_id_idx on public.sync_events(home_id);
 create index if not exists sync_events_provider_id_idx on public.sync_events(provider_id);
+create index if not exists attention_resolutions_user_home_idx on public.attention_resolutions(user_id, home_id);
+create index if not exists attention_resolutions_status_idx on public.attention_resolutions(resolution_status);
+create index if not exists attention_resolutions_snoozed_until_idx on public.attention_resolutions(snoozed_until);
+create index if not exists attention_resolutions_related_idx on public.attention_resolutions(related_table, related_id);
+create index if not exists bill_events_user_home_idx on public.bill_events(user_id, home_id);
+create index if not exists bill_events_provider_id_idx on public.bill_events(provider_id);
+create index if not exists bill_events_bill_id_idx on public.bill_events(bill_id);
+create index if not exists bill_events_event_type_idx on public.bill_events(event_type);
+create index if not exists bill_events_resolution_status_idx on public.bill_events(resolution_status);
+create index if not exists bill_events_snoozed_until_idx on public.bill_events(snoozed_until);
+create index if not exists bill_events_created_at_idx on public.bill_events(created_at);
 create index if not exists monthly_summaries_user_id_idx on public.monthly_summaries(user_id);
 create index if not exists monthly_summaries_home_id_idx on public.monthly_summaries(home_id);
 create index if not exists monthly_summaries_month_idx on public.monthly_summaries(month);
@@ -403,6 +531,8 @@ alter table public.documents enable row level security;
 alter table public.maintenance_tasks enable row level security;
 alter table public.insights enable row level security;
 alter table public.sync_events enable row level security;
+alter table public.attention_resolutions enable row level security;
+alter table public.bill_events enable row level security;
 alter table public.monthly_summaries enable row level security;
 
 drop policy if exists "Provider categories are readable by authenticated users" on public.provider_categories;
@@ -493,6 +623,22 @@ with check (user_id = auth.uid());
 drop policy if exists "Users can manage their own sync events" on public.sync_events;
 create policy "Users can manage their own sync events"
 on public.sync_events
+for all
+to authenticated
+using (user_id = auth.uid())
+with check (user_id = auth.uid());
+
+drop policy if exists "Users can manage their own attention resolutions" on public.attention_resolutions;
+create policy "Users can manage their own attention resolutions"
+on public.attention_resolutions
+for all
+to authenticated
+using (user_id = auth.uid())
+with check (user_id = auth.uid());
+
+drop policy if exists "Users can manage their own bill events" on public.bill_events;
+create policy "Users can manage their own bill events"
+on public.bill_events
 for all
 to authenticated
 using (user_id = auth.uid())

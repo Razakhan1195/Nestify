@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Dwellwise",
+  title: "Nestify",
   description: "A calmer home operating system for bills, providers, maintenance, and documents.",
 };
 

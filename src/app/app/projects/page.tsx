@@ -80,7 +80,7 @@ export default async function ProjectsPage({ searchParams }: ProjectsPageProps) 
 
       {migrationRequired ? (
         <MigrationRequiredCard
-          detail="Projects need the Homeowner OS projects table before Dwellwise can save repairs, renovations, upgrades, and major home work."
+          detail="Projects need the Homeowner OS projects table before Nestify can save repairs, renovations, upgrades, and major home work."
           error={error}
         />
       ) : typeof pageError === "string" || error ? (

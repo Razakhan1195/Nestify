@@ -137,9 +137,22 @@ export const providerSetup = [
     syncFrequency: "monthly",
   },
   {
-    name: "Other",
+    name: "Other service",
     priority: 10,
-    value: "Track any other home-related provider.",
+    value: "Track any other household service, contact, or recurring provider.",
+    capabilities: {
+      amount: true,
+      due_date: true,
+      pdf: false,
+      usage: false,
+      billing_period: true,
+    },
+    syncFrequency: "manual",
+  },
+  {
+    name: "Rent / landlord",
+    priority: 11,
+    value: "Track rent, landlord contacts, lease records, and recurring housing due dates.",
     capabilities: {
       amount: true,
       due_date: true,
@@ -152,6 +165,34 @@ export const providerSetup = [
 ] as const;
 
 export type ProviderSetupItem = (typeof providerSetup)[number];
+
+export const recommendedProviderCategories = [
+  "Electricity",
+  "Natural Gas",
+  "Water",
+  "Internet",
+  "Property Tax",
+  "Home Insurance",
+] as const;
+
+export const suggestedProvidersByCategory: Record<string, string[]> = {
+  Electricity: ["Hydro One", "Alectra", "Toronto Hydro", "Elexicon"],
+  "Natural Gas": ["Enbridge Gas"],
+  Water: ["Durham Region Water", "City of Toronto Water", "York Region Water"],
+  Internet: ["Rogers", "Bell", "Telus", "Cogeco"],
+  "Property Tax": [
+    "Town of Pickering",
+    "Town of Whitby",
+    "City of Toronto",
+    "City of Mississauga",
+  ],
+  "Home Insurance": ["TD Insurance", "Aviva", "Intact", "Sonnet"],
+  Security: ["Bell Smart Home", "Telus SmartHome Security", "Rogers Smart Home"],
+  "Water Heater Rental": ["Enercare", "Reliance"],
+  Waste: ["GFL", "Waste Connections"],
+  "Rent / landlord": ["Landlord", "Property manager", "Condo management"],
+  "Other service": [],
+};
 
 export type ProviderCategoryRow = {
   id: string;
@@ -190,6 +231,10 @@ export function getProviderSetupByName(name: string) {
   return providerSetup.find((item) => item.name === name);
 }
 
+export function getProviderSetupByPriority(priority: number | null | undefined) {
+  return providerSetup.find((item) => item.priority === priority);
+}
+
 export function getProviderAction(state: ProviderState | string | undefined) {
   switch (state) {
     case "not_added":
@@ -210,6 +255,53 @@ export function getProviderAction(state: ProviderState | string | undefined) {
     default:
       return "Add";
   }
+}
+
+export function getProviderStatusLabel(
+  state: ProviderState | string | null | undefined
+) {
+  switch (state) {
+    case "healthy":
+    case "connected":
+      return "Connected";
+    case "added_manual":
+      return "Added, not connected";
+    case "needs_attention":
+      return "Needs your attention";
+    case "sync_failed":
+      return "Sync issue";
+    case "disconnected":
+      return "Disconnected";
+    case "syncing":
+      return "Syncing";
+    case "connecting":
+      return "Connecting";
+    case "not_added":
+    case undefined:
+    case null:
+      return "Not added yet";
+    default:
+      return state.replaceAll("_", " ");
+  }
+}
+
+export function isProviderNameMissing(
+  providerName: string | null | undefined,
+  categoryName: string | null | undefined
+) {
+  if (!providerName?.trim()) return true;
+  if (!categoryName?.trim()) return false;
+
+  return providerName.trim().toLowerCase() === categoryName.trim().toLowerCase();
+}
+
+export function getActualProviderName(
+  providerName: string | null | undefined,
+  categoryName: string | null | undefined
+) {
+  return isProviderNameMissing(providerName, categoryName)
+    ? "Provider not selected yet"
+    : providerName?.trim() ?? "Provider not selected yet";
 }
 
 export async function getProviderCategories() {

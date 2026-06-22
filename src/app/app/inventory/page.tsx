@@ -78,7 +78,7 @@ export default async function InventoryPage({ searchParams }: InventoryPageProps
 
       {migrationRequired ? (
         <MigrationRequiredCard
-          detail="Inventory needs the Homeowner OS inventory table before Dwellwise can save appliances, model numbers, warranties, and repair context."
+          detail="Inventory needs the Homeowner OS inventory table before Nestify can save appliances, model numbers, warranties, and repair context."
           error={error}
         />
       ) : typeof pageError === "string" || error ? (

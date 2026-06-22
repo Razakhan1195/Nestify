@@ -41,7 +41,7 @@ const features = [
 ] as const;
 
 const workflow = [
-  ["Create your home profile", "Dwellwise organizes everything around one property."],
+  ["Create your home profile", "Nestify organizes everything around one property."],
   ["Connect important providers", "Start with utilities, internet, property tax, and insurance."],
   ["Review your monthly report", "Know what is due, what changed, and what needs attention."],
 ] as const;
@@ -52,7 +52,7 @@ export default function HomePage() {
       <header className="border-b bg-card/85 backdrop-blur">
         <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 sm:px-6">
           <Link className="text-lg font-semibold tracking-tight" href="/">
-            Dwellwise
+            Nestify
           </Link>
           <nav className="flex items-center gap-2">
             <Button asChild variant="ghost">
@@ -75,7 +75,7 @@ export default function HomePage() {
           </h1>
           <p className="mt-5 max-w-2xl text-lg text-muted-foreground">
             Bills, due dates, documents, providers, warranties, and maintenance
-            tend to live in different inboxes and portals. Dwellwise brings the
+            tend to live in different inboxes and portals. Nestify brings the
             important pieces into one clear homeowner dashboard.
           </p>
           <div className="mt-8 flex flex-col gap-3 sm:flex-row">
@@ -86,7 +86,7 @@ export default function HomePage() {
               </Link>
             </Button>
             <Button asChild className="h-11" variant="outline">
-              <Link href="/login">Open Dwellwise</Link>
+              <Link href="/login">Open Nestify</Link>
             </Button>
           </div>
           <div className="mt-6 flex flex-wrap gap-3 text-sm text-muted-foreground">
@@ -170,7 +170,7 @@ export default function HomePage() {
             From scattered to steady
           </p>
           <h2 className="mt-2 text-3xl font-semibold tracking-tight">
-            Dwellwise guides the next useful step.
+            Nestify guides the next useful step.
           </h2>
           <p className="mt-3 text-muted-foreground">
             The product is designed around the homeowner workflow: set up the
@@ -221,7 +221,7 @@ export default function HomePage() {
                 Bring your home admin into one calm place.
               </h2>
               <p className="mt-2 max-w-2xl text-primary-foreground/80">
-                Start with your home profile. Dwellwise will guide you toward
+                Start with your home profile. Nestify will guide you toward
                 the providers and records that matter most.
               </p>
             </div>

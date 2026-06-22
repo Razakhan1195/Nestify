@@ -1,9 +1,19 @@
-import { AlertCircle, Lightbulb } from "lucide-react";
+import { AlertCircle, ArrowRight, CheckCircle2 } from "lucide-react";
 
 import { ProviderSetupCard } from "@/components/providers/provider-setup-card";
-import { Badge } from "@/components/ui/badge";
+import { ActionFeedbackToast } from "@/components/product/action-feedback-toast";
 import {
-  Card,
+  InsightCard,
+  PageHeader,
+  PageSection,
+  PageShell,
+  PrimaryCTA,
+  ProductCard,
+  SecondaryCTA,
+  SectionHeader,
+  StatusBadge,
+} from "@/components/product/design-system";
+import {
   CardContent,
   CardDescription,
   CardHeader,
@@ -12,13 +22,16 @@ import {
 import { requireCurrentUserHome } from "@/lib/homes";
 import {
   getHomeProviders,
+  getActualProviderName,
   getProviderCategories,
+  isProviderNameMissing,
   providerSetup,
+  recommendedProviderCategories,
   requireAuthenticatedUser,
 } from "@/lib/providers";
 
 type ProvidersPageProps = {
-  searchParams: Promise<{ error?: string | string[] }>;
+  searchParams: Promise<{ error?: string | string[]; notice?: string | string[] }>;
 };
 
 function getProviderMigrationGuidance(error: string) {
@@ -58,7 +71,7 @@ export default async function ProvidersPage({
 }: ProvidersPageProps) {
   const user = await requireAuthenticatedUser();
   const home = await requireCurrentUserHome(user.id);
-  const [{ error }, categories, providerResult] = await Promise.all([
+  const [{ error, notice }, categories, providerResult] = await Promise.all([
     searchParams,
     getProviderCategories(),
     getHomeProviders(home.id, user.id)
@@ -80,55 +93,166 @@ export default async function ProvidersPage({
       .filter((provider) => provider.category_id)
       .map((provider) => [provider.category_id, provider])
   );
+  const providersByPriority = new Map(
+    providers
+      .filter((provider) => provider.provider_priority)
+      .map((provider) => [provider.provider_priority, provider])
+  );
+  const getProviderForSetup = (setup: (typeof providerSetup)[number]) => {
+    const category = categoriesByName.get(setup.name);
+    return (
+      (category ? providersByCategoryId.get(category.id) : undefined) ??
+      providersByPriority.get(setup.priority)
+    );
+  };
   const connectedCount = providers.filter((provider) =>
     ["connected", "healthy"].includes(provider.connection_status)
   ).length;
+  const recommendedSet = new Set<string>(recommendedProviderCategories);
+  const recommendedProviders = providers.filter((provider) => {
+    const setup = providerSetup.find(
+      (item) => item.priority === provider.provider_priority
+    );
+    return setup ? recommendedSet.has(setup.name) : false;
+  });
+  const connectedRecommendedCount = recommendedProviders.filter((provider) =>
+    ["connected", "healthy"].includes(provider.connection_status)
+  ).length;
+  const nextRecommendedItem = providerSetup
+    .filter((setup) => recommendedSet.has(setup.name))
+    .map((setup) => {
+      const provider = getProviderForSetup(setup);
+
+      if (!provider) {
+        return {
+          label: `Add ${setup.name.toLowerCase()} next`,
+          setup,
+          sort: setup.priority,
+        };
+      }
+
+      if (isProviderNameMissing(provider.display_name ?? provider.name, setup.name)) {
+        return {
+          label: `Choose your ${setup.name.toLowerCase()} provider`,
+          setup,
+          sort: setup.priority,
+        };
+      }
+
+      if (!["connected", "healthy"].includes(provider.connection_status)) {
+        return {
+          label: `Connect ${getActualProviderName(
+            provider.display_name ?? provider.name,
+            setup.name
+          )}`,
+          setup,
+          sort: setup.priority,
+        };
+      }
+
+      return null;
+    })
+    .filter((item): item is NonNullable<typeof item> => Boolean(item))
+    .sort((a, b) => a.sort - b.sort)[0];
+  const dashboardReadiness = Math.round(
+    (connectedRecommendedCount / recommendedProviderCategories.length) * 100
+  );
 
   return (
-    <div className="grid gap-6">
-      <div className="grid gap-4 lg:grid-cols-[1fr_auto] lg:items-end">
-        <div>
-          <p className="text-sm font-medium text-muted-foreground">
-            Provider intelligence setup
-          </p>
-          <h1 className="mt-1 text-2xl font-semibold tracking-tight">
-            Build your home intelligence profile
-          </h1>
-          <p className="mt-2 max-w-3xl text-sm text-muted-foreground">
-            Start with electricity, gas, internet, and property tax. These
-            usually create the most useful home dashboard.
-          </p>
-        </div>
-        <div className="flex gap-2">
-          <Badge variant="secondary">{providers.length} added</Badge>
-          <Badge variant="outline">{connectedCount} connected</Badge>
-        </div>
-      </div>
+    <PageShell>
+      <PageHeader
+        eyebrow="Provider connections"
+        title="Connect your home providers"
+        description="Connect your hydro, gas, water, internet, tax, and insurance providers to build your monthly home dashboard."
+        actions={
+          <>
+            <PrimaryCTA asChild>
+              <a href="#provider-setup">
+                Start setup
+                <ArrowRight className="size-4" />
+              </a>
+            </PrimaryCTA>
+            <SecondaryCTA asChild>
+              <a href="#provider-setup">Review providers</a>
+            </SecondaryCTA>
+          </>
+        }
+      />
+
+      <ProductCard variant="hero">
+        <CardContent className="grid gap-4 p-4 sm:p-5 lg:grid-cols-[1fr_auto] lg:items-center">
+          <div className="grid gap-4">
+            <div>
+              <StatusBadge value={dashboardReadiness >= 70 ? "on track" : "needs setup"} />
+              <h2 className="mt-2 text-xl font-semibold tracking-tight">
+                {nextRecommendedItem?.label ?? "Core provider setup is ready"}
+              </h2>
+              <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
+                {connectedRecommendedCount} of {recommendedProviderCategories.length} recommended automation sources connected.
+                {nextRecommendedItem
+                  ? " Add the next source to improve due dates, bill PDFs, and monthly change detection."
+                  : " Nestify has the core provider signals it needs for a stronger monthly summary."}
+              </p>
+            </div>
+            <div className="rounded-2xl border bg-background/80 p-3.5">
+              <p className="text-sm font-medium">Dashboard readiness</p>
+              <div className="mt-3 h-2 rounded-full bg-muted">
+                <div
+                  className="h-2 rounded-full bg-primary"
+                  style={{ width: `${dashboardReadiness}%` }}
+                />
+              </div>
+              <p className="mt-2 text-sm text-muted-foreground">
+                {dashboardReadiness}% ready based on recommended provider connections.
+              </p>
+            </div>
+          </div>
+          <div className="grid min-w-60 gap-2 rounded-2xl border bg-background/80 p-3.5">
+            <div className="flex items-center justify-between gap-4 text-sm">
+              <span className="text-muted-foreground">Added</span>
+              <span className="font-semibold">{providers.length}</span>
+            </div>
+            <div className="flex items-center justify-between gap-4 text-sm">
+              <span className="text-muted-foreground">Connected</span>
+              <span className="font-semibold">{connectedCount}</span>
+            </div>
+            <div className="flex items-center justify-between gap-4 text-sm">
+              <span className="text-muted-foreground">Recommended</span>
+              <span className="font-semibold">
+                {connectedRecommendedCount}/{recommendedProviderCategories.length}
+              </span>
+            </div>
+            <SecondaryCTA asChild size="sm">
+              <a href="#provider-setup">
+                Review setup
+                <ArrowRight className="size-4" />
+              </a>
+            </SecondaryCTA>
+          </div>
+        </CardContent>
+      </ProductCard>
 
       {typeof error === "string" ? (
-        <Card className="rounded-lg border-destructive/30 bg-destructive/10">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-destructive">
-              <AlertCircle className="size-5" />
-              Provider setup issue
-            </CardTitle>
-            <CardDescription className="text-destructive">{error}</CardDescription>
-          </CardHeader>
-        </Card>
+        <InsightCard
+          description={error}
+          icon={AlertCircle}
+          severity="critical"
+          title="Provider setup issue"
+        />
       ) : null}
 
+      <ActionFeedbackToast message={typeof notice === "string" ? notice : null} />
+
       {providerSchemaError ? (
-        <Card className="rounded-lg border-destructive/30 bg-destructive/10">
+        <ProductCard tone="critical" variant="insight">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-destructive">
+            <CardTitle className="flex items-center gap-2">
               <AlertCircle className="size-5" />
               {providerMigrationGuidance?.title}
             </CardTitle>
-            <CardDescription className="text-destructive">
-              {providerSchemaError}
-            </CardDescription>
+            <CardDescription>{providerSchemaError}</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-2 text-sm text-destructive">
+          <CardContent className="space-y-2 text-sm">
             <p>{providerMigrationGuidance?.description}</p>
             <p>
               Run <code>{providerMigrationGuidance?.file}</code> in the
@@ -138,41 +262,57 @@ export default async function ProvidersPage({
               <p>{providerMigrationGuidance.note}</p>
             ) : null}
           </CardContent>
-        </Card>
+        </ProductCard>
       ) : null}
 
-      <Card className="rounded-lg">
+      <ProductCard variant="action">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Lightbulb className="size-5" />
-            Monthly intelligence starts here
+            <CheckCircle2 className="size-5" />
+            Connections unlock your monthly report
           </CardTitle>
           <CardDescription>
-            Connected providers power your monthly home summary.
+            Bill amount, due date, PDFs, usage where available, bill changes,
+            provider history, and your monthly household summary. Manual providers
+            and contacts are still useful when sync is not available.
           </CardDescription>
         </CardHeader>
-      </Card>
+      </ProductCard>
 
-      <div className="grid gap-4">
-        {providerSetup.map((setup) => {
-          const category = categoriesByName.get(setup.name);
-          const provider = category
-            ? providersByCategoryId.get(category.id)
-            : undefined;
+      <PageSection id="provider-setup">
+        <SectionHeader
+          title="Recommended setup"
+          description="Start with the providers that create the strongest home dashboard."
+          action={
+            nextRecommendedItem ? (
+              <SecondaryCTA asChild size="sm">
+                <a href={`#${nextRecommendedItem.setup.name.toLowerCase().replaceAll(" ", "-")}`}>
+                  {nextRecommendedItem.label}
+                </a>
+              </SecondaryCTA>
+            ) : null
+          }
+        />
+        <div className="grid gap-3">
+          {providerSetup.map((setup) => {
+            const category = categoriesByName.get(setup.name);
+            const provider = getProviderForSetup(setup);
 
-          return (
-            <ProviderSetupCard
-              category={category}
-              disabledReason={
-                providerMigrationGuidance?.disabledReason
-              }
-              key={setup.name}
-              provider={provider}
-              setup={setup}
-            />
-          );
-        })}
-      </div>
-    </div>
+            return (
+              <div id={setup.name.toLowerCase().replaceAll(" ", "-")} key={setup.name}>
+                <ProviderSetupCard
+                  category={category}
+                  disabledReason={
+                    providerMigrationGuidance?.disabledReason
+                  }
+                  provider={provider}
+                  setup={setup}
+                />
+              </div>
+            );
+          })}
+        </div>
+      </PageSection>
+    </PageShell>
   );
 }

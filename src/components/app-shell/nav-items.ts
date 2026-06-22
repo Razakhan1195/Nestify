@@ -1,11 +1,7 @@
 import {
   FileText,
   Home,
-  PackageCheck,
-  Sparkles,
-  History,
-  LifeBuoy,
-  Hammer,
+  Plug,
   ReceiptText,
   Settings,
   Wrench,
@@ -18,9 +14,19 @@ export const appNavItems = [
     icon: Home,
   },
   {
-    title: "Bills & Costs",
+    title: "Providers",
+    href: "/app/providers",
+    icon: Plug,
+  },
+  {
+    title: "Bills",
     href: "/app/bills",
     icon: ReceiptText,
+  },
+  {
+    title: "Vault",
+    href: "/app/documents",
+    icon: FileText,
   },
   {
     title: "Maintenance",
@@ -28,37 +34,7 @@ export const appNavItems = [
     icon: Wrench,
   },
   {
-    title: "Projects",
-    href: "/app/projects",
-    icon: Hammer,
-  },
-  {
-    title: "Home Vault",
-    href: "/app/documents",
-    icon: FileText,
-  },
-  {
-    title: "Inventory",
-    href: "/app/inventory",
-    icon: PackageCheck,
-  },
-  {
-    title: "Assistant",
-    href: "/app/assistant",
-    icon: Sparkles,
-  },
-  {
-    title: "Timeline",
-    href: "/app/timeline",
-    icon: History,
-  },
-  {
-    title: "Providers",
-    href: "/app/providers",
-    icon: LifeBuoy,
-  },
-  {
-    title: "Home Profile",
+    title: "Home",
     href: "/app/settings",
     icon: Settings,
   },

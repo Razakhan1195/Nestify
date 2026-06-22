@@ -11,6 +11,18 @@ export const homeownerOsMigrationPath =
 export const homeownerOsMigrationMessage =
   "The Homeowner OS database migration has not been run yet. Run supabase/migrations/202606170001_homeowner_os_foundation.sql in the Supabase SQL Editor, then refresh this page.";
 
+export const billIntelligenceMigrationPath =
+  "supabase/migrations/202606180002_bill_intelligence_events.sql";
+
+export const billIntelligenceMigrationMessage =
+  "The Bill Intelligence database migration has not been run yet. Run supabase/migrations/202606180002_bill_intelligence_events.sql in the Supabase SQL Editor, then refresh this page.";
+
+export const guidedIssueHelpMigrationPath =
+  "supabase/migrations/202606200001_guided_issue_help.sql";
+
+export const guidedIssueHelpMigrationMessage =
+  "The Guided Issue Help database migration has not been run yet. Run supabase/migrations/202606200001_guided_issue_help.sql in the Supabase SQL Editor, then refresh this page.";
+
 export function isMissingSchemaError(error: SchemaErrorLike | null | undefined) {
   if (!error) return false;
 

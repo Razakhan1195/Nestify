@@ -7,15 +7,31 @@ import { z } from "zod";
 
 import { createClient } from "@/lib/supabase/server";
 import {
+  createBillActivityEvent,
+  markBillEventsHandled,
+  refreshProviderConnectionIntelligence,
+  refreshBillIntelligenceForBill,
+} from "@/lib/insights/bill-intelligence";
+import {
   hasSupabaseEnv,
   missingSupabaseEnvMessage,
 } from "@/lib/supabase/env";
 import { getCurrentUserHome } from "@/lib/homes";
+import {
+  getIssueGuidance,
+  suggestedDueDateForIssue,
+} from "@/lib/issues/guidance";
 import { getProviderSetupByName, requireOwnedProvider } from "@/lib/providers";
 import {
+  guidedIssueHelpMigrationMessage,
   homeownerOsMigrationMessage,
   isMissingSchemaError,
 } from "@/lib/schema-errors";
+import {
+  isBillIncomplete,
+  statusAfterBillDetailsCompleted,
+  statusForNewManualBill,
+} from "@/lib/product/rules";
 
 export type ActionState = {
   errors?: Record<string, string[] | undefined>;
@@ -66,12 +82,27 @@ const homeSchema = z.object({
 const providerSetupSchema = z.object({
   category_id: z.string().uuid(),
   category_name: z.string().min(1),
+  provider_name: z.string().min(1, "Enter the provider name.").max(120),
+  account_number: z.string().max(80).optional(),
+  notes: z.string().max(500).optional(),
+});
+
+const providerNameSchema = z.object({
+  provider_id: z.string().uuid(),
+  provider_name: z.string().min(1, "Enter the provider name.").max(120),
+  account_number: z.string().max(80).optional(),
+  notes: z.string().max(500).optional(),
 });
 
 const manualBillSchema = z.object({
-  provider_name: z.string().min(1, "Enter a provider or bill name.").max(120),
-  amount: z.string().optional(),
-  due_date: z.string().optional(),
+  bill_title: z.string().min(1, "Enter a bill title.").max(140),
+  category: z.string().min(1, "Choose a category.").max(80),
+  provider_name: z.string().max(120).optional(),
+  amount: z
+    .string()
+    .min(1, "Enter the bill amount.")
+    .refine((value) => Number.isFinite(Number(value)), "Enter a valid amount."),
+  due_date: z.string().min(1, "Choose a due date."),
   frequency: z.string().optional(),
   status: z.string().optional(),
   notes: z.string().optional(),
@@ -79,16 +110,18 @@ const manualBillSchema = z.object({
 
 const maintenanceTaskSchema = z.object({
   title: z.string().min(1, "Enter a task title.").max(140),
-  category: z.string().optional(),
+  category: z.string().min(1, "Choose a task type.").max(80),
   due_date: z.string().optional(),
   recurrence: z.string().optional(),
   priority: z.string().optional(),
   description: z.string().optional(),
+  relevance: z.string().optional(),
 });
 
 const documentRecordSchema = z.object({
   title: z.string().min(1, "Enter a document title.").max(160),
-  category: z.string().optional(),
+  category: z.string().min(1, "Choose a document category.").max(80),
+  issued_on: z.string().optional(),
   expires_on: z.string().optional(),
   notes: z.string().optional(),
 });
@@ -116,9 +149,58 @@ const projectSchema = z.object({
 
 const repairIssueSchema = z.object({
   title: z.string().min(1, "Enter an issue title.").max(160),
-  area: z.string().optional(),
-  urgency: z.string().optional(),
-  description: z.string().optional(),
+  category: z.string().min(1, "Choose a category.").max(80),
+  location: z.string().min(1, "Choose a location.").max(80),
+  urgency: z.enum(["low", "medium", "high", "urgent"]),
+  renter_owner_context: z.string().optional(),
+  description: z.string().min(1, "Describe what is happening.").max(1200),
+  status: z.string().optional(),
+});
+
+const issueActionSchema = z.object({
+  issue_id: z.string().uuid(),
+  return_path: z.string().startsWith("/").default("/app/help"),
+});
+
+const issueNoteSchema = issueActionSchema.extend({
+  note: z.string().min(1, "Enter a note.").max(1000),
+});
+
+const attentionResolutionSchema = z.object({
+  attention_key: z.string().min(1),
+  event_type: z.string().min(1),
+  related_table: z.string().optional(),
+  related_id: z.string().uuid().optional().or(z.literal("")),
+  return_path: z.string().startsWith("/").default("/app"),
+  resolution_action: z.enum(["dismiss", "handled", "snooze"]),
+  snooze_for: z.enum(["tomorrow", "week", "month"]).optional(),
+});
+
+const billActionSchema = z.object({
+  bill_id: z.string().uuid(),
+  attention_key: z.string().optional(),
+  event_type: z.string().optional(),
+  return_path: z.string().startsWith("/").default("/app/bills"),
+});
+
+const billDueDateSchema = z.object({
+  bill_id: z.string().uuid(),
+  amount: z.string().optional(),
+  due_date: z.string().min(1, "Choose a due date."),
+  return_path: z.string().startsWith("/").default("/app/bills"),
+});
+
+const maintenanceActionSchema = z.object({
+  attention_key: z.string().optional(),
+  event_type: z.string().optional(),
+  return_path: z.string().startsWith("/").default("/app/maintenance"),
+  task_id: z.string().uuid(),
+});
+
+const starterTaskActionSchema = z.object({
+  attention_key: z.string().min(1),
+  return_path: z.string().startsWith("/").default("/app/maintenance"),
+  resolution_action: z.enum(["dismiss", "snooze"]),
 });
 
 function getString(formData: FormData, key: string) {
@@ -138,6 +220,23 @@ function nullableMoney(value: string) {
   if (!value) return null;
   const amount = Number(value);
   return Number.isFinite(amount) ? amount : null;
+}
+
+function addCalendarDays(date: Date, days: number) {
+  const next = new Date(date);
+  next.setDate(next.getDate() + days);
+  return next;
+}
+
+function addCalendarMonths(date: Date, months: number) {
+  const next = new Date(date);
+  next.setMonth(next.getMonth() + months);
+  return next;
+}
+
+function redirectWithNotice(path: string, message: string): never {
+  const separator = path.includes("?") ? "&" : "?";
+  redirect(`${path}${separator}notice=${encodeURIComponent(message)}`);
 }
 
 async function getRequestOrigin() {
@@ -203,6 +302,74 @@ async function createTimelineEvent(input: {
       event_type: input.eventType,
       message: error.message,
     });
+  }
+}
+
+async function upsertAttentionResolution(input: {
+  attentionKey: string;
+  eventType: string;
+  homeId: string;
+  note?: string;
+  relatedId?: string | null;
+  relatedTable?: string | null;
+  resolutionStatus: "dismissed" | "handled" | "snoozed";
+  snoozedUntil?: string | null;
+  userId: string;
+}) {
+  const now = new Date().toISOString();
+  const supabase = await createClient();
+
+  const { error } = await supabase.from("attention_resolutions").upsert(
+    {
+      user_id: input.userId,
+      home_id: input.homeId,
+      attention_key: input.attentionKey,
+      event_type: input.eventType,
+      related_table: input.relatedTable ?? null,
+      related_id: input.relatedId || null,
+      resolution_status: input.resolutionStatus,
+      dismissed_at: input.resolutionStatus === "dismissed" ? now : null,
+      handled_at: input.resolutionStatus === "handled" ? now : null,
+      snoozed_until:
+        input.resolutionStatus === "snoozed" ? input.snoozedUntil ?? null : null,
+      note: input.note ?? null,
+    },
+    { onConflict: "user_id,home_id,attention_key" }
+  );
+
+  if (error) {
+    throw new Error(
+      isMissingSchemaError(error)
+        ? "Attention actions need the attention resolution migration."
+        : error.message
+    );
+  }
+}
+
+async function supabaseUpdateBillEventResolution(input: {
+  attentionKey: string;
+  homeId: string;
+  resolutionStatus: "dismissed" | "handled" | "snoozed";
+  snoozedUntil?: string | null;
+  userId: string;
+}) {
+  const supabase = await createClient();
+  const now = new Date().toISOString();
+  const { error } = await supabase
+    .from("bill_events")
+    .update({
+      resolution_status: input.resolutionStatus,
+      dismissed_at: input.resolutionStatus === "dismissed" ? now : null,
+      handled_at: input.resolutionStatus === "handled" ? now : null,
+      snoozed_until:
+        input.resolutionStatus === "snoozed" ? input.snoozedUntil ?? null : null,
+    })
+    .eq("user_id", input.userId)
+    .eq("home_id", input.homeId)
+    .eq("event_key", input.attentionKey);
+
+  if (error && !isMissingSchemaError(error)) {
+    throw new Error(error.message);
   }
 }
 
@@ -526,10 +693,13 @@ export async function addProvider(formData: FormData) {
   const parsed = providerSetupSchema.safeParse({
     category_id: getString(formData, "category_id"),
     category_name: getString(formData, "category_name"),
+    provider_name: getString(formData, "provider_name"),
+    account_number: getString(formData, "account_number"),
+    notes: getString(formData, "notes"),
   });
 
   if (!parsed.success) {
-    redirect("/app/providers?error=Choose a provider category.");
+    redirect("/app/providers?error=Choose a category and enter the provider name.");
   }
 
   const setup = getProviderSetupByName(parsed.data.category_name);
@@ -560,15 +730,17 @@ export async function addProvider(formData: FormData) {
       user_id: user.id,
       home_id: home.id,
       category_id: parsed.data.category_id,
-      name: setup.name,
-      display_name: setup.name,
+      name: parsed.data.provider_name,
+      display_name: parsed.data.provider_name,
+      account_number: nullableString(parsed.data.account_number ?? ""),
+      notes: nullableString(parsed.data.notes ?? ""),
       provider_priority: setup.priority,
       connection_status: "added_manual",
       health_status: "needs_attention",
       sync_frequency: setup.syncFrequency,
       requires_user_action: true,
       user_action_message:
-        "Connect this provider when integrations are available. For now, Dwellwise will track it as a manual provider.",
+        "Added to your household command center. Connect when ready to retrieve bills, due dates, PDFs, and changes automatically.",
       data_capabilities: setup.capabilities,
     })
     .select("id")
@@ -578,8 +750,98 @@ export async function addProvider(formData: FormData) {
     redirect(`/app/providers?error=${encodeURIComponent(error.message)}`);
   }
 
+  await refreshProviderConnectionIntelligence({
+    userId: user.id,
+    homeId: home.id,
+    provider: {
+      id: provider.id,
+      display_name: parsed.data.provider_name,
+      name: parsed.data.provider_name,
+      provider_priority: setup.priority,
+      connection_status: "added_manual",
+      health_status: "needs_attention",
+      sync_frequency: setup.syncFrequency,
+      requires_user_action: true,
+      user_action_message:
+        "Added to your household command center. Connect when ready to retrieve bills, due dates, PDFs, and changes automatically.",
+    },
+    supabase,
+  });
+
+  await createTimelineEvent({
+    userId: user.id,
+    homeId: home.id,
+    eventType: "provider_added",
+    title: "Provider added",
+    body: `${setup.name}: ${parsed.data.provider_name}`,
+    relatedTable: "providers",
+    relatedId: provider.id,
+  });
+
+  revalidatePath("/app");
   revalidatePath("/app/providers");
-  redirect(`/app/providers/${provider.id}`);
+  redirectWithNotice(`/app/providers/${provider.id}`, "Provider added.");
+}
+
+export async function updateProviderName(formData: FormData) {
+  const parsed = providerNameSchema.safeParse({
+    provider_id: getString(formData, "provider_id"),
+    provider_name: getString(formData, "provider_name"),
+    account_number: getString(formData, "account_number"),
+    notes: getString(formData, "notes"),
+  });
+
+  if (!parsed.success) {
+    redirect("/app/providers?error=Enter the provider company or municipality.");
+  }
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+    error: userError,
+  } = await supabase.auth.getUser();
+
+  if (userError || !user) {
+    redirect("/login");
+  }
+
+  const provider = await requireOwnedProvider(parsed.data.provider_id, user.id);
+
+  const { error } = await supabase
+    .from("providers")
+    .update({
+      name: parsed.data.provider_name,
+      display_name: parsed.data.provider_name,
+      account_number: nullableString(parsed.data.account_number ?? ""),
+      notes: nullableString(parsed.data.notes ?? ""),
+      requires_user_action: provider.connection_status === "added_manual",
+      user_action_message:
+        provider.connection_status === "added_manual"
+          ? "Provider selected. Connect when ready to retrieve bills, due dates, PDFs, and changes automatically."
+          : provider.user_action_message,
+    })
+    .eq("id", provider.id)
+    .eq("user_id", user.id);
+
+  if (error) {
+    redirect(`/app/providers?error=${encodeURIComponent(error.message)}`);
+  }
+
+  await refreshProviderConnectionIntelligence({
+    userId: user.id,
+    homeId: provider.home_id,
+    provider: {
+      ...provider,
+      display_name: parsed.data.provider_name,
+      name: parsed.data.provider_name,
+    },
+    supabase,
+  });
+
+  revalidatePath("/app");
+  revalidatePath("/app/providers");
+  revalidatePath(`/app/providers/${provider.id}`);
+  redirect("/app/providers");
 }
 
 export async function updateProviderConnectionState(formData: FormData) {
@@ -637,6 +899,8 @@ export async function updateProviderConnectionState(formData: FormData) {
 export async function createManualBill(formData: FormData) {
   const { home, supabase, user } = await requireUserAndHome();
   const parsed = manualBillSchema.safeParse({
+    bill_title: getString(formData, "bill_title"),
+    category: getString(formData, "category"),
     provider_name: getString(formData, "provider_name"),
     amount: getString(formData, "amount"),
     due_date: getString(formData, "due_date"),
@@ -646,7 +910,7 @@ export async function createManualBill(formData: FormData) {
   });
 
   if (!parsed.success) {
-    redirect("/app/bills?error=Enter at least a bill or provider name.");
+    redirect("/app/bills?error=Enter a bill title and choose a category.");
   }
 
   const values = parsed.data;
@@ -655,14 +919,18 @@ export async function createManualBill(formData: FormData) {
     .insert({
       user_id: user.id,
       home_id: home.id,
-      name: values.provider_name,
+      name: values.bill_title,
       amount: nullableMoney(values.amount ?? ""),
       due_date: nullableDate(values.due_date ?? ""),
       frequency: nullableString(values.frequency ?? ""),
       recurrence: nullableString(values.frequency ?? ""),
-      status: values.status || "upcoming",
+      status: statusForNewManualBill(values.due_date),
       source: "manual",
       notes: nullableString(values.notes ?? ""),
+      raw_data: {
+        category: values.category,
+        provider_contact: nullableString(values.provider_name ?? ""),
+      },
     })
     .select("id")
     .single();
@@ -675,15 +943,386 @@ export async function createManualBill(formData: FormData) {
     userId: user.id,
     homeId: home.id,
     eventType: "bill_added",
-    title: `${values.provider_name} bill added`,
-    body: values.due_date ? `Due ${values.due_date}` : null,
+    title: "Bill added",
+    body: values.due_date
+      ? `${values.bill_title} due ${values.due_date}`
+      : values.bill_title,
     relatedTable: "bills",
     relatedId: bill.id,
   });
 
+  await refreshBillIntelligenceForBill({
+    billId: bill.id,
+    homeId: home.id,
+    supabase,
+    userId: user.id,
+  });
+
   revalidatePath("/app");
   revalidatePath("/app/bills");
-  redirect("/app/bills");
+  redirectWithNotice("/app/bills", "Bill added.");
+}
+
+export async function resolveAttentionItem(formData: FormData) {
+  const { home, user } = await requireUserAndHome();
+  const parsed = attentionResolutionSchema.safeParse({
+    attention_key: getString(formData, "attention_key"),
+    event_type: getString(formData, "event_type"),
+    related_table: getString(formData, "related_table"),
+    related_id: getString(formData, "related_id"),
+    return_path: getString(formData, "return_path") || "/app",
+    resolution_action: getString(formData, "resolution_action"),
+    snooze_for: getString(formData, "snooze_for") || undefined,
+  });
+
+  if (!parsed.success) {
+    redirectWithNotice("/app", "That attention item could not be updated.");
+  }
+
+  const values = parsed.data;
+  const now = new Date();
+  const snoozedUntil =
+    values.snooze_for === "tomorrow"
+      ? addCalendarDays(now, 1)
+      : values.snooze_for === "week"
+        ? addCalendarDays(now, 7)
+        : values.snooze_for === "month"
+          ? addCalendarMonths(now, 1)
+          : null;
+  const resolutionStatus =
+    values.resolution_action === "dismiss"
+      ? "dismissed"
+      : values.resolution_action === "snooze"
+        ? "snoozed"
+        : "handled";
+
+  await upsertAttentionResolution({
+    userId: user.id,
+    homeId: home.id,
+    attentionKey: values.attention_key,
+    eventType: values.event_type,
+    relatedTable: nullableString(values.related_table ?? ""),
+    relatedId: nullableString(values.related_id ?? ""),
+    resolutionStatus,
+    snoozedUntil: snoozedUntil?.toISOString() ?? null,
+  });
+
+  await supabaseUpdateBillEventResolution({
+    attentionKey: values.attention_key,
+    homeId: home.id,
+    resolutionStatus,
+    userId: user.id,
+    snoozedUntil: snoozedUntil?.toISOString() ?? null,
+  });
+
+  revalidatePath("/app");
+  revalidatePath("/app/bills");
+  revalidatePath("/app/providers");
+  redirectWithNotice(
+    values.return_path,
+    resolutionStatus === "dismissed"
+      ? "Dismissed from Needs Attention."
+      : resolutionStatus === "snoozed"
+        ? "Snoozed until later."
+        : "Marked as handled."
+  );
+}
+
+export async function markBillPaid(formData: FormData) {
+  const { home, supabase, user } = await requireUserAndHome();
+  const parsed = billActionSchema.safeParse({
+    bill_id: getString(formData, "bill_id"),
+    attention_key: getString(formData, "attention_key"),
+    event_type: getString(formData, "event_type"),
+    return_path: getString(formData, "return_path") || "/app/bills",
+  });
+
+  if (!parsed.success) {
+    redirectWithNotice("/app/bills", "That bill could not be updated.");
+  }
+
+  const values = parsed.data;
+  const { error } = await supabase
+    .from("bills")
+    .update({
+      paid_at: new Date().toISOString(),
+      status: "paid",
+    })
+    .eq("id", values.bill_id)
+    .eq("user_id", user.id)
+    .eq("home_id", home.id);
+
+  if (error) {
+    redirectWithNotice(
+      values.return_path,
+      isMissingSchemaError(error)
+        ? homeownerOsMigrationMessage
+        : error.message
+    );
+  }
+
+  if (values.attention_key && values.event_type) {
+    await upsertAttentionResolution({
+      userId: user.id,
+      homeId: home.id,
+      attentionKey: values.attention_key,
+      eventType: values.event_type,
+      relatedTable: "bills",
+      relatedId: values.bill_id,
+      resolutionStatus: "handled",
+      note: "Bill marked as paid.",
+    });
+  }
+
+  await markBillEventsHandled({
+    billId: values.bill_id,
+    eventTypes: ["bill_due_soon", "bill_overdue"],
+    homeId: home.id,
+    supabase,
+    userId: user.id,
+  });
+
+  await createBillActivityEvent({
+    billId: values.bill_id,
+    description: "Bill marked as paid.",
+    eventType: "bill_marked_paid",
+    homeId: home.id,
+    supabase,
+    title: "Bill marked paid",
+    userId: user.id,
+  });
+
+  await createTimelineEvent({
+    userId: user.id,
+    homeId: home.id,
+    eventType: "bill_paid",
+    title: "Bill marked paid",
+    relatedTable: "bills",
+    relatedId: values.bill_id,
+  });
+
+  revalidatePath("/app");
+  revalidatePath("/app/bills");
+  redirectWithNotice(values.return_path, "Bill marked paid.");
+}
+
+export async function markBillReviewed(formData: FormData) {
+  const { home, user } = await requireUserAndHome();
+  const parsed = billActionSchema.safeParse({
+    bill_id: getString(formData, "bill_id"),
+    attention_key: getString(formData, "attention_key"),
+    event_type: getString(formData, "event_type") || "bill_review",
+    return_path: getString(formData, "return_path") || "/app/bills",
+  });
+
+  if (!parsed.success || !parsed.data.attention_key) {
+    redirectWithNotice("/app/bills", "That bill review could not be saved.");
+  }
+
+  await upsertAttentionResolution({
+    userId: user.id,
+    homeId: home.id,
+    attentionKey: parsed.data.attention_key,
+    eventType: parsed.data.event_type ?? "bill_review",
+    relatedTable: "bills",
+    relatedId: parsed.data.bill_id,
+    resolutionStatus: "handled",
+    note: "Bill reviewed.",
+  });
+
+  await markBillEventsHandled({
+    billId: parsed.data.bill_id,
+    homeId: home.id,
+    userId: user.id,
+    eventTypes: [
+      "bill_amount_increased",
+      "bill_amount_decreased",
+      "due_date_missing",
+      "usage_increased",
+      "usage_decreased",
+      "new_fee_detected",
+    ],
+  });
+
+  await createBillActivityEvent({
+    billId: parsed.data.bill_id,
+    description: "Bill intelligence reviewed.",
+    eventType: "bill_marked_reviewed",
+    homeId: home.id,
+    title: "Bill marked as reviewed",
+    userId: user.id,
+  });
+
+  revalidatePath("/app");
+  revalidatePath("/app/bills");
+  redirectWithNotice(parsed.data.return_path, "Bill marked as reviewed.");
+}
+
+export async function updateBillDueDate(formData: FormData) {
+  const { home, supabase, user } = await requireUserAndHome();
+  const parsed = billDueDateSchema.safeParse({
+    bill_id: getString(formData, "bill_id"),
+    amount: getString(formData, "amount"),
+    due_date: getString(formData, "due_date"),
+    return_path: getString(formData, "return_path") || "/app/bills",
+  });
+
+  if (!parsed.success) {
+    redirectWithNotice("/app/bills", "Choose a due date first.");
+  }
+
+  const values = parsed.data;
+  const { data: existingBill, error: existingBillError } = await supabase
+    .from("bills")
+    .select("id,name,amount,raw_data,status")
+    .eq("id", values.bill_id)
+    .eq("user_id", user.id)
+    .eq("home_id", home.id)
+    .single();
+
+  if (existingBillError || !existingBill) {
+    redirectWithNotice(values.return_path, "Couldn't update. Try again.");
+  }
+
+  const nextAmount =
+    values.amount && Number.isFinite(Number(values.amount))
+      ? Number(values.amount)
+      : existingBill.amount;
+  const nextStatus = isBillIncomplete({
+    amount: nextAmount,
+    due_date: values.due_date,
+    name: existingBill.name,
+    raw_data: existingBill.raw_data,
+    status: null,
+  })
+    ? "incomplete"
+    : statusAfterBillDetailsCompleted(values.due_date);
+  const { error } = await supabase
+    .from("bills")
+    .update({
+      amount: nextAmount,
+      due_date: values.due_date,
+      status: nextStatus,
+    })
+    .eq("id", values.bill_id)
+    .eq("user_id", user.id)
+    .eq("home_id", home.id);
+
+  if (error) {
+    redirectWithNotice(values.return_path, "Could not save due date. Try again.");
+  }
+
+  await markBillEventsHandled({
+    billId: values.bill_id,
+    eventTypes: ["due_date_missing"],
+    homeId: home.id,
+    supabase,
+    userId: user.id,
+  });
+
+  await createTimelineEvent({
+    userId: user.id,
+    homeId: home.id,
+    eventType: "bill_due_date_added",
+    title: "Bill due date added",
+    body: `Due ${values.due_date}`,
+    relatedTable: "bills",
+    relatedId: values.bill_id,
+  });
+
+  revalidatePath("/app");
+  revalidatePath("/app/bills");
+  redirectWithNotice(values.return_path, "Due date added.");
+}
+
+export async function completeMaintenanceTask(formData: FormData) {
+  const { home, supabase, user } = await requireUserAndHome();
+  const parsed = maintenanceActionSchema.safeParse({
+    attention_key: getString(formData, "attention_key"),
+    event_type: getString(formData, "event_type") || "maintenance_due",
+    return_path: getString(formData, "return_path") || "/app/maintenance",
+    task_id: getString(formData, "task_id"),
+  });
+
+  if (!parsed.success) {
+    redirectWithNotice("/app/maintenance", "That maintenance task could not be updated.");
+  }
+
+  const values = parsed.data;
+  const { error } = await supabase
+    .from("maintenance_tasks")
+    .update({
+      completed_at: new Date().toISOString(),
+      status: "completed",
+    })
+    .eq("id", values.task_id)
+    .eq("user_id", user.id)
+    .eq("home_id", home.id);
+
+  if (error) {
+    redirectWithNotice(values.return_path, error.message);
+  }
+
+  if (values.attention_key) {
+    await upsertAttentionResolution({
+      userId: user.id,
+      homeId: home.id,
+      attentionKey: values.attention_key,
+      eventType: values.event_type ?? "maintenance_due",
+      relatedTable: "maintenance_tasks",
+      relatedId: values.task_id,
+      resolutionStatus: "handled",
+    note: "Care task completed.",
+    });
+  }
+
+  await createTimelineEvent({
+    userId: user.id,
+    homeId: home.id,
+    eventType: "maintenance_completed",
+    title: "Task completed",
+    relatedTable: "maintenance_tasks",
+    relatedId: values.task_id,
+  });
+
+  revalidatePath("/app");
+  revalidatePath("/app/maintenance");
+  redirectWithNotice(values.return_path, "Task completed.");
+}
+
+export async function skipStarterTask(formData: FormData) {
+  const { home, user } = await requireUserAndHome();
+  const parsed = starterTaskActionSchema.safeParse({
+    attention_key: getString(formData, "attention_key"),
+    return_path: getString(formData, "return_path") || "/app/maintenance",
+    resolution_action: getString(formData, "resolution_action"),
+  });
+
+  if (!parsed.success) {
+    redirectWithNotice("/app/maintenance", "That starter task could not be updated.");
+  }
+
+  await upsertAttentionResolution({
+    userId: user.id,
+    homeId: home.id,
+    attentionKey: parsed.data.attention_key,
+    eventType: "starter_maintenance",
+    relatedTable: "maintenance_tasks",
+    resolutionStatus:
+      parsed.data.resolution_action === "snooze" ? "snoozed" : "dismissed",
+    snoozedUntil:
+      parsed.data.resolution_action === "snooze"
+        ? addCalendarDays(new Date(), 30).toISOString()
+        : null,
+  });
+
+  revalidatePath("/app/maintenance");
+  redirectWithNotice(
+    parsed.data.return_path,
+    parsed.data.resolution_action === "snooze"
+      ? "Skipped for now."
+      : "Marked not relevant."
+  );
 }
 
 export async function createMaintenanceTask(formData: FormData) {
@@ -695,13 +1334,20 @@ export async function createMaintenanceTask(formData: FormData) {
     recurrence: getString(formData, "recurrence"),
     priority: getString(formData, "priority"),
     description: getString(formData, "description"),
+    relevance: getString(formData, "relevance"),
   });
 
   if (!parsed.success) {
-    redirect("/app/maintenance?error=Enter a maintenance task title.");
+    redirect("/app/maintenance?error=Enter a task title and choose a type.");
   }
 
   const values = parsed.data;
+  const reminderNotes = [
+    nullableString(values.description ?? ""),
+    values.relevance ? `Applies to: ${values.relevance}` : null,
+  ]
+    .filter(Boolean)
+    .join("\n");
   const { data: task, error } = await supabase
     .from("maintenance_tasks")
     .insert({
@@ -712,7 +1358,7 @@ export async function createMaintenanceTask(formData: FormData) {
       due_date: nullableDate(values.due_date ?? ""),
       recurrence: nullableString(values.recurrence ?? ""),
       priority: values.priority || "normal",
-      description: nullableString(values.description ?? ""),
+      description: nullableString(reminderNotes),
       status: "open",
     })
     .select("id")
@@ -726,7 +1372,7 @@ export async function createMaintenanceTask(formData: FormData) {
     userId: user.id,
     homeId: home.id,
     eventType: "maintenance_added",
-    title: `${values.title} added`,
+    title: "Reminder added",
     body: values.due_date ? `Due ${values.due_date}` : null,
     relatedTable: "maintenance_tasks",
     relatedId: task.id,
@@ -734,7 +1380,7 @@ export async function createMaintenanceTask(formData: FormData) {
 
   revalidatePath("/app");
   revalidatePath("/app/maintenance");
-  redirect("/app/maintenance");
+  redirectWithNotice("/app/maintenance", "Reminder added.");
 }
 
 export async function createDocumentRecord(formData: FormData) {
@@ -742,12 +1388,13 @@ export async function createDocumentRecord(formData: FormData) {
   const parsed = documentRecordSchema.safeParse({
     title: getString(formData, "title"),
     category: getString(formData, "category"),
+    issued_on: getString(formData, "issued_on"),
     expires_on: getString(formData, "expires_on"),
     notes: getString(formData, "notes"),
   });
 
   if (!parsed.success) {
-    redirect("/app/documents?error=Enter a document title.");
+    redirect("/app/documents?error=Enter a document title and choose a category.");
   }
 
   const values = parsed.data;
@@ -759,6 +1406,7 @@ export async function createDocumentRecord(formData: FormData) {
       title: values.title,
       document_type: nullableString(values.category ?? ""),
       category: nullableString(values.category ?? ""),
+      issued_on: nullableDate(values.issued_on ?? ""),
       expires_on: nullableDate(values.expires_on ?? ""),
       source: "manual",
       notes: nullableString(values.notes ?? ""),
@@ -774,7 +1422,7 @@ export async function createDocumentRecord(formData: FormData) {
     userId: user.id,
     homeId: home.id,
     eventType: "document_added",
-    title: `${values.title} saved`,
+    title: "Document saved",
     body: values.category || null,
     relatedTable: "documents",
     relatedId: document.id,
@@ -782,7 +1430,7 @@ export async function createDocumentRecord(formData: FormData) {
 
   revalidatePath("/app");
   revalidatePath("/app/documents");
-  redirect("/app/documents");
+  redirectWithNotice("/app/documents", "Document saved.");
 }
 
 export async function createInventoryItem(formData: FormData) {
@@ -903,54 +1551,387 @@ export async function createRepairIssue(formData: FormData) {
   const { home, supabase, user } = await requireUserAndHome();
   const parsed = repairIssueSchema.safeParse({
     title: getString(formData, "title"),
-    area: getString(formData, "area"),
+    category: getString(formData, "category"),
+    location: getString(formData, "location"),
     urgency: getString(formData, "urgency"),
+    renter_owner_context: getString(formData, "renter_owner_context"),
     description: getString(formData, "description"),
+    status: getString(formData, "status"),
   });
 
   if (!parsed.success) {
-    redirect("/app/assistant?error=Describe the home issue first.");
+    redirectWithNotice("/app/help", "Couldn't save. Try again.");
   }
 
   const values = parsed.data;
+  const guidance = getIssueGuidance({
+    category: values.category,
+    description: values.description,
+    renterOwnerContext: values.renter_owner_context,
+    title: values.title,
+    urgency: values.urgency,
+  });
+  const status = values.status === "resolved" ? "resolved" : "next_steps_ready";
   const { data: issue, error } = await supabase
     .from("repair_issues")
     .insert({
       user_id: user.id,
       home_id: home.id,
       title: values.title,
-      area: nullableString(values.area ?? ""),
+      area: values.location,
+      category: values.category,
+      location: values.location,
+      renter_owner_context: nullableString(values.renter_owner_context ?? ""),
       urgency: values.urgency || "monitor",
       description: nullableString(values.description ?? ""),
-      recommended_action:
-        values.urgency === "urgent"
-          ? "Consider contacting a licensed professional."
-          : "Track this issue and decide whether it should become a project or maintenance task.",
-      status: "open",
+      recommended_action: guidance.escalation,
+      likely_causes: guidance.likelyCauses,
+      recommended_steps: guidance.recommendedSteps,
+      safety_notes: guidance.safetyNotes,
+      escalation_recommendation: guidance.escalation,
+      resolved_at: status === "resolved" ? new Date().toISOString() : null,
+      status,
     })
     .select("id")
     .single();
 
   if (error) {
     const message = isMissingSchemaError(error)
-      ? homeownerOsMigrationMessage
-      : error.message;
-    redirect(`/app/assistant?error=${encodeURIComponent(message)}`);
+      ? guidedIssueHelpMigrationMessage
+      : "Couldn't save. Try again.";
+    redirect(`/app/help?error=${encodeURIComponent(message)}`);
   }
 
   await createTimelineEvent({
     userId: user.id,
     homeId: home.id,
-    eventType: "repair_issue_added",
-    title: `${values.title} issue logged`,
-    body: values.area || null,
+    eventType: status === "resolved" ? "issue_resolved" : "issue_saved",
+    title: status === "resolved" ? "Issue resolved" : "Issue saved",
+    body: values.title,
     relatedTable: "repair_issues",
     relatedId: issue.id,
   });
 
   revalidatePath("/app");
-  revalidatePath("/app/assistant");
-  redirect("/app/assistant");
+  revalidatePath("/app/help");
+  revalidatePath("/app/maintenance");
+  redirectWithNotice("/app/help", status === "resolved" ? "Issue marked resolved." : "Issue saved.");
+}
+
+export async function createIssueFollowUpTask(formData: FormData) {
+  const { home, supabase, user } = await requireUserAndHome();
+  const parsed = repairIssueSchema.safeParse({
+    title: getString(formData, "title"),
+    category: getString(formData, "category"),
+    location: getString(formData, "location"),
+    urgency: getString(formData, "urgency"),
+    renter_owner_context: getString(formData, "renter_owner_context"),
+    description: getString(formData, "description"),
+  });
+
+  if (!parsed.success) {
+    redirectWithNotice("/app/help", "Couldn't create task. Try again.");
+  }
+
+  const values = parsed.data;
+  const guidance = getIssueGuidance({
+    category: values.category,
+    description: values.description,
+    renterOwnerContext: values.renter_owner_context,
+    title: values.title,
+    urgency: values.urgency,
+  });
+  const dueDate = suggestedDueDateForIssue(values.urgency);
+
+  const { data: issue, error: issueError } = await supabase
+    .from("repair_issues")
+    .insert({
+      user_id: user.id,
+      home_id: home.id,
+      title: values.title,
+      area: values.location,
+      category: values.category,
+      location: values.location,
+      renter_owner_context: nullableString(values.renter_owner_context ?? ""),
+      urgency: values.urgency,
+      description: values.description,
+      recommended_action: guidance.escalation,
+      likely_causes: guidance.likelyCauses,
+      recommended_steps: guidance.recommendedSteps,
+      safety_notes: guidance.safetyNotes,
+      escalation_recommendation: guidance.escalation,
+      status: "task_created",
+    })
+    .select("id,title")
+    .single();
+
+  if (issueError) {
+    redirectWithNotice(
+      "/app/help",
+      isMissingSchemaError(issueError)
+        ? guidedIssueHelpMigrationMessage
+        : "Couldn't create task. Try again."
+    );
+  }
+
+  const { data: task, error: taskError } = await supabase
+    .from("maintenance_tasks")
+    .insert({
+      user_id: user.id,
+      home_id: home.id,
+      title: values.title,
+      category: "repair",
+      due_date: dueDate,
+      recurrence: null,
+      priority:
+        values.urgency === "urgent" || values.urgency === "high"
+          ? "high"
+          : "normal",
+      description: nullableString(
+        [
+          values.description,
+          values.location ? `Location: ${values.location}` : null,
+          values.category ? `Issue type: ${values.category.replaceAll("_", " ")}` : null,
+        ]
+          .filter(Boolean)
+          .join("\n")
+      ),
+      status: "open",
+    })
+    .select("id")
+    .single();
+
+  if (taskError) {
+    redirectWithNotice("/app/help", "Couldn't create task. Try again.");
+  }
+
+  const { error: linkError } = await supabase
+    .from("repair_issues")
+    .update({ related_task_id: task.id })
+    .eq("id", issue.id)
+    .eq("user_id", user.id)
+    .eq("home_id", home.id);
+
+  if (linkError) {
+    redirectWithNotice(
+      "/app/help",
+      isMissingSchemaError(linkError)
+        ? guidedIssueHelpMigrationMessage
+        : "Task created, but the issue could not be linked."
+    );
+  }
+
+  await createTimelineEvent({
+    userId: user.id,
+    homeId: home.id,
+    eventType: "issue_task_created",
+    title: "Issue follow-up created",
+    body: issue.title,
+    relatedTable: "maintenance_tasks",
+    relatedId: task.id,
+  });
+
+  revalidatePath("/app");
+  revalidatePath("/app/help");
+  revalidatePath("/app/maintenance");
+  redirectWithNotice("/app/help", "Task created.");
+}
+
+export async function createCareTaskFromIssue(formData: FormData) {
+  const { home, supabase, user } = await requireUserAndHome();
+  const parsed = issueActionSchema.safeParse({
+    issue_id: getString(formData, "issue_id"),
+    return_path: getString(formData, "return_path") || "/app/help",
+  });
+
+  if (!parsed.success) {
+    redirectWithNotice("/app/help", "Couldn't create task. Try again.");
+  }
+
+  const { data: issue, error: issueError } = await supabase
+    .from("repair_issues")
+    .select("id,title,description,urgency,category,location,related_task_id")
+    .eq("id", parsed.data.issue_id)
+    .eq("user_id", user.id)
+    .eq("home_id", home.id)
+    .single();
+
+  if (issueError || !issue) {
+    const message =
+      issueError && isMissingSchemaError(issueError)
+        ? guidedIssueHelpMigrationMessage
+        : "Couldn't create task. Try again.";
+    redirectWithNotice(parsed.data.return_path, message);
+  }
+
+  if (issue.related_task_id) {
+    revalidatePath("/app/help");
+    revalidatePath("/app/maintenance");
+    redirectWithNotice(parsed.data.return_path, "Task already exists.");
+  }
+
+  const dueDate = suggestedDueDateForIssue(issue.urgency);
+  const { data: task, error } = await supabase
+    .from("maintenance_tasks")
+    .insert({
+      user_id: user.id,
+      home_id: home.id,
+      title: issue.title,
+      category: "repair",
+      due_date: dueDate,
+      recurrence: null,
+      priority:
+        issue.urgency === "urgent" || issue.urgency === "high"
+          ? "high"
+          : "normal",
+      description: nullableString(
+        [
+          issue.description,
+          issue.location ? `Location: ${issue.location}` : null,
+          issue.category ? `Issue type: ${issue.category.replaceAll("_", " ")}` : null,
+        ]
+          .filter(Boolean)
+          .join("\n")
+      ),
+      status: "open",
+    })
+    .select("id")
+    .single();
+
+  if (error) {
+    redirectWithNotice(parsed.data.return_path, "Couldn't create task. Try again.");
+  }
+
+  const { error: updateError } = await supabase
+    .from("repair_issues")
+    .update({
+      related_task_id: task.id,
+      status: "task_created",
+    })
+    .eq("id", issue.id)
+    .eq("user_id", user.id)
+    .eq("home_id", home.id);
+
+  if (updateError) {
+    redirectWithNotice(
+      parsed.data.return_path,
+      isMissingSchemaError(updateError)
+        ? guidedIssueHelpMigrationMessage
+        : "Task created, but the issue could not be linked."
+    );
+  }
+
+  await createTimelineEvent({
+    userId: user.id,
+    homeId: home.id,
+    eventType: "issue_task_created",
+    title: "Issue follow-up created",
+    body: issue.title,
+    relatedTable: "maintenance_tasks",
+    relatedId: task.id,
+  });
+
+  revalidatePath("/app");
+  revalidatePath("/app/help");
+  revalidatePath("/app/maintenance");
+  redirectWithNotice(parsed.data.return_path, "Task created.");
+}
+
+export async function resolveRepairIssue(formData: FormData) {
+  const { home, supabase, user } = await requireUserAndHome();
+  const parsed = issueActionSchema.safeParse({
+    issue_id: getString(formData, "issue_id"),
+    return_path: getString(formData, "return_path") || "/app/help",
+  });
+
+  if (!parsed.success) {
+    redirectWithNotice("/app/help", "Couldn't save. Try again.");
+  }
+
+  const { data: issue, error } = await supabase
+    .from("repair_issues")
+    .update({
+      resolved_at: new Date().toISOString(),
+      status: "resolved",
+    })
+    .eq("id", parsed.data.issue_id)
+    .eq("user_id", user.id)
+    .eq("home_id", home.id)
+    .select("id,title")
+    .single();
+
+  if (error) {
+    redirectWithNotice(
+      parsed.data.return_path,
+      isMissingSchemaError(error) ? guidedIssueHelpMigrationMessage : "Couldn't save. Try again."
+    );
+  }
+
+  await createTimelineEvent({
+    userId: user.id,
+    homeId: home.id,
+    eventType: "issue_resolved",
+    title: "Issue resolved",
+    body: issue.title,
+    relatedTable: "repair_issues",
+    relatedId: issue.id,
+  });
+
+  revalidatePath("/app");
+  revalidatePath("/app/help");
+  redirectWithNotice(parsed.data.return_path, "Issue resolved.");
+}
+
+export async function addRepairIssueNote(formData: FormData) {
+  const { home, supabase, user } = await requireUserAndHome();
+  const parsed = issueNoteSchema.safeParse({
+    issue_id: getString(formData, "issue_id"),
+    note: getString(formData, "note"),
+    return_path: getString(formData, "return_path") || "/app/help",
+  });
+
+  if (!parsed.success) {
+    redirectWithNotice("/app/help", "Couldn't save. Try again.");
+  }
+
+  const { data: issue, error: issueError } = await supabase
+    .from("repair_issues")
+    .select("id,title,description")
+    .eq("id", parsed.data.issue_id)
+    .eq("user_id", user.id)
+    .eq("home_id", home.id)
+    .single();
+
+  if (issueError || !issue) {
+    redirectWithNotice(parsed.data.return_path, "Couldn't save. Try again.");
+  }
+
+  const noteLine = `Note ${new Date().toLocaleDateString("en-CA")}: ${parsed.data.note}`;
+  const { error } = await supabase
+    .from("repair_issues")
+    .update({
+      description: [issue.description, noteLine].filter(Boolean).join("\n\n"),
+    })
+    .eq("id", issue.id)
+    .eq("user_id", user.id)
+    .eq("home_id", home.id);
+
+  if (error) {
+    redirectWithNotice(parsed.data.return_path, "Couldn't save. Try again.");
+  }
+
+  await createTimelineEvent({
+    userId: user.id,
+    homeId: home.id,
+    eventType: "issue_note_added",
+    title: "Note added",
+    body: issue.title,
+    relatedTable: "repair_issues",
+    relatedId: issue.id,
+  });
+
+  revalidatePath("/app/help");
+  redirectWithNotice(parsed.data.return_path, "Note added.");
 }
 
 export async function logout() {
