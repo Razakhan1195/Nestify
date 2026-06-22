@@ -1,5 +1,1 @@
-import { redirect } from "next/navigation";
-
-export default function AssistantRedirectPage() {
-  redirect("/app/help");
-}
+export { default } from "../help/page";

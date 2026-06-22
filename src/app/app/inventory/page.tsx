@@ -71,9 +71,9 @@ export default async function InventoryPage({ searchParams }: InventoryPageProps
   return (
     <div className="grid gap-6">
       <PageHeader
-        eyebrow="Warranties and home assets"
-        title="Inventory"
-        description="Track appliances, equipment, model numbers, warranty dates, and the items future repairs depend on."
+        eyebrow="Appliances & systems"
+        title="Appliances & Systems"
+        description="Track appliances, equipment, model numbers, warranty dates, and the systems future repairs depend on."
       />
 
       {migrationRequired ? (
@@ -102,7 +102,7 @@ export default async function InventoryPage({ searchParams }: InventoryPageProps
 
           <Card className="rounded-lg">
             <CardHeader>
-              <CardTitle>Add an appliance or item</CardTitle>
+              <CardTitle>Add an appliance or system</CardTitle>
               <CardDescription>
                 Start with items that have warranties, model numbers, or repair
                 history.
@@ -169,7 +169,7 @@ export default async function InventoryPage({ searchParams }: InventoryPageProps
         <EmptyState
           icon={PackageCheck}
           title="No inventory items yet"
-          description="Add appliances and equipment with warranty or model details so repairs and replacements are easier later."
+          description="Add appliances, equipment, and home systems with warranty or model details so repairs and replacements are easier later."
         />
       ) : null}
     </div>

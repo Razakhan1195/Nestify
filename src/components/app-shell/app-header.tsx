@@ -43,9 +43,9 @@ export function AppHeader({ email }: { email?: string | null }) {
 
       <div className="ml-auto flex items-center gap-1.5 md:gap-2">
         <Button asChild className="hidden sm:inline-flex" size="sm" variant="ghost">
-          <Link href="/app/help">
+          <Link href="/app/assistant">
             <CircleHelp className="size-4" />
-            Ask Nestify
+            AI Assistant
           </Link>
         </Button>
 

@@ -73,9 +73,9 @@ export default async function ProjectsPage({ searchParams }: ProjectsPageProps) 
   return (
     <div className="grid gap-6">
       <PageHeader
-        eyebrow="Home history"
-        title="Projects"
-        description="Track repairs, renovations, upgrades, quotes, costs, and notes so future-you knows what happened."
+        eyebrow="Repairs"
+        title="Repairs & projects"
+        description="Track active fixes, quotes, contractors, costs, and follow-ups so future-you knows what happened."
       />
 
       {migrationRequired ? (
@@ -104,7 +104,7 @@ export default async function ProjectsPage({ searchParams }: ProjectsPageProps) 
 
           <Card className="rounded-lg">
             <CardHeader>
-              <CardTitle>Create a project</CardTitle>
+              <CardTitle>Add a repair or project</CardTitle>
               <CardDescription>
                 Use projects for repairs, upgrades, renovations, inspections, and
                 major home work.
@@ -177,7 +177,7 @@ export default async function ProjectsPage({ searchParams }: ProjectsPageProps) 
       ) : !migrationRequired ? (
         <EmptyState
           icon={Hammer}
-          title="No projects yet"
+          title="No repairs or projects yet"
           description="Create a project when something becomes a repair, renovation, upgrade, inspection, or major home event worth remembering."
         />
       ) : null}
