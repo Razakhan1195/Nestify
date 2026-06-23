@@ -37,6 +37,7 @@ import {
   StatusBadge,
 } from "@/components/product/design-system";
 import { SubmitButton } from "@/components/submit-button";
+import { SectionCard } from "@/components/section-card";
 import {
   DashboardEmptyState,
   DashboardStatRow,
@@ -853,74 +854,10 @@ export default async function AppHomePage({
       ) : null}
 
       {!hasMeaningfulHouseholdData ? (
-        <>
-          <div className="grid gap-4 rounded-xl border bg-card p-5 md:grid-cols-[1fr_auto] md:items-center">
-            <div>
-              <h2 className="text-xl font-semibold tracking-tight">
-                Welcome to your home command center
-              </h2>
-              <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
-                Add a little about your home and Nestify will start working for you.
-              </p>
-            </div>
-            <StartSetupDialog />
-          </div>
-
-          <div className="grid gap-3 md:grid-cols-3">
-            {outcomeRows.slice(0, 3).map((item) => (
-              <div className="rounded-xl border bg-card p-4" key={item.title}>
-                <item.icon className="size-5 text-muted-foreground" />
-                <p className="mt-3 font-medium">{item.title}</p>
-                <p className="mt-1 text-sm text-muted-foreground">{item.description}</p>
-              </div>
-            ))}
-          </div>
-
-          <SectionCard
-            title="Start here"
-            description="Connect or add one thing and the dashboard begins to fill in."
-            icon={Sparkles}
-          >
-            <div className="grid gap-3 sm:grid-cols-2">
-              <Button asChild variant="outline">
-                <Link href="/app/providers">Connect provider</Link>
-              </Button>
-              <Button asChild variant="outline">
-                <Link href="/app/documents#add-document">Save a document</Link>
-              </Button>
-              <Button asChild variant="outline">
-                <Link href="/app/maintenance#add-task">Add a task</Link>
-              </Button>
-              <Button asChild variant="outline">
-                <Link href="/app/bills#manual-bill">Add a bill</Link>
-              </Button>
-            </div>
-          </SectionCard>
-        </>
+        <DashboardEmptyState />
       ) : (
         <>
-          <div className="grid grid-cols-2 gap-3 lg:grid-cols-4 lg:gap-4">
-            {dashboardStats.map((stat) => (
-              <Card key={stat.label}>
-                <CardContent className="flex flex-col gap-3 p-4 md:p-5">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-medium text-muted-foreground">
-                      {stat.label}
-                    </span>
-                    <stat.icon className="size-4 text-muted-foreground" />
-                  </div>
-                  <div className="flex flex-col gap-0.5">
-                    <span className="text-2xl font-semibold tracking-tight">
-                      {stat.value}
-                    </span>
-                    <span className="truncate text-xs text-muted-foreground">
-                      {stat.note}
-                    </span>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+          <DashboardStatRow stats={dashboardStats} />
 
           <div className="grid gap-6 lg:grid-cols-3 lg:gap-8">
             <div className="flex flex-col gap-6 lg:col-span-2">
@@ -943,17 +880,17 @@ export default async function AppHomePage({
                             <span className="truncate text-sm font-medium">
                               {item.title}
                             </span>
-                            <VercelStatusBadge
-                              tone={
+                            <span
+                              className={
                                 item.severity === "high"
-                                  ? "overdue"
+                                  ? "inline-flex items-center rounded-full bg-[color:var(--critical-bg)] px-2 py-0.5 text-[11px] font-medium capitalize text-[color:var(--critical-foreground)]"
                                   : item.severity === "medium"
-                                    ? "due-soon"
-                                    : "upcoming"
+                                    ? "inline-flex items-center rounded-full bg-[color:var(--warning-bg)] px-2 py-0.5 text-[11px] font-medium capitalize text-[color:var(--warning-foreground)]"
+                                    : "inline-flex items-center rounded-full bg-secondary px-2 py-0.5 text-[11px] font-medium capitalize text-secondary-foreground"
                               }
                             >
                               {item.meta ?? item.eventType.replaceAll("_", " ")}
-                            </VercelStatusBadge>
+                            </span>
                           </div>
                           <span className="truncate text-xs text-muted-foreground">
                             {item.explanation}
@@ -978,11 +915,15 @@ export default async function AppHomePage({
                       </div>
                     ))
                   ) : (
-                    <EmptyState
-                      icon={PackageCheck}
-                      title="Nothing needs attention"
-                      description="Nestify will surface bills, repairs, records, and reminders here when something needs a look."
-                    />
+                    <div className="flex flex-col items-center gap-2 rounded-xl border border-dashed border-[color:var(--border-soft)] bg-muted/20 px-4 py-8 text-center">
+                      <span className="flex size-10 items-center justify-center rounded-full bg-[color:var(--success-bg)] text-[color:var(--success-foreground)]">
+                        <PackageCheck className="size-5" />
+                      </span>
+                      <p className="text-sm font-medium">You&apos;re all caught up</p>
+                      <p className="max-w-sm text-xs text-muted-foreground">
+                        Nestify surfaces bills, repairs, records, and reminders here when something needs a look.
+                      </p>
+                    </div>
                   )}
                   {attentionItems.length > 4 ? (
                     <Button asChild variant="ghost" size="sm" className="mt-1 w-full justify-center">
@@ -992,50 +933,22 @@ export default async function AppHomePage({
                 </CardContent>
               </Card>
 
-              <SectionCard
-                title="Upcoming maintenance"
-                description="The next tasks to keep your home in good shape"
-                icon={CalendarClock}
-                action={
+              <Card>
+                <CardHeader className="flex-row items-center justify-between gap-2 space-y-0">
+                  <div className="flex flex-col gap-1">
+                    <CardTitle>Coming up</CardTitle>
+                    <CardDescription>
+                      Bills, reminders, and renewals due in the days ahead.
+                    </CardDescription>
+                  </div>
                   <Button asChild variant="ghost" size="sm" className="text-xs">
                     <Link href="/app/maintenance">View all</Link>
                   </Button>
-                }
-              >
-                {maintenanceRows.length ? (
-                  <div className="flex flex-col gap-2">
-                    {maintenanceRows.slice(0, 4).map((task) => (
-                      <Link
-                        className="flex items-center justify-between gap-3 rounded-lg border bg-card px-3 py-2.5 transition-colors hover:bg-accent/40"
-                        href="/app/maintenance"
-                        key={task.id}
-                      >
-                        <div className="flex min-w-0 flex-col">
-                          <span className="truncate text-sm font-medium">
-                            {task.title}
-                          </span>
-                          <span className="text-xs text-muted-foreground">
-                            Due {formatDate(task.due_date)}
-                          </span>
-                        </div>
-                        <VercelStatusBadge
-                          tone={
-                            parseDate(task.due_date) && parseDate(task.due_date)! < today
-                              ? "overdue"
-                              : "upcoming"
-                          }
-                        />
-                      </Link>
-                    ))}
-                  </div>
-                ) : (
-                  <EmptyState
-                    icon={CalendarClock}
-                    title="No maintenance due"
-                    description="Add one recurring task to start building your home care rhythm."
-                  />
-                )}
-              </SectionCard>
+                </CardHeader>
+                <CardContent>
+                  <UpcomingList items={operatingTimeline} />
+                </CardContent>
+              </Card>
 
               <SectionCard
                 title="Warranty & document alerts"
@@ -1060,7 +973,9 @@ export default async function AppHomePage({
                                 {item.category ?? "Home item"} · {formatDate(item.warranty_expires_on)}
                               </span>
                             </div>
-                            <VercelStatusBadge tone="expiring" />
+                            <span className="inline-flex shrink-0 items-center rounded-full bg-[color:var(--warning-bg)] px-2 py-0.5 text-[11px] font-medium text-[color:var(--warning-foreground)]">
+                              Expiring
+                            </span>
                             <ChevronRight className="size-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
                           </Link>
                         ))}
@@ -1108,58 +1023,20 @@ export default async function AppHomePage({
                 title="Quick actions"
                 description="Get one more thing on the record"
               >
-                <div className="grid gap-3 sm:grid-cols-2">
-                  {[
-                    ["Add a bill", "Track a due date or reminder", ReceiptText, "/app/bills#manual-bill"],
-                    ["Save a document", "Policies, manuals, receipts", FileText, "/app/documents#add-document"],
-                    ["Add a task", "Recurring or one-off upkeep", Wrench, "/app/maintenance#add-task"],
-                    ["Log a repair", "Track a fix and contractor", Hammer, "/app/repairs#log-repair"],
-                    ["Track a warranty", "Never miss an expiry", ShieldAlert, "/app/warranties"],
-                    ["Add an appliance", "Build your home inventory", Refrigerator, "/app/appliances#add-item"],
-                  ].map(([title, description, Icon, href]) => {
-                    const IconComponent = Icon as typeof ReceiptText;
-                    return (
-                      <Link
-                        className="group flex items-center gap-3 rounded-xl border bg-card p-3 transition-colors hover:bg-accent/40"
-                        href={href as string}
-                        key={title as string}
-                      >
-                        <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-accent text-accent-foreground">
-                          <IconComponent className="size-4" />
-                        </span>
-                        <span className="min-w-0 flex-1">
-                          <span className="block truncate text-sm font-medium">{title as string}</span>
-                          <span className="block truncate text-xs text-muted-foreground">{description as string}</span>
-                        </span>
-                        <ChevronRight className="size-4 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
-                      </Link>
-                    );
-                  })}
-                </div>
+                <QuickActionsGrid />
               </SectionCard>
             </div>
 
             <div className="flex flex-col gap-6 lg:col-span-1">
-              <SectionCard title="Home health" description="How complete your home profile is">
-                <div className="flex flex-col gap-3">
-                  <div>
-                    <p className="text-2xl font-semibold tracking-tight">
-                      {connectedProviderCount}/{Math.max(providerRows.length, 1)}
-                    </p>
-                    <p className="text-xs text-muted-foreground">Providers connected</p>
-                  </div>
-                  <div className="h-2 overflow-hidden rounded-full bg-muted">
-                    <div
-                      className="h-full rounded-full bg-primary"
-                      style={{
-                        width: `${Math.min(100, Math.round((connectedProviderCount / Math.max(providerRows.length, 1)) * 100))}%`,
-                      }}
-                    />
-                  </div>
-                  <Button asChild variant="outline" size="sm">
-                    <Link href="/app/providers">Review providers</Link>
-                  </Button>
-                </div>
+              <SectionCard title="Home setup" description="Round out your home to get the most from Nestify">
+                <SetupProgress
+                  steps={[
+                    { done: hasBillData, href: "/app/bills#manual-bill", label: "Track a bill" },
+                    { done: hasDocumentData, href: "/app/documents#add-document", label: "Save a document" },
+                    { done: hasCareData, href: "/app/maintenance#add-task", label: "Add a reminder" },
+                    { done: hasConnectedProviderData, href: "/app/settings", label: "Connect a provider (optional)" },
+                  ]}
+                />
               </SectionCard>
 
               <SectionCard title="Ask Nestify" description="Get safe next steps for home issues">
@@ -1174,30 +1051,7 @@ export default async function AppHomePage({
               </SectionCard>
 
               <SectionCard title="Recent activity" description="The latest across your home">
-                {recentActivityItems.length ? (
-                  <div className="flex flex-col">
-                    {recentActivityItems.slice(0, 5).map((event) => (
-                      <div
-                        className="flex items-center justify-between gap-2 border-b py-2.5 first:pt-0 last:border-b-0 last:pb-0"
-                        key={event.id}
-                      >
-                        <div className="flex min-w-0 flex-col">
-                          <span className="truncate text-sm font-medium">{event.title}</span>
-                          <span className="text-xs text-muted-foreground">
-                            {event.description ?? event.source}
-                          </span>
-                        </div>
-                        <span className="shrink-0 text-xs text-muted-foreground">
-                          {formatDate(event.created_at.slice(0, 10))}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-sm text-muted-foreground">
-                    New bills, records, repairs, and maintenance activity will appear here.
-                  </p>
-                )}
+                <RecentActivityList items={recentActivityItems} />
               </SectionCard>
             </div>
           </div>
