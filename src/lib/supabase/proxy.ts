@@ -41,6 +41,12 @@ export async function updateSession(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
+  console.log("[v0] middleware", {
+    path: request.nextUrl.pathname,
+    hasUser: Boolean(user),
+    cookieNames: request.cookies.getAll().map((c) => c.name),
+  });
+
   // Redirect unauthenticated users away from protected app routes.
   if (!user && request.nextUrl.pathname.startsWith("/app")) {
     const url = request.nextUrl.clone();

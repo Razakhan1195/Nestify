@@ -29,6 +29,8 @@ export default async function AppLayout({
     data: { user },
   } = await supabase.auth.getUser();
 
+  console.log("[v0] app layout", { hasUser: Boolean(user) });
+
   if (!user) {
     redirect("/login");
   }
