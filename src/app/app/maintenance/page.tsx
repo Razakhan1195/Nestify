@@ -2,11 +2,8 @@ import Link from "next/link";
 import { Calendar, ClipboardList, MapPin, Plus, Repeat, Sparkles, Wrench } from "lucide-react";
 import { redirect } from "next/navigation";
 
-import {
-  completeMaintenanceTask,
-  createMaintenanceTask,
-  skipStarterTask,
-} from "@/app/actions";
+import { completeMaintenanceTask, createMaintenanceTask } from "@/app/actions";
+import { MaintenancePlanGenerator } from "@/components/ai/maintenance-plan-generator";
 import { EmptyState } from "@/components/empty-state";
 import { ActionFeedbackToast } from "@/components/product/action-feedback-toast";
 import { PageHeader, PageShell } from "@/components/product/design-system";
@@ -35,12 +32,6 @@ type MaintenanceTask = {
 type MaintenancePageProps = {
   searchParams: Promise<{ error?: string | string[]; notice?: string | string[] }>;
 };
-
-const starterTasks = [
-  "Test garage door auto-reverse safety feature",
-  "Vacuum refrigerator condenser coils",
-  "Check water heater pressure relief valve",
-];
 
 const seasonalTasks = [
   {
@@ -226,28 +217,11 @@ export default async function MaintenancePage({ searchParams }: MaintenancePageP
 
           <div className="flex flex-col gap-6 lg:col-span-1">
             <SectionCard
-              description="Based on your home and the season"
+              description="A plan built for your home and climate"
               icon={Sparkles}
-              title="AI suggested tasks"
+              title="AI maintenance plan"
             >
-              <div className="flex flex-col gap-3">
-                {starterTasks.map((task) => (
-                  <div
-                    className="flex items-start justify-between gap-3 rounded-lg border bg-card p-3"
-                    key={task}
-                  >
-                    <p className="text-sm leading-snug">{task}</p>
-                    <form action={skipStarterTask}>
-                      <input name="attention_key" type="hidden" value={`starter-maintenance-${task.toLowerCase().replaceAll(" ", "-")}`} />
-                      <input name="event_type" type="hidden" value="starter_maintenance" />
-                      <input name="return_path" type="hidden" value="/app/maintenance" />
-                      <Button variant="ghost" size="sm" className="h-7 shrink-0 gap-1 px-2 text-xs">
-                        Skip
-                      </Button>
-                    </form>
-                  </div>
-                ))}
-              </div>
+              <MaintenancePlanGenerator hasTasks={taskRows.length > 0} />
             </SectionCard>
 
             <SectionCard

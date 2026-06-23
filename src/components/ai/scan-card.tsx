@@ -237,11 +237,14 @@ export function ScanCard({ kind }: { kind: ScanKind }) {
 
           {kind === "document" ? (
             <div className="sm:col-span-2 rounded-lg border bg-card p-3">
-              <label className="flex items-start gap-2">
-                <Checkbox
+              <label className="flex cursor-pointer items-start gap-2">
+                <input
                   checked={remind}
-                  onCheckedChange={(value) => setRemind(value === true)}
+                  className="sr-only"
+                  onChange={(event) => setRemind(event.target.checked)}
+                  type="checkbox"
                 />
+                <Checkbox checked={remind} />
                 <span className="text-sm leading-snug">
                   Create a reminder for this document
                   <span className="block text-xs text-muted-foreground">

@@ -63,7 +63,7 @@ const PRIORITY_CLASS: Record<PlanTask["priority"], string> = {
   low: "bg-muted text-muted-foreground",
 };
 
-export function MaintenancePlanGenerator() {
+export function MaintenancePlanGenerator({ hasTasks = false }: { hasTasks?: boolean }) {
   const [status, setStatus] = useState<"idle" | "loading" | "ready">("idle");
   const [error, setError] = useState<string | null>(null);
   const [tasks, setTasks] = useState<PlanTask[]>([]);
@@ -104,8 +104,9 @@ export function MaintenancePlanGenerator() {
     return (
       <div className="flex flex-col gap-3">
         <p className="text-sm leading-snug text-muted-foreground">
-          Generate a maintenance plan tailored to your home&apos;s type, age, and climate. Review the
-          suggestions and add the ones you want.
+          {hasTasks
+            ? "Want more ideas? Generate a maintenance plan tailored to your home's type, age, and climate, then add the ones you want."
+            : "Generate a maintenance plan tailored to your home's type, age, and climate. Review the suggestions and add the ones you want."}
         </p>
         <Button className="w-fit gap-2" disabled={status === "loading"} onClick={generate} type="button">
           {status === "loading" ? <Loader2 className="size-4 animate-spin" /> : <Wand2 className="size-4" />}
@@ -124,13 +125,15 @@ export function MaintenancePlanGenerator() {
             className="flex cursor-pointer items-start gap-3 rounded-lg border bg-card p-3"
             key={`${task.title}-${index}`}
           >
-            <Checkbox
+            <input
               checked={selected[index] ?? false}
-              className="mt-0.5"
-              onCheckedChange={(value) =>
-                setSelected((prev) => ({ ...prev, [index]: value === true }))
+              className="sr-only"
+              onChange={(event) =>
+                setSelected((prev) => ({ ...prev, [index]: event.target.checked }))
               }
+              type="checkbox"
             />
+            <Checkbox checked={selected[index] ?? false} className="mt-0.5" />
             <div className="flex flex-1 flex-col gap-1">
               <div className="flex flex-wrap items-center gap-2">
                 <p className="text-sm font-medium leading-tight">{task.title}</p>
