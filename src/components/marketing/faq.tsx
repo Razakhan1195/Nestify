@@ -14,13 +14,19 @@ const faqs = [
   },
   {
     answer:
-      "Bills and reminders, maintenance schedules, repairs and contractors, documents, warranties, and your appliances and systems. It's the single place for everything that keeps your home running.",
+      "Bills and reminders, maintenance schedules, repairs and contractors, documents, warranties, and your appliances and systems. Nestify uses that context to explain what is due, what changed, and what needs attention.",
     question: "What can I track in Nestify?",
     value: "tracking",
   },
   {
     answer:
-      "Nestify watches your due dates, renewals, and seasonal tasks, then surfaces what needs you on your dashboard and reminds you before deadlines, so small things never become expensive ones.",
+      "Nestify uses AI to summarize your home status, answer questions about your records, and suggest practical next steps. It does not replace professionals for urgent or unsafe home issues.",
+    question: "What does the AI do?",
+    value: "ai",
+  },
+  {
+    answer:
+      "Nestify watches your due dates, renewals, changes, and seasonal tasks, then uses AI-friendly summaries to surface what needs you before deadlines sneak up.",
     question: "How do reminders work?",
     value: "reminders",
   },

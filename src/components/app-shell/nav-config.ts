@@ -1,7 +1,9 @@
 import {
   FileText,
   Hammer,
+  Home,
   LayoutDashboard,
+  Plug,
   ReceiptText,
   Refrigerator,
   Settings,
@@ -32,6 +34,12 @@ export const appNavSections: AppNavSection[] = [
         href: "/app",
         icon: LayoutDashboard,
         title: "Dashboard",
+      },
+      {
+        description: "Connect utilities, tax, insurance, and services",
+        href: "/app/providers",
+        icon: Plug,
+        title: "Providers",
       },
     ],
   },
@@ -82,8 +90,14 @@ export const appNavSections: AppNavSection[] = [
     ],
   },
   {
-    label: "Assistant & settings",
+    label: "Home & help",
     items: [
+      {
+        description: "Profile, systems, providers, and history",
+        href: "/app/home",
+        icon: Home,
+        title: "Home",
+      },
       {
         description: "Ask about your home and get safe next steps",
         href: "/app/assistant",

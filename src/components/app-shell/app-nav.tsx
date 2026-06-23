@@ -88,7 +88,7 @@ export function MobileNav() {
           </SheetTitle>
         </SheetHeader>
         <p className="px-4 pb-4 text-sm text-muted-foreground">
-          Know what is due, what changed, and where household records live.
+          Know what is due, what changed, what needs attention, and what to do next.
         </p>
         <NavLinks onMobile />
       </SheetContent>
