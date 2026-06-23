@@ -14,6 +14,7 @@ import {
   SectionHeader,
   StatusBadge,
 } from "@/components/product/design-system";
+import { ScanCard } from "@/components/ai/scan-card";
 import { CardContent } from "@/components/ui/card";
 import { requireCurrentUserHome } from "@/lib/homes";
 import { createClient } from "@/lib/supabase/server";
@@ -132,6 +133,14 @@ export default async function WarrantiesPage() {
           title={warrantyDocuments.length.toString()}
         />
       </div>
+
+      <PageSection>
+        <SectionHeader
+          title="Add a warranty"
+          description="Scan a warranty card or receipt and Nestify fills in the product, provider, and expiry date."
+        />
+        <ScanCard kind="warranty" />
+      </PageSection>
 
       <PageSection>
         <SectionHeader

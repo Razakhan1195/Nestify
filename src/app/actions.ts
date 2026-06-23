@@ -118,12 +118,28 @@ const maintenanceTaskSchema = z.object({
   relevance: z.string().optional(),
 });
 
+const planTasksSchema = z
+  .array(
+    z.object({
+      title: z.string().min(1).max(160),
+      category: z.string().max(80).optional(),
+      recurrence: z.string().max(80).optional(),
+      due_date: z.string().optional(),
+      description: z.string().max(400).optional(),
+      priority: z.string().max(20).optional(),
+    }),
+  )
+  .min(1)
+  .max(12);
+
 const documentRecordSchema = z.object({
   title: z.string().min(1, "Enter a document title.").max(160),
   category: z.string().min(1, "Choose a document category.").max(80),
   issued_on: z.string().optional(),
   expires_on: z.string().optional(),
   notes: z.string().optional(),
+  reminder_title: z.string().optional(),
+  reminder_date: z.string().optional(),
 });
 
 const inventoryItemSchema = z.object({
@@ -132,6 +148,9 @@ const inventoryItemSchema = z.object({
   room_or_area: z.string().optional(),
   brand: z.string().optional(),
   model_number: z.string().optional(),
+  serial_number: z.string().optional(),
+  purchase_date: z.string().optional(),
+  purchase_price: z.string().optional(),
   warranty_expires_on: z.string().optional(),
   notes: z.string().optional(),
 });
@@ -1383,6 +1402,54 @@ export async function createMaintenanceTask(formData: FormData) {
   redirectWithNotice("/app/maintenance", "Reminder added.");
 }
 
+export async function createMaintenanceTasksFromPlan(formData: FormData) {
+  const { home, supabase, user } = await requireUserAndHome();
+
+  let payload: unknown;
+  try {
+    payload = JSON.parse(getString(formData, "tasks") || "[]");
+  } catch {
+    redirect("/app/maintenance?error=Could not read the selected tasks.");
+  }
+
+  const parsed = planTasksSchema.safeParse(payload);
+  if (!parsed.success) {
+    redirect("/app/maintenance?error=Select at least one task to add.");
+  }
+
+  const rows = parsed.data.map((task) => ({
+    user_id: user.id,
+    home_id: home.id,
+    title: task.title,
+    category: nullableString(task.category ?? ""),
+    recurrence: nullableString(task.recurrence ?? ""),
+    due_date: nullableDate(task.due_date ?? ""),
+    priority: task.priority || "normal",
+    description: nullableString(task.description ?? ""),
+    status: "open",
+  }));
+
+  const { error } = await supabase.from("maintenance_tasks").insert(rows);
+  if (error) {
+    redirect(`/app/maintenance?error=${encodeURIComponent(error.message)}`);
+  }
+
+  await createTimelineEvent({
+    userId: user.id,
+    homeId: home.id,
+    eventType: "maintenance_plan_added",
+    title: `Added ${rows.length} ${rows.length === 1 ? "task" : "tasks"} from your maintenance plan`,
+    relatedTable: "maintenance_tasks",
+  });
+
+  revalidatePath("/app");
+  revalidatePath("/app/maintenance");
+  redirectWithNotice(
+    "/app/maintenance",
+    `Added ${rows.length} ${rows.length === 1 ? "task" : "tasks"} to your plan.`,
+  );
+}
+
 export async function createDocumentRecord(formData: FormData) {
   const { home, supabase, user } = await requireUserAndHome();
   const parsed = documentRecordSchema.safeParse({
@@ -1391,6 +1458,8 @@ export async function createDocumentRecord(formData: FormData) {
     issued_on: getString(formData, "issued_on"),
     expires_on: getString(formData, "expires_on"),
     notes: getString(formData, "notes"),
+    reminder_title: getString(formData, "reminder_title"),
+    reminder_date: getString(formData, "reminder_date"),
   });
 
   if (!parsed.success) {
@@ -1428,9 +1497,32 @@ export async function createDocumentRecord(formData: FormData) {
     relatedId: document.id,
   });
 
+  // When the document carries a real deadline (renewal/expiry), turn it into a
+  // reminder so the vault actively protects the homeowner instead of just
+  // storing files. Failure here must not block saving the document.
+  const reminderTitle = nullableString(values.reminder_title ?? "");
+  const reminderDate = nullableDate(values.reminder_date ?? "");
+  let reminderCreated = false;
+  if (reminderTitle && reminderDate) {
+    const { error: reminderError } = await supabase.from("maintenance_tasks").insert({
+      user_id: user.id,
+      home_id: home.id,
+      title: reminderTitle,
+      category: nullableString(values.category ?? ""),
+      due_date: reminderDate,
+      description: `From document: ${values.title}`,
+      status: "open",
+    });
+    reminderCreated = !reminderError;
+  }
+
   revalidatePath("/app");
   revalidatePath("/app/documents");
-  redirectWithNotice("/app/documents", "Document saved.");
+  revalidatePath("/app/maintenance");
+  redirectWithNotice(
+    "/app/documents",
+    reminderCreated ? "Document saved and reminder added." : "Document saved.",
+  );
 }
 
 export async function createInventoryItem(formData: FormData) {
@@ -1441,6 +1533,9 @@ export async function createInventoryItem(formData: FormData) {
     room_or_area: getString(formData, "room_or_area"),
     brand: getString(formData, "brand"),
     model_number: getString(formData, "model_number"),
+    serial_number: getString(formData, "serial_number"),
+    purchase_date: getString(formData, "purchase_date"),
+    purchase_price: getString(formData, "purchase_price"),
     warranty_expires_on: getString(formData, "warranty_expires_on"),
     notes: getString(formData, "notes"),
   });
@@ -1460,6 +1555,9 @@ export async function createInventoryItem(formData: FormData) {
       room_or_area: nullableString(values.room_or_area ?? ""),
       brand: nullableString(values.brand ?? ""),
       model_number: nullableString(values.model_number ?? ""),
+      serial_number: nullableString(values.serial_number ?? ""),
+      purchase_date: nullableDate(values.purchase_date ?? ""),
+      purchase_price: nullableMoney(values.purchase_price ?? ""),
       warranty_expires_on: nullableDate(values.warranty_expires_on ?? ""),
       notes: nullableString(values.notes ?? ""),
     })
