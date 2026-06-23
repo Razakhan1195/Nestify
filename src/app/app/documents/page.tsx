@@ -11,6 +11,7 @@ import {
 import { redirect } from "next/navigation";
 
 import { createDocumentRecord } from "@/app/actions";
+import { ScanCard } from "@/components/ai/scan-card";
 import { EmptyState } from "@/components/empty-state";
 import { ActionFeedbackToast } from "@/components/product/action-feedback-toast";
 import { PageHeader, PageShell } from "@/components/product/design-system";
@@ -231,6 +232,9 @@ export default async function DocumentsPage({ searchParams }: DocumentsPageProps
             icon={Plus}
             title="Add a document"
           >
+            <div className="mb-5">
+              <ScanCard kind="document" />
+            </div>
             <form action={createDocumentRecord} className="grid gap-4 lg:grid-cols-4" id="add-document">
               <div className="grid gap-2 lg:col-span-2">
                 <Label htmlFor="title">Document name</Label>

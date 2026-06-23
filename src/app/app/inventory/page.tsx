@@ -2,6 +2,7 @@ import { Boxes, FileText, Plus, Refrigerator, ShieldCheck, Wrench } from "lucide
 import { redirect } from "next/navigation";
 
 import { createInventoryItem } from "@/app/actions";
+import { ScanCard } from "@/components/ai/scan-card";
 import { EmptyState } from "@/components/empty-state";
 import { PageHeader, PageShell } from "@/components/product/design-system";
 import { MigrationRequiredCard } from "@/components/product/migration-required-card";
@@ -198,6 +199,9 @@ export default async function InventoryPage({ searchParams }: InventoryPageProps
             title="Add an appliance or system"
             className="scroll-mt-24"
           >
+            <div className="mb-5">
+              <ScanCard kind="appliance" />
+            </div>
             <form action={createInventoryItem} className="grid gap-4 lg:grid-cols-5" id="add-item">
               <div className="grid gap-2 lg:col-span-2">
                 <Label htmlFor="name">Name</Label>
