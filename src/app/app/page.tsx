@@ -37,9 +37,15 @@ import {
   StatusBadge,
 } from "@/components/product/design-system";
 import { SubmitButton } from "@/components/submit-button";
-import { EmptyState } from "@/components/empty-state";
-import { SectionCard } from "@/components/section-card";
-import { StatusBadge as VercelStatusBadge } from "@/components/status-badge";
+import {
+  DashboardEmptyState,
+  DashboardStatRow,
+  QuickActionsGrid,
+  RecentActivityList,
+  SetupProgress,
+  UpcomingList,
+  type SetupStep,
+} from "@/components/dashboard/dashboard-pieces";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {

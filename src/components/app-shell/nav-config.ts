@@ -2,8 +2,6 @@ import {
   FileText,
   Hammer,
   LayoutDashboard,
-  PackageCheck,
-  Plug,
   ReceiptText,
   Refrigerator,
   Settings,
@@ -35,17 +33,17 @@ export const appNavSections: AppNavSection[] = [
         icon: LayoutDashboard,
         title: "Dashboard",
       },
-      {
-        description: "Connect services that power your monthly report",
-        href: "/app/providers",
-        icon: Plug,
-        title: "Providers",
-      },
     ],
   },
   {
-    label: "Stay on top of the home",
+    label: "Stay on top of your home",
     items: [
+      {
+        description: "Due dates, costs, and renewals",
+        href: "/app/bills",
+        icon: ReceiptText,
+        title: "Bills & Reminders",
+      },
       {
         description: "Recurring upkeep and seasonal tasks",
         href: "/app/maintenance",
@@ -57,12 +55,6 @@ export const appNavSections: AppNavSection[] = [
         href: "/app/repairs",
         icon: Hammer,
         title: "Repairs",
-      },
-      {
-        description: "Due dates, costs, and renewals",
-        href: "/app/bills",
-        icon: ReceiptText,
-        title: "Bills & Reminders",
       },
     ],
   },
@@ -87,25 +79,19 @@ export const appNavSections: AppNavSection[] = [
         icon: Refrigerator,
         title: "Appliances & Systems",
       },
-      {
-        description: "Home profile, systems, and history",
-        href: "/app/home",
-        icon: PackageCheck,
-        title: "Home",
-      },
     ],
   },
   {
-    label: "Help",
+    label: "Assistant & settings",
     items: [
       {
         description: "Ask about your home and get safe next steps",
         href: "/app/assistant",
         icon: Sparkles,
-        title: "AI Assistant",
+        title: "Assistant",
       },
       {
-        description: "Home profile and preferences",
+        description: "Home profile, providers, and preferences",
         href: "/app/settings",
         icon: Settings,
         title: "Settings",
