@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { createInventoryItem } from "@/app/actions";
 import { ScanCard } from "@/components/ai/scan-card";
 import { EmptyState } from "@/components/empty-state";
+import { DeleteRecordButton } from "@/components/product/delete-record-button";
 import { PageHeader, PageShell } from "@/components/product/design-system";
 import { MigrationRequiredCard } from "@/components/product/migration-required-card";
 import { SectionCard } from "@/components/section-card";
@@ -180,6 +181,13 @@ export default async function InventoryPage({ searchParams }: InventoryPageProps
                       <Button variant="ghost" size="icon-sm" aria-label="Manuals and documents">
                         <FileText className="size-4" />
                       </Button>
+                      <DeleteRecordButton
+                        iconOnly
+                        id={item.id}
+                        kind="inventory"
+                        label={`Delete ${item.name}`}
+                        returnPath="/app/inventory"
+                      />
                     </div>
                   </div>
                 ))}

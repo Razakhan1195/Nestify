@@ -14,6 +14,7 @@ import { createDocumentRecord } from "@/app/actions";
 import { ScanCard } from "@/components/ai/scan-card";
 import { EmptyState } from "@/components/empty-state";
 import { ActionFeedbackToast } from "@/components/product/action-feedback-toast";
+import { DeleteRecordButton } from "@/components/product/delete-record-button";
 import { PageHeader, PageShell } from "@/components/product/design-system";
 import { SectionCard } from "@/components/section-card";
 import { Button } from "@/components/ui/button";
@@ -210,6 +211,13 @@ export default async function DocumentsPage({ searchParams }: DocumentsPageProps
                         <Sparkles className="size-3.5" />
                         AI summary
                       </Button>
+                      <DeleteRecordButton
+                        iconOnly
+                        id={document.id}
+                        kind="document"
+                        label={`Delete ${document.title}`}
+                        returnPath="/app/documents"
+                      />
                       <Button variant="ghost" size="icon-sm" aria-label="Download">
                         <Download className="size-4" />
                       </Button>
@@ -241,8 +249,8 @@ export default async function DocumentsPage({ searchParams }: DocumentsPageProps
                 <Input id="title" name="title" placeholder="Home insurance policy" required />
               </div>
               <div className="grid gap-2">
-                <Label htmlFor="document_type">Category</Label>
-                <Input id="document_type" name="document_type" placeholder="Insurance, warranty" />
+                <Label htmlFor="category">Category</Label>
+                <Input id="category" name="category" placeholder="Insurance, warranty" required />
               </div>
               <div className="grid gap-2">
                 <Label htmlFor="expires_on">Expiry date</Label>

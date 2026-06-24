@@ -87,6 +87,16 @@ function nextBillDate(bills: DeckBill[]) {
     .sort((a, b) => new Date(a).getTime() - new Date(b).getTime())[0];
 }
 
+function addCalendarDays(date: Date, days: number) {
+  const next = new Date(date);
+  next.setDate(next.getDate() + days);
+  return next;
+}
+
+function providerLabel(provider: ProviderRow) {
+  return provider.display_name ?? provider.name;
+}
+
 async function createSyncEvent(input: {
   userId: string;
   homeId: string;
@@ -106,6 +116,70 @@ async function createSyncEvent(input: {
     message: input.message,
     metadata: input.metadata ?? {},
   });
+}
+
+async function createProviderSyncRun(input: {
+  userId: string;
+  homeId: string;
+  providerId: string;
+  runType: "manual" | "scheduled" | "initial";
+  status: string;
+  message: string;
+  metadata?: Record<string, unknown>;
+}) {
+  const supabase = await createClient();
+  const { error } = await supabase.from("provider_sync_runs").insert({
+    user_id: input.userId,
+    home_id: input.homeId,
+    provider_id: input.providerId,
+    run_type: input.runType,
+    status: input.status,
+    message: input.message,
+    finished_at: ["success", "failed", "requires_user_action"].includes(input.status)
+      ? new Date().toISOString()
+      : null,
+    metadata: input.metadata ?? {},
+  });
+
+  if (error) {
+    console.warn("[provider_sync_runs:create] skipped sync run", {
+      code: error.code,
+      message: error.message,
+    });
+  }
+}
+
+async function createNotification(input: {
+  userId: string;
+  homeId: string;
+  notificationType: string;
+  title: string;
+  body: string;
+  href: string;
+  relatedId?: string;
+  relatedTable?: string;
+  metadata?: Record<string, unknown>;
+}) {
+  const supabase = await createClient();
+  const { error } = await supabase.from("notifications").insert({
+    user_id: input.userId,
+    home_id: input.homeId,
+    notification_type: input.notificationType,
+    title: input.title,
+    body: input.body,
+    href: input.href,
+    related_table: input.relatedTable ?? null,
+    related_id: input.relatedId ?? null,
+    metadata: input.metadata ?? {},
+  });
+
+  if (error) {
+    console.warn("[notifications:create] skipped notification", {
+      code: error.code,
+      message: error.message,
+      notification_type: input.notificationType,
+    });
+  }
 }
 
 async function createTimelineEvent(input: {
@@ -164,6 +238,7 @@ export async function createProviderConnectionSession(input: {
         mock: session.metadata?.mock ?? false,
         connectUrl: session.connectUrl,
       },
+      sync_status: "authentication_required",
       ...mapped,
     })
     .eq("id", provider.id)
@@ -231,6 +306,10 @@ export async function createProviderDeckCredential(input: {
       connection_status: "connected",
       health_status:
         credential.status === "verified" ? "healthy" : "needs_attention",
+      sync_status:
+        credential.status === "verified"
+          ? "initial_sync_pending"
+          : "authentication_required",
       requires_user_action: false,
       user_action_message:
         credential.status === "verified"
@@ -413,6 +492,10 @@ async function finishProviderSync(input: {
   const successful =
     connection.status === "connected" || connection.status === "no_bill_found";
   const nextDueDate = nextBillDate(bills);
+  const syncFrequencyDays = provider.sync_frequency_days ?? 30;
+  const nextScheduledSyncAt = successful
+    ? addCalendarDays(new Date(), syncFrequencyDays).toISOString()
+    : provider.next_scheduled_sync_at ?? null;
   const providerUpdate = {
     deck_connection_id: connectionId,
     deck_connection_status: connection.status,
@@ -423,7 +506,24 @@ async function finishProviderSync(input: {
       providerName: connection.providerName,
     },
     next_expected_bill_date: nextDueDate ?? null,
+    next_scheduled_sync_at: nextScheduledSyncAt,
+    sync_status: successful
+      ? "sync_scheduled"
+      : connection.status === "syncing"
+        ? "initial_sync_running"
+        : connection.status === "requires_user_action" ||
+            connection.status === "mfa_required"
+          ? "security_question_required"
+          : "initial_sync_failed",
+    sync_failure_reason: successful
+      ? null
+      : connection.userActionMessage ?? "Provider sync is not ready yet.",
     ...mapped,
+    ...(connection.userActionMessage &&
+    (connection.status === "requires_user_action" ||
+      connection.status === "mfa_required")
+      ? { user_action_message: connection.userActionMessage }
+      : {}),
     ...(successful ? { last_successful_sync_at: new Date().toISOString() } : {}),
   };
 
@@ -496,6 +596,59 @@ async function finishProviderSync(input: {
     },
   });
 
+  await createProviderSyncRun({
+    userId,
+    homeId: provider.home_id,
+    providerId: provider.id,
+    runType: wasAlreadyConnected ? "manual" : "initial",
+    status:
+      connection.status === "mfa_required" ||
+      connection.status === "requires_user_action"
+        ? "requires_user_action"
+        : successful
+          ? "success"
+          : "failed",
+    message,
+    metadata: {
+      deckStatus: connection.status,
+      billCount: bills.length,
+      taskRunId: connection.metadata?.taskRunId,
+    },
+  });
+
+  if (successful) {
+    await createNotification({
+      userId,
+      homeId: provider.home_id,
+      notificationType: "provider_sync_ready",
+      title: `${providerLabel(provider)} bill data is ready`,
+      body: bills.length
+        ? `Synced ${bills.length} bill${bills.length === 1 ? "" : "s"}.`
+        : "The provider is connected. No bill was found yet.",
+      href: `/app/providers/${provider.id}`,
+      relatedTable: "providers",
+      relatedId: provider.id,
+      metadata: { billCount: bills.length },
+    });
+  } else if (
+    connection.status === "mfa_required" ||
+    connection.status === "requires_user_action"
+  ) {
+    await createNotification({
+      userId,
+      homeId: provider.home_id,
+      notificationType: "provider_action_required",
+      title: `${providerLabel(provider)} needs one more step`,
+      body:
+        connection.userActionMessage ??
+        "Answer the provider security question so syncing can continue.",
+      href: `/app/providers/${provider.id}`,
+      relatedTable: "providers",
+      relatedId: provider.id,
+      metadata: { deckStatus: connection.status },
+    });
+  }
+
   return {
     ok: successful,
     status: connection.status,
@@ -506,6 +659,7 @@ async function finishProviderSync(input: {
 
 export async function syncProvider(input: {
   providerId: string;
+  restart?: boolean;
   userId: string;
 }): Promise<SyncResult> {
   const supabase = await createClient();
@@ -526,6 +680,8 @@ export async function syncProvider(input: {
     .update({
       connection_status: "syncing",
       health_status: "needs_attention",
+      sync_status: "syncing",
+      sync_failure_reason: null,
       deck_connection_id: connectionId,
       deck_connection_status: "syncing",
     })
@@ -535,7 +691,7 @@ export async function syncProvider(input: {
   try {
     const connection = await deck.syncConnection(connectionId, {
       credentialId: getProviderCredentialId(provider),
-      taskRunId: shouldResumeProviderTaskRun(provider)
+      taskRunId: !input.restart && shouldResumeProviderTaskRun(provider)
         ? getProviderTaskRunId(provider)
         : undefined,
     });
@@ -555,6 +711,8 @@ export async function syncProvider(input: {
       .update({
         connection_status: "sync_failed",
         health_status: "sync_failed",
+        sync_status: "sync_failed",
+        sync_failure_reason: message,
         requires_user_action: true,
         user_action_message: message,
       })
@@ -567,6 +725,28 @@ export async function syncProvider(input: {
       providerId: provider.id,
       status: "failed",
       message,
+      metadata: { error: message },
+    });
+
+    await createProviderSyncRun({
+      userId: input.userId,
+      homeId: provider.home_id,
+      providerId: provider.id,
+      runType: "manual",
+      status: "failed",
+      message,
+      metadata: { error: message },
+    });
+
+    await createNotification({
+      userId: input.userId,
+      homeId: provider.home_id,
+      notificationType: "provider_sync_failed",
+      title: `We couldn’t refresh ${providerLabel(provider)}`,
+      body: "You can reconnect, try again, or add the bill manually.",
+      href: `/app/providers/${provider.id}`,
+      relatedTable: "providers",
+      relatedId: provider.id,
       metadata: { error: message },
     });
 
@@ -650,6 +830,8 @@ export async function disconnectProvider(input: {
       connection_status: "disconnected",
       health_status: "needs_attention",
       deck_connection_status: "disconnected",
+      sync_status: "disconnected",
+      next_scheduled_sync_at: null,
       requires_user_action: true,
       user_action_message: "Provider disconnected.",
     })

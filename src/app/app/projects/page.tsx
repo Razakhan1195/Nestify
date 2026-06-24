@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 
 import { createProject } from "@/app/actions";
 import { EmptyState } from "@/components/empty-state";
+import { DeleteRecordButton } from "@/components/product/delete-record-button";
 import { PageHeader, PageShell } from "@/components/product/design-system";
 import { MigrationRequiredCard } from "@/components/product/migration-required-card";
 import { SectionCard } from "@/components/section-card";
@@ -79,6 +80,13 @@ function RepairRow({ project }: { project: Project }) {
         <span>
           Priority: <span className="font-medium text-foreground">{project.priority}</span>
         </span>
+        <DeleteRecordButton
+          className="h-auto px-0 py-0 text-xs"
+          id={project.id}
+          kind="project"
+          label="Remove"
+          returnPath="/app/projects"
+        />
       </div>
     </div>
   );

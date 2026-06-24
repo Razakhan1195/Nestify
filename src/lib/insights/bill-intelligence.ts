@@ -222,7 +222,7 @@ async function fetchBillWithProvider(
   const { data, error } = await supabase
     .from("bills")
     .select(
-      "id,user_id,home_id,provider_id,name,amount,currency,due_date,issue_date,billing_period_start,billing_period_end,usage_amount,usage_unit,pdf_available,detected_fees,line_items,source,status,created_at,providers(id,display_name,name,provider_priority,connection_status,health_status,sync_frequency,next_expected_bill_date)"
+      "id,user_id,home_id,provider_id,name,amount,currency,due_date,issue_date,billing_period_start,billing_period_end,usage_amount,usage_unit,pdf_available,detected_fees,line_items,source,status,created_at,providers!bills_provider_id_fkey(id,display_name,name,provider_priority,connection_status,health_status,sync_frequency,next_expected_bill_date)"
     )
     .eq("id", billId)
     .eq("user_id", userId)
@@ -237,7 +237,7 @@ async function fetchPreviousBill(supabase: Supabase, bill: IntelligenceBill) {
   let query = supabase
     .from("bills")
     .select(
-      "id,user_id,home_id,provider_id,name,amount,currency,due_date,issue_date,billing_period_start,billing_period_end,usage_amount,usage_unit,pdf_available,detected_fees,line_items,source,status,created_at,providers(id,display_name,name,provider_priority)"
+      "id,user_id,home_id,provider_id,name,amount,currency,due_date,issue_date,billing_period_start,billing_period_end,usage_amount,usage_unit,pdf_available,detected_fees,line_items,source,status,created_at,providers!bills_provider_id_fkey(id,display_name,name,provider_priority)"
     )
     .eq("user_id", bill.user_id)
     .eq("home_id", bill.home_id)

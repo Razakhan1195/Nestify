@@ -98,13 +98,17 @@ export function DeckInteractionForm({
     <form className="grid gap-3" onSubmit={onSubmit} ref={formRef}>
       <div>
         <p className="text-sm font-medium">
-          {interaction.type.replaceAll("_", " ")}
+          Verification needed
         </p>
         <p className="text-sm text-muted-foreground">{interaction.message}</p>
-        {interaction.type === "security_question" ? (
+        {interaction.fields.some((field) =>
+          field.label.toLowerCase().includes("security")
+        ) ? (
           <p className="mt-1 text-sm text-muted-foreground">
-            Deck did not provide the exact question text to Nestify. Use the
-            question shown in the Deck session, then check the result here.
+            If the exact question is not shown here, Deck did not send it back
+            to Nestify. Use the question shown in the Deck session, then enter
+            the answer below. If you already answered it in Deck, use “Check
+            Deck result” below.
           </p>
         ) : null}
       </div>

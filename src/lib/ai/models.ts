@@ -1,13 +1,14 @@
 // Central model configuration for Nestify's AI features.
 //
-// Cost posture: "balanced" — we use a strong, low-cost vision model for the
-// one-shot extraction flows (scanning labels, receipts, warranties, documents)
-// where accuracy directly removes data-entry friction, and a small reasoning
-// model for text-only generation (the maintenance plan).
-//
-// Both providers (Google Vertex + OpenAI) are zero-config through the Vercel
-// AI Gateway, so no provider API keys are required.
+// Cost posture: "cheap first" for the conversational assistant. Prefer direct
+// Gemini when a Google AI Studio key is present because it has a free tier with
+// rate limits. Vercel AI Gateway remains the fallback for production routing.
+// Extraction flows keep using the app's existing Gemini/OpenAI model choices.
 export const AI_MODELS = {
+  // Conversational home assistant through direct Google Generative AI.
+  assistantGoogle: "gemini-2.5-flash-lite",
+  // Conversational home assistant through Vercel AI Gateway.
+  assistantGateway: "google/gemini-2.5-flash-lite",
   // Vision + document understanding (images and PDFs). Gemini Flash is fast,
   // cheap, and handles multi-modal file input well.
   vision: "google/gemini-2.5-flash",

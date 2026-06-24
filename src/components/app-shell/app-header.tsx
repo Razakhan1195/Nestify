@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
 import {
   Bell,
   CircleHelp,
@@ -15,7 +14,6 @@ import {
 } from "lucide-react";
 
 import { MobileNav } from "@/components/app-shell/app-nav";
-import { appNavItems } from "@/components/app-shell/nav-config";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -26,6 +24,14 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Separator } from "@/components/ui/separator";
+
+type HeaderNotification = {
+  body: string | null;
+  created_at: string;
+  href: string | null;
+  id: string;
+  title: string;
+};
 
 const quickAddItems = [
   {
@@ -66,15 +72,13 @@ const quickAddItems = [
   },
 ];
 
-export function AppHeader({ email }: { email?: string | null }) {
-  const pathname = usePathname();
-  const current =
-    appNavItems.find(
-      (item) =>
-        pathname === item.href ||
-        (item.href !== "/app" && pathname.startsWith(`${item.href}/`))
-    ) ?? appNavItems[0];
-
+export function AppHeader({
+  email,
+  notifications = [],
+}: {
+  email?: string | null;
+  notifications?: HeaderNotification[];
+}) {
   return (
     <header className="sticky top-0 z-30 flex h-[var(--header-height)] flex-1 shrink-0 items-center gap-2 bg-background/78 px-4 backdrop-blur-xl sm:px-6">
       <div className="lg:hidden">
@@ -82,11 +86,11 @@ export function AppHeader({ email }: { email?: string | null }) {
       </div>
       <Separator className="hidden h-5 sm:block lg:hidden" orientation="vertical" />
       <div className="flex min-w-0 flex-col">
-        <h1 className="truncate text-sm font-semibold leading-tight md:text-base">
-          {current.title}
-        </h1>
+        <p className="truncate text-sm font-semibold leading-tight md:text-base">
+          Nestify
+        </p>
         <p className="hidden truncate text-xs text-muted-foreground sm:block">
-          {current.description}
+          What needs attention, what changed, and what to do next.
         </p>
       </div>
 
@@ -137,9 +141,27 @@ export function AppHeader({ email }: { email?: string | null }) {
           <DropdownMenuContent align="end" className="w-72">
             <DropdownMenuLabel>What needs attention</DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <div className="px-2 py-3 text-sm text-muted-foreground">
-              Start with your attention queue, then review due bills and care tasks.
-            </div>
+            {notifications.length ? (
+              notifications.map((notification) => (
+                <DropdownMenuItem asChild key={notification.id}>
+                  <Link
+                    className="flex flex-col items-start gap-0.5 whitespace-normal py-2"
+                    href={notification.href ?? "/app/attention"}
+                  >
+                    <span className="font-medium">{notification.title}</span>
+                    {notification.body ? (
+                      <span className="text-xs text-muted-foreground">
+                        {notification.body}
+                      </span>
+                    ) : null}
+                  </Link>
+                </DropdownMenuItem>
+              ))
+            ) : (
+              <div className="px-2 py-3 text-sm text-muted-foreground">
+                Start with your attention queue, then review due bills and care tasks.
+              </div>
+            )}
             <DropdownMenuSeparator />
             <DropdownMenuItem asChild>
               <Link href="/app/attention">Open attention queue</Link>

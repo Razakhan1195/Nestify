@@ -16,6 +16,7 @@ import {
 } from "@/app/actions";
 import { GuidedIssueCheck } from "@/components/issues/guided-issue-check";
 import { ActionFeedbackToast } from "@/components/product/action-feedback-toast";
+import { DeleteRecordButton } from "@/components/product/delete-record-button";
 import {
   EmptyState,
   InsightCard,
@@ -133,6 +134,12 @@ function IssueActions({ issue }: { issue: IssueRow }) {
           </SubmitButton>
         </form>
       ) : null}
+      <DeleteRecordButton
+        id={issue.id}
+        kind="repair-issue"
+        label="Remove"
+        returnPath="/app/help"
+      />
     </div>
   );
 }
@@ -368,7 +375,16 @@ export default async function HelpPage({ searchParams }: HelpPageProps) {
                           {formatDate(issue.resolved_at)}
                         </p>
                       </div>
-                      <StatusBadge value="Resolved" />
+                      <div className="flex items-center gap-2">
+                        <StatusBadge value="Resolved" />
+                        <DeleteRecordButton
+                          iconOnly
+                          id={issue.id}
+                          kind="repair-issue"
+                          label={`Delete ${issue.title}`}
+                          returnPath="/app/help"
+                        />
+                      </div>
                     </div>
                   ))}
                 </CardContent>

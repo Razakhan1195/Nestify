@@ -3,12 +3,15 @@ import {
   AlertCircle,
   CheckCircle2,
   Clock3,
+  ExternalLink,
   RefreshCw,
   ShieldCheck,
 } from "lucide-react";
 
 import { addProvider, updateProviderName } from "@/app/actions";
+import { DeleteProviderButton } from "@/components/providers/delete-provider-button";
 import { AttentionActionMenu } from "@/components/product/attention-action-menu";
+import { DeckInteractionForm } from "@/components/providers/deck-interaction-form";
 import { DeckProviderActionButton } from "@/components/providers/deck-provider-action-button";
 import { SubmitButton } from "@/components/submit-button";
 import { Badge } from "@/components/ui/badge";
@@ -29,6 +32,7 @@ import {
   type ProviderSetupItem,
 } from "@/lib/providers";
 import { providerPrimaryAction, providerStatusLabel } from "@/lib/action-system";
+import type { DeckInteraction } from "@/lib/deck/types";
 
 function formatDate(value: string | null) {
   if (!value) {
@@ -77,6 +81,78 @@ const benefitCopy = [
   "Captures usage where available",
 ];
 
+function getDeckInteraction(
+  metadata: Record<string, unknown> | null,
+  fallbackMessage?: string | null
+): DeckInteraction | null {
+  const interaction = metadata?.interaction;
+  const taskRunId = metadata?.taskRunId;
+
+  if (!interaction || typeof interaction !== "object") {
+    if (typeof taskRunId === "string" && taskRunId.startsWith("trun_")) {
+      return {
+        fields: [{ label: "Security answer", name: "answer", type: "string" }],
+        message:
+          fallbackMessage ??
+          "Please answer the security question to continue accessing your bills.",
+        type: "security_question",
+      };
+    }
+
+    return null;
+  }
+
+  const candidate = interaction as {
+    fields?: unknown;
+    message?: unknown;
+    type?: unknown;
+  };
+  const fields = Array.isArray(candidate.fields)
+    ? candidate.fields.flatMap((field, index) => {
+        if (!field || typeof field !== "object") return [];
+
+        const item = field as {
+          label?: unknown;
+          name?: unknown;
+          type?: unknown;
+        };
+
+        return [
+          {
+            label:
+              typeof item.label === "string" && item.label
+                ? item.label
+                : typeof item.name === "string" && item.name
+                  ? item.name
+                  : "Security answer",
+            name:
+              typeof item.name === "string" && item.name
+                ? item.name
+                : index === 0
+                  ? "answer"
+                  : `answer_${index + 1}`,
+            type:
+              typeof item.type === "string" && item.type
+                ? item.type
+                : "string",
+          },
+        ];
+      })
+    : [];
+
+  return {
+    fields: fields.length
+      ? fields
+      : [{ label: "Security answer", name: "answer", type: "string" }],
+    message:
+      typeof candidate.message === "string" && candidate.message
+        ? candidate.message
+        : fallbackMessage ??
+          "Please answer the security question to continue accessing your bills.",
+    type: typeof candidate.type === "string" ? candidate.type : "verification",
+  };
+}
+
 export function ProviderSetupCard({
   category,
   disabledReason,
@@ -122,6 +198,12 @@ export function ProviderSetupCard({
     isConnected,
     isMissingProviderName: missingProviderName,
   });
+  const deckInteraction = provider
+    ? getDeckInteraction(
+        provider.deck_connection_metadata,
+        provider.user_action_message
+      )
+    : null;
   const suggestionListId = `suggested-${setup.name
     .toLowerCase()
     .replaceAll(" ", "-")}-providers`;
@@ -141,7 +223,13 @@ export function ProviderSetupCard({
             <Badge variant={provider ? "secondary" : "outline"}>
               {provider ? "Added" : "Not added"}
             </Badge>
-            <Badge variant="outline">{providerStatusLabel(state)}</Badge>
+            <Badge
+              className={isConnected ? "gap-1.5 border-emerald-200 bg-emerald-50 text-emerald-800" : ""}
+              variant="outline"
+            >
+              {isConnected ? <CheckCircle2 className="size-3.5" /> : null}
+              {isConnected ? "Complete" : providerStatusLabel(state)}
+            </Badge>
           </div>
         </div>
       </CardHeader>
@@ -156,6 +244,17 @@ export function ProviderSetupCard({
               <p className="mt-1 text-sm text-muted-foreground">
                 Choose the company or municipality for this provider.
               </p>
+            ) : null}
+            {provider?.website_url ? (
+              <a
+                className="mt-1 inline-flex items-center gap-1 text-sm font-medium text-primary underline-offset-4 hover:underline"
+                href={provider.website_url}
+                rel="noreferrer"
+                target="_blank"
+              >
+                Provider login page
+                <ExternalLink className="size-3.5" />
+              </a>
             ) : null}
           </div>
           <p className="flex items-center gap-2 font-medium sm:justify-end">
@@ -179,9 +278,49 @@ export function ProviderSetupCard({
           </div>
         </div>
 
-        {provider?.requires_user_action && provider.user_action_message ? (
-          <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
-            {provider.user_action_message}
+        {provider?.requires_user_action ? (
+          <div className="grid gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950">
+            <div className="flex items-start gap-2">
+              <AlertCircle className="mt-0.5 size-4 shrink-0" />
+              <div>
+                <p className="font-medium">Verification needed</p>
+                <p className="mt-1 text-amber-900">
+                  {provider.user_action_message ??
+                    "Deck needs one more step before this provider can sync."}
+                </p>
+              </div>
+            </div>
+            {deckInteraction ? (
+              <div className="rounded-xl border border-amber-200 bg-background/80 p-3">
+                <DeckInteractionForm
+                  interaction={deckInteraction}
+                  providerId={provider.id}
+                />
+              </div>
+            ) : (
+              <div className="grid gap-2 rounded-xl border border-amber-200 bg-background/80 p-3">
+                <p className="text-sm text-muted-foreground">
+                  Nestify does not have a question from Deck yet. Check the
+                  Deck result if you answered it elsewhere, or restart sync to
+                  request the prompt again.
+                </p>
+                <div className="flex flex-col gap-2 sm:flex-row">
+                  <DeckProviderActionButton
+                    action="sync"
+                    providerId={provider.id}
+                    restartSync
+                    variant="outline"
+                  >
+                    Check / restart sync
+                  </DeckProviderActionButton>
+                  <Button asChild className="h-9 w-full sm:w-auto">
+                    <Link href={`/app/providers/${provider.id}`}>
+                      Open provider details
+                    </Link>
+                  </Button>
+                </div>
+              </div>
+            )}
           </div>
         ) : null}
 
@@ -334,9 +473,21 @@ export function ProviderSetupCard({
               {primaryActionLabel}
             </DeckProviderActionButton>
           ) : needsReview ? (
-            <Button asChild className="h-9 w-full sm:w-auto">
-              <Link href={`/app/providers/${provider.id}`}>{primaryActionLabel}</Link>
-            </Button>
+            <>
+              <Button asChild className="h-9 w-full sm:w-auto">
+                <Link href={`/app/providers/${provider.id}`}>
+                  {deckInteraction ? "Answer security question" : primaryActionLabel}
+                </Link>
+              </Button>
+              <DeckProviderActionButton
+                action="sync"
+                providerId={provider.id}
+                restartSync
+                variant="outline"
+              >
+                Check / restart sync
+              </DeckProviderActionButton>
+            </>
           ) : isConnected ? (
             <Button asChild className="h-9 w-full sm:w-auto">
               <Link href={`/app/providers/${provider.id}`}>{primaryActionLabel}</Link>
@@ -365,6 +516,16 @@ export function ProviderSetupCard({
                 returnPath: "/app/providers",
               }}
             />
+          ) : null}
+          {provider && !isConnected ? (
+            <Button asChild className="h-9 w-full sm:w-auto" variant="outline">
+              <Link href={`/app/bills?provider=${provider.id}#manual-bill`}>
+                Add bill manually
+              </Link>
+            </Button>
+          ) : null}
+          {provider ? (
+            <DeleteProviderButton providerId={provider.id} returnPath="/app/providers" />
           ) : null}
         </div>
         <div className="flex gap-2 rounded-lg border bg-muted/20 px-3 py-2 text-xs text-muted-foreground sm:text-sm">
@@ -403,9 +564,23 @@ export function ProviderSetupCard({
               </p>
             </div>
             <div>
-              <p className="text-muted-foreground">Expected rhythm</p>
+              <p className="text-muted-foreground">Refresh cadence</p>
               <p className="font-medium">
-                {provider?.sync_frequency ?? setup.syncFrequency}
+                {provider?.sync_frequency_days
+                  ? `Every ${provider.sync_frequency_days} days`
+                  : provider?.sync_frequency ?? setup.syncFrequency}
+              </p>
+            </div>
+            <div>
+              <p className="text-muted-foreground">Next scheduled refresh</p>
+              <p className="font-medium">
+                {formatDate(provider?.next_scheduled_sync_at ?? null)}
+              </p>
+            </div>
+            <div>
+              <p className="text-muted-foreground">Sync status</p>
+              <p className="font-medium">
+                {provider?.sync_status?.replaceAll("_", " ") ?? "Manual"}
               </p>
             </div>
           </div>
