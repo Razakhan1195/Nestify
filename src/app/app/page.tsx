@@ -807,28 +807,26 @@ export default async function AppHomePage({
     : "Here is what needs you, what your home costs, and where your records are building.";
   const dashboardStats = [
     {
-      icon: Wallet,
-      label: "Tracked this month",
+      icon: ReceiptText,
+      label: "Bills tracked",
       note: billRows.length
         ? `Across ${billRows.length} bill${billRows.length === 1 ? "" : "s"}`
         : "No bills tracked yet",
-      value: billRows.length
-        ? formatAmount("CAD", monthlySummary.knownCostThisMonth)
-        : "$0",
-    },
-    {
-      icon: CalendarClock,
-      label: "Next bill due",
-      note: nextDueBill
-        ? `${billLabel(nextDueBill)} · ${formatAmount(nextDueBill.currency, nextDueBill.amount)}`
-        : "Nothing due yet",
-      value: nextDueBill ? formatDate(nextDueBill.due_date) : "Not set",
+      value: billRows.length.toString(),
     },
     {
       icon: FileText,
       label: "Vault records",
       note: recordCount === 1 ? "1 record saved" : `${recordCount} records saved`,
       value: recordCount.toString(),
+    },
+    {
+      icon: Refrigerator,
+      label: "Appliances",
+      note: inventoryRows.length
+        ? `${inventoryRows.length} tracked`
+        : "None added yet",
+      value: inventoryRows.length.toString(),
     },
     {
       icon: Hammer,
@@ -842,16 +840,94 @@ export default async function AppHomePage({
 
   return (
     <PageShell className="flex flex-col gap-6 md:gap-8">
-      <header className="flex flex-col gap-1">
-        <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-          {home.nickname} · This week
-        </span>
-        <h1 className="text-2xl font-semibold tracking-tight text-balance md:text-3xl">
-          {dashboardTitle}
-        </h1>
-        <p className="max-w-2xl text-sm leading-relaxed text-muted-foreground text-pretty">
-          {dashboardDescription}
-        </p>
+      <header className="overflow-hidden rounded-2xl border bg-card">
+        <div className="flex flex-col gap-5 p-5 md:p-6">
+          <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+            <div className="flex flex-col gap-1.5">
+              <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                {home.nickname} · This week
+              </span>
+              <h1 className="text-2xl font-semibold tracking-tight text-balance md:text-3xl">
+                {dashboardTitle}
+              </h1>
+              <p className="max-w-2xl text-sm leading-relaxed text-muted-foreground text-pretty">
+                {dashboardDescription}
+              </p>
+            </div>
+            <div className="flex shrink-0 flex-wrap gap-2 md:flex-col">
+              <Button asChild size="sm">
+                <Link href="/app/bills#manual-bill">
+                  <ReceiptText className="size-4" />
+                  Add a bill
+                </Link>
+              </Button>
+              <Button asChild size="sm" variant="outline">
+                <Link href="/app/repairs#log-repair">
+                  <Wrench className="size-4" />
+                  Log a repair
+                </Link>
+              </Button>
+            </div>
+          </div>
+
+          {hasMeaningfulHouseholdData ? (
+            <div className="grid grid-cols-1 gap-px overflow-hidden rounded-xl border bg-border sm:grid-cols-3">
+              <div className="flex items-center gap-3 bg-card p-4">
+                <span
+                  className={
+                    attentionItems.length
+                      ? "flex size-9 shrink-0 items-center justify-center rounded-lg bg-[color:var(--critical-bg)] text-[color:var(--critical-foreground)]"
+                      : "flex size-9 shrink-0 items-center justify-center rounded-lg bg-[color:var(--success-bg)] text-[color:var(--success-foreground)]"
+                  }
+                >
+                  {attentionItems.length ? (
+                    <AlertCircle className="size-4.5" />
+                  ) : (
+                    <PackageCheck className="size-4.5" />
+                  )}
+                </span>
+                <div className="flex min-w-0 flex-col">
+                  <span className="text-lg font-semibold leading-none">
+                    {attentionItems.length || "0"}
+                  </span>
+                  <span className="truncate text-xs text-muted-foreground">
+                    {attentionItems.length ? "Need attention" : "All caught up"}
+                  </span>
+                </div>
+              </div>
+              <div className="flex items-center gap-3 bg-card p-4">
+                <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-secondary text-secondary-foreground">
+                  <CalendarClock className="size-4.5" />
+                </span>
+                <div className="flex min-w-0 flex-col">
+                  <span className="truncate text-lg font-semibold leading-none">
+                    {nextDueBill ? formatDate(nextDueBill.due_date) : "Clear"}
+                  </span>
+                  <span className="truncate text-xs text-muted-foreground">
+                    {nextDueBill
+                      ? `Next: ${billLabel(nextDueBill)}`
+                      : "No bills due soon"}
+                  </span>
+                </div>
+              </div>
+              <div className="flex items-center gap-3 bg-card p-4">
+                <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-secondary text-secondary-foreground">
+                  <Wallet className="size-4.5" />
+                </span>
+                <div className="flex min-w-0 flex-col">
+                  <span className="truncate text-lg font-semibold leading-none">
+                    {billRows.length
+                      ? formatAmount("CAD", monthlySummary.knownCostThisMonth)
+                      : "$0"}
+                  </span>
+                  <span className="truncate text-xs text-muted-foreground">
+                    Tracked this month
+                  </span>
+                </div>
+              </div>
+            </div>
+          ) : null}
+        </div>
       </header>
 
       <ActionFeedbackToast message={typeof notice === "string" ? notice : null} />
