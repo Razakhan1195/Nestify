@@ -24,14 +24,14 @@ const setupOptions = [
   {
     action: "Add document",
     description: "Save leases, policies, receipts, warranties, manuals, and PDFs.",
-    href: "/app/documents#add-record",
+    href: "/app/documents#add-document",
     icon: FileText,
     title: "Document",
   },
   {
     action: "Add reminder",
     description: "Remember chores, repairs, renewals, and recurring care tasks.",
-    href: "/app/maintenance#add-reminder",
+    href: "/app/maintenance#add-task",
     icon: PackageCheck,
     title: "Reminder",
   },

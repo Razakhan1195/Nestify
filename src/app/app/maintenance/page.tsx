@@ -6,6 +6,7 @@ import { completeMaintenanceTask, createMaintenanceTask } from "@/app/actions";
 import { MaintenancePlanGenerator } from "@/components/ai/maintenance-plan-generator";
 import { EmptyState } from "@/components/empty-state";
 import { ActionFeedbackToast } from "@/components/product/action-feedback-toast";
+import { DeleteRecordButton } from "@/components/product/delete-record-button";
 import { PageHeader, PageShell } from "@/components/product/design-system";
 import { SubmitButton } from "@/components/submit-button";
 import { SectionCard } from "@/components/section-card";
@@ -106,6 +107,13 @@ function TaskRow({ task }: { task: MaintenanceTask }) {
             <MapPin className="size-3.5" />
             {task.category ?? "Home"}
           </span>
+          <DeleteRecordButton
+            className="h-auto px-0 py-0 text-xs"
+            id={task.id}
+            kind="maintenance"
+            label="Remove"
+            returnPath="/app/maintenance"
+          />
         </div>
       </div>
     </div>

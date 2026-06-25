@@ -192,7 +192,26 @@ export class MockDeckClient implements DeckClient {
         profile.status === "requires_user_action"
           ? "Mock Deck needs the user to confirm account access."
           : undefined,
-      metadata: { mock: true, category: profile.category },
+      metadata: {
+        mock: true,
+        category: profile.category,
+        ...(profile.status === "requires_user_action"
+          ? {
+              taskRunId: `trun_mock_${input.providerId.slice(0, 8)}`,
+              interaction: {
+                type: "security_question",
+                message: "Please answer your security question to continue.",
+                fields: [
+                  {
+                    label: "Security answer",
+                    name: "answer",
+                    type: "string",
+                  },
+                ],
+              },
+            }
+          : {}),
+      },
     };
   }
 
@@ -245,7 +264,26 @@ export class MockDeckClient implements DeckClient {
             : status === "failed"
               ? "Mock sync failed. Try again later."
               : undefined,
-      metadata: { mock: true, category: profile.category },
+      metadata: {
+        mock: true,
+        category: profile.category,
+        ...(status === "requires_user_action"
+          ? {
+              taskRunId: `trun_mock_${connectionId.slice(-8)}`,
+              interaction: {
+                type: "security_question",
+                message: "Please answer your security question to continue.",
+                fields: [
+                  {
+                    label: "Security answer",
+                    name: "answer",
+                    type: "string",
+                  },
+                ],
+              },
+            }
+          : {}),
+      },
     };
   }
 

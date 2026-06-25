@@ -1,6 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowRight, Bell, CheckCircle2, ReceiptText, Wrench } from "lucide-react";
+import { ArrowRight, Bell, CheckCircle2, ReceiptText, Sparkles, Wrench } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 
@@ -36,15 +36,26 @@ export function Hero() {
         <div>
           <span className="inline-flex items-center gap-2 rounded-full border border-[color:var(--border-soft)] bg-card px-3 py-1 text-xs font-medium text-muted-foreground">
             <span className="size-1.5 rounded-full bg-[color:var(--success)]" />
-            Your home, calmly organized
+            AI-powered home command center
           </span>
           <h1 className="mt-5 text-pretty text-4xl font-semibold leading-[1.08] tracking-tight sm:text-5xl lg:text-[3.4rem]">
-            Everything that keeps your home running, in one calm place.
+            Know what your home needs before it becomes a problem.
           </h1>
           <p className="mt-5 max-w-xl text-pretty text-lg leading-relaxed text-muted-foreground">
-            Track bills, maintenance, repairs, documents, and warranties. Nestify reminds you
-            before things are due and gives you a clear monthly picture of your home.
+            Nestify uses AI to turn bills, maintenance, repairs, documents, and
+            warranties into one clear monthly home report: what is due, what
+            changed, what needs attention, and what to do next.
           </p>
+          <div className="mt-5 grid max-w-xl gap-2 text-sm text-muted-foreground sm:grid-cols-2">
+            <div className="flex items-center gap-2">
+              <Sparkles className="size-4 text-primary" />
+              AI summarizes your home status
+            </div>
+            <div className="flex items-center gap-2">
+              <CheckCircle2 className="size-4 text-primary" />
+              Clear next steps, not raw lists
+            </div>
+          </div>
           <div className="mt-8 flex flex-col gap-3 sm:flex-row">
             <Button asChild size="lg">
               <Link href="/signup">
@@ -75,7 +86,7 @@ export function Hero() {
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <Bell className="size-4 text-primary" />
-                  <p className="text-sm font-semibold">Needs your attention</p>
+                  <p className="text-sm font-semibold">AI monthly home report</p>
                 </div>
                 <span className="rounded-full bg-[color:var(--critical-bg)] px-2 py-0.5 text-xs font-medium text-[color:var(--critical-foreground)]">
                   3 items

@@ -445,13 +445,13 @@ function sanitizeInteraction(interaction: DeckTaskRun["interaction"]) {
   return {
     fields: Array.isArray(interaction.fields)
       ? interaction.fields
-          .map((field) => ({
-            label: field.label ?? field.name ?? "Answer",
-            name: field.name ?? "",
+          .map((field, index) => ({
+            label: field.label ?? field.name ?? "Security answer",
+            name: field.name ?? (index === 0 ? "answer" : `answer_${index + 1}`),
             type: field.type ?? "string",
           }))
           .filter((field) => field.name)
-      : [],
+      : [{ label: "Security answer", name: "answer", type: "string" }],
     message: interaction.message ?? "Additional verification is required.",
     type: interaction.type ?? "verification",
   };

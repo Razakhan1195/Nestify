@@ -9,6 +9,7 @@ type DeckProviderActionButtonProps = {
   action: "connect" | "sync" | "disconnect";
   children: React.ReactNode;
   providerId: string;
+  restartSync?: boolean;
   variant?: "default" | "outline";
 };
 
@@ -28,26 +29,50 @@ export function DeckProviderActionButton({
   action,
   children,
   providerId,
+  restartSync = false,
   variant = "default",
 }: DeckProviderActionButtonProps) {
   const router = useRouter();
   const [pending, setPending] = useState(false);
 
   async function runAction() {
+    if (
+      action === "disconnect" &&
+      !window.confirm(
+        "Disconnect this provider? Historical bills and records will stay in Nestify, but automatic syncing will stop."
+      )
+    ) {
+      return;
+    }
+
     setPending(true);
 
     try {
       const response = await fetch(endpointByAction[action], {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ providerId }),
+        body: JSON.stringify({ providerId, restart: restartSync }),
       });
       const result = (await response.json()) as {
         message?: string;
+        status?: string;
       };
 
       if (!response.ok) {
         throw new Error(result.message ?? "Provider action failed.");
+      }
+
+      if (
+        result.status === "requires_user_action" ||
+        result.status === "mfa_required"
+      ) {
+        router.push(
+          `/app/providers/${providerId}?notice=${encodeURIComponent(
+            result.message ??
+              "Deck needs one more verification step before syncing can continue."
+          )}`
+        );
+        return;
       }
 
       router.refresh();

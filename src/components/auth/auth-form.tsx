@@ -1,5 +1,7 @@
 import Link from "next/link";
+import { Mail } from "lucide-react";
 
+import { signInWithGoogle } from "@/app/actions";
 import { SubmitButton } from "@/components/submit-button";
 import {
   Card,
@@ -17,6 +19,8 @@ type AuthFormProps = {
   alternateLabel: string;
   alternateText: string;
   error?: string;
+  googleNext?: string;
+  notice?: string;
   pendingLabel: string;
   passwordAutoComplete?: "current-password" | "new-password";
   submitLabel: string;
@@ -30,6 +34,8 @@ export function AuthForm({
   alternateLabel,
   alternateText,
   error,
+  googleNext = "/app",
+  notice,
   pendingLabel,
   passwordAutoComplete = "current-password",
   submitLabel,
@@ -43,10 +49,33 @@ export function AuthForm({
         <CardDescription>{subtitle}</CardDescription>
       </CardHeader>
       <CardContent>
+        <form action={signInWithGoogle}>
+          <input name="next" type="hidden" value={googleNext} />
+          <SubmitButton
+            className="h-10 w-full"
+            label="Continue with Google"
+            pendingLabel="Opening Google..."
+            variant="outline"
+          >
+            <span className="flex size-5 items-center justify-center rounded-full border text-xs font-semibold">
+              G
+            </span>
+          </SubmitButton>
+        </form>
+        <div className="my-5 grid grid-cols-[1fr_auto_1fr] items-center gap-3 text-xs text-muted-foreground">
+          <span className="h-px bg-border" />
+          <span>Email</span>
+          <span className="h-px bg-border" />
+        </div>
         <form action={action} className="grid gap-4">
           {error ? (
             <p className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
               {error}
+            </p>
+          ) : null}
+          {notice ? (
+            <p className="rounded-lg border border-primary/20 bg-primary/10 px-3 py-2 text-sm text-primary">
+              {notice}
             </p>
           ) : null}
           <div className="grid gap-2">
@@ -77,6 +106,15 @@ export function AuthForm({
             pendingLabel={pendingLabel}
           />
         </form>
+        <p className="mt-3 text-center text-sm text-muted-foreground">
+          <Link
+            className="inline-flex items-center gap-1.5 font-medium text-foreground underline"
+            href="/forgot-password"
+          >
+            <Mail className="size-3.5" />
+            Forgot password?
+          </Link>
+        </p>
         <p className="mt-5 text-center text-sm text-muted-foreground">
           {alternateText}{" "}
           <Link className="font-medium text-foreground underline" href={alternateHref}>

@@ -212,12 +212,17 @@ export type ProviderRow = {
   last_successful_sync_at: string | null;
   next_expected_bill_date: string | null;
   sync_frequency: string | null;
+  sync_frequency_days?: number | null;
+  next_scheduled_sync_at?: string | null;
+  sync_status?: string | null;
+  sync_failure_reason?: string | null;
   requires_user_action: boolean | null;
   user_action_message: string | null;
   data_capabilities: Record<string, boolean> | null;
   deck_connection_id: string | null;
   deck_connection_status: string | null;
   deck_connection_metadata: Record<string, unknown> | null;
+  registry_provider_id?: string | null;
   account_number: string | null;
   website_url: string | null;
   phone: string | null;
@@ -322,7 +327,7 @@ export async function getHomeProviders(homeId: string, userId: string) {
   const { data, error } = await supabase
     .from("providers")
     .select(
-      "id,user_id,home_id,category_id,name,display_name,provider_priority,connection_status,health_status,last_successful_sync_at,next_expected_bill_date,sync_frequency,requires_user_action,user_action_message,data_capabilities,deck_connection_id,deck_connection_status,deck_connection_metadata,account_number,website_url,phone,email,notes,created_at,updated_at"
+      "id,user_id,home_id,category_id,name,display_name,provider_priority,connection_status,health_status,last_successful_sync_at,next_expected_bill_date,sync_frequency,sync_frequency_days,next_scheduled_sync_at,sync_status,sync_failure_reason,requires_user_action,user_action_message,data_capabilities,deck_connection_id,deck_connection_status,deck_connection_metadata,registry_provider_id,account_number,website_url,phone,email,notes,created_at,updated_at"
     )
     .eq("home_id", homeId)
     .eq("user_id", userId);
@@ -339,7 +344,7 @@ export async function requireOwnedProvider(providerId: string, userId: string) {
   const { data, error } = await supabase
     .from("providers")
     .select(
-      "id,user_id,home_id,category_id,name,display_name,provider_priority,connection_status,health_status,last_successful_sync_at,next_expected_bill_date,sync_frequency,requires_user_action,user_action_message,data_capabilities,deck_connection_id,deck_connection_status,deck_connection_metadata,account_number,website_url,phone,email,notes,created_at,updated_at"
+      "id,user_id,home_id,category_id,name,display_name,provider_priority,connection_status,health_status,last_successful_sync_at,next_expected_bill_date,sync_frequency,sync_frequency_days,next_scheduled_sync_at,sync_status,sync_failure_reason,requires_user_action,user_action_message,data_capabilities,deck_connection_id,deck_connection_status,deck_connection_metadata,registry_provider_id,account_number,website_url,phone,email,notes,created_at,updated_at"
     )
     .eq("id", providerId)
     .eq("user_id", userId)

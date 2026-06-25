@@ -1,26 +1,26 @@
-import { Bell, Home, ListChecks } from "lucide-react";
+import { Home, ListChecks, Sparkles } from "lucide-react";
 
 const steps = [
   {
     description:
-      "Tell Nestify a little about your place. Add your home in minutes, no card required.",
+      "Tell Nestify a little about your place so AI can understand the home, not just a list of tasks.",
     icon: Home,
     step: "01",
-    title: "Add your home",
+    title: "Create your home profile",
   },
   {
     description:
-      "Log bills, maintenance, repairs, documents, and warranties as they come up. Everything lives in one organized place.",
+      "Add records manually or connect supported providers so bills, due dates, documents, and renewals flow into one place.",
     icon: ListChecks,
     step: "02",
-    title: "Track what matters",
+    title: "Connect or add what matters",
   },
   {
     description:
-      "Get reminders before due dates and renewals, plus a clear monthly summary of your home's health and spending.",
-    icon: Bell,
+      "AI turns everything into a monthly home report with priorities, reminders, and practical next steps.",
+    icon: Sparkles,
     step: "03",
-    title: "Stay ahead",
+    title: "Get AI guidance",
   },
 ];
 
@@ -33,10 +33,11 @@ export function HowItWorks() {
             How it works
           </p>
           <h2 className="mt-2 text-balance text-3xl font-semibold tracking-tight sm:text-4xl">
-            From scattered paperwork to a calm, organized home
+            From scattered home admin to AI-guided clarity
           </h2>
           <p className="mt-3 text-pretty text-lg leading-relaxed text-muted-foreground">
-            No spreadsheets, sticky notes, or buried email receipts. Just three simple steps.
+            No spreadsheets, sticky notes, or buried email receipts. Nestify gives your
+            home a memory and helps you decide what to handle next.
           </p>
         </div>
 

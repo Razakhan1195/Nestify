@@ -9,9 +9,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Nestify - Household command center",
+  title: "Nestify - AI home command center",
   description:
-    "Keep everything that protects your home in one place: maintenance, repairs, bills, warranties, documents, and the systems that run your home.",
+    "AI-powered home management that turns bills, maintenance, repairs, warranties, documents, and home systems into clear priorities and next steps.",
 };
 
 export default function RootLayout({

@@ -6,6 +6,7 @@ import { createManualBill } from "@/app/actions";
 import { EmptyState } from "@/components/empty-state";
 import { ActionFeedbackToast } from "@/components/product/action-feedback-toast";
 import { MarkBillPaidAction } from "@/components/product/attention-action-menu";
+import { DeleteRecordButton } from "@/components/product/delete-record-button";
 import { PageHeader, PageShell } from "@/components/product/design-system";
 import { SectionCard } from "@/components/section-card";
 import { StatusBadge, type StatusTone } from "@/components/status-badge";
@@ -20,7 +21,11 @@ import { getActualProviderName, getProviderSetupByPriority } from "@/lib/provide
 import { createClient } from "@/lib/supabase/server";
 
 type BillsPageProps = {
-  searchParams: Promise<{ error?: string | string[]; notice?: string | string[] }>;
+  searchParams: Promise<{
+    error?: string | string[];
+    notice?: string | string[];
+    provider?: string | string[];
+  }>;
 };
 
 type ProviderRelation =
@@ -30,14 +35,24 @@ type ProviderRelation =
 
 type Bill = {
   amount: number | null;
+  custom_provider_name: string | null;
   currency: string;
   due_date: string | null;
   id: string;
   name: string;
+  payment_status: string | null;
+  provider_id: string | null;
   providers: ProviderRelation;
   raw_data: unknown;
   source: string | null;
   status: string;
+};
+
+type ProviderOption = {
+  display_name: string | null;
+  id: string;
+  name: string;
+  provider_priority: number | null;
 };
 
 const billSuggestions = [
@@ -118,7 +133,13 @@ function billCategory(rawData: unknown) {
 
 function BillCard({ bill }: { bill: Bill }) {
   const tone = billTone(bill);
-  const label = providerName(bill.providers, cleanCustomerLabel(bill.name) ?? "Household bill");
+  const label =
+    providerName(
+      bill.providers,
+      cleanCustomerLabel(bill.custom_provider_name) ??
+        cleanCustomerLabel(bill.name) ??
+        "Household bill"
+    );
 
   return (
     <div className="flex items-center gap-4 rounded-xl border bg-card p-4">
@@ -157,13 +178,22 @@ function BillCard({ bill }: { bill: Bill }) {
             Remind me
           </Button>
         )}
+        {bill.source === "manual" ? (
+          <DeleteRecordButton
+            className="h-7 px-2 text-xs"
+            id={bill.id}
+            kind="manual-bill"
+            label="Remove"
+            returnPath="/app/bills"
+          />
+        ) : null}
       </div>
     </div>
   );
 }
 
 export default async function BillsPage({ searchParams }: BillsPageProps) {
-  const [{ error: pageError, notice }, supabase] = await Promise.all([
+  const [{ error: pageError, notice, provider: selectedProviderParam }, supabase] = await Promise.all([
     searchParams,
     createClient(),
   ]);
@@ -174,14 +204,25 @@ export default async function BillsPage({ searchParams }: BillsPageProps) {
   if (!user) redirect("/login");
 
   const home = await requireCurrentUserHome(user.id);
-  const { data: bills, error } = await supabase
-    .from("bills")
-    .select("id,name,amount,currency,due_date,status,source,raw_data,providers(display_name,name,provider_priority)")
-    .eq("user_id", user.id)
-    .eq("home_id", home.id)
-    .order("due_date", { ascending: true, nullsFirst: false });
+  const [{ data: bills, error }, { data: providers }] = await Promise.all([
+    supabase
+      .from("bills")
+      .select("id,name,amount,currency,due_date,status,source,payment_status,custom_provider_name,provider_id,raw_data,providers!bills_provider_id_fkey(display_name,name,provider_priority)")
+      .eq("user_id", user.id)
+      .eq("home_id", home.id)
+      .order("due_date", { ascending: true, nullsFirst: false }),
+    supabase
+      .from("providers")
+      .select("id,name,display_name,provider_priority")
+      .eq("user_id", user.id)
+      .eq("home_id", home.id)
+      .order("provider_priority", { ascending: true, nullsFirst: false }),
+  ]);
 
   const billRows = (bills ?? []) as unknown as Bill[];
+  const providerOptions = (providers ?? []) as ProviderOption[];
+  const selectedProviderId =
+    typeof selectedProviderParam === "string" ? selectedProviderParam : "";
   const overdue = billRows.filter((bill) => billTone(bill) === "overdue");
   const dueSoon = billRows.filter((bill) => billTone(bill) === "due-soon");
   const monthlyTotal = getKnownHomeCostThisMonth(billRows, new Date());
@@ -273,31 +314,97 @@ export default async function BillsPage({ searchParams }: BillsPageProps) {
           >
             <form action={createManualBill} className="grid gap-4 lg:grid-cols-4" id="manual-bill">
               <div className="grid gap-2 lg:col-span-2">
-                <Label htmlFor="name">Bill or reminder</Label>
-                <Input id="name" name="name" placeholder="Water and sewer" required />
+                <Label htmlFor="provider_id">Provider connection optional</Label>
+                <select
+                  className="h-10 rounded-md border border-input bg-background px-3 text-sm outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+                  defaultValue={selectedProviderId}
+                  id="provider_id"
+                  name="provider_id"
+                >
+                  <option value="">Custom or unsupported provider</option>
+                  {providerOptions.map((provider) => {
+                    const category = getProviderSetupByPriority(provider.provider_priority)?.name;
+                    const label = providerName(
+                      {
+                        display_name: provider.display_name,
+                        name: provider.name,
+                        provider_priority: provider.provider_priority,
+                      },
+                      provider.name
+                    );
+
+                    return (
+                      <option key={provider.id} value={provider.id}>
+                        {label}{category ? ` · ${category}` : ""}
+                      </option>
+                    );
+                  })}
+                </select>
+              </div>
+              <div className="grid gap-2 lg:col-span-2">
+                <Label htmlFor="bill_title">Bill or reminder</Label>
+                <Input id="bill_title" name="bill_title" placeholder="Water and sewer" required />
               </div>
               <div className="grid gap-2">
                 <Label htmlFor="amount">Amount</Label>
-                <Input id="amount" name="amount" placeholder="120.00" step="0.01" type="number" />
+                <Input id="amount" name="amount" placeholder="120.00" required step="0.01" type="number" />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="amount_paid">Amount paid optional</Label>
+                <Input id="amount_paid" name="amount_paid" placeholder="0.00" step="0.01" type="number" />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="issue_date">Bill date</Label>
+                <Input id="issue_date" name="issue_date" type="date" />
               </div>
               <div className="grid gap-2">
                 <Label htmlFor="due_date">Due date</Label>
-                <Input id="due_date" name="due_date" type="date" />
+                <Input id="due_date" name="due_date" required type="date" />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="billing_period_start">Period start</Label>
+                <Input id="billing_period_start" name="billing_period_start" type="date" />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="billing_period_end">Period end</Label>
+                <Input id="billing_period_end" name="billing_period_end" type="date" />
               </div>
               <div className="grid gap-2 lg:col-span-2">
                 <Label htmlFor="category">Category</Label>
-                <Input id="category" name="category" placeholder="Utilities, insurance, property tax" />
+                <Input id="category" name="category" placeholder="Water, internet, insurance, property tax" required />
               </div>
               <div className="grid gap-2 lg:col-span-2">
-                <Label htmlFor="provider_contact">Provider</Label>
-                <Input id="provider_contact" name="provider_contact" placeholder="Durham Region Water" />
+                <Label htmlFor="provider_name">Custom provider name</Label>
+                <Input id="provider_name" name="provider_name" placeholder="Durham Region Water" />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="payment_status">Payment status</Label>
+                <select
+                  className="h-10 rounded-md border border-input bg-background px-3 text-sm outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+                  defaultValue="unpaid"
+                  id="payment_status"
+                  name="payment_status"
+                >
+                  <option value="unpaid">Unpaid</option>
+                  <option value="scheduled">Scheduled</option>
+                  <option value="paid">Paid</option>
+                  <option value="overdue">Overdue</option>
+                </select>
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="reminder_date">Reminder date optional</Label>
+                <Input id="reminder_date" name="reminder_date" type="date" />
+              </div>
+              <div className="grid gap-2 lg:col-span-2">
+                <Label htmlFor="account_number">Account or nickname optional</Label>
+                <Input id="account_number" name="account_number" placeholder="Last 4 digits, unit, or nickname" />
               </div>
               <div className="grid gap-2 lg:col-span-4">
                 <Label htmlFor="notes">Notes</Label>
                 <Textarea id="notes" name="notes" placeholder="Account info, renewal notes, or anything to remember" />
               </div>
               <Button className="lg:col-span-4 lg:w-fit" type="submit">
-                Add reminder
+                Add manual bill
               </Button>
             </form>
           </SectionCard>

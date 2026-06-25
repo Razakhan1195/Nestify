@@ -21,6 +21,10 @@ import {
   getIssueGuidance,
   suggestedDueDateForIssue,
 } from "@/lib/issues/guidance";
+import {
+  categoryNameForRegistryUtility,
+  getProviderRegistryById,
+} from "@/lib/provider-registry";
 import { getProviderSetupByName, requireOwnedProvider } from "@/lib/providers";
 import {
   guidedIssueHelpMigrationMessage,
@@ -32,6 +36,7 @@ import {
   statusAfterBillDetailsCompleted,
   statusForNewManualBill,
 } from "@/lib/product/rules";
+import { disconnectProvider as disconnectDeckProvider } from "@/lib/sync/provider-sync";
 
 export type ActionState = {
   errors?: Record<string, string[] | undefined>;
@@ -40,17 +45,23 @@ export type ActionState = {
 
 const signupSchema = z
   .object({
-    city: z.string().min(1, "Enter your city.").max(100),
     email: z.string().email("Enter a valid email address."),
-    full_name: z.string().min(2, "Enter your full name.").max(120),
-    home_nickname: z.string().min(1, "Enter a home nickname.").max(80),
-    home_type: z.string().min(1, "Choose a home type.").max(80),
-    ownership_type: z.string().min(1, "Choose an ownership type.").max(80),
-    password: z.string().min(8, "Use at least 8 characters."),
+    password: z.string().min(6, "Use at least 6 characters."),
     password_confirm: z.string().min(1, "Confirm your password."),
-    postal_code: z.string().min(1, "Enter your postal code.").max(20),
-    province: z.string().min(1, "Enter your province.").max(80),
-    street_address: z.string().min(1, "Enter your street address.").max(160),
+  })
+  .refine((value) => value.password === value.password_confirm, {
+    message: "Passwords do not match.",
+    path: ["password_confirm"],
+  });
+
+const forgotPasswordSchema = z.object({
+  email: z.string().email("Enter a valid email address."),
+});
+
+const resetPasswordSchema = z
+  .object({
+    password: z.string().min(6, "Use at least 6 characters."),
+    password_confirm: z.string().min(1, "Confirm your password."),
   })
   .refine((value) => value.password === value.password_confirm, {
     message: "Passwords do not match.",
@@ -80,11 +91,18 @@ const homeSchema = z.object({
 });
 
 const providerSetupSchema = z.object({
-  category_id: z.string().uuid(),
+  category_id: z.string().uuid().optional().or(z.literal("")),
   category_name: z.string().min(1),
   provider_name: z.string().min(1, "Enter the provider name.").max(120),
+  registry_provider_id: z.string().uuid().optional().or(z.literal("")),
   account_number: z.string().max(80).optional(),
   notes: z.string().max(500).optional(),
+  sync_frequency_days: z
+    .string()
+    .optional()
+    .refine((value) => !value || value === "15" || value === "30", {
+      message: "Choose a 15 or 30 day refresh cadence.",
+    }),
 });
 
 const providerNameSchema = z.object({
@@ -97,15 +115,35 @@ const providerNameSchema = z.object({
 const manualBillSchema = z.object({
   bill_title: z.string().min(1, "Enter a bill title.").max(140),
   category: z.string().min(1, "Choose a category.").max(80),
+  provider_id: z.string().uuid().optional().or(z.literal("")),
   provider_name: z.string().max(120).optional(),
+  issue_date: z.string().optional(),
+  billing_period_start: z.string().optional(),
+  billing_period_end: z.string().optional(),
   amount: z
     .string()
     .min(1, "Enter the bill amount.")
     .refine((value) => Number.isFinite(Number(value)), "Enter a valid amount."),
+  amount_paid: z
+    .string()
+    .optional()
+    .refine((value) => !value || Number.isFinite(Number(value)), "Enter a valid amount paid."),
   due_date: z.string().min(1, "Choose a due date."),
   frequency: z.string().optional(),
-  status: z.string().optional(),
+  payment_status: z.enum(["unpaid", "scheduled", "paid", "overdue"]).optional(),
+  account_number: z.string().max(80).optional(),
+  reminder_date: z.string().optional(),
   notes: z.string().optional(),
+});
+
+const providerSyncPreferenceSchema = z.object({
+  provider_id: z.string().uuid(),
+  sync_frequency_days: z.enum(["15", "30"]),
+});
+
+const providerDeleteSchema = z.object({
+  provider_id: z.string().uuid(),
+  return_path: z.string().startsWith("/").default("/app/providers"),
 });
 
 const maintenanceTaskSchema = z.object({
@@ -202,6 +240,11 @@ const billActionSchema = z.object({
   return_path: z.string().startsWith("/").default("/app/bills"),
 });
 
+const recordDeleteSchema = z.object({
+  record_id: z.string().uuid(),
+  return_path: z.string().startsWith("/").default("/app"),
+});
+
 const billDueDateSchema = z.object({
   bill_id: z.string().uuid(),
   amount: z.string().optional(),
@@ -263,7 +306,11 @@ async function getRequestOrigin() {
   const host = headersList.get("host");
   const protocol = headersList.get("x-forwarded-proto") ?? "http";
 
-  return process.env.NEXT_PUBLIC_SITE_URL ?? (host ? `${protocol}://${host}` : "");
+  return (
+    process.env.NEXT_PUBLIC_APP_URL ??
+    process.env.NEXT_PUBLIC_SITE_URL ??
+    (host ? `${protocol}://${host}` : "")
+  );
 }
 
 async function requireUserAndHome() {
@@ -392,8 +439,17 @@ async function supabaseUpdateBillEventResolution(input: {
   }
 }
 
-function redirectWithError(path: "/login" | "/signup", message: string): never {
-  redirect(`${path}?error=${encodeURIComponent(message)}`);
+function redirectWithError(path: string, message: string): never {
+  const separator = path.includes("?") ? "&" : "?";
+  redirect(`${path}${separator}error=${encodeURIComponent(message)}`);
+}
+
+function safeAuthNextPath(value: string) {
+  if (!value || !value.startsWith("/") || value.startsWith("//")) {
+    return "/app";
+  }
+
+  return value;
 }
 
 export async function login(formData: FormData) {
@@ -427,17 +483,9 @@ export async function signup(formData: FormData) {
   }
 
   const parsed = signupSchema.safeParse({
-    city: getString(formData, "city"),
     email: getString(formData, "email"),
-    full_name: getString(formData, "full_name"),
-    home_nickname: getString(formData, "home_nickname"),
-    home_type: getString(formData, "home_type"),
-    ownership_type: getString(formData, "ownership_type"),
     password: getString(formData, "password"),
     password_confirm: getString(formData, "password_confirm"),
-    postal_code: getString(formData, "postal_code"),
-    province: getString(formData, "province"),
-    street_address: getString(formData, "street_address"),
   });
 
   if (!parsed.success) {
@@ -455,15 +503,7 @@ export async function signup(formData: FormData) {
     password: values.password,
     options: {
       data: {
-        full_name: values.full_name,
-        home_city: values.city,
-        home_nickname: values.home_nickname,
-        home_ownership_type: values.ownership_type,
-        home_postal_code: values.postal_code,
-        home_province: values.province,
-        home_street_address: values.street_address,
-        home_type: values.home_type,
-        signup_context: "home_onboarding",
+        signup_context: "quick_account",
       },
       emailRedirectTo: origin
         ? `${origin}/auth/callback?next=/app/onboarding`
@@ -480,7 +520,7 @@ export async function signup(formData: FormData) {
       {
         user_id: data.user.id,
         email: data.user.email ?? values.email,
-        full_name: values.full_name,
+        full_name: null,
       },
       { onConflict: "user_id" }
     );
@@ -491,6 +531,102 @@ export async function signup(formData: FormData) {
   }
 
   redirect(`/signup/check-email?email=${encodeURIComponent(values.email)}`);
+}
+
+export async function signInWithGoogle(formData: FormData) {
+  if (!hasSupabaseEnv()) {
+    redirectWithError("/login", missingSupabaseEnvMessage);
+  }
+
+  const next = safeAuthNextPath(getString(formData, "next") || "/app");
+  const origin = await getRequestOrigin();
+  const supabase = await createClient();
+  const { data, error } = await supabase.auth.signInWithOAuth({
+    provider: "google",
+    options: {
+      redirectTo: origin
+        ? `${origin}/auth/callback?next=${encodeURIComponent(next)}`
+        : undefined,
+    },
+  });
+
+  if (error || !data.url) {
+    redirectWithError(next === "/app/onboarding" ? "/signup" : "/login", error?.message ?? "Google sign-in could not start.");
+  }
+
+  redirect(data.url);
+}
+
+export async function requestPasswordReset(formData: FormData) {
+  if (!hasSupabaseEnv()) {
+    redirectWithError("/forgot-password", missingSupabaseEnvMessage);
+  }
+
+  const parsed = forgotPasswordSchema.safeParse({
+    email: getString(formData, "email"),
+  });
+
+  if (!parsed.success) {
+    redirectWithError(
+      "/forgot-password",
+      parsed.error.issues[0]?.message ?? "Enter a valid email address."
+    );
+  }
+
+  const origin = await getRequestOrigin();
+  const supabase = await createClient();
+  const { error } = await supabase.auth.resetPasswordForEmail(parsed.data.email, {
+    redirectTo: origin
+      ? `${origin}/auth/callback?next=/reset-password`
+      : undefined,
+  });
+
+  if (error) {
+    redirectWithError("/forgot-password", error.message);
+  }
+
+  redirect(`/forgot-password?sent=1&email=${encodeURIComponent(parsed.data.email)}`);
+}
+
+export async function resetPassword(formData: FormData) {
+  if (!hasSupabaseEnv()) {
+    redirectWithError("/reset-password", missingSupabaseEnvMessage);
+  }
+
+  const parsed = resetPasswordSchema.safeParse({
+    password: getString(formData, "password"),
+    password_confirm: getString(formData, "password_confirm"),
+  });
+
+  if (!parsed.success) {
+    redirectWithError(
+      "/reset-password",
+      parsed.error.issues[0]?.message ?? "Check the password and try again."
+    );
+  }
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+    error: userError,
+  } = await supabase.auth.getUser();
+
+  if (userError || !user) {
+    redirectWithError(
+      "/forgot-password",
+      "Open the password reset link from your email before setting a new password."
+    );
+  }
+
+  const { error } = await supabase.auth.updateUser({
+    password: parsed.data.password,
+  });
+
+  if (error) {
+    redirectWithError("/reset-password", error.message);
+  }
+
+  redirect("/login?notice=Password updated. You can sign in now.");
 }
 
 export async function createHome(
@@ -713,27 +849,50 @@ export async function addProvider(formData: FormData) {
     category_id: getString(formData, "category_id"),
     category_name: getString(formData, "category_name"),
     provider_name: getString(formData, "provider_name"),
+    registry_provider_id: getString(formData, "registry_provider_id"),
     account_number: getString(formData, "account_number"),
     notes: getString(formData, "notes"),
+    sync_frequency_days: getString(formData, "sync_frequency_days"),
   });
 
   if (!parsed.success) {
     redirect("/app/providers?error=Choose a category and enter the provider name.");
   }
 
-  const setup = getProviderSetupByName(parsed.data.category_name);
+  const registryProvider = parsed.data.registry_provider_id
+    ? await getProviderRegistryById(parsed.data.registry_provider_id)
+    : null;
+  const categoryName = registryProvider
+    ? categoryNameForRegistryUtility(registryProvider.utility_type)
+    : parsed.data.category_name;
+  const setup = getProviderSetupByName(categoryName);
 
   if (!setup) {
     redirect("/app/providers?error=Unknown provider category.");
   }
 
-  const { data: existingProvider, error: existingError } = await supabase
+  const providerName = registryProvider?.name ?? parsed.data.provider_name;
+  const categoryId = parsed.data.category_id || null;
+  const syncFrequencyDays = Number(parsed.data.sync_frequency_days || "30");
+  const nextScheduledSyncAt =
+    syncFrequencyDays === 15 || syncFrequencyDays === 30
+      ? addCalendarDays(new Date(), syncFrequencyDays).toISOString()
+      : null;
+
+  let existingProviderQuery = supabase
     .from("providers")
     .select("id")
     .eq("user_id", user.id)
-    .eq("home_id", home.id)
-    .eq("category_id", parsed.data.category_id)
-    .maybeSingle();
+    .eq("home_id", home.id);
+
+  existingProviderQuery = registryProvider
+    ? existingProviderQuery.eq("registry_provider_id", registryProvider.id)
+    : categoryId
+      ? existingProviderQuery.eq("category_id", categoryId)
+      : existingProviderQuery.eq("name", providerName);
+
+  const { data: existingProvider, error: existingError } =
+    await existingProviderQuery.maybeSingle();
 
   if (existingError) {
     redirect(`/app/providers?error=${encodeURIComponent(existingError.message)}`);
@@ -748,18 +907,26 @@ export async function addProvider(formData: FormData) {
     .insert({
       user_id: user.id,
       home_id: home.id,
-      category_id: parsed.data.category_id,
-      name: parsed.data.provider_name,
-      display_name: parsed.data.provider_name,
+      category_id: categoryId,
+      registry_provider_id: registryProvider?.id ?? null,
+      name: providerName,
+      display_name: providerName,
       account_number: nullableString(parsed.data.account_number ?? ""),
+      website_url: registryProvider?.website_url ?? null,
       notes: nullableString(parsed.data.notes ?? ""),
       provider_priority: setup.priority,
       connection_status: "added_manual",
       health_status: "needs_attention",
-      sync_frequency: setup.syncFrequency,
+      sync_frequency: `${syncFrequencyDays} days`,
+      sync_frequency_days: syncFrequencyDays,
+      next_scheduled_sync_at: nextScheduledSyncAt,
+      sync_status:
+        registryProvider?.status === "active" ? "initial_sync_pending" : "manual_bill_available",
       requires_user_action: true,
       user_action_message:
-        "Added to your household command center. Connect when ready to retrieve bills, due dates, PDFs, and changes automatically.",
+        registryProvider?.status === "active"
+          ? "Provider selected. Connect when ready to retrieve bills, due dates, PDFs, and changes automatically."
+          : "This provider is saved. Automation is not fully mapped yet, so you can add bills manually while connection support is prepared.",
       data_capabilities: setup.capabilities,
     })
     .select("id")
@@ -774,15 +941,17 @@ export async function addProvider(formData: FormData) {
     homeId: home.id,
     provider: {
       id: provider.id,
-      display_name: parsed.data.provider_name,
-      name: parsed.data.provider_name,
+      display_name: providerName,
+      name: providerName,
       provider_priority: setup.priority,
       connection_status: "added_manual",
       health_status: "needs_attention",
-      sync_frequency: setup.syncFrequency,
+      sync_frequency: `${syncFrequencyDays} days`,
       requires_user_action: true,
       user_action_message:
-        "Added to your household command center. Connect when ready to retrieve bills, due dates, PDFs, and changes automatically.",
+        registryProvider?.status === "active"
+          ? "Provider selected. Connect when ready to retrieve bills, due dates, PDFs, and changes automatically."
+          : "This provider is saved. Automation is not fully mapped yet, so you can add bills manually while connection support is prepared.",
     },
     supabase,
   });
@@ -792,7 +961,7 @@ export async function addProvider(formData: FormData) {
     homeId: home.id,
     eventType: "provider_added",
     title: "Provider added",
-    body: `${setup.name}: ${parsed.data.provider_name}`,
+    body: `${setup.name}: ${providerName}`,
     relatedTable: "providers",
     relatedId: provider.id,
   });
@@ -863,6 +1032,113 @@ export async function updateProviderName(formData: FormData) {
   redirect("/app/providers");
 }
 
+export async function updateProviderSyncPreference(formData: FormData) {
+  const parsed = providerSyncPreferenceSchema.safeParse({
+    provider_id: getString(formData, "provider_id"),
+    sync_frequency_days: getString(formData, "sync_frequency_days"),
+  });
+
+  if (!parsed.success) {
+    redirectWithNotice("/app/providers", "Choose a 15 or 30 day refresh cadence.");
+  }
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+    error: userError,
+  } = await supabase.auth.getUser();
+
+  if (userError || !user) {
+    redirect("/login");
+  }
+
+  const provider = await requireOwnedProvider(parsed.data.provider_id, user.id);
+  const days = Number(parsed.data.sync_frequency_days);
+  const anchor = provider.last_successful_sync_at
+    ? new Date(provider.last_successful_sync_at)
+    : new Date();
+  const nextScheduledSyncAt = addCalendarDays(anchor, days).toISOString();
+
+  const { error } = await supabase
+    .from("providers")
+    .update({
+      sync_frequency: `${days} days`,
+      sync_frequency_days: days,
+      next_scheduled_sync_at: nextScheduledSyncAt,
+    })
+    .eq("id", provider.id)
+    .eq("user_id", user.id);
+
+  if (error) {
+    redirectWithNotice(`/app/providers/${provider.id}`, error.message);
+  }
+
+  revalidatePath("/app/providers");
+  revalidatePath(`/app/providers/${provider.id}`);
+  redirectWithNotice(
+    `/app/providers/${provider.id}`,
+    `Refresh cadence updated to every ${days} days.`
+  );
+}
+
+export async function deleteProvider(formData: FormData) {
+  const parsed = providerDeleteSchema.safeParse({
+    provider_id: getString(formData, "provider_id"),
+    return_path: getString(formData, "return_path") || "/app/providers",
+  });
+
+  if (!parsed.success) {
+    redirectWithNotice("/app/providers", "That provider could not be deleted.");
+  }
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+    error: userError,
+  } = await supabase.auth.getUser();
+
+  if (userError || !user) {
+    redirect("/login");
+  }
+
+  const provider = await requireOwnedProvider(parsed.data.provider_id, user.id);
+
+  if (
+    provider.deck_connection_id &&
+    provider.deck_connection_status !== "disconnected"
+  ) {
+    await disconnectDeckProvider({
+      providerId: provider.id,
+      userId: user.id,
+    });
+  }
+
+  await createTimelineEvent({
+    userId: user.id,
+    homeId: provider.home_id,
+    eventType: "provider_deleted",
+    title: "Provider removed",
+    body: provider.display_name ?? provider.name,
+    relatedTable: "providers",
+    relatedId: provider.id,
+  });
+
+  const { error } = await supabase
+    .from("providers")
+    .delete()
+    .eq("id", provider.id)
+    .eq("user_id", user.id);
+
+  if (error) {
+    redirectWithNotice(parsed.data.return_path, error.message);
+  }
+
+  revalidatePath("/app");
+  revalidatePath("/app/providers");
+  revalidatePath("/app/bills");
+  redirectWithNotice("/app/providers", "Provider deleted. Historical bills and records were kept.");
+}
+
 export async function updateProviderConnectionState(formData: FormData) {
   const providerId = getString(formData, "provider_id");
   const nextState = getString(formData, "next_state");
@@ -918,13 +1194,21 @@ export async function updateProviderConnectionState(formData: FormData) {
 export async function createManualBill(formData: FormData) {
   const { home, supabase, user } = await requireUserAndHome();
   const parsed = manualBillSchema.safeParse({
-    bill_title: getString(formData, "bill_title"),
+    bill_title: getString(formData, "bill_title") || getString(formData, "name"),
     category: getString(formData, "category"),
-    provider_name: getString(formData, "provider_name"),
+    provider_id: getString(formData, "provider_id"),
+    provider_name:
+      getString(formData, "provider_name") || getString(formData, "provider_contact"),
+    issue_date: getString(formData, "issue_date"),
+    billing_period_start: getString(formData, "billing_period_start"),
+    billing_period_end: getString(formData, "billing_period_end"),
     amount: getString(formData, "amount"),
+    amount_paid: getString(formData, "amount_paid"),
     due_date: getString(formData, "due_date"),
     frequency: getString(formData, "frequency"),
-    status: getString(formData, "status"),
+    payment_status: getString(formData, "payment_status") || undefined,
+    account_number: getString(formData, "account_number"),
+    reminder_date: getString(formData, "reminder_date"),
     notes: getString(formData, "notes"),
   });
 
@@ -933,22 +1217,68 @@ export async function createManualBill(formData: FormData) {
   }
 
   const values = parsed.data;
+  const provider = values.provider_id
+    ? await requireOwnedProvider(values.provider_id, user.id)
+    : null;
+  const amount = nullableMoney(values.amount ?? "");
+  const paymentStatus = values.payment_status ?? "unpaid";
+  const billStatus =
+    paymentStatus === "paid"
+      ? "paid"
+      : paymentStatus === "overdue"
+        ? "overdue"
+        : statusForNewManualBill(values.due_date);
+
+  const duplicateQuery = supabase
+    .from("bills")
+    .select("id")
+    .eq("user_id", user.id)
+    .eq("home_id", home.id)
+    .eq("due_date", values.due_date)
+    .eq("amount", amount);
+
+  const { data: duplicateBill } = provider
+    ? await duplicateQuery.eq("provider_id", provider.id).maybeSingle()
+    : await duplicateQuery
+        .eq("custom_provider_name", values.provider_name ?? values.bill_title)
+        .maybeSingle();
+
+  if (duplicateBill) {
+    redirectWithNotice(
+      `/app/bills?provider=${provider?.id ?? ""}#manual-bill`,
+      "A similar manual bill already exists."
+    );
+  }
+
   const { data: bill, error } = await supabase
     .from("bills")
     .insert({
       user_id: user.id,
       home_id: home.id,
+      provider_id: provider?.id ?? null,
+      provider_connection_id: provider?.id ?? null,
+      custom_provider_name: provider ? null : nullableString(values.provider_name ?? ""),
       name: values.bill_title,
-      amount: nullableMoney(values.amount ?? ""),
+      amount,
+      amount_paid: nullableMoney(values.amount_paid ?? ""),
       due_date: nullableDate(values.due_date ?? ""),
+      issue_date: nullableDate(values.issue_date ?? ""),
+      billing_period_start: nullableDate(values.billing_period_start ?? ""),
+      billing_period_end: nullableDate(values.billing_period_end ?? ""),
+      account_number_masked: nullableString(values.account_number ?? ""),
+      payment_status: paymentStatus,
+      reminder_date: nullableDate(values.reminder_date ?? ""),
       frequency: nullableString(values.frequency ?? ""),
       recurrence: nullableString(values.frequency ?? ""),
-      status: statusForNewManualBill(values.due_date),
+      status: billStatus,
       source: "manual",
       notes: nullableString(values.notes ?? ""),
       raw_data: {
         category: values.category,
-        provider_contact: nullableString(values.provider_name ?? ""),
+        provider_contact: nullableString(
+          provider?.display_name ?? provider?.name ?? values.provider_name ?? ""
+        ),
+        manual_fallback: true,
       },
     })
     .select("id")
@@ -979,7 +1309,10 @@ export async function createManualBill(formData: FormData) {
 
   revalidatePath("/app");
   revalidatePath("/app/bills");
-  redirectWithNotice("/app/bills", "Bill added.");
+  if (provider) {
+    revalidatePath(`/app/providers/${provider.id}`);
+  }
+  redirectWithNotice("/app/bills", "Manual bill added.");
 }
 
 export async function resolveAttentionItem(formData: FormData) {
@@ -1254,6 +1587,63 @@ export async function updateBillDueDate(formData: FormData) {
   redirectWithNotice(values.return_path, "Due date added.");
 }
 
+export async function deleteManualBill(formData: FormData) {
+  const { home, supabase, user } = await requireUserAndHome();
+  const parsed = recordDeleteSchema.safeParse({
+    record_id: getString(formData, "record_id"),
+    return_path: getString(formData, "return_path") || "/app/bills",
+  });
+
+  if (!parsed.success) {
+    redirectWithNotice("/app/bills", "That bill could not be removed.");
+  }
+
+  const values = parsed.data;
+  const { data: bill, error: billError } = await supabase
+    .from("bills")
+    .select("id,name,source")
+    .eq("id", values.record_id)
+    .eq("user_id", user.id)
+    .eq("home_id", home.id)
+    .single();
+
+  if (billError || !bill) {
+    redirectWithNotice(values.return_path, "That bill could not be found.");
+  }
+
+  if (bill.source !== "manual") {
+    redirectWithNotice(
+      values.return_path,
+      "Provider-synced bills are kept as home history."
+    );
+  }
+
+  const { error } = await supabase
+    .from("bills")
+    .delete()
+    .eq("id", bill.id)
+    .eq("user_id", user.id)
+    .eq("home_id", home.id);
+
+  if (error) {
+    redirectWithNotice(values.return_path, "That bill could not be removed.");
+  }
+
+  await createTimelineEvent({
+    userId: user.id,
+    homeId: home.id,
+    eventType: "manual_bill_deleted",
+    title: "Manual bill removed",
+    body: bill.name,
+    relatedTable: "bills",
+    relatedId: bill.id,
+  });
+
+  revalidatePath("/app");
+  revalidatePath("/app/bills");
+  redirectWithNotice(values.return_path, "Manual bill removed.");
+}
+
 export async function completeMaintenanceTask(formData: FormData) {
   const { home, supabase, user } = await requireUserAndHome();
   const parsed = maintenanceActionSchema.safeParse({
@@ -1307,6 +1697,57 @@ export async function completeMaintenanceTask(formData: FormData) {
   revalidatePath("/app");
   revalidatePath("/app/maintenance");
   redirectWithNotice(values.return_path, "Task completed.");
+}
+
+export async function deleteMaintenanceTask(formData: FormData) {
+  const { home, supabase, user } = await requireUserAndHome();
+  const parsed = recordDeleteSchema.safeParse({
+    record_id: getString(formData, "record_id"),
+    return_path: getString(formData, "return_path") || "/app/maintenance",
+  });
+
+  if (!parsed.success) {
+    redirectWithNotice("/app/maintenance", "That task could not be removed.");
+  }
+
+  const values = parsed.data;
+  const { data: task, error: taskError } = await supabase
+    .from("maintenance_tasks")
+    .select("id,title")
+    .eq("id", values.record_id)
+    .eq("user_id", user.id)
+    .eq("home_id", home.id)
+    .single();
+
+  if (taskError || !task) {
+    redirectWithNotice(values.return_path, "That task could not be found.");
+  }
+
+  const { error } = await supabase
+    .from("maintenance_tasks")
+    .delete()
+    .eq("id", task.id)
+    .eq("user_id", user.id)
+    .eq("home_id", home.id);
+
+  if (error) {
+    redirectWithNotice(values.return_path, "That task could not be removed.");
+  }
+
+  await createTimelineEvent({
+    userId: user.id,
+    homeId: home.id,
+    eventType: "maintenance_deleted",
+    title: "Maintenance task removed",
+    body: task.title,
+    relatedTable: "maintenance_tasks",
+    relatedId: task.id,
+  });
+
+  revalidatePath("/app");
+  revalidatePath("/app/maintenance");
+  revalidatePath("/app/help");
+  redirectWithNotice(values.return_path, "Task removed.");
 }
 
 export async function skipStarterTask(formData: FormData) {
@@ -1525,6 +1966,57 @@ export async function createDocumentRecord(formData: FormData) {
   );
 }
 
+export async function deleteDocumentRecord(formData: FormData) {
+  const { home, supabase, user } = await requireUserAndHome();
+  const parsed = recordDeleteSchema.safeParse({
+    record_id: getString(formData, "record_id"),
+    return_path: getString(formData, "return_path") || "/app/documents",
+  });
+
+  if (!parsed.success) {
+    redirectWithNotice("/app/documents", "That document could not be removed.");
+  }
+
+  const values = parsed.data;
+  const { data: document, error: documentError } = await supabase
+    .from("documents")
+    .select("id,title")
+    .eq("id", values.record_id)
+    .eq("user_id", user.id)
+    .eq("home_id", home.id)
+    .single();
+
+  if (documentError || !document) {
+    redirectWithNotice(values.return_path, "That document could not be found.");
+  }
+
+  const { error } = await supabase
+    .from("documents")
+    .delete()
+    .eq("id", document.id)
+    .eq("user_id", user.id)
+    .eq("home_id", home.id);
+
+  if (error) {
+    redirectWithNotice(values.return_path, "That document could not be removed.");
+  }
+
+  await createTimelineEvent({
+    userId: user.id,
+    homeId: home.id,
+    eventType: "document_deleted",
+    title: "Document removed",
+    body: document.title,
+    relatedTable: "documents",
+    relatedId: document.id,
+  });
+
+  revalidatePath("/app");
+  revalidatePath("/app/documents");
+  revalidatePath("/app/warranties");
+  redirectWithNotice(values.return_path, "Document removed.");
+}
+
 export async function createInventoryItem(formData: FormData) {
   const { home, supabase, user } = await requireUserAndHome();
   const parsed = inventoryItemSchema.safeParse({
@@ -1588,6 +2080,57 @@ export async function createInventoryItem(formData: FormData) {
   redirect("/app/inventory");
 }
 
+export async function deleteInventoryItem(formData: FormData) {
+  const { home, supabase, user } = await requireUserAndHome();
+  const parsed = recordDeleteSchema.safeParse({
+    record_id: getString(formData, "record_id"),
+    return_path: getString(formData, "return_path") || "/app/inventory",
+  });
+
+  if (!parsed.success) {
+    redirectWithNotice("/app/inventory", "That item could not be removed.");
+  }
+
+  const values = parsed.data;
+  const { data: item, error: itemError } = await supabase
+    .from("inventory_items")
+    .select("id,name")
+    .eq("id", values.record_id)
+    .eq("user_id", user.id)
+    .eq("home_id", home.id)
+    .single();
+
+  if (itemError || !item) {
+    redirectWithNotice(values.return_path, "That item could not be found.");
+  }
+
+  const { error } = await supabase
+    .from("inventory_items")
+    .delete()
+    .eq("id", item.id)
+    .eq("user_id", user.id)
+    .eq("home_id", home.id);
+
+  if (error) {
+    redirectWithNotice(values.return_path, "That item could not be removed.");
+  }
+
+  await createTimelineEvent({
+    userId: user.id,
+    homeId: home.id,
+    eventType: "inventory_deleted",
+    title: "Home item removed",
+    body: item.name,
+    relatedTable: "inventory_items",
+    relatedId: item.id,
+  });
+
+  revalidatePath("/app");
+  revalidatePath("/app/inventory");
+  revalidatePath("/app/warranties");
+  redirectWithNotice(values.return_path, "Item removed.");
+}
+
 export async function createProject(formData: FormData) {
   const { home, supabase, user } = await requireUserAndHome();
   const parsed = projectSchema.safeParse({
@@ -1643,6 +2186,58 @@ export async function createProject(formData: FormData) {
   revalidatePath("/app");
   revalidatePath("/app/projects");
   redirect("/app/projects");
+}
+
+export async function deleteProject(formData: FormData) {
+  const { home, supabase, user } = await requireUserAndHome();
+  const parsed = recordDeleteSchema.safeParse({
+    record_id: getString(formData, "record_id"),
+    return_path: getString(formData, "return_path") || "/app/projects",
+  });
+
+  if (!parsed.success) {
+    redirectWithNotice("/app/projects", "That repair could not be removed.");
+  }
+
+  const values = parsed.data;
+  const { data: project, error: projectError } = await supabase
+    .from("projects")
+    .select("id,title")
+    .eq("id", values.record_id)
+    .eq("user_id", user.id)
+    .eq("home_id", home.id)
+    .single();
+
+  if (projectError || !project) {
+    redirectWithNotice(values.return_path, "That repair could not be found.");
+  }
+
+  const { error } = await supabase
+    .from("projects")
+    .delete()
+    .eq("id", project.id)
+    .eq("user_id", user.id)
+    .eq("home_id", home.id);
+
+  if (error) {
+    redirectWithNotice(values.return_path, "That repair could not be removed.");
+  }
+
+  await createTimelineEvent({
+    userId: user.id,
+    homeId: home.id,
+    eventType: "project_deleted",
+    title: "Repair removed",
+    body: project.title,
+    relatedTable: "projects",
+    relatedId: project.id,
+  });
+
+  revalidatePath("/app");
+  revalidatePath("/app/projects");
+  revalidatePath("/app/repairs");
+  revalidatePath("/app/help");
+  redirectWithNotice(values.return_path, "Repair removed.");
 }
 
 export async function createRepairIssue(formData: FormData) {
@@ -1978,6 +2573,57 @@ export async function resolveRepairIssue(formData: FormData) {
   revalidatePath("/app");
   revalidatePath("/app/help");
   redirectWithNotice(parsed.data.return_path, "Issue resolved.");
+}
+
+export async function deleteRepairIssue(formData: FormData) {
+  const { home, supabase, user } = await requireUserAndHome();
+  const parsed = recordDeleteSchema.safeParse({
+    record_id: getString(formData, "record_id"),
+    return_path: getString(formData, "return_path") || "/app/help",
+  });
+
+  if (!parsed.success) {
+    redirectWithNotice("/app/help", "That issue could not be removed.");
+  }
+
+  const values = parsed.data;
+  const { data: issue, error: issueError } = await supabase
+    .from("repair_issues")
+    .select("id,title")
+    .eq("id", values.record_id)
+    .eq("user_id", user.id)
+    .eq("home_id", home.id)
+    .single();
+
+  if (issueError || !issue) {
+    redirectWithNotice(values.return_path, "That issue could not be found.");
+  }
+
+  const { error } = await supabase
+    .from("repair_issues")
+    .delete()
+    .eq("id", issue.id)
+    .eq("user_id", user.id)
+    .eq("home_id", home.id);
+
+  if (error) {
+    redirectWithNotice(values.return_path, "That issue could not be removed.");
+  }
+
+  await createTimelineEvent({
+    userId: user.id,
+    homeId: home.id,
+    eventType: "issue_deleted",
+    title: "Issue removed",
+    body: issue.title,
+    relatedTable: "repair_issues",
+    relatedId: issue.id,
+  });
+
+  revalidatePath("/app");
+  revalidatePath("/app/help");
+  revalidatePath("/app/maintenance");
+  redirectWithNotice(values.return_path, "Issue removed.");
 }
 
 export async function addRepairIssueNote(formData: FormData) {

@@ -42,7 +42,8 @@ export default async function CheckEmailPage({
           <CardContent className="grid gap-4 text-sm text-muted-foreground">
             <p>
               After you click the verification link, Nestify will bring you
-              back to onboarding with your home details prefilled.
+              back to a guided setup flow where you can add the home details
+              that make your dashboard useful.
             </p>
             <div className="flex flex-col gap-2 sm:flex-row">
               <Button asChild>

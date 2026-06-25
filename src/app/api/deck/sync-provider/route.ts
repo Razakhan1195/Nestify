@@ -7,6 +7,7 @@ export async function POST(request: Request) {
   const user = await requireAuthenticatedUser();
   const body = (await request.json().catch(() => ({}))) as {
     providerId?: string;
+    restart?: boolean;
   };
 
   if (!body.providerId) {
@@ -18,6 +19,7 @@ export async function POST(request: Request) {
 
   const result = await syncProvider({
     providerId: body.providerId,
+    restart: body.restart,
     userId: user.id,
   });
 

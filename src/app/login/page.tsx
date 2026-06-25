@@ -5,11 +5,11 @@ import { AuthForm } from "@/components/auth/auth-form";
 import { AuthBrandPanel } from "@/components/auth/auth-brand-panel";
 
 type LoginPageProps = {
-  searchParams: Promise<{ error?: string | string[] }>;
+  searchParams: Promise<{ error?: string | string[]; notice?: string | string[] }>;
 };
 
 export default async function LoginPage({ searchParams }: LoginPageProps) {
-  const { error } = await searchParams;
+  const { error, notice } = await searchParams;
 
   return (
     <main className="grid min-h-screen lg:grid-cols-2">
@@ -27,6 +27,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
             alternateLabel="Sign up"
             alternateText="New to Nestify?"
             error={typeof error === "string" ? error : undefined}
+            notice={typeof notice === "string" ? notice : undefined}
             pendingLabel="Logging in..."
             submitLabel="Log in"
             subtitle="Sign in to get back to your home dashboard."

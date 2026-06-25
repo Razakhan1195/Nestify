@@ -424,7 +424,7 @@ export default async function AppHomePage({
     supabase
       .from("bills")
       .select(
-        "id,provider_id,name,amount,currency,due_date,issue_date,billing_period_start,billing_period_end,pdf_available,status,source,raw_data,created_at,providers(display_name,name,provider_priority)"
+        "id,provider_id,name,amount,currency,due_date,issue_date,billing_period_start,billing_period_end,pdf_available,status,source,raw_data,created_at,providers!bills_provider_id_fkey(display_name,name,provider_priority)"
       )
       .eq("user_id", user.id)
       .eq("home_id", home.id)
@@ -492,15 +492,27 @@ export default async function AppHomePage({
   const loadError =
     providersError ?? billsError ?? maintenanceError ?? documentsError;
 
-  const providerRows = providers as Provider[];
-  const billRows = bills as unknown as Bill[];
-  const maintenanceRows = maintenanceTasks as MaintenanceTask[];
-  const documentRows = documents as unknown as DocumentRow[];
-  const resolutionRows = attentionResolutions as AttentionResolution[];
-  const billEventRows = billEvents as BillEvent[];
-  const inventoryRows = inventoryItems as InventoryItem[];
-  const repairIssueRows = repairIssues as RepairIssueRow[];
-  const timelineRows = timelineEvents as TimelineEventRow[];
+  const providerRows = (Array.isArray(providers) ? providers : []) as Provider[];
+  const billRows = (Array.isArray(bills) ? bills : []) as unknown as Bill[];
+  const maintenanceRows = (Array.isArray(maintenanceTasks)
+    ? maintenanceTasks
+    : []) as MaintenanceTask[];
+  const documentRows = (Array.isArray(documents)
+    ? documents
+    : []) as unknown as DocumentRow[];
+  const resolutionRows = (Array.isArray(attentionResolutions)
+    ? attentionResolutions
+    : []) as AttentionResolution[];
+  const billEventRows = (Array.isArray(billEvents) ? billEvents : []) as BillEvent[];
+  const inventoryRows = (Array.isArray(inventoryItems)
+    ? inventoryItems
+    : []) as InventoryItem[];
+  const repairIssueRows = (Array.isArray(repairIssues)
+    ? repairIssues
+    : []) as RepairIssueRow[];
+  const timelineRows = (Array.isArray(timelineEvents)
+    ? timelineEvents
+    : []) as TimelineEventRow[];
   const upcomingBills = billRows
     .filter((bill) => {
       const dueDate = parseDate(bill.due_date);

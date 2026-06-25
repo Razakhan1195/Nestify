@@ -1,6 +1,8 @@
 import { AlertCircle, ArrowRight, CheckCircle2 } from "lucide-react";
+import Link from "next/link";
 
 import { ProviderSetupCard } from "@/components/providers/provider-setup-card";
+import { ProviderRegistryPicker } from "@/components/providers/provider-registry-picker";
 import { ActionFeedbackToast } from "@/components/product/action-feedback-toast";
 import {
   InsightCard,
@@ -21,6 +23,10 @@ import {
 } from "@/components/ui/card";
 import { requireCurrentUserHome } from "@/lib/homes";
 import {
+  getProviderRegistry,
+  providerRegistryMigrationFile,
+} from "@/lib/provider-registry";
+import {
   getHomeProviders,
   getActualProviderName,
   getProviderCategories,
@@ -31,8 +37,16 @@ import {
 } from "@/lib/providers";
 
 type ProvidersPageProps = {
-  searchParams: Promise<{ error?: string | string[]; notice?: string | string[] }>;
+  searchParams: Promise<{
+    error?: string | string[];
+    notice?: string | string[];
+    provider?: string | string[];
+  }>;
 };
+
+function providerSlug(value: string) {
+  return value.toLowerCase().replaceAll("&", "and").replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
+}
 
 function getProviderMigrationGuidance(error: string) {
   const missingDeckSyncColumn = [
@@ -42,6 +56,25 @@ function getProviderMigrationGuidance(error: string) {
     "external_bill_id",
     "external_document_id",
   ].some((column) => error.includes(column));
+  const missingRegistryColumn = [
+    "provider_registry",
+    "registry_provider_id",
+    "sync_frequency_days",
+    "next_scheduled_sync_at",
+    "notifications",
+  ].some((column) => error.includes(column));
+
+  if (missingRegistryColumn) {
+    return {
+      description:
+        "This environment is missing the provider registry and sync preference tables used by the production provider flow.",
+      disabledReason:
+        "Provider setup is paused until the provider registry migration is applied.",
+      file: providerRegistryMigrationFile,
+      note: "Run this after the Phase 4 provider intelligence and Phase 5 Deck sync migrations.",
+      title: "Provider registry migration required",
+    };
+  }
 
   if (missingDeckSyncColumn) {
     return {
@@ -71,7 +104,12 @@ export default async function ProvidersPage({
 }: ProvidersPageProps) {
   const user = await requireAuthenticatedUser();
   const home = await requireCurrentUserHome(user.id);
-  const [{ error, notice }, categories, providerResult] = await Promise.all([
+  const [
+    { error, notice, provider: selectedProviderParam },
+    categories,
+    providerResult,
+    registryResult,
+  ] = await Promise.all([
     searchParams,
     getProviderCategories(),
     getHomeProviders(home.id, user.id)
@@ -80,9 +118,15 @@ export default async function ProvidersPage({
         providers: [],
         error: providerError.message,
       })),
+    getProviderRegistry()
+      .then((registry) => ({ registry, error: null }))
+      .catch((registryError: Error) => ({
+        registry: [],
+        error: registryError.message,
+      })),
   ]);
   const providers = providerResult.providers;
-  const providerSchemaError = providerResult.error;
+  const providerSchemaError = providerResult.error ?? registryResult.error;
   const providerMigrationGuidance = providerSchemaError
     ? getProviderMigrationGuidance(providerSchemaError)
     : null;
@@ -157,6 +201,12 @@ export default async function ProvidersPage({
   const dashboardReadiness = Math.round(
     (connectedRecommendedCount / recommendedProviderCategories.length) * 100
   );
+  const selectedSlug =
+    typeof selectedProviderParam === "string" ? selectedProviderParam : null;
+  const defaultSetup = nextRecommendedItem?.setup ?? providerSetup[0];
+  const selectedSetup =
+    providerSetup.find((setup) => providerSlug(setup.name) === selectedSlug) ??
+    defaultSetup;
 
   return (
     <PageShell>
@@ -281,36 +331,86 @@ export default async function ProvidersPage({
 
       <PageSection id="provider-setup">
         <SectionHeader
-          title="Recommended setup"
-          description="Start with the providers that create the strongest home dashboard."
+          title="Choose what to connect"
+          description="Search for the actual company or municipality first, or pick a category below if you want to add a custom provider."
           action={
             nextRecommendedItem ? (
               <SecondaryCTA asChild size="sm">
-                <a href={`#${nextRecommendedItem.setup.name.toLowerCase().replaceAll(" ", "-")}`}>
+                <Link href={`/app/providers?provider=${providerSlug(nextRecommendedItem.setup.name)}#provider-setup`}>
                   {nextRecommendedItem.label}
-                </a>
+                </Link>
               </SecondaryCTA>
             ) : null
           }
         />
-        <div className="grid gap-3">
-          {providerSetup.map((setup) => {
-            const category = categoriesByName.get(setup.name);
-            const provider = getProviderForSetup(setup);
+        <div className="grid gap-4">
+          {!providerMigrationGuidance ? (
+            <ProviderRegistryPicker
+              categories={categories}
+              connectedRegistryIds={providers.flatMap((provider) =>
+                provider.registry_provider_id ? [provider.registry_provider_id] : []
+              )}
+              providers={registryResult.registry}
+            />
+          ) : null}
 
-            return (
-              <div id={setup.name.toLowerCase().replaceAll(" ", "-")} key={setup.name}>
-                <ProviderSetupCard
-                  category={category}
-                  disabledReason={
-                    providerMigrationGuidance?.disabledReason
-                  }
-                  provider={provider}
-                  setup={setup}
-                />
-              </div>
-            );
-          })}
+          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+            {providerSetup.map((setup) => {
+              const provider = getProviderForSetup(setup);
+              const selected = setup.name === selectedSetup.name;
+              const added = Boolean(provider);
+              const connected = Boolean(
+                provider &&
+                  ["connected", "healthy"].includes(provider.connection_status)
+              );
+              const needsAction = Boolean(provider?.requires_user_action);
+              const providerName =
+                provider && !isProviderNameMissing(provider.display_name ?? provider.name, setup.name)
+                  ? getActualProviderName(provider.display_name ?? provider.name, setup.name)
+                  : "Choose provider";
+
+              return (
+                <Link
+                  className={[
+                    "rounded-2xl border bg-card p-4 text-left transition-colors hover:bg-muted/40",
+                    selected ? "border-primary ring-2 ring-primary/15" : "border-[color:var(--border-soft)]",
+                  ].join(" ")}
+                  href={`/app/providers?provider=${providerSlug(setup.name)}#provider-setup`}
+                  key={setup.name}
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold">{setup.name}</p>
+                      <p className="mt-1 truncate text-xs text-muted-foreground">
+                        {providerName}
+                      </p>
+                    </div>
+                    <StatusBadge
+                      value={
+                        connected
+                          ? "connected"
+                          : needsAction
+                            ? "needs attention"
+                            : added
+                              ? "added"
+                              : "not added"
+                      }
+                    />
+                  </div>
+                  <p className="mt-3 line-clamp-2 text-xs leading-relaxed text-muted-foreground">
+                    {setup.value}
+                  </p>
+                </Link>
+              );
+            })}
+          </div>
+
+          <ProviderSetupCard
+            category={categoriesByName.get(selectedSetup.name)}
+            disabledReason={providerMigrationGuidance?.disabledReason}
+            provider={getProviderForSetup(selectedSetup)}
+            setup={selectedSetup}
+          />
         </div>
       </PageSection>
     </PageShell>
