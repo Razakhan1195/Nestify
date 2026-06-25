@@ -2,6 +2,7 @@ import { CheckCircle2, Hammer, History, Plus, Sparkles } from "lucide-react";
 import { redirect } from "next/navigation";
 
 import { createProject } from "@/app/actions";
+import { RepairDiagnosis } from "@/components/ai/repair-diagnosis";
 import { EmptyState } from "@/components/empty-state";
 import { DeleteRecordButton } from "@/components/product/delete-record-button";
 import { PageHeader, PageShell } from "@/components/product/design-system";
@@ -210,11 +211,35 @@ export default async function ProjectsPage({ searchParams }: ProjectsPageProps) 
                 </div>
                 <div className="grid gap-2">
                   <Label htmlFor="project_type">Area / system</Label>
-                  <Input id="project_type" name="project_type" placeholder="Plumbing" />
+                  <select
+                    className="h-10 rounded-md border border-input bg-background px-3 text-sm outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+                    defaultValue="General"
+                    id="project_type"
+                    name="project_type"
+                  >
+                    {issueCategories.map((category) => (
+                      <option key={category} value={category}>
+                        {category}
+                      </option>
+                    ))}
+                  </select>
                 </div>
                 <div className="grid gap-2">
                   <Label htmlFor="room_or_area">Room or area</Label>
                   <Input id="room_or_area" name="room_or_area" placeholder="Bathroom" />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="priority">Priority</Label>
+                  <select
+                    className="h-10 rounded-md border border-input bg-background px-3 text-sm outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+                    defaultValue="normal"
+                    id="priority"
+                    name="priority"
+                  >
+                    <option value="low">Low</option>
+                    <option value="normal">Normal</option>
+                    <option value="high">High / urgent</option>
+                  </select>
                 </div>
                 <div className="grid gap-2">
                   <Label htmlFor="budget">Quote / budget</Label>
@@ -229,7 +254,6 @@ export default async function ProjectsPage({ searchParams }: ProjectsPageProps) 
                   />
                 </div>
                 <input name="status" type="hidden" value="planning" />
-                <input name="priority" type="hidden" value="normal" />
                 <Button className="lg:col-span-5 lg:w-fit" type="submit">
                   Log repair
                 </Button>
@@ -239,22 +263,11 @@ export default async function ProjectsPage({ searchParams }: ProjectsPageProps) 
 
           <div className="flex flex-col gap-6 lg:col-span-1">
             <SectionCard
-              description="Describe what's happening and turn it into a tracked repair"
+              description="Describe what's happening, get likely causes and safe next steps, then log it in one tap"
               icon={Sparkles}
-              title="Report an issue"
+              title="AI repair help"
             >
-              <div className="grid grid-cols-2 gap-2">
-                {issueCategories.map((category) => (
-                  <a
-                    className="flex flex-col items-start gap-2 rounded-lg border bg-card p-3 text-left transition-colors hover:bg-accent/40"
-                    href="#log-repair"
-                    key={category}
-                  >
-                    <Hammer className="size-4 text-muted-foreground" />
-                    <span className="text-sm font-medium leading-tight">{category}</span>
-                  </a>
-                ))}
-              </div>
+              <RepairDiagnosis />
             </SectionCard>
 
             <div className="flex items-start gap-3 rounded-xl border border-warning/40 bg-warning/10 p-4">

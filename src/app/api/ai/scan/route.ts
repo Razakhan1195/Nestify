@@ -1,6 +1,7 @@
 import {
   classifyDocument,
   extractAppliance,
+  extractBill,
   extractWarranty,
   type AiFilePart,
 } from "@/lib/ai/extraction";
@@ -11,7 +12,7 @@ export const maxDuration = 60;
 const MAX_FILE_BYTES = 15 * 1024 * 1024; // 15 MB
 const ALLOWED_PREFIXES = ["image/"];
 const ALLOWED_TYPES = ["application/pdf"];
-const VALID_KINDS = ["appliance", "warranty", "document"] as const;
+const VALID_KINDS = ["appliance", "warranty", "document", "bill"] as const;
 type ScanKind = (typeof VALID_KINDS)[number];
 
 function isAllowedType(type: string) {
@@ -65,6 +66,10 @@ export async function POST(req: Request) {
     }
     if (kind === "warranty") {
       const data = await extractWarranty(part);
+      return Response.json({ kind, data });
+    }
+    if (kind === "bill") {
+      const data = await extractBill(part);
       return Response.json({ kind, data });
     }
     const data = await classifyDocument(part);
