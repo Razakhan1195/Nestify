@@ -17,6 +17,7 @@ import {
   missingSupabaseEnvMessage,
 } from "@/lib/supabase/env";
 import { getCurrentUserHome } from "@/lib/homes";
+import { isDemoEmail, seedDemoData } from "@/lib/demo/seed";
 import {
   getIssueGuidance,
   suggestedDueDateForIssue,
@@ -465,13 +466,21 @@ export async function login(formData: FormData) {
   }
 
   const supabase = await createClient();
-  const { error } = await supabase.auth.signInWithPassword({
+  const { data: signInData, error } = await supabase.auth.signInWithPassword({
     email,
     password,
   });
 
   if (error) {
     redirectWithError("/login", error.message);
+  }
+
+  // Seed polished demo data for the demo account on sign-in (idempotent).
+  if (isDemoEmail(signInData.user?.email)) {
+    const { data: home } = await getCurrentUserHome(signInData.user!.id);
+    if (home) {
+      await seedDemoData(supabase, signInData.user!.id, home.id);
+    }
   }
 
   redirect("/app");

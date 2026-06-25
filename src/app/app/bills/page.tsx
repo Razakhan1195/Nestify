@@ -3,6 +3,7 @@ import { Bell, Calendar, CalendarClock, Lightbulb, Plus, ReceiptText, Repeat, Wa
 import { redirect } from "next/navigation";
 
 import { createManualBill } from "@/app/actions";
+import { BillScanCard } from "@/components/ai/bill-scan-card";
 import { EmptyState } from "@/components/empty-state";
 import { ActionFeedbackToast } from "@/components/product/action-feedback-toast";
 import { MarkBillPaidAction } from "@/components/product/attention-action-menu";
@@ -308,10 +309,20 @@ export default async function BillsPage({ searchParams }: BillsPageProps) {
 
           <SectionCard
             className="scroll-mt-24"
-            description="Add manually if a provider is not connected or supported yet."
+            description="Upload a bill and let AI fill it in, or add it manually below."
             icon={Plus}
             title="Add a bill or reminder"
           >
+            <div className="mb-5">
+              <BillScanCard />
+            </div>
+            <div className="mb-4 flex items-center gap-3">
+              <span className="h-px flex-1 bg-border" />
+              <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                or add manually
+              </span>
+              <span className="h-px flex-1 bg-border" />
+            </div>
             <form action={createManualBill} className="grid gap-4 lg:grid-cols-4" id="manual-bill">
               <div className="grid gap-2 lg:col-span-2">
                 <Label htmlFor="provider_id">Provider connection optional</Label>
