@@ -45,17 +45,23 @@ export type ActionState = {
 
 const signupSchema = z
   .object({
-    city: z.string().min(1, "Enter your city.").max(100),
     email: z.string().email("Enter a valid email address."),
-    full_name: z.string().min(2, "Enter your full name.").max(120),
-    home_nickname: z.string().min(1, "Enter a home nickname.").max(80),
-    home_type: z.string().min(1, "Choose a home type.").max(80),
-    ownership_type: z.string().min(1, "Choose an ownership type.").max(80),
-    password: z.string().min(8, "Use at least 8 characters."),
+    password: z.string().min(6, "Use at least 6 characters."),
     password_confirm: z.string().min(1, "Confirm your password."),
-    postal_code: z.string().min(1, "Enter your postal code.").max(20),
-    province: z.string().min(1, "Enter your province.").max(80),
-    street_address: z.string().min(1, "Enter your street address.").max(160),
+  })
+  .refine((value) => value.password === value.password_confirm, {
+    message: "Passwords do not match.",
+    path: ["password_confirm"],
+  });
+
+const forgotPasswordSchema = z.object({
+  email: z.string().email("Enter a valid email address."),
+});
+
+const resetPasswordSchema = z
+  .object({
+    password: z.string().min(6, "Use at least 6 characters."),
+    password_confirm: z.string().min(1, "Confirm your password."),
   })
   .refine((value) => value.password === value.password_confirm, {
     message: "Passwords do not match.",
@@ -300,7 +306,11 @@ async function getRequestOrigin() {
   const host = headersList.get("host");
   const protocol = headersList.get("x-forwarded-proto") ?? "http";
 
-  return process.env.NEXT_PUBLIC_SITE_URL ?? (host ? `${protocol}://${host}` : "");
+  return (
+    process.env.NEXT_PUBLIC_APP_URL ??
+    process.env.NEXT_PUBLIC_SITE_URL ??
+    (host ? `${protocol}://${host}` : "")
+  );
 }
 
 async function requireUserAndHome() {
@@ -429,8 +439,17 @@ async function supabaseUpdateBillEventResolution(input: {
   }
 }
 
-function redirectWithError(path: "/login" | "/signup", message: string): never {
-  redirect(`${path}?error=${encodeURIComponent(message)}`);
+function redirectWithError(path: string, message: string): never {
+  const separator = path.includes("?") ? "&" : "?";
+  redirect(`${path}${separator}error=${encodeURIComponent(message)}`);
+}
+
+function safeAuthNextPath(value: string) {
+  if (!value || !value.startsWith("/") || value.startsWith("//")) {
+    return "/app";
+  }
+
+  return value;
 }
 
 export async function login(formData: FormData) {
@@ -464,17 +483,9 @@ export async function signup(formData: FormData) {
   }
 
   const parsed = signupSchema.safeParse({
-    city: getString(formData, "city"),
     email: getString(formData, "email"),
-    full_name: getString(formData, "full_name"),
-    home_nickname: getString(formData, "home_nickname"),
-    home_type: getString(formData, "home_type"),
-    ownership_type: getString(formData, "ownership_type"),
     password: getString(formData, "password"),
     password_confirm: getString(formData, "password_confirm"),
-    postal_code: getString(formData, "postal_code"),
-    province: getString(formData, "province"),
-    street_address: getString(formData, "street_address"),
   });
 
   if (!parsed.success) {
@@ -492,15 +503,7 @@ export async function signup(formData: FormData) {
     password: values.password,
     options: {
       data: {
-        full_name: values.full_name,
-        home_city: values.city,
-        home_nickname: values.home_nickname,
-        home_ownership_type: values.ownership_type,
-        home_postal_code: values.postal_code,
-        home_province: values.province,
-        home_street_address: values.street_address,
-        home_type: values.home_type,
-        signup_context: "home_onboarding",
+        signup_context: "quick_account",
       },
       emailRedirectTo: origin
         ? `${origin}/auth/callback?next=/app/onboarding`
@@ -517,7 +520,7 @@ export async function signup(formData: FormData) {
       {
         user_id: data.user.id,
         email: data.user.email ?? values.email,
-        full_name: values.full_name,
+        full_name: null,
       },
       { onConflict: "user_id" }
     );
@@ -528,6 +531,102 @@ export async function signup(formData: FormData) {
   }
 
   redirect(`/signup/check-email?email=${encodeURIComponent(values.email)}`);
+}
+
+export async function signInWithGoogle(formData: FormData) {
+  if (!hasSupabaseEnv()) {
+    redirectWithError("/login", missingSupabaseEnvMessage);
+  }
+
+  const next = safeAuthNextPath(getString(formData, "next") || "/app");
+  const origin = await getRequestOrigin();
+  const supabase = await createClient();
+  const { data, error } = await supabase.auth.signInWithOAuth({
+    provider: "google",
+    options: {
+      redirectTo: origin
+        ? `${origin}/auth/callback?next=${encodeURIComponent(next)}`
+        : undefined,
+    },
+  });
+
+  if (error || !data.url) {
+    redirectWithError(next === "/app/onboarding" ? "/signup" : "/login", error?.message ?? "Google sign-in could not start.");
+  }
+
+  redirect(data.url);
+}
+
+export async function requestPasswordReset(formData: FormData) {
+  if (!hasSupabaseEnv()) {
+    redirectWithError("/forgot-password", missingSupabaseEnvMessage);
+  }
+
+  const parsed = forgotPasswordSchema.safeParse({
+    email: getString(formData, "email"),
+  });
+
+  if (!parsed.success) {
+    redirectWithError(
+      "/forgot-password",
+      parsed.error.issues[0]?.message ?? "Enter a valid email address."
+    );
+  }
+
+  const origin = await getRequestOrigin();
+  const supabase = await createClient();
+  const { error } = await supabase.auth.resetPasswordForEmail(parsed.data.email, {
+    redirectTo: origin
+      ? `${origin}/auth/callback?next=/reset-password`
+      : undefined,
+  });
+
+  if (error) {
+    redirectWithError("/forgot-password", error.message);
+  }
+
+  redirect(`/forgot-password?sent=1&email=${encodeURIComponent(parsed.data.email)}`);
+}
+
+export async function resetPassword(formData: FormData) {
+  if (!hasSupabaseEnv()) {
+    redirectWithError("/reset-password", missingSupabaseEnvMessage);
+  }
+
+  const parsed = resetPasswordSchema.safeParse({
+    password: getString(formData, "password"),
+    password_confirm: getString(formData, "password_confirm"),
+  });
+
+  if (!parsed.success) {
+    redirectWithError(
+      "/reset-password",
+      parsed.error.issues[0]?.message ?? "Check the password and try again."
+    );
+  }
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+    error: userError,
+  } = await supabase.auth.getUser();
+
+  if (userError || !user) {
+    redirectWithError(
+      "/forgot-password",
+      "Open the password reset link from your email before setting a new password."
+    );
+  }
+
+  const { error } = await supabase.auth.updateUser({
+    password: parsed.data.password,
+  });
+
+  if (error) {
+    redirectWithError("/reset-password", error.message);
+  }
+
+  redirect("/login?notice=Password updated. You can sign in now.");
 }
 
 export async function createHome(
