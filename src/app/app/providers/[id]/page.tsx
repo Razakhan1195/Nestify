@@ -39,7 +39,10 @@ import type { DeckInteraction } from "@/lib/deck/types";
 
 type ProviderDetailPageProps = {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ error?: string | string[]; notice?: string | string[] }>;
+  searchParams: Promise<{
+    error?: string | string[];
+    notice?: string | string[];
+  }>;
 };
 
 function formatDate(value: string | null) {
@@ -68,28 +71,28 @@ function capabilityLabel(key: string) {
 
 function getDeckMetadataValue(
   metadata: Record<string, unknown> | null,
-  key: string
+  key: string,
 ) {
   const value = metadata?.[key];
   return typeof value === "string" ? value : null;
 }
 
-function supportsDurhamWaterCredentials(providerName: string, setupName?: string) {
+function supportsDurhamWaterCredentials(
+  providerName: string,
+  setupName?: string,
+) {
   const text = `${providerName} ${setupName ?? ""}`.toLowerCase();
   return text.includes("durham") || text.includes("water");
 }
 
 function getDeckInteraction(
   metadata: Record<string, unknown> | null,
-  fallbackMessage?: string | null
+  fallbackMessage?: string | null,
 ): DeckInteraction | null {
   const interaction = metadata?.interaction;
   const taskRunId = metadata?.taskRunId;
 
-  if (
-    !interaction ||
-    typeof interaction !== "object"
-  ) {
+  if (!interaction || typeof interaction !== "object") {
     if (typeof taskRunId === "string" && taskRunId.startsWith("trun_")) {
       return {
         fields: [{ label: "Security answer", name: "answer", type: "string" }],
@@ -109,30 +112,36 @@ function getDeckInteraction(
     type?: unknown;
   };
 
-  const fields = Array.isArray(candidate.fields) ? candidate.fields.flatMap((field, index) => {
-    if (!field || typeof field !== "object") return [];
+  const fields = Array.isArray(candidate.fields)
+    ? candidate.fields.flatMap((field, index) => {
+        if (!field || typeof field !== "object") return [];
 
-    const item = field as { label?: unknown; name?: unknown; type?: unknown };
+        const item = field as {
+          label?: unknown;
+          name?: unknown;
+          type?: unknown;
+        };
 
-    return [
-      {
-        label:
-          typeof item.label === "string" && item.label
-            ? item.label
-            : typeof item.name === "string" && item.name
-              ? item.name
-              : "Security answer",
-        name:
-          typeof item.name === "string" && item.name
-            ? item.name
-            : index === 0
-              ? "answer"
-              : `answer_${index + 1}`,
-        type:
-          typeof item.type === "string" && item.type ? item.type : "string",
-      },
-    ];
-  }) : [];
+        return [
+          {
+            label:
+              typeof item.label === "string" && item.label
+                ? item.label
+                : typeof item.name === "string" && item.name
+                  ? item.name
+                  : "Security answer",
+            name:
+              typeof item.name === "string" && item.name
+                ? item.name
+                : index === 0
+                  ? "answer"
+                  : `answer_${index + 1}`,
+            type:
+              typeof item.type === "string" && item.type ? item.type : "string",
+          },
+        ];
+      })
+    : [];
 
   return {
     fields: fields.length
@@ -141,8 +150,8 @@ function getDeckInteraction(
     message:
       typeof candidate.message === "string"
         ? candidate.message
-        : fallbackMessage ??
-          "Please answer the security question to continue accessing your bills.",
+        : (fallbackMessage ??
+          "Please answer the security question to continue accessing your bills."),
     type: typeof candidate.type === "string" ? candidate.type : "verification",
   };
 }
@@ -175,7 +184,7 @@ export default async function ProviderDetailPage({
     supabase
       .from("bills")
       .select(
-        "id,name,amount,currency,due_date,issue_date,billing_period_start,billing_period_end,account_number_masked,status,created_at"
+        "id,name,amount,currency,due_date,issue_date,billing_period_start,billing_period_end,account_number_masked,status,created_at",
       )
       .eq("user_id", user.id)
       .eq("provider_id", provider.id)
@@ -187,27 +196,27 @@ export default async function ProviderDetailPage({
   const capabilities = provider.data_capabilities ?? setup?.capabilities ?? {};
   const deckCredentialId = getDeckMetadataValue(
     provider.deck_connection_metadata,
-    "credentialId"
+    "credentialId",
   );
   const hasDeckCredential = Boolean(deckCredentialId?.startsWith("cred_"));
   const credentialStatus = getDeckMetadataValue(
     provider.deck_connection_metadata,
-    "credentialStatus"
+    "credentialStatus",
   );
   const canCollectDeckCredentials = supportsDurhamWaterCredentials(
     provider.display_name ?? provider.name,
-    setup?.name
+    setup?.name,
   );
   const deckInteraction = getDeckInteraction(
     provider.deck_connection_metadata,
-    provider.user_action_message
+    provider.user_action_message,
   );
   const actualProviderName = getActualProviderName(
     provider.display_name ?? provider.name,
-    setup?.name
+    setup?.name,
   );
   const providerConnected = ["connected", "healthy"].includes(
-    provider.connection_status
+    provider.connection_status,
   );
 
   return (
@@ -244,11 +253,17 @@ export default async function ProviderDetailPage({
             ) : null}
           </div>
           <Badge
-            className={providerConnected ? "gap-1.5 border-emerald-200 bg-emerald-50 text-emerald-800" : ""}
+            className={
+              providerConnected
+                ? "gap-1.5 border-emerald-200 bg-emerald-50 text-emerald-800"
+                : ""
+            }
             variant={provider.requires_user_action ? "outline" : "secondary"}
           >
             {providerConnected ? <CheckCircle2 className="size-3.5" /> : null}
-            {providerConnected ? "Connected complete" : getProviderStatusLabel(provider.health_status)}
+            {providerConnected
+              ? "Connected complete"
+              : getProviderStatusLabel(provider.health_status)}
           </Badge>
         </div>
       </div>
@@ -256,13 +271,19 @@ export default async function ProviderDetailPage({
       {typeof error === "string" ? (
         <Card className="rounded-lg border-destructive/30 bg-destructive/10">
           <CardHeader>
-            <CardTitle className="text-destructive">Provider action failed</CardTitle>
-            <CardDescription className="text-destructive">{error}</CardDescription>
+            <CardTitle className="text-destructive">
+              Provider action failed
+            </CardTitle>
+            <CardDescription className="text-destructive">
+              {error}
+            </CardDescription>
           </CardHeader>
         </Card>
       ) : null}
 
-      <ActionFeedbackToast message={typeof notice === "string" ? notice : null} />
+      <ActionFeedbackToast
+        message={typeof notice === "string" ? notice : null}
+      />
 
       <div className="grid gap-4 lg:grid-cols-3">
         <Card className="rounded-lg">
@@ -299,10 +320,15 @@ export default async function ProviderDetailPage({
               <p className="font-medium">
                 {provider.sync_frequency_days
                   ? `Every ${provider.sync_frequency_days} days`
-                  : provider.sync_frequency ?? setup?.syncFrequency ?? "manual"}
+                  : (provider.sync_frequency ??
+                    setup?.syncFrequency ??
+                    "manual")}
               </p>
             </div>
-            <form action={updateProviderSyncPreference} className="grid gap-2 rounded-lg border bg-muted/20 p-3">
+            <form
+              action={updateProviderSyncPreference}
+              className="grid gap-2 rounded-lg border bg-muted/20 p-3"
+            >
               <input name="provider_id" type="hidden" value={provider.id} />
               <label className="grid gap-1 text-sm font-medium">
                 Refresh this account
@@ -356,7 +382,8 @@ export default async function ProviderDetailPage({
             <div>
               <p className="text-muted-foreground">Billing period</p>
               <p className="font-medium">
-                {latestBill?.billing_period_start || latestBill?.billing_period_end
+                {latestBill?.billing_period_start ||
+                latestBill?.billing_period_end
                   ? `${formatDate(latestBill.billing_period_start)} - ${formatDate(latestBill.billing_period_end)}`
                   : "Not available"}
               </p>
@@ -409,7 +436,7 @@ export default async function ProviderDetailPage({
         </CardHeader>
         <CardContent className="grid gap-4">
           <div className="rounded-lg border bg-muted/20 px-3 py-2 text-sm text-muted-foreground">
-            Nestify uses secure provider connections through our integration
+            Rezlee uses secure provider connections through our integration
             partner. You can disconnect anytime.
           </div>
 
@@ -430,7 +457,7 @@ export default async function ProviderDetailPage({
                 </p>
               </div>
               <p className="text-amber-900">
-                Nestify does not have the security question loaded yet. If you
+                Rezlee does not have the security question loaded yet. If you
                 answered it in Deck, check the result. Otherwise restart sync to
                 request the prompt again.
               </p>
@@ -453,7 +480,7 @@ export default async function ProviderDetailPage({
                 </p>
                 <p className="text-sm text-amber-900">
                   This direct Durham Water login flow is for pilot development
-                  only. Credentials are sent to Deck Vault. Nestify stores only
+                  only. Credentials are sent to Deck Vault. Rezlee stores only
                   the Deck credential reference, not the provider password.
                 </p>
               </div>
@@ -493,7 +520,9 @@ export default async function ProviderDetailPage({
               </Link>
             </Button>
             {provider.requires_user_action ||
-            ["needs_attention", "sync_failed"].includes(provider.health_status) ? (
+            ["needs_attention", "sync_failed"].includes(
+              provider.health_status,
+            ) ? (
               <AttentionActionMenu
                 context={{
                   attentionKey: `provider-issue-${provider.id}`,
@@ -514,7 +543,8 @@ export default async function ProviderDetailPage({
             Sync history
           </CardTitle>
           <CardDescription>
-            Recent provider activity will appear here as integrations come online.
+            Recent provider activity will appear here as integrations come
+            online.
           </CardDescription>
         </CardHeader>
         <CardContent>

@@ -26,7 +26,10 @@ type OnboardingPageProps = {
   }>;
 };
 
-function getStep(value: string | string[] | undefined, hasHome: boolean): OnboardingStep {
+function getStep(
+  value: string | string[] | undefined,
+  hasHome: boolean,
+): OnboardingStep {
   const step = typeof value === "string" ? value : undefined;
 
   if (!hasHome) return "home";
@@ -47,13 +50,15 @@ function getGoals(value: string | string[] | undefined) {
 
 function getMetadataString(
   metadata: Record<string, unknown>,
-  key: string
+  key: string,
 ): string | undefined {
   const value = metadata[key];
   return typeof value === "string" && value.trim() ? value : undefined;
 }
 
-function getHomeDefaults(metadata: Record<string, unknown>): HomeOnboardingDefaults {
+function getHomeDefaults(
+  metadata: Record<string, unknown>,
+): HomeOnboardingDefaults {
   return {
     city: getMetadataString(metadata, "home_city"),
     home_type: getMetadataString(metadata, "home_type"),
@@ -115,7 +120,7 @@ export default async function OnboardingPage({
 
       {error ? (
         <div className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
-          {error.message}
+          {"We could not load these records. Please try again shortly."}
         </div>
       ) : null}
 
@@ -129,8 +134,8 @@ export default async function OnboardingPage({
         <>
           <StepIntro
             eyebrow="Step 1 of 3"
-            title="Set up your home profile"
-            description="Nestify organizes providers, bills, maintenance, documents, warranties, and projects around the property they belong to."
+            title="Set up your place"
+            description="Give your bills, records, and reminders a place to belong. Whether you rent or own, you can start small."
           />
           <HomeOnboardingForm defaults={homeDefaults} />
         </>
@@ -141,7 +146,7 @@ export default async function OnboardingPage({
           <StepIntro
             eyebrow="Step 2 of 3"
             title="What do you want help with first?"
-            description="Choose the areas that feel most scattered today. Nestify will turn them into a practical setup plan."
+            description="Choose the areas that feel most scattered today. Rezlee will turn them into a practical setup plan."
           />
           <OnboardingGoalsForm />
         </>
@@ -163,7 +168,7 @@ export default async function OnboardingPage({
           <CardHeader>
             <CardTitle>Create your home first</CardTitle>
             <CardDescription>
-              Your setup plan needs a home profile so Nestify knows where to
+              Your setup plan needs a home profile so Rezlee knows where to
               attach bills, records, reminders, and projects.
             </CardDescription>
           </CardHeader>

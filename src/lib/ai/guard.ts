@@ -1,3 +1,4 @@
+import { reserveAiRequest } from "@/lib/ai/reservation";
 import type { User } from "@supabase/supabase-js";
 
 import { checkAiRateLimit } from "@/lib/ai/rate-limit";
@@ -31,7 +32,10 @@ export async function guardAiRequest(): Promise<AiGuardResult> {
   if (!user) {
     return {
       ok: false,
-      response: Response.json({ error: "Please sign in to use this." }, { status: 401 }),
+      response: Response.json(
+        { error: "Please sign in to use this." },
+        { status: 401 },
+      ),
     };
   }
 
@@ -40,11 +44,23 @@ export async function guardAiRequest(): Promise<AiGuardResult> {
     return {
       ok: false,
       response: Response.json(
-        { error: "You've reached today's limit for AI actions. Try again tomorrow." },
+        {
+          error:
+            "You've reached today's limit for AI actions. Try again tomorrow.",
+        },
         { status: 429 },
       ),
     };
   }
 
+  const reservation = await reserveAiRequest(supabase);
+  if (!reservation.ok)
+    return {
+      ok: false,
+      response: Response.json(
+        { error: reservation.message },
+        { status: reservation.status },
+      ),
+    };
   return { ok: true, user, supabase };
 }

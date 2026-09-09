@@ -1,8 +1,20 @@
+import { FilterLinks } from "@/components/product/filter-links";
+import { classifyBillStatus } from "@/lib/product/rules";
+import { SubmitButton } from "@/components/submit-button";
+import { AttentionActionMenu } from "@/components/product/attention-action-menu";
 import Link from "next/link";
-import { Bell, Calendar, CalendarClock, Lightbulb, Plus, ReceiptText, Repeat, Wallet } from "lucide-react";
+import {
+  Calendar,
+  CalendarClock,
+  Lightbulb,
+  Plus,
+  ReceiptText,
+  Repeat,
+  Wallet,
+} from "lucide-react";
 import { redirect } from "next/navigation";
 
-import { createManualBill } from "@/app/actions";
+import { createManualBill, updateBillDueDate } from "@/app/actions";
 import { BillScanCard } from "@/components/ai/bill-scan-card";
 import { EmptyState } from "@/components/empty-state";
 import { ActionFeedbackToast } from "@/components/product/action-feedback-toast";
@@ -12,17 +24,26 @@ import { PageHeader, PageShell } from "@/components/product/design-system";
 import { SectionCard } from "@/components/section-card";
 import { StatusBadge, type StatusTone } from "@/components/status-badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { getKnownHomeCostThisMonth } from "@/lib/home-costs";
 import { requireCurrentUserHome } from "@/lib/homes";
-import { getActualProviderName, getProviderSetupByPriority } from "@/lib/providers";
+import {
+  getActualProviderName,
+  getProviderSetupByPriority,
+} from "@/lib/providers";
 import { createClient } from "@/lib/supabase/server";
 
 type BillsPageProps = {
   searchParams: Promise<{
+    view?: string;
     error?: string | string[];
     notice?: string | string[];
     provider?: string | string[];
@@ -30,8 +51,16 @@ type BillsPageProps = {
 };
 
 type ProviderRelation =
-  | { display_name: string | null; name: string; provider_priority: number | null }
-  | { display_name: string | null; name: string; provider_priority: number | null }[]
+  | {
+      display_name: string | null;
+      name: string;
+      provider_priority: number | null;
+    }
+  | {
+      display_name: string | null;
+      name: string;
+      provider_priority: number | null;
+    }[]
   | null;
 
 type Bill = {
@@ -44,6 +73,7 @@ type Bill = {
   payment_status: string | null;
   provider_id: string | null;
   providers: ProviderRelation;
+  recurrence: string | null;
   raw_data: unknown;
   source: string | null;
   status: string;
@@ -57,8 +87,8 @@ type ProviderOption = {
 };
 
 const billSuggestions = [
-  "Property tax installments",
-  "Home insurance renewal",
+  "Rent or mortgage payment",
+  "Home or tenant insurance",
   "Water heater rental",
   "Internet promo expiry",
 ];
@@ -75,7 +105,10 @@ function providerName(value: ProviderRelation, fallback: string) {
   const provider = Array.isArray(value) ? value[0] : value;
   if (!provider) return fallback;
   const category = getProviderSetupByPriority(provider.provider_priority)?.name;
-  const actualName = getActualProviderName(provider.display_name ?? provider.name, category);
+  const actualName = getActualProviderName(
+    provider.display_name ?? provider.name,
+    category,
+  );
 
   return (
     cleanCustomerLabel(actualName) ??
@@ -103,17 +136,12 @@ function formatAmount(currency: string, amount: number | null) {
   }).format(amount);
 }
 
-function daysUntil(value: string | null) {
-  if (!value) return null;
-  const dueDate = new Date(`${value}T00:00:00`);
-  return Math.ceil((dueDate.getTime() - new Date().getTime()) / 86_400_000);
-}
-
 function billTone(bill: Bill): StatusTone {
-  if (bill.status === "paid") return "done";
-  const days = daysUntil(bill.due_date);
-  if (days !== null && days < 0) return "overdue";
-  if (days !== null && days <= 14) return "due-soon";
+  const status = classifyBillStatus(bill);
+  if (status === "paid") return "done";
+  if (status === "overdue") return "overdue";
+  if (status === "due_soon") return "due-soon";
+  if (status === "incomplete") return "warning";
   return "upcoming";
 }
 
@@ -127,28 +155,34 @@ function statusLabel(tone: StatusTone) {
 function billCategory(rawData: unknown) {
   if (!rawData || typeof rawData !== "object") return "Home";
   const category = (rawData as { category?: unknown }).category;
-  return typeof category === "string"
-    ? category.replaceAll("_", " ")
-    : "Home";
+  return typeof category === "string" ? category.replaceAll("_", " ") : "Home";
 }
 
 function BillCard({ bill }: { bill: Bill }) {
   const tone = billTone(bill);
-  const label =
-    providerName(
-      bill.providers,
-      cleanCustomerLabel(bill.custom_provider_name) ??
-        cleanCustomerLabel(bill.name) ??
-        "Household bill"
-    );
+  const status = classifyBillStatus(bill);
+  const label = providerName(
+    bill.providers,
+    cleanCustomerLabel(bill.custom_provider_name) ??
+      cleanCustomerLabel(bill.name) ??
+      "Household bill",
+  );
 
   return (
-    <div className="flex items-center gap-4 rounded-xl border bg-card p-4">
-      <div className="flex flex-1 flex-col gap-1.5">
+    <div className="flex flex-col gap-4 border-b py-5 last:border-0 sm:flex-row sm:items-start">
+      <div className="flex min-w-0 flex-1 flex-col gap-1.5">
         <div className="flex flex-wrap items-center gap-2">
           <p className="font-medium leading-tight">{label}</p>
-          <StatusBadge tone={tone}>{statusLabel(tone)}</StatusBadge>
-          {bill.source === "manual" ? <StatusBadge tone="info">Manual fallback</StatusBadge> : null}
+          <StatusBadge tone={tone}>
+            {status === "incomplete"
+              ? "Incomplete"
+              : status === "archived"
+                ? "Archived"
+                : statusLabel(tone)}
+          </StatusBadge>
+          {bill.source === "manual" ? (
+            <StatusBadge tone="info">Added by you</StatusBadge>
+          ) : null}
         </div>
         <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
           <span className="flex items-center gap-1">
@@ -157,7 +191,7 @@ function BillCard({ bill }: { bill: Bill }) {
           </span>
           <span className="flex items-center gap-1">
             <Repeat className="size-3.5" />
-            {bill.status === "paid" ? "Paid" : "Tracked"}
+            {bill.recurrence || "One-time"}
           </span>
           <span className="rounded-full bg-muted px-2 py-0.5 capitalize">
             {billCategory(bill.raw_data)}
@@ -165,20 +199,77 @@ function BillCard({ bill }: { bill: Bill }) {
         </div>
       </div>
       <div className="flex flex-col items-end gap-1.5">
-        <span className="font-semibold tabular-nums">{formatAmount(bill.currency, bill.amount)}</span>
-        {tone === "overdue" || tone === "due-soon" ? (
-          <MarkBillPaidAction
-            attentionKey={`${tone}-bill-${bill.id}`}
-            billId={bill.id}
-            eventType={tone === "overdue" ? "bill_overdue" : "bill_due_soon"}
-            returnPath="/app/bills"
-          />
-        ) : (
-          <Button variant="ghost" size="sm" className="h-7 gap-1 px-2 text-xs">
-            <Bell className="size-3.5" />
-            Remind me
-          </Button>
-        )}
+        <span className="font-semibold tabular-nums">
+          {formatAmount(bill.currency, bill.amount)}
+        </span>
+        {!["paid", "archived", "incomplete"].includes(status) ? (
+          <div className="flex items-center gap-2">
+            <MarkBillPaidAction billId={bill.id} returnPath="/app/bills" />
+            <AttentionActionMenu
+              context={{
+                attentionKey: `${status === "overdue" ? "overdue" : "due-soon"}-bill-${bill.id}`,
+                billId: bill.id,
+                eventType:
+                  status === "overdue" ? "bill_overdue" : "bill_due_soon",
+                returnPath: "/app/bills",
+              }}
+            />
+          </div>
+        ) : null}
+        {status === "incomplete" ? (
+          <details className="w-full max-w-xs">
+            <summary className="cursor-pointer py-2 text-sm font-medium text-primary">
+              Complete details
+            </summary>
+            <form
+              action={updateBillDueDate}
+              className="mt-2 grid gap-3 text-left"
+            >
+              <input type="hidden" name="bill_id" value={bill.id} />
+              <input type="hidden" name="return_path" value="/app/bills" />
+              <Label htmlFor={`name-${bill.id}`}>Bill title</Label>
+              <Input
+                id={`name-${bill.id}`}
+                name="name"
+                defaultValue={bill.name}
+                required
+              />
+              <Label htmlFor={`category-${bill.id}`}>Category</Label>
+              <Input
+                id={`category-${bill.id}`}
+                name="category"
+                defaultValue={billCategory(bill.raw_data)}
+                required
+              />
+              <Label htmlFor={`amount-${bill.id}`}>Amount</Label>
+              <Input
+                id={`amount-${bill.id}`}
+                name="amount"
+                type="number"
+                step="0.01"
+                defaultValue={bill.amount ?? ""}
+                required
+              />
+              <Label htmlFor={`date-${bill.id}`}>Due date</Label>
+              <Input
+                id={`date-${bill.id}`}
+                name="due_date"
+                type="date"
+                defaultValue={bill.due_date ?? ""}
+                required
+              />
+              <SubmitButton label="Save details" pendingLabel="Saving..." />
+            </form>
+          </details>
+        ) : null}
+        {bill.provider_id ? (
+          <Link
+            className="inline-flex min-h-11 items-center text-xs text-primary"
+            href={`/app/documents?provider=${bill.provider_id}`}
+          >
+            Provider records
+          </Link>
+        ) : null}
         {bill.source === "manual" ? (
           <DeleteRecordButton
             className="h-7 px-2 text-xs"
@@ -194,10 +285,10 @@ function BillCard({ bill }: { bill: Bill }) {
 }
 
 export default async function BillsPage({ searchParams }: BillsPageProps) {
-  const [{ error: pageError, notice, provider: selectedProviderParam }, supabase] = await Promise.all([
-    searchParams,
-    createClient(),
-  ]);
+  const [
+    { error: pageError, notice, view = "all", provider: selectedProviderParam },
+    supabase,
+  ] = await Promise.all([searchParams, createClient()]);
   const {
     data: { user },
   } = await supabase.auth.getUser();
@@ -208,7 +299,9 @@ export default async function BillsPage({ searchParams }: BillsPageProps) {
   const [{ data: bills, error }, { data: providers }] = await Promise.all([
     supabase
       .from("bills")
-      .select("id,name,amount,currency,due_date,status,source,payment_status,custom_provider_name,provider_id,raw_data,providers!bills_provider_id_fkey(display_name,name,provider_priority)")
+      .select(
+        "id,name,amount,currency,due_date,status,source,payment_status,recurrence,custom_provider_name,provider_id,raw_data,providers!bills_provider_id_fkey(display_name,name,provider_priority)",
+      )
       .eq("user_id", user.id)
       .eq("home_id", home.id)
       .order("due_date", { ascending: true, nullsFirst: false }),
@@ -228,16 +321,31 @@ export default async function BillsPage({ searchParams }: BillsPageProps) {
   const dueSoon = billRows.filter((bill) => billTone(bill) === "due-soon");
   const monthlyTotal = getKnownHomeCostThisMonth(billRows, new Date());
 
+  const selectedView = [
+    "all",
+    "overdue",
+    "due_soon",
+    "upcoming",
+    "paid",
+    "incomplete",
+    "archived",
+  ].includes(view)
+    ? view
+    : "all";
+  const visibleBills = billRows.filter(
+    (bill) =>
+      selectedView === "all" || classifyBillStatus(bill) === selectedView,
+  );
   return (
     <PageShell>
       <PageHeader
-        eyebrow="Bills & reminders"
-        title="Bills & reminders"
-        description="Due dates, amounts, renewals, PDFs, and provider-linked bills in one place."
+        eyebrow="Know"
+        title="Bills"
+        description="See what is due, what changed, and what you have already paid."
         actions={
           <>
-            <Button asChild size="sm">
-              <Link href="/app/providers">Connect provider</Link>
+            <Button asChild size="sm" variant="ghost">
+              <Link href="/app/providers">Providers</Link>
             </Button>
             <Button asChild size="sm" variant="outline">
               <a href="#manual-bill">
@@ -254,47 +362,50 @@ export default async function BillsPage({ searchParams }: BillsPageProps) {
           <CardHeader>
             <CardTitle className="text-destructive">Bill issue</CardTitle>
             <CardDescription className="text-destructive">
-              {typeof pageError === "string" ? pageError : error?.message}
+              {typeof pageError === "string"
+                ? pageError
+                : "We could not load these records. Please try again shortly."}
             </CardDescription>
           </CardHeader>
         </Card>
       ) : null}
 
-      <ActionFeedbackToast message={typeof notice === "string" ? notice : null} />
+      <ActionFeedbackToast
+        message={typeof notice === "string" ? notice : null}
+      />
 
       <div className="grid gap-6 lg:grid-cols-3 lg:gap-8">
         <div className="flex flex-col gap-6 lg:col-span-2">
-          <div className="flex flex-wrap gap-2">
-            <span className="rounded-full border border-primary bg-primary px-3 py-1 text-xs font-medium text-primary-foreground">
-              All
-            </span>
-            <span className="rounded-full border bg-card px-3 py-1 text-xs font-medium text-muted-foreground">
-              Overdue{overdue.length > 0 ? ` (${overdue.length})` : ""}
-            </span>
-            <span className="rounded-full border bg-card px-3 py-1 text-xs font-medium text-muted-foreground">
-              Due soon
-            </span>
-            <span className="rounded-full border bg-card px-3 py-1 text-xs font-medium text-muted-foreground">
-              Upcoming
-            </span>
-          </div>
+          <FilterLinks
+            basePath="/app/bills"
+            selected={selectedView}
+            options={[
+              { value: "all", label: "All", count: billRows.length },
+              ...[
+                ["overdue", "Overdue"],
+                ["due_soon", "Due soon"],
+                ["upcoming", "Upcoming"],
+                ["paid", "Paid"],
+                ["incomplete", "Incomplete"],
+                ["archived", "Archived"],
+              ].map(([value, label]) => ({
+                value,
+                label,
+                count: billRows.filter(
+                  (bill) => classifyBillStatus(bill) === value,
+                ).length,
+              })),
+            ]}
+          />
 
           <SectionCard
-            action={
-              <Button asChild size="sm">
-                <a href="#manual-bill">
-                  <Plus className="size-4" />
-                  Add bill
-                </a>
-              </Button>
-            }
             description="Due dates, amounts, and renewals in one place"
             icon={ReceiptText}
-            title="Bills & reminders"
+            title="Bills"
           >
-            {billRows.length ? (
+            {visibleBills.length ? (
               <div className="flex flex-col gap-3">
-                {billRows.map((bill) => (
+                {visibleBills.map((bill) => (
                   <BillCard bill={bill} key={bill.id} />
                 ))}
               </div>
@@ -302,7 +413,7 @@ export default async function BillsPage({ searchParams }: BillsPageProps) {
               <EmptyState
                 icon={CalendarClock}
                 title="Nothing in this view"
-                description="Once a provider syncs, bills, due dates, and PDFs will appear here. You can also add a manual fallback."
+                description="Add a bill using the form below, or choose another filter. Provider connections are optional."
               />
             )}
           </SectionCard>
@@ -311,7 +422,7 @@ export default async function BillsPage({ searchParams }: BillsPageProps) {
             className="scroll-mt-24"
             description="Upload a bill and let AI fill it in, or add it manually below."
             icon={Plus}
-            title="Add a bill or reminder"
+            title="Add a bill"
           >
             <div className="mb-5">
               <BillScanCard />
@@ -323,46 +434,74 @@ export default async function BillsPage({ searchParams }: BillsPageProps) {
               </span>
               <span className="h-px flex-1 bg-border" />
             </div>
-            <form action={createManualBill} className="grid gap-4 lg:grid-cols-4" id="manual-bill">
+            <span id="add-bill" />
+            <form
+              action={createManualBill}
+              className="grid gap-4 lg:grid-cols-4"
+              id="manual-bill"
+            >
               <div className="grid gap-2 lg:col-span-2">
-                <Label htmlFor="provider_id">Provider connection optional</Label>
+                <Label htmlFor="provider_id">
+                  Provider connection optional
+                </Label>
                 <select
                   className="h-10 rounded-md border border-input bg-background px-3 text-sm outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
                   defaultValue={selectedProviderId}
                   id="provider_id"
                   name="provider_id"
                 >
-                  <option value="">Custom or unsupported provider</option>
+                  <option value="">No provider connection</option>
                   {providerOptions.map((provider) => {
-                    const category = getProviderSetupByPriority(provider.provider_priority)?.name;
+                    const category = getProviderSetupByPriority(
+                      provider.provider_priority,
+                    )?.name;
                     const label = providerName(
                       {
                         display_name: provider.display_name,
                         name: provider.name,
                         provider_priority: provider.provider_priority,
                       },
-                      provider.name
+                      provider.name,
                     );
 
                     return (
                       <option key={provider.id} value={provider.id}>
-                        {label}{category ? ` · ${category}` : ""}
+                        {label}
+                        {category ? ` · ${category}` : ""}
                       </option>
                     );
                   })}
                 </select>
               </div>
               <div className="grid gap-2 lg:col-span-2">
-                <Label htmlFor="bill_title">Bill or reminder</Label>
-                <Input id="bill_title" name="bill_title" placeholder="Water and sewer" required />
+                <Label htmlFor="bill_title">Bill title</Label>
+                <Input
+                  id="bill_title"
+                  name="bill_title"
+                  placeholder="Water and sewer"
+                  required
+                />
               </div>
               <div className="grid gap-2">
                 <Label htmlFor="amount">Amount</Label>
-                <Input id="amount" name="amount" placeholder="120.00" required step="0.01" type="number" />
+                <Input
+                  id="amount"
+                  name="amount"
+                  placeholder="120.00"
+                  required
+                  step="0.01"
+                  type="number"
+                />
               </div>
               <div className="grid gap-2">
                 <Label htmlFor="amount_paid">Amount paid optional</Label>
-                <Input id="amount_paid" name="amount_paid" placeholder="0.00" step="0.01" type="number" />
+                <Input
+                  id="amount_paid"
+                  name="amount_paid"
+                  placeholder="0.00"
+                  step="0.01"
+                  type="number"
+                />
               </div>
               <div className="grid gap-2">
                 <Label htmlFor="issue_date">Bill date</Label>
@@ -374,19 +513,36 @@ export default async function BillsPage({ searchParams }: BillsPageProps) {
               </div>
               <div className="grid gap-2">
                 <Label htmlFor="billing_period_start">Period start</Label>
-                <Input id="billing_period_start" name="billing_period_start" type="date" />
+                <Input
+                  id="billing_period_start"
+                  name="billing_period_start"
+                  type="date"
+                />
               </div>
               <div className="grid gap-2">
                 <Label htmlFor="billing_period_end">Period end</Label>
-                <Input id="billing_period_end" name="billing_period_end" type="date" />
+                <Input
+                  id="billing_period_end"
+                  name="billing_period_end"
+                  type="date"
+                />
               </div>
               <div className="grid gap-2 lg:col-span-2">
                 <Label htmlFor="category">Category</Label>
-                <Input id="category" name="category" placeholder="Water, internet, insurance, property tax" required />
+                <Input
+                  id="category"
+                  name="category"
+                  placeholder="Water, internet, insurance, property tax"
+                  required
+                />
               </div>
               <div className="grid gap-2 lg:col-span-2">
                 <Label htmlFor="provider_name">Custom provider name</Label>
-                <Input id="provider_name" name="provider_name" placeholder="Durham Region Water" />
+                <Input
+                  id="provider_name"
+                  name="provider_name"
+                  placeholder="Durham Region Water"
+                />
               </div>
               <div className="grid gap-2">
                 <Label htmlFor="payment_status">Payment status</Label>
@@ -407,16 +563,41 @@ export default async function BillsPage({ searchParams }: BillsPageProps) {
                 <Input id="reminder_date" name="reminder_date" type="date" />
               </div>
               <div className="grid gap-2 lg:col-span-2">
-                <Label htmlFor="account_number">Account or nickname optional</Label>
-                <Input id="account_number" name="account_number" placeholder="Last 4 digits, unit, or nickname" />
+                <Label htmlFor="account_number">
+                  Account or nickname optional
+                </Label>
+                <Input
+                  id="account_number"
+                  name="account_number"
+                  placeholder="Last 4 digits, unit, or nickname"
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="frequency">Frequency</Label>
+                <select
+                  id="frequency"
+                  name="frequency"
+                  className="h-11 rounded-md border bg-background px-3 text-sm"
+                >
+                  <option value="one_time">One-time</option>
+                  <option value="monthly">Monthly</option>
+                  <option value="quarterly">Quarterly</option>
+                  <option value="annual">Annual</option>
+                </select>
               </div>
               <div className="grid gap-2 lg:col-span-4">
                 <Label htmlFor="notes">Notes</Label>
-                <Textarea id="notes" name="notes" placeholder="Account info, renewal notes, or anything to remember" />
+                <Textarea
+                  id="notes"
+                  name="notes"
+                  placeholder="Account info, renewal notes, or anything to remember"
+                />
               </div>
-              <Button className="lg:col-span-4 lg:w-fit" type="submit">
-                Add manual bill
-              </Button>
+              <SubmitButton
+                className="lg:col-span-4 lg:w-fit"
+                label="Save bill"
+                pendingLabel="Saving..."
+              />
             </form>
           </SectionCard>
         </div>
@@ -428,12 +609,16 @@ export default async function BillsPage({ searchParams }: BillsPageProps) {
                 <p className="text-2xl font-semibold tracking-tight">
                   {formatAmount("CAD", monthlyTotal)}
                 </p>
-                <p className="text-xs text-muted-foreground">Known home cost this month</p>
+                <p className="text-xs text-muted-foreground">
+                  Known home cost this month
+                </p>
               </div>
               <div className="flex flex-col gap-2 border-t pt-3">
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-muted-foreground">Overdue</span>
-                  <span className="font-medium text-destructive">{overdue.length}</span>
+                  <span className="font-medium text-destructive">
+                    {overdue.length}
+                  </span>
                 </div>
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-muted-foreground">Due soon</span>
@@ -444,7 +629,7 @@ export default async function BillsPage({ searchParams }: BillsPageProps) {
           </SectionCard>
 
           <SectionCard
-            description="Common bills homeowners track"
+            description="Everyday household costs"
             icon={Lightbulb}
             title="Worth adding"
           >
@@ -455,7 +640,12 @@ export default async function BillsPage({ searchParams }: BillsPageProps) {
                   key={suggestion}
                 >
                   <span className="text-sm leading-snug">{suggestion}</span>
-                  <Button asChild size="sm" variant="outline" className="h-7 gap-1 px-2 text-xs">
+                  <Button
+                    asChild
+                    size="sm"
+                    variant="outline"
+                    className="h-7 gap-1 px-2 text-xs"
+                  >
                     <a href="#manual-bill">
                       <Plus className="size-3.5" />
                       Add

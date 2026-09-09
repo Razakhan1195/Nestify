@@ -30,7 +30,7 @@ export function SignupForm({ error }: SignupFormProps) {
         <CardHeader>
           <CardTitle className="text-2xl">Start your home dashboard</CardTitle>
           <CardDescription>
-            Create your account first. Nestify will ask for home details in a
+            Create your account first. Rezlee will ask for home details in a
             guided setup after you sign in.
           </CardDescription>
         </CardHeader>
@@ -110,7 +110,10 @@ export function SignupForm({ error }: SignupFormProps) {
 
           <p className="mt-5 text-center text-sm text-muted-foreground">
             Already have an account?{" "}
-            <Link className="font-medium text-foreground underline" href="/login">
+            <Link
+              className="font-medium text-foreground underline"
+              href="/login"
+            >
               Log in
             </Link>
           </p>
@@ -121,7 +124,9 @@ export function SignupForm({ error }: SignupFormProps) {
         <Card className="rounded-lg border-primary/20 bg-primary/[0.04]">
           <CardHeader>
             <Sparkles className="mb-2 size-5 text-primary" />
-            <CardTitle className="text-base">Fast first, detailed later</CardTitle>
+            <CardTitle className="text-base">
+              Fast first, detailed later
+            </CardTitle>
             <CardDescription>
               No address or provider details up front. Set up the home profile
               after account creation.
@@ -131,7 +136,9 @@ export function SignupForm({ error }: SignupFormProps) {
         <Card className="rounded-lg">
           <CardHeader>
             <ShieldCheck className="mb-2 size-5 text-primary" />
-            <CardTitle className="text-base">Protected by Supabase Auth</CardTitle>
+            <CardTitle className="text-base">
+              Protected by Supabase Auth
+            </CardTitle>
             <CardDescription>
               Email/password and Google sign-in both use the same protected app
               session.
@@ -147,7 +154,9 @@ export function SignupForm({ error }: SignupFormProps) {
             <ol className="grid gap-2 text-sm text-muted-foreground">
               {setupSteps.map((step, index) => (
                 <li className="flex gap-2" key={step}>
-                  <span className="font-medium text-foreground">{index + 1}.</span>
+                  <span className="font-medium text-foreground">
+                    {index + 1}.
+                  </span>
                   <span>{step}</span>
                 </li>
               ))}

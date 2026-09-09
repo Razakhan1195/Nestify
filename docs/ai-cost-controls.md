@@ -1,6 +1,8 @@
-# Nestify AI Cost Controls
+> Historical design notes. For current Rezlee scope and launch status, read [the launch report](rezlee-launch-report.md) and [preservation map](rezlee-preservation-map.md). Current code takes precedence where older behavior is described.
 
-Nestify uses the AI SDK for assistant and extraction features. The assistant is configured to be cheap-first and guarded by usage limits.
+# Rezlee AI Cost Controls
+
+Rezlee uses the AI SDK for assistant and extraction features. The assistant is configured to be cheap-first and guarded by usage limits.
 
 ## Cheapest Assistant Setup
 
@@ -11,7 +13,7 @@ GOOGLE_GENERATIVE_AI_API_KEY=...
 AI_ASSISTANT_PROVIDER=auto
 ```
 
-With `AI_ASSISTANT_PROVIDER=auto`, Nestify prefers direct Google when `GOOGLE_GENERATIVE_AI_API_KEY` exists. The default direct model is:
+With `AI_ASSISTANT_PROVIDER=auto`, Rezlee prefers direct Google when `GOOGLE_GENERATIVE_AI_API_KEY` exists. The default direct model is:
 
 ```txt
 gemini-2.5-flash-lite

@@ -38,7 +38,9 @@ function formatDate(value: string) {
   }).format(new Date(`${value}T00:00:00`));
 }
 
-export default async function TimelinePage({ searchParams }: TimelinePageProps) {
+export default async function TimelinePage({
+  searchParams,
+}: TimelinePageProps) {
   const [{ q }, supabase] = await Promise.all([searchParams, createClient()]);
   const query = typeof q === "string" ? q.trim() : "";
   const {
@@ -58,7 +60,7 @@ export default async function TimelinePage({ searchParams }: TimelinePageProps) 
 
   if (query) {
     timelineQuery = timelineQuery.or(
-      `title.ilike.%${query}%,body.ilike.%${query}%`
+      `title.ilike.%${query}%,body.ilike.%${query}%`,
     );
   }
 
@@ -71,7 +73,7 @@ export default async function TimelinePage({ searchParams }: TimelinePageProps) 
       <PageHeader
         eyebrow="Home memory"
         title="Timeline"
-        description="Search the history of bills, documents, projects, repairs, inventory, and maintenance as Nestify captures more of your home."
+        description="Search the history of bills, documents, projects, repairs, inventory, and maintenance as Rezlee captures more of your home."
       />
 
       {!migrationRequired ? (
@@ -96,17 +98,15 @@ export default async function TimelinePage({ searchParams }: TimelinePageProps) 
 
       {migrationRequired ? (
         <MigrationRequiredCard
-          detail="Timeline needs the Homeowner OS timeline table before Nestify can build a searchable history of bills, documents, repairs, inventory, and projects."
+          detail="Timeline needs the Homeowner OS timeline table before Rezlee can build a searchable history of bills, documents, repairs, inventory, and projects."
           error={error}
         />
       ) : error ? (
         <Card className="rounded-lg border-destructive/30 bg-destructive/10">
           <CardHeader>
-            <CardTitle className="text-destructive">
-              Timeline issue
-            </CardTitle>
+            <CardTitle className="text-destructive">Timeline issue</CardTitle>
             <CardDescription className="text-destructive">
-              {error.message}
+              {"We could not load these records. Please try again shortly."}
             </CardDescription>
           </CardHeader>
         </Card>
@@ -134,11 +134,13 @@ export default async function TimelinePage({ searchParams }: TimelinePageProps) 
       ) : !migrationRequired ? (
         <EmptyState
           icon={History}
-          title={query ? "No matching history yet" : "Your timeline is just starting"}
+          title={
+            query ? "No matching history yet" : "Your timeline is just starting"
+          }
           description={
             query
               ? "Try a different search or add more bills, documents, projects, repairs, and maintenance records."
-              : "As you add bills, documents, projects, issues, and maintenance tasks, Nestify will build a searchable history of the home."
+              : "As you add bills, documents, projects, issues, and maintenance tasks, Rezlee will build a searchable history of the home."
           }
         />
       ) : null}

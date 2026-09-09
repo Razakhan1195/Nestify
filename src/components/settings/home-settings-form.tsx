@@ -33,7 +33,8 @@ export function HomeSettingsForm({ home }: { home: CurrentHome }) {
       <CardHeader>
         <CardTitle>Profile details</CardTitle>
         <CardDescription>
-          Keep the essentials accurate so your household summary has the right context.
+          Keep the essentials accurate so your household summary has the right
+          context.
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -76,7 +77,12 @@ export function HomeSettingsForm({ home }: { home: CurrentHome }) {
               <div className="grid gap-4 sm:grid-cols-3">
                 <div className="grid gap-2">
                   <Label htmlFor="city">City</Label>
-                  <Input defaultValue={home.city ?? ""} id="city" name="city" required />
+                  <Input
+                    defaultValue={home.city ?? ""}
+                    id="city"
+                    name="city"
+                    required
+                  />
                   <FieldError errors={state.errors?.city} />
                 </div>
                 <div className="grid gap-2">
@@ -111,7 +117,7 @@ export function HomeSettingsForm({ home }: { home: CurrentHome }) {
               </p>
             </div>
             <div className="grid gap-4 sm:grid-cols-2">
-            <div className="grid gap-2">
+              <div className="grid gap-2">
                 <Label htmlFor="home_type">Home type</Label>
                 <select
                   className="h-8 w-full rounded-lg border border-input bg-background px-2.5 text-sm outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
@@ -150,7 +156,7 @@ export function HomeSettingsForm({ home }: { home: CurrentHome }) {
             <div className="mb-4">
               <h3 className="font-semibold">Ownership</h3>
               <p className="text-sm text-muted-foreground">
-                Helps Nestify understand recurring costs and important dates.
+                Helps Rezlee understand recurring costs and important dates.
               </p>
             </div>
             <div className="grid gap-4 sm:grid-cols-2">
@@ -167,7 +173,9 @@ export function HomeSettingsForm({ home }: { home: CurrentHome }) {
                   <option value="Own">Own</option>
                   <option value="Rent">Rent</option>
                   <option value="Family home">Family home</option>
-                  <option value="Investment property">Investment property</option>
+                  <option value="Investment property">
+                    Investment property
+                  </option>
                   <option value="Other">Other</option>
                 </select>
                 <FieldError errors={state.errors?.ownership_type} />

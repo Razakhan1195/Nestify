@@ -21,36 +21,33 @@ type MigrationRequiredCardProps = {
 };
 
 export function MigrationRequiredCard({
-  detail = "Projects, inventory, Help, and timeline use the newer Homeowner OS tables. The app code is ready, but Supabase needs the matching migration.",
+  detail,
   error,
   migrationPath = homeownerOsMigrationPath,
-  title = "Database migration required",
+  title,
 }: MigrationRequiredCardProps) {
+  if (process.env.NODE_ENV === "production")
+    return (
+      <Card className="border-amber-200 bg-amber-50/70">
+        <CardHeader>
+          <CardTitle>This area needs a service update</CardTitle>
+          <CardDescription>
+            Your existing records have not been removed. Please try again
+            shortly.
+          </CardDescription>
+        </CardHeader>
+      </Card>
+    );
   return (
-    <Card className="rounded-lg border-amber-200 bg-amber-50/70">
+    <Card>
       <CardHeader>
-        <div className="flex items-start gap-3">
-          <div className="rounded-lg bg-amber-100 p-2 text-amber-900">
-            <DatabaseZap className="size-5" />
-          </div>
-          <div className="grid gap-1">
-            <CardTitle className="text-amber-950">{title}</CardTitle>
-            <CardDescription className="text-amber-900">
-              {detail}
-            </CardDescription>
-          </div>
-        </div>
+        <CardTitle>{title || "Database update needed"}</CardTitle>
+        <CardDescription>{detail}</CardDescription>
       </CardHeader>
-      <CardContent className="grid gap-3 text-sm text-amber-950">
-        <div className="rounded-lg border border-amber-200 bg-background/70 p-3">
-          Run this file in the Supabase SQL Editor:
-          <code className="mt-2 block overflow-x-auto rounded-md bg-amber-100 px-2 py-1 font-mono text-xs text-amber-950">
-            {migrationPath}
-          </code>
-        </div>
-        {error?.message ? (
-          <p className="text-xs text-amber-800">Supabase said: {error.message}</p>
-        ) : null}
+      <CardContent className="grid gap-3 text-sm">
+        <DatabaseZap className="size-5" />
+        <p>Run {migrationPath} in your development database.</p>
+        <p>{error?.message}</p>
       </CardContent>
     </Card>
   );

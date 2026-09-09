@@ -1,8 +1,10 @@
-# Nestify Product Experience Map
+> Historical design notes. For current Rezlee scope and launch status, read [the launch report](rezlee-launch-report.md) and [preservation map](rezlee-preservation-map.md). Current code takes precedence where older behavior is described.
+
+# Rezlee Product Experience Map
 
 ## Core Promise
 
-Nestify helps homeowners understand what changed, what is due, what needs attention, and what to do next across bills, providers, records, and maintenance.
+Rezlee helps homeowners understand what changed, what is due, what needs attention, and what to do next across bills, providers, records, and maintenance.
 
 ## Main Journey
 
@@ -12,27 +14,27 @@ For returning users: land on Dashboard, review open actions, handle or snooze wh
 
 ## Page Purposes
 
-| Page | Job | Primary CTA | Secondary CTA | Main Data | Key States |
-| --- | --- | --- | --- | --- | --- |
-| Dashboard | Monthly home command center | State-based: Connect first provider, I paid this, View bill, Choose provider, Review change | Open Vault, View all items | Providers, bills, bill events, attention resolutions, documents, maintenance | setup, active, no issues, error |
-| Providers | Set up sources for bills, PDFs, usage, and monthly intelligence | Choose provider, Connect provider, Retry sync, Reconnect, View details | View details, snooze/dismiss setup reminders | Provider categories, providers, Deck connection state | empty, setup, connected, needs attention |
-| Bills | Control home costs, due dates, PDFs, and bill changes | Row-based: I paid this, View bill, Review change, Connect provider | Add bill manually, Open PDF, dismiss/snooze | Bills, bill events, provider labels | no bills, needs review, due soon, upcoming, paid |
-| Vault | Home memory for proof and records | Add record | Connect providers, open inventory | Documents, PDFs, warranties, record categories | empty, active, renewal/review needed |
-| Maintenance | Home care rhythm and repair follow-ups | Add reminder, Mark complete | Snooze, Skip, Not relevant, Open projects | Maintenance tasks, starter tasks, projects | empty, starter setup, due soon, active |
-| Home | Property profile and history hub | Update home details | Open timeline, inventory, providers | Home profile, providers, timeline, inventory | incomplete profile, active, history building |
+| Page        | Job                                                             | Primary CTA                                                                                 | Secondary CTA                                | Main Data                                                                    | Key States                                       |
+| ----------- | --------------------------------------------------------------- | ------------------------------------------------------------------------------------------- | -------------------------------------------- | ---------------------------------------------------------------------------- | ------------------------------------------------ |
+| Dashboard   | Monthly home command center                                     | State-based: Connect first provider, I paid this, View bill, Choose provider, Review change | Open Vault, View all items                   | Providers, bills, bill events, attention resolutions, documents, maintenance | setup, active, no issues, error                  |
+| Providers   | Set up sources for bills, PDFs, usage, and monthly intelligence | Choose provider, Connect provider, Retry sync, Reconnect, View details                      | View details, snooze/dismiss setup reminders | Provider categories, providers, Deck connection state                        | empty, setup, connected, needs attention         |
+| Bills       | Control home costs, due dates, PDFs, and bill changes           | Row-based: I paid this, View bill, Review change, Connect provider                          | Add bill manually, Open PDF, dismiss/snooze  | Bills, bill events, provider labels                                          | no bills, needs review, due soon, upcoming, paid |
+| Vault       | Home memory for proof and records                               | Add record                                                                                  | Connect providers, open inventory            | Documents, PDFs, warranties, record categories                               | empty, active, renewal/review needed             |
+| Maintenance | Home care rhythm and repair follow-ups                          | Add reminder, Mark complete                                                                 | Snooze, Skip, Not relevant, Open projects    | Maintenance tasks, starter tasks, projects                                   | empty, starter setup, due soon, active           |
+| Home        | Property profile and history hub                                | Update home details                                                                         | Open timeline, inventory, providers          | Home profile, providers, timeline, inventory                                 | incomplete profile, active, history building     |
 
 ## Object And Action Model
 
-| Object | Display Rule | Primary Action | Resolution |
-| --- | --- | --- | --- |
-| Provider | actual provider name, then category | Choose, Connect, Retry, Reconnect, View details | handled when connected/healthy |
-| Bill | provider name, bill title, category, manual label | I paid this, View bill, Review change, Connect provider | paid, reviewed, dismissed, snoozed |
-| Bill event | customer-friendly title and explanation | event-specific action | open, handled, dismissed, snoozed |
-| Action queue item | source + id + event type deduped | one obvious action | leaves Needs Attention when resolved |
-| Vault record | title + category + source | View record, Add file, Review record | handled/snoozed/dismissed where relevant |
-| Maintenance task | task title + due timing | Mark complete, Add reminder | completed, skipped, snoozed |
-| Activity item | historical event copy | View related area | never appears as active warning |
-| Home profile | nickname + address/context | Update home details | saved profile improves dashboard context |
+| Object            | Display Rule                                      | Primary Action                                          | Resolution                               |
+| ----------------- | ------------------------------------------------- | ------------------------------------------------------- | ---------------------------------------- |
+| Provider          | actual provider name, then category               | Choose, Connect, Retry, Reconnect, View details         | handled when connected/healthy           |
+| Bill              | provider name, bill title, category, manual label | I paid this, View bill, Review change, Connect provider | paid, reviewed, dismissed, snoozed       |
+| Bill event        | customer-friendly title and explanation           | event-specific action                                   | open, handled, dismissed, snoozed        |
+| Action queue item | source + id + event type deduped                  | one obvious action                                      | leaves Needs Attention when resolved     |
+| Vault record      | title + category + source                         | View record, Add file, Review record                    | handled/snoozed/dismissed where relevant |
+| Maintenance task  | task title + due timing                           | Mark complete, Add reminder                             | completed, skipped, snoozed              |
+| Activity item     | historical event copy                             | View related area                                       | never appears as active warning          |
+| Home profile      | nickname + address/context                        | Update home details                                     | saved profile improves dashboard context |
 
 ## Action Queue Rules
 

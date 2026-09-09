@@ -1,4 +1,4 @@
-// Central model configuration for Nestify's AI features.
+// Central model configuration for Rezlee's AI features.
 //
 // Cost posture: "cheap first" for the conversational assistant. Prefer direct
 // Gemini when a Google AI Studio key is present because it has a free tier with

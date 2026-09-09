@@ -1,12 +1,10 @@
+import { validBearer } from "@/lib/security/bearer";
 import { NextResponse, type NextRequest } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 
 export async function POST(request: NextRequest) {
   const cronSecret = process.env.CRON_SECRET;
-  const authorization = request.headers.get("authorization");
-  const requestSecret = authorization?.replace(/^Bearer\s+/i, "");
-
-  if (cronSecret && requestSecret !== cronSecret) {
+  if (!validBearer(request.headers.get("authorization"), cronSecret)) {
     return NextResponse.json({ message: "Unauthorized." }, { status: 401 });
   }
 
@@ -19,7 +17,7 @@ export async function POST(request: NextRequest) {
         message:
           "Scheduled provider sync needs NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY.",
       },
-      { status: 501 }
+      { status: 501 },
     );
   }
 
@@ -35,7 +33,10 @@ export async function POST(request: NextRequest) {
     .limit(20);
 
   if (error) {
-    return NextResponse.json({ message: error.message }, { status: 500 });
+    return NextResponse.json(
+      { message: "Scheduled refresh could not be queued." },
+      { status: 500 },
+    );
   }
 
   for (const provider of dueProviders ?? []) {

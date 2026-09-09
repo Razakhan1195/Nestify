@@ -4,10 +4,7 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { AlertTriangle, ArrowLeft, CheckCircle2, Wrench } from "lucide-react";
 
-import {
-  createIssueFollowUpTask,
-  createRepairIssue,
-} from "@/app/actions";
+import { createIssueFollowUpTask, createRepairIssue } from "@/app/actions";
 import { SubmitButton } from "@/components/submit-button";
 import { Button } from "@/components/ui/button";
 import { CardContent } from "@/components/ui/card";
@@ -48,7 +45,13 @@ const initialDraft: IssueDraft = {
   urgency: "medium",
 };
 
-function HiddenIssueFields({ draft, status }: { draft: IssueDraft; status?: string }) {
+function HiddenIssueFields({
+  draft,
+  status,
+}: {
+  draft: IssueDraft;
+  status?: string;
+}) {
   return (
     <>
       <input name="title" type="hidden" value={draft.title} />
@@ -56,7 +59,11 @@ function HiddenIssueFields({ draft, status }: { draft: IssueDraft; status?: stri
       <input name="category" type="hidden" value={draft.category} />
       <input name="location" type="hidden" value={draft.location} />
       <input name="urgency" type="hidden" value={draft.urgency} />
-      <input name="renter_owner_context" type="hidden" value={draft.renterOwnerContext} />
+      <input
+        name="renter_owner_context"
+        type="hidden"
+        value={draft.renterOwnerContext}
+      />
       {status ? <input name="status" type="hidden" value={status} /> : null}
     </>
   );
@@ -75,7 +82,7 @@ function StepButton({
         "rounded-full border px-3 py-1 text-xs font-medium",
         active
           ? "border-primary/25 bg-primary/10 text-primary"
-          : "border-border bg-card text-muted-foreground"
+          : "border-border bg-card text-muted-foreground",
       )}
     >
       {children}
@@ -95,13 +102,17 @@ export function GuidedIssueCheck() {
         title: draft.title,
         urgency: draft.urgency,
       }),
-    [draft]
+    [draft],
   );
   const urgent = isUrgentIssue(draft);
   const canContinueFromIntro = draft.title.trim() && draft.description.trim();
 
   return (
-    <ProductCard className="overflow-hidden" id="start-issue-check" variant="hero">
+    <ProductCard
+      className="overflow-hidden"
+      id="start-issue-check"
+      variant="hero"
+    >
       <CardContent className="grid gap-5 p-4 sm:p-6">
         <div className="flex flex-wrap gap-2">
           {[1, 2, 3, 4].map((item) => (
@@ -119,7 +130,8 @@ export function GuidedIssueCheck() {
               </h2>
               <p className="mt-1 text-sm text-muted-foreground">
                 Describe the issue in plain language. Example: &quot;The sink is
-                draining slowly&quot; or &quot;The furnace is making a loud noise.&quot;
+                draining slowly&quot; or &quot;The furnace is making a loud
+                noise.&quot;
               </p>
             </div>
             <div className="grid gap-3">
@@ -128,7 +140,10 @@ export function GuidedIssueCheck() {
                 <Input
                   id="issue-title"
                   onChange={(event) =>
-                    setDraft((current) => ({ ...current, title: event.target.value }))
+                    setDraft((current) => ({
+                      ...current,
+                      title: event.target.value,
+                    }))
                   }
                   placeholder="Slow kitchen drain"
                   value={draft.title}
@@ -260,7 +275,7 @@ export function GuidedIssueCheck() {
                     "rounded-2xl border p-3 text-left transition-colors",
                     draft.urgency === urgency.value
                       ? "border-primary/30 bg-primary/10"
-                      : "bg-card hover:bg-muted/30"
+                      : "bg-card hover:bg-muted/30",
                   )}
                   key={urgency.value}
                   onClick={() =>
@@ -297,8 +312,8 @@ export function GuidedIssueCheck() {
                   Here&apos;s a safe way to handle this
                 </h2>
                 <p className="mt-1 text-sm text-muted-foreground">
-                  Nestify is organizing the issue and suggesting safe next
-                  steps, not making a certain diagnosis.
+                  Rezlee is organizing the issue and suggesting safe next steps,
+                  not making a certain diagnosis.
                 </p>
               </div>
               <StatusBadge value={urgencyLabel(draft.urgency)} />
@@ -365,7 +380,7 @@ export function GuidedIssueCheck() {
             <div className="rounded-2xl border bg-muted/20 p-4">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div>
-                  <p className="font-semibold">Track it in Nestify</p>
+                  <p className="font-semibold">Track it in Rezlee</p>
                   <p className="mt-1 text-sm text-muted-foreground">
                     Save this issue, turn it into a Care follow-up, or mark it
                     resolved if you already handled it.
@@ -406,7 +421,11 @@ export function GuidedIssueCheck() {
               </div>
             </div>
 
-            <SecondaryCTA className="w-fit" onClick={() => setStep(3)} type="button">
+            <SecondaryCTA
+              className="w-fit"
+              onClick={() => setStep(3)}
+              type="button"
+            >
               <ArrowLeft className="size-4" />
               Back
             </SecondaryCTA>

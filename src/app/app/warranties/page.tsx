@@ -71,12 +71,16 @@ export default async function WarrantiesPage() {
     await Promise.all([
       supabase
         .from("inventory_items")
-        .select("id,name,category,room_or_area,brand,model_number,warranty_expires_on")
+        .select(
+          "id,name,category,room_or_area,brand,model_number,warranty_expires_on",
+        )
         .eq("user_id", user.id)
         .eq("home_id", home.id)
         .not("warranty_expires_on", "is", null)
         .order("warranty_expires_on", { ascending: true })
-        .then((result) => (result.error ? { data: [], error: result.error } : result)),
+        .then((result) =>
+          result.error ? { data: [], error: result.error } : result,
+        ),
       supabase
         .from("documents")
         .select("id,title,expires_on")
@@ -109,7 +113,7 @@ export default async function WarrantiesPage() {
 
       {itemError ? (
         <InsightCard
-          description={itemError.message}
+          description="Could not load coverage records. Please try again shortly."
           icon={AlertCircle}
           severity="critical"
           title="Could not load warranties"
@@ -137,7 +141,7 @@ export default async function WarrantiesPage() {
       <PageSection>
         <SectionHeader
           title="Add a warranty"
-          description="Scan a warranty card or receipt and Nestify fills in the product, provider, and expiry date."
+          description="Scan a warranty card or receipt and Rezlee fills in the product, provider, and expiry date."
         />
         <ScanCard kind="warranty" />
       </PageSection>
@@ -154,10 +158,16 @@ export default async function WarrantiesPage() {
                 <CardContent className="grid gap-3 p-4 sm:grid-cols-[1fr_auto] sm:items-center">
                   <div>
                     <div className="flex flex-wrap items-center gap-2">
-                      <StatusBadge value={warrantyStatus(item.warranty_expires_on)} />
-                      {item.category ? <StatusBadge value={item.category} /> : null}
+                      <StatusBadge
+                        value={warrantyStatus(item.warranty_expires_on)}
+                      />
+                      {item.category ? (
+                        <StatusBadge value={item.category} />
+                      ) : null}
                     </div>
-                    <h3 className="mt-2 text-base font-semibold">{item.name}</h3>
+                    <h3 className="mt-2 text-base font-semibold">
+                      {item.name}
+                    </h3>
                     <p className="mt-1 text-sm text-muted-foreground">
                       {[item.brand, item.model_number, item.room_or_area]
                         .filter(Boolean)
@@ -166,7 +176,9 @@ export default async function WarrantiesPage() {
                   </div>
                   <div className="text-sm sm:text-right">
                     <p className="text-muted-foreground">Warranty expires</p>
-                    <p className="font-medium">{formatDate(item.warranty_expires_on)}</p>
+                    <p className="font-medium">
+                      {formatDate(item.warranty_expires_on)}
+                    </p>
                   </div>
                 </CardContent>
               </ProductCard>
@@ -176,7 +188,7 @@ export default async function WarrantiesPage() {
           <EmptyState
             icon={PackageCheck}
             title="No warranties tracked yet"
-            description="Add an appliance or upload a warranty document so Nestify can remind you before coverage expires."
+            description="Add an appliance or upload a warranty document so Rezlee can remind you before coverage expires."
           />
         )}
       </PageSection>

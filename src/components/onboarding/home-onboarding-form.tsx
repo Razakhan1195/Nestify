@@ -44,7 +44,7 @@ export function HomeOnboardingForm({
   return (
     <Card className="rounded-lg">
       <CardHeader>
-        <CardTitle className="text-2xl">Tell us what home this is</CardTitle>
+        <CardTitle className="text-2xl">Give your place a name</CardTitle>
         <CardDescription>
           Keep this light. The goal is to create a useful home hub in a few
           minutes, not fill out every detail perfectly.
@@ -74,7 +74,7 @@ export function HomeOnboardingForm({
           </div>
 
           <div className="grid gap-2">
-            <Label htmlFor="street_address">Street address</Label>
+            <Label htmlFor="street_address">Street address (optional)</Label>
             <Input
               autoComplete="street-address"
               defaultValue={defaults.street_address}
@@ -148,7 +148,7 @@ export function HomeOnboardingForm({
               <FieldError errors={state.errors?.home_type} />
             </div>
             <div className="grid gap-2">
-              <Label htmlFor="ownership_type">Ownership type</Label>
+              <Label htmlFor="ownership_type">How do you live here?</Label>
               <select
                 className="h-8 w-full rounded-lg border border-input bg-background px-2.5 text-sm outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
                 defaultValue={defaults.ownership_type ?? ""}
@@ -156,9 +156,10 @@ export function HomeOnboardingForm({
                 name="ownership_type"
                 required
               >
-                <option value="">Choose ownership</option>
+                <option value="">Choose what fits</option>
                 <option value="Own">Own</option>
                 <option value="Rent">Rent</option>
+                <option value="Shared home">Shared with roommates</option>
                 <option value="Family home">Family home</option>
                 <option value="Investment property">Investment property</option>
                 <option value="Other">Other</option>
@@ -168,7 +169,9 @@ export function HomeOnboardingForm({
           </div>
 
           <div className="grid gap-2">
-            <Label htmlFor="closing_date">Closing date</Label>
+            <Label htmlFor="closing_date">
+              Move-in or closing date (optional)
+            </Label>
             <Input id="closing_date" name="closing_date" type="date" />
             <p className="text-xs text-muted-foreground">
               Optional. Useful later for insurance, taxes, warranties, and home
@@ -178,7 +181,9 @@ export function HomeOnboardingForm({
           </div>
 
           <div className="grid gap-2">
-            <Label htmlFor="approximate_year_built">Approximate year built</Label>
+            <Label htmlFor="approximate_year_built">
+              Approximate year built
+            </Label>
             <Input
               id="approximate_year_built"
               inputMode="numeric"
@@ -194,8 +199,8 @@ export function HomeOnboardingForm({
 
           <SubmitButton
             className="h-10 w-full sm:w-fit"
-            label="Create home profile"
-            pendingLabel="Creating home..."
+            label="Create place profile"
+            pendingLabel="Saving your place..."
           />
         </form>
       </CardContent>

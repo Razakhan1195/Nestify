@@ -1,14 +1,16 @@
-# Nestify Product Operating Model
+> Historical design notes. For current Rezlee scope and launch status, read [the launch report](rezlee-launch-report.md) and [preservation map](rezlee-preservation-map.md). Current code takes precedence where older behavior is described.
+
+# Rezlee Product Operating Model
 
 ## 1. Product Promise
 
-Nestify helps households stay on top of what is due, what changed, what needs fixing, what needs storing, and what to do next.
+Rezlee helps households stay on top of what is due, what changed, what needs fixing, what needs storing, and what to do next.
 
-Nestify is for renters, homeowners, couples, families, roommates, and anyone responsible for managing the place they live, whether that place is an apartment, condo, townhouse, or house.
+Rezlee is for renters, homeowners, couples, families, roommates, and anyone responsible for managing the place they live, whether that place is an apartment, condo, townhouse, or house.
 
-The problem Nestify solves is household drift: bills get missed, records scatter, chores and repairs live in people’s heads, cost changes are hard to notice, and shared responsibilities become unclear. It exists to turn the messy operational work of living somewhere into a calm monthly command center.
+The problem Rezlee solves is household drift: bills get missed, records scatter, chores and repairs live in people’s heads, cost changes are hard to notice, and shared responsibilities become unclear. It exists to turn the messy operational work of living somewhere into a calm monthly command center.
 
-Provider sync is an automation enhancer, not the product. Nestify must still be useful without it through manual bill/rent tracking, reminders, records, issue intake, shared context, and household history.
+Provider sync is an automation enhancer, not the product. Rezlee must still be useful without it through manual bill/rent tracking, reminders, records, issue intake, shared context, and household history.
 
 The first useful moment should be one of these:
 
@@ -17,18 +19,18 @@ The first useful moment should be one of these:
 - A resident logs a home issue and gets a next step or reminder.
 - A household sees one clear attention item and handles it.
 
-The monthly return habit should be: open Nestify, see what is due, what changed, what needs attention, what was handled, and what to do next.
+The monthly return habit should be: open Rezlee, see what is due, what changed, what needs attention, what was handled, and what to do next.
 
 ## 2. Core Household Moments
 
-| Moment | User Problem | Current Support | Future Roadmap Support | Primary Module | Key CTA | Dashboard Signal |
-| --- | --- | --- | --- | --- | --- | --- |
-| Something is due | Bills, rent, renewals, reminders, and tasks are easy to miss. | Bills, due dates, maintenance tasks, provider sync, attention queue. | Shared bills, rental tools, payments, household budget. | Dashboard, Bills, Care | I paid this, View bill, Add reminder | Due soon, overdue, renewal soon, task due |
-| Something changed | Residents rarely notice cost or usage changes until later. | Bill intelligence events, amount changes, usage changes where available. | Shared cost trends, budget alerts, rent/renewal changes. | Dashboard, Bills | Review change, Mark reviewed | What Changed |
-| Something broke | People do not know what to try, who to call, or how to track the issue. | Basic assistant/repair issue logging and projects. | AI Home Assistant, photo upload, marketplace connection. | Assistant, Care | Describe issue, Create task | New issue, repair follow-up |
-| I need proof | Records are scattered across email, portals, drawers, and texts. | Vault, documents, bill PDFs, inventory. | Better upload, categorization, renewal alerts, shared access. | Vault | Add record, View record | Recent records, renewal warnings |
-| We need to coordinate | Partners, roommates, and families lose track of who handles what. | Tasks and reminders partially support this. | Roommate tools, shared responsibilities, shared budget. | Care, Bills | Assign/track later, Add reminder now | Shared responsibility due |
-| I need to plan/pay | Big household decisions need scenario planning and payment flow. | Bills and projects give early cost context. | Mortgage calculator, payments, rewards, marketplace. | Bills, Place, future Plan/Pay surfaces | Compare scenario, Pay, Book service later | Planning prompt only when relevant |
+| Moment                | User Problem                                                            | Current Support                                                          | Future Roadmap Support                                        | Primary Module                         | Key CTA                                   | Dashboard Signal                          |
+| --------------------- | ----------------------------------------------------------------------- | ------------------------------------------------------------------------ | ------------------------------------------------------------- | -------------------------------------- | ----------------------------------------- | ----------------------------------------- |
+| Something is due      | Bills, rent, renewals, reminders, and tasks are easy to miss.           | Bills, due dates, maintenance tasks, provider sync, attention queue.     | Shared bills, rental tools, payments, household budget.       | Dashboard, Bills, Care                 | I paid this, View bill, Add reminder      | Due soon, overdue, renewal soon, task due |
+| Something changed     | Residents rarely notice cost or usage changes until later.              | Bill intelligence events, amount changes, usage changes where available. | Shared cost trends, budget alerts, rent/renewal changes.      | Dashboard, Bills                       | Review change, Mark reviewed              | What Changed                              |
+| Something broke       | People do not know what to try, who to call, or how to track the issue. | Basic assistant/repair issue logging and projects.                       | AI Home Assistant, photo upload, marketplace connection.      | Assistant, Care                        | Describe issue, Create task               | New issue, repair follow-up               |
+| I need proof          | Records are scattered across email, portals, drawers, and texts.        | Vault, documents, bill PDFs, inventory.                                  | Better upload, categorization, renewal alerts, shared access. | Vault                                  | Add record, View record                   | Recent records, renewal warnings          |
+| We need to coordinate | Partners, roommates, and families lose track of who handles what.       | Tasks and reminders partially support this.                              | Roommate tools, shared responsibilities, shared budget.       | Care, Bills                            | Assign/track later, Add reminder now      | Shared responsibility due                 |
+| I need to plan/pay    | Big household decisions need scenario planning and payment flow.        | Bills and projects give early cost context.                              | Mortgage calculator, payments, rewards, marketplace.          | Bills, Place, future Plan/Pay surfaces | Compare scenario, Pay, Book service later | Planning prompt only when relevant        |
 
 ## 3. Product Pillars
 
@@ -162,20 +164,20 @@ Dashboard feed: place context, system reminders, recent history, profile gaps.
 
 ## 4. Roadmap Sorting
 
-| Item | Bucket | Why | Dependency | Risk | Sync-Independent Value | Audience | Core Fit |
-| --- | --- | --- | --- | --- | --- | --- | --- |
-| Main Dashboard Redesign | Current beta core | The dashboard is the product entry point and must express the promise. | Product operating model, action queue, bill/task/record data. | High if it becomes generic cards again. | Yes | Renters and owners | Strengthens core |
-| AI Home Assistant | Near-term enhancement | “Something broke” is a universal household moment. | Structured issue intake, safety copy, repair issue model. | High if launched as vague chat. | Yes | Renters and owners | Strengthens core if guided |
-| Rental Tools | Near-term enhancement | Renters must be first-class; lease/rent/landlord workflows broaden product meaning. | Place profile occupancy context, Vault lease records, Bills/rent model. | Medium scope creep. | Yes | Renters | Strengthens core |
-| Shared Home Budget Tools | Phase 2 | Useful once bills/rent are reliable and shared household model exists. | Household members, shared costs, bill categories. | High if it turns Nestify into a generic budgeting app. | Yes | Renters, couples, roommates, families, owners | Strengthens if limited to household costs |
-| Roommate Management Tools | Phase 2 | Coordination is a core household moment, but needs identity/permissions. | Household membership, assignment model, shared bills/tasks. | High social complexity. | Yes | Renters, roommates, families | Strengthens if scoped |
-| Payments Integration | Phase 2 | Useful after bill/rent/shared cost workflows are trusted. | Payment provider, compliance, bill states, shared costs. | Very high trust/compliance risk. | Yes, but only after core actions work. | Renters and owners | Strengthens later, distracts now |
-| Mortgage Scenario Calculator | Expansion track | Ownership-specific planning tool, not universal household management. | Owner profile, property finance assumptions. | Medium; can distract from universal promise. | Yes for owners only | Homeowners | Adjacent, not core beta |
-| Local Handyman Marketplace | Expansion track | Natural extension from issues/projects, but supply-side marketplace is a different business. | Assistant, issue classification, service provider model, trust/safety. | Very high operational risk. | Yes | Renters and owners, different paths | Later extension |
-| Home Rewards Program | Do not build yet | Unclear relationship to household command center until core habits exist. | Payments/marketplace/partner strategy. | High distraction, low trust if premature. | Maybe | Unclear | Distracts now |
-| Landing Page Header & Navigation | Current beta core | Needed for acquisition and product clarity, but not app functionality. | Positioning and IA. | Low. | Yes | All users | Supports adoption |
-| Trust & Social Proof Section | Current beta core | Needed because bills, records, and provider access are sensitive. | Positioning, privacy language, proof points. | Medium if overclaimed. | Yes | All users | Supports trust |
-| Landing Page Footer | Current beta core | Basic release-quality surface. | Positioning, legal/privacy links. | Low. | Yes | All users | Hygiene |
+| Item                             | Bucket                | Why                                                                                          | Dependency                                                              | Risk                                                  | Sync-Independent Value                 | Audience                                      | Core Fit                                  |
+| -------------------------------- | --------------------- | -------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------- | ----------------------------------------------------- | -------------------------------------- | --------------------------------------------- | ----------------------------------------- |
+| Main Dashboard Redesign          | Current beta core     | The dashboard is the product entry point and must express the promise.                       | Product operating model, action queue, bill/task/record data.           | High if it becomes generic cards again.               | Yes                                    | Renters and owners                            | Strengthens core                          |
+| AI Home Assistant                | Near-term enhancement | “Something broke” is a universal household moment.                                           | Structured issue intake, safety copy, repair issue model.               | High if launched as vague chat.                       | Yes                                    | Renters and owners                            | Strengthens core if guided                |
+| Rental Tools                     | Near-term enhancement | Renters must be first-class; lease/rent/landlord workflows broaden product meaning.          | Place profile occupancy context, Vault lease records, Bills/rent model. | Medium scope creep.                                   | Yes                                    | Renters                                       | Strengthens core                          |
+| Shared Home Budget Tools         | Phase 2               | Useful once bills/rent are reliable and shared household model exists.                       | Household members, shared costs, bill categories.                       | High if it turns Rezlee into a generic budgeting app. | Yes                                    | Renters, couples, roommates, families, owners | Strengthens if limited to household costs |
+| Roommate Management Tools        | Phase 2               | Coordination is a core household moment, but needs identity/permissions.                     | Household membership, assignment model, shared bills/tasks.             | High social complexity.                               | Yes                                    | Renters, roommates, families                  | Strengthens if scoped                     |
+| Payments Integration             | Phase 2               | Useful after bill/rent/shared cost workflows are trusted.                                    | Payment provider, compliance, bill states, shared costs.                | Very high trust/compliance risk.                      | Yes, but only after core actions work. | Renters and owners                            | Strengthens later, distracts now          |
+| Mortgage Scenario Calculator     | Expansion track       | Ownership-specific planning tool, not universal household management.                        | Owner profile, property finance assumptions.                            | Medium; can distract from universal promise.          | Yes for owners only                    | Homeowners                                    | Adjacent, not core beta                   |
+| Local Handyman Marketplace       | Expansion track       | Natural extension from issues/projects, but supply-side marketplace is a different business. | Assistant, issue classification, service provider model, trust/safety.  | Very high operational risk.                           | Yes                                    | Renters and owners, different paths           | Later extension                           |
+| Home Rewards Program             | Do not build yet      | Unclear relationship to household command center until core habits exist.                    | Payments/marketplace/partner strategy.                                  | High distraction, low trust if premature.             | Maybe                                  | Unclear                                       | Distracts now                             |
+| Landing Page Header & Navigation | Current beta core     | Needed for acquisition and product clarity, but not app functionality.                       | Positioning and IA.                                                     | Low.                                                  | Yes                                    | All users                                     | Supports adoption                         |
+| Trust & Social Proof Section     | Current beta core     | Needed because bills, records, and provider access are sensitive.                            | Positioning, privacy language, proof points.                            | Medium if overclaimed.                                | Yes                                    | All users                                     | Supports trust                            |
+| Landing Page Footer              | Current beta core     | Basic release-quality surface.                                                               | Positioning, legal/privacy links.                                       | Low.                                                  | Yes                                    | All users                                     | Hygiene                                   |
 
 ## 5. Final Information Architecture
 
@@ -191,15 +193,15 @@ Recommended app navigation:
 
 “Care” is better than “Maintenance” because it supports renters, chores, reminders, repairs, and projects. “Place” is more inclusive than “Home” when the user may rent, share, or live in a unit they do not own. “Home” is warmer, but “Place” is clearer for the profile/context surface. A final product copy decision could use “Place” in navigation and “home” naturally in body copy.
 
-| Nav Item | Why It Exists | User Job | Primary CTA | Secondary CTAs | Never Show | Dashboard Connection |
-| --- | --- | --- | --- | --- | --- | --- |
-| Dashboard | Command center | Know what needs attention now | State-based next action | Open related area, view all attention | Raw tables, setup admin, history as warnings | Source of monthly status |
-| Bills | Costs and due dates | Track rent/bills and changes | Add bill or I paid this | Connect provider, add due date, review change | Generic budgeting unrelated to household costs | Due, changed, monthly cost |
-| Vault | Proof and records | Find important documents | Add record | Add file, view record, add renewal date | Random upload-only page | Recent records, renewal warnings |
-| Care | Tasks and repairs | Keep up with chores/issues | Add reminder or describe issue | Complete, snooze, skip, open project | Owner-only maintenance assumptions | Tasks due, repair follow-up |
-| Assistant | Guided issue help | Figure out what to do when something breaks | Describe issue | Upload photo, create task/project | Generic open-ended AI chat as primary experience | Issues and next steps |
-| Providers | Automation/source layer | Connect or record bill/service sources | Choose/connect/retry | Disconnect, view details | Raw Deck/system internals above fold | Provider health, sync status |
-| Place | Context and history | Manage where you live | Update place details | Add system/item, open timeline | Mortgage-only or owner-only assumptions | Context, systems, timeline |
+| Nav Item  | Why It Exists           | User Job                                    | Primary CTA                    | Secondary CTAs                                | Never Show                                       | Dashboard Connection             |
+| --------- | ----------------------- | ------------------------------------------- | ------------------------------ | --------------------------------------------- | ------------------------------------------------ | -------------------------------- |
+| Dashboard | Command center          | Know what needs attention now               | State-based next action        | Open related area, view all attention         | Raw tables, setup admin, history as warnings     | Source of monthly status         |
+| Bills     | Costs and due dates     | Track rent/bills and changes                | Add bill or I paid this        | Connect provider, add due date, review change | Generic budgeting unrelated to household costs   | Due, changed, monthly cost       |
+| Vault     | Proof and records       | Find important documents                    | Add record                     | Add file, view record, add renewal date       | Random upload-only page                          | Recent records, renewal warnings |
+| Care      | Tasks and repairs       | Keep up with chores/issues                  | Add reminder or describe issue | Complete, snooze, skip, open project          | Owner-only maintenance assumptions               | Tasks due, repair follow-up      |
+| Assistant | Guided issue help       | Figure out what to do when something breaks | Describe issue                 | Upload photo, create task/project             | Generic open-ended AI chat as primary experience | Issues and next steps            |
+| Providers | Automation/source layer | Connect or record bill/service sources      | Choose/connect/retry           | Disconnect, view details                      | Raw Deck/system internals above fold             | Provider health, sync status     |
+| Place     | Context and history     | Manage where you live                       | Update place details           | Add system/item, open timeline                | Mortgage-only or owner-only assumptions          | Context, systems, timeline       |
 
 ## 6. Page-By-Page Meaning Audit
 
@@ -213,7 +215,7 @@ It should answer what needs attention, what is due, what changed, what to do nex
 
 Purpose: Bills, rent, utilities, due dates, amount changes, manual fallback, provider sync, and future shared costs.
 
-Manual bills must be first-class because provider sync may be slow, incomplete, or unavailable. The page should group bills by Needs review, Due soon, Upcoming, and Paid/handled. Provider sync should be framed as automation, not as the only way to use Nestify.
+Manual bills must be first-class because provider sync may be slow, incomplete, or unavailable. The page should group bills by Needs review, Due soon, Upcoming, and Paid/handled. Provider sync should be framed as automation, not as the only way to use Rezlee.
 
 ### Vault
 
@@ -247,7 +249,7 @@ It should include address/unit, renter/owner/roommate context, systems/appliance
 
 ## 7. Non-Sync Value Model
 
-Nestify provides value without provider sync through:
+Rezlee provides value without provider sync through:
 
 - Manual bill/rent due dates.
 - Shared bill tracking later.
@@ -269,7 +271,7 @@ Provider sync adds:
 - Amount changes.
 - Connection health.
 
-The product should never imply “sync failed” means “Nestify failed.” Sync should be positioned as a convenience layer on top of a useful household operating system.
+The product should never imply “sync failed” means “Rezlee failed.” Sync should be positioned as a convenience layer on top of a useful household operating system.
 
 ## 8. Final Recommendation
 
@@ -292,7 +294,7 @@ Next, rebuild Bills as a renter/owner-neutral cost and due-date system. Add rent
 - “Maintenance” -> “Care”.
 - “Home” profile -> “Place” or “Place profile”.
 - “Documents” route can remain technically, but product copy should use “Vault”.
-- “Assistant” should be “Ask Nestify” or “Home issue help” depending on final tone.
+- “Assistant” should be “Ask Rezlee” or “Home issue help” depending on final tone.
 
 ### Hide Until Useful
 
@@ -320,7 +322,7 @@ Next, rebuild Bills as a renter/owner-neutral cost and due-date system. Add rent
 
 ### Acceptance Criteria For Next Implementation Sprint
 
-- A renter can use Nestify without connecting a provider.
+- A renter can use Rezlee without connecting a provider.
 - A homeowner can connect providers but still manually fill gaps.
 - Dashboard clearly shows what is due, what changed, what needs attention, and what to do next.
 - Bills supports rent, utilities, internet, insurance, and manual fallback.

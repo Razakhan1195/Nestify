@@ -1,6 +1,8 @@
+> Historical design notes. For current Rezlee scope and launch status, read [the launch report](rezlee-launch-report.md) and [preservation map](rezlee-preservation-map.md). Current code takes precedence where older behavior is described.
+
 # UX Composition Audit
 
-Production composition sprint for Nestify. This file documents repeated UI patterns found across Dashboard, Bills, Vault, and Care, and the ownership rules that should guide future changes.
+Production composition sprint for Rezlee. This file documents repeated UI patterns found across Dashboard, Bills, Vault, and Care, and the ownership rules that should guide future changes.
 
 ## Repeated Copy Found
 
@@ -33,7 +35,7 @@ Production composition sprint for Nestify. This file documents repeated UI patte
 - Empty dashboard shows only hero, outcome rows, and one subtle automation note.
 - Empty dashboard setup choices now live inside the `Start setup` dialog, not as a visible page section.
 - Dashboard hero has one primary CTA and no longer lists every starter action.
-- “What Nestify helps with” is outcome-only and does not repeat Add bill/document/reminder buttons.
+- “What Rezlee helps with” is outcome-only and does not repeat Add bill/document/reminder buttons.
 - Things to handle appears only when there are open actionable items.
 - What changed appears only when meaningful bill change events exist.
 - Bills page keeps `Add bill` in the header and removes competing primary bill CTAs from the automation strip and empty list.

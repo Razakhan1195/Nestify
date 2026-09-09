@@ -1,3 +1,4 @@
+import { differenceInCalendarDays } from "date-fns";
 export const billStatuses = [
   "incomplete",
   "draft",
@@ -44,19 +45,28 @@ export function isBillIncomplete(bill: BillCompletenessInput) {
 
 export function parseProductDate(value: string | null | undefined) {
   if (!value) return null;
+  if (
+    !/^\d{4}-\d{2}-\d{2}$/.test(value) ||
+    Number.isNaN(Date.parse(value)) ||
+    new Date(value).toISOString().slice(0, 10) !== value
+  )
+    return null;
   const date = new Date(`${value}T00:00:00`);
   return Number.isNaN(date.getTime()) ? null : date;
 }
 
-export function daysUntilDate(value: string | null | undefined, today = new Date()) {
+export function daysUntilDate(
+  value: string | null | undefined,
+  today = new Date(),
+) {
   const date = parseProductDate(value);
   if (!date) return null;
-  return Math.ceil((date.getTime() - today.getTime()) / 86_400_000);
+  return differenceInCalendarDays(date, today);
 }
 
 export function classifyBillStatus(
   bill: BillStatusInput,
-  today = new Date()
+  today = new Date(),
 ): BillStatus {
   const status = bill.status?.toLowerCase();
 
@@ -75,6 +85,9 @@ export function statusForNewManualBill(dueDate: string, today = new Date()) {
   return dueInDays !== null && dueInDays < 0 ? "overdue" : "upcoming";
 }
 
-export function statusAfterBillDetailsCompleted(dueDate: string, today = new Date()) {
+export function statusAfterBillDetailsCompleted(
+  dueDate: string,
+  today = new Date(),
+) {
   return statusForNewManualBill(dueDate, today);
 }

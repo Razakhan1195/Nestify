@@ -1,3 +1,4 @@
+import { RezleeLogo } from "@/components/brand/rezlee-logo";
 import Link from "next/link";
 
 import { Button } from "@/components/ui/button";
@@ -13,10 +14,7 @@ export function SiteHeader() {
     <header className="sticky top-0 z-40 border-b border-[color:var(--border-soft)] bg-background/80 backdrop-blur-md">
       <div className="mx-auto flex h-16 w-full max-w-6xl items-center justify-between gap-4 px-4 sm:px-6">
         <Link className="flex items-center gap-2.5" href="/">
-          <span className="flex size-8 items-center justify-center rounded-xl bg-primary text-sm font-semibold text-primary-foreground">
-            N
-          </span>
-          <span className="text-base font-semibold tracking-tight">Nestify</span>
+          <RezleeLogo />
         </Link>
 
         <nav className="hidden items-center gap-1 md:flex">

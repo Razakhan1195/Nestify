@@ -25,7 +25,10 @@ export default function AppError({
           <AlertTriangle className="size-5" />
         </div>
         <CardTitle>Something went wrong</CardTitle>
-        <CardDescription>{error.message}</CardDescription>
+        <CardDescription>
+          We could not load this part of your place. Try again shortly.
+          {error.digest ? ` Reference: ${error.digest}` : ""}
+        </CardDescription>
       </CardHeader>
       <CardContent>
         <Button onClick={reset} type="button" variant="outline">

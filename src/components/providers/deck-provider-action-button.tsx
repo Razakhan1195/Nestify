@@ -39,7 +39,7 @@ export function DeckProviderActionButton({
     if (
       action === "disconnect" &&
       !window.confirm(
-        "Disconnect this provider? Historical bills and records will stay in Nestify, but automatic syncing will stop."
+        "Disconnect this provider? Historical bills and records will stay in Rezlee, but automatic syncing will stop.",
       )
     ) {
       return;
@@ -69,8 +69,8 @@ export function DeckProviderActionButton({
         router.push(
           `/app/providers/${providerId}?notice=${encodeURIComponent(
             result.message ??
-              "Deck needs one more verification step before syncing can continue."
-          )}`
+              "Deck needs one more verification step before syncing can continue.",
+          )}`,
         );
         return;
       }
@@ -80,7 +80,7 @@ export function DeckProviderActionButton({
       const message =
         error instanceof Error ? error.message : "Provider action failed.";
       router.push(
-        `/app/providers/${providerId}?error=${encodeURIComponent(message)}`
+        `/app/providers/${providerId}?error=${encodeURIComponent(message)}`,
       );
     } finally {
       setPending(false);

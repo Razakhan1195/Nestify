@@ -69,7 +69,11 @@ export function buildUpcomingItems({
   today: Date;
 }) {
   const billItems: UpcomingItem[] = bills
-    .filter((bill) => bill.status !== "paid" && parseProductDate(bill.due_date))
+    .filter(
+      (bill) =>
+        !["paid", "archived", "incomplete", "draft"].includes(bill.status) &&
+        parseProductDate(bill.due_date),
+    )
     .map((bill) => ({
       cta: "View bill",
       date: bill.due_date ?? "",
@@ -82,7 +86,11 @@ export function buildUpcomingItems({
     }));
 
   const taskItems: UpcomingItem[] = tasks
-    .filter((task) => task.status !== "completed" && parseProductDate(task.due_date))
+    .filter(
+      (task) =>
+        !["completed", "cancelled", "skipped"].includes(task.status) &&
+        parseProductDate(task.due_date),
+    )
     .map((task) => ({
       cta: "Complete",
       date: task.due_date ?? "",

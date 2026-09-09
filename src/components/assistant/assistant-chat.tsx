@@ -97,7 +97,9 @@ function formatHistoryDate(value: string) {
 
 function titleFromMessages(messages: UIMessage[]) {
   const firstUserMessage = messages.find((message) => message.role === "user");
-  const fallback = firstUserMessage ? getMessageText(firstUserMessage) : "Assistant chat";
+  const fallback = firstUserMessage
+    ? getMessageText(firstUserMessage)
+    : "Assistant chat";
   const clean = fallback.replace(/\s+/g, " ").trim();
   if (!clean) return "Assistant chat";
   return clean.length > 70 ? `${clean.slice(0, 67).trim()}...` : clean;
@@ -112,12 +114,20 @@ export function AssistantChat({
   const [input, setInput] = useState("");
   const [conversations, setConversations] =
     useState<AssistantConversationSummary[]>(initialConversations);
-  const [currentConversationId, setCurrentConversationId] = useState<string | null>(null);
+  const [currentConversationId, setCurrentConversationId] = useState<
+    string | null
+  >(null);
   const [isCurrentSaved, setIsCurrentSaved] = useState(false);
   const [saveState, setSaveState] = useState<SaveState>("idle");
-  const [historyError, setHistoryError] = useState<string | null>(historyMessage ?? null);
-  const [loadingConversationId, setLoadingConversationId] = useState<string | null>(null);
-  const [deletingConversationId, setDeletingConversationId] = useState<string | null>(null);
+  const [historyError, setHistoryError] = useState<string | null>(
+    historyMessage ?? null,
+  );
+  const [loadingConversationId, setLoadingConversationId] = useState<
+    string | null
+  >(null);
+  const [deletingConversationId, setDeletingConversationId] = useState<
+    string | null
+  >(null);
   const currentConversationIdRef = useRef<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -126,7 +136,9 @@ export function AssistantChat({
     saved?: boolean;
     silent?: boolean;
   }) {
-    const usefulMessages = options.messages.filter((message) => getMessageText(message));
+    const usefulMessages = options.messages.filter((message) =>
+      getMessageText(message),
+    );
     if (!historyReady || usefulMessages.length === 0) return null;
 
     if (!options.silent) {
@@ -158,7 +170,9 @@ export function AssistantChat({
       setIsCurrentSaved(payload.conversation.is_saved);
       setConversations((previous) => [
         payload.conversation!,
-        ...previous.filter((conversation) => conversation.id !== payload.conversation!.id),
+        ...previous.filter(
+          (conversation) => conversation.id !== payload.conversation!.id,
+        ),
       ]);
       setHistoryError(null);
       if (!options.silent) {
@@ -166,7 +180,8 @@ export function AssistantChat({
       }
       return payload.conversation;
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Could not save the chat.";
+      const message =
+        error instanceof Error ? error.message : "Could not save the chat.";
       setHistoryError(message);
       if (!options.silent) {
         setSaveState("error");
@@ -186,7 +201,10 @@ export function AssistantChat({
   const hasMessages = messages.length > 0;
 
   useEffect(() => {
-    scrollRef.current?.scrollTo({ behavior: "smooth", top: scrollRef.current.scrollHeight });
+    scrollRef.current?.scrollTo({
+      behavior: "smooth",
+      top: scrollRef.current.scrollHeight,
+    });
   }, [messages, status]);
 
   useEffect(() => {
@@ -236,7 +254,9 @@ export function AssistantChat({
       setHistoryError(null);
       setSaveState("idle");
     } catch (error) {
-      setHistoryError(error instanceof Error ? error.message : "Could not open that chat.");
+      setHistoryError(
+        error instanceof Error ? error.message : "Could not open that chat.",
+      );
     } finally {
       setLoadingConversationId(null);
     }
@@ -253,21 +273,28 @@ export function AssistantChat({
     if (deletingConversationId) return;
     setDeletingConversationId(conversationId);
     try {
-      const response = await fetch(`/api/assistant/conversations?id=${conversationId}`, {
-        method: "DELETE",
-      });
-      const payload = (await response.json().catch(() => ({}))) as { error?: string };
+      const response = await fetch(
+        `/api/assistant/conversations?id=${conversationId}`,
+        {
+          method: "DELETE",
+        },
+      );
+      const payload = (await response.json().catch(() => ({}))) as {
+        error?: string;
+      };
       if (!response.ok) {
         throw new Error(payload.error ?? "Could not delete that chat.");
       }
       setConversations((previous) =>
-        previous.filter((conversation) => conversation.id !== conversationId)
+        previous.filter((conversation) => conversation.id !== conversationId),
       );
       if (currentConversationId === conversationId) {
         newConversation();
       }
     } catch (error) {
-      setHistoryError(error instanceof Error ? error.message : "Could not delete that chat.");
+      setHistoryError(
+        error instanceof Error ? error.message : "Could not delete that chat.",
+      );
     } finally {
       setDeletingConversationId(null);
     }
@@ -282,7 +309,9 @@ export function AssistantChat({
               <History className="size-4 text-primary" />
               Assistant history
             </p>
-            <p className="mt-0.5 text-xs text-muted-foreground">Recent home questions</p>
+            <p className="mt-0.5 text-xs text-muted-foreground">
+              Recent home questions
+            </p>
           </div>
           <Button
             aria-label="New conversation"
@@ -312,7 +341,9 @@ export function AssistantChat({
                 <div
                   className={cn(
                     "group grid grid-cols-[1fr_auto] gap-1 rounded-xl border border-transparent p-1.5",
-                    isActive ? "border-primary/20 bg-primary/5" : "hover:bg-muted/35"
+                    isActive
+                      ? "border-primary/20 bg-primary/5"
+                      : "hover:bg-muted/35",
                   )}
                   key={conversation.id}
                 >
@@ -323,11 +354,15 @@ export function AssistantChat({
                     type="button"
                   >
                     <span className="flex items-center gap-1.5 text-xs font-medium">
-                      {conversation.is_saved ? <Bookmark className="size-3 text-primary" /> : null}
+                      {conversation.is_saved ? (
+                        <Bookmark className="size-3 text-primary" />
+                      ) : null}
                       <span className="truncate">{conversation.title}</span>
                     </span>
                     <span className="mt-0.5 block text-[11px] text-muted-foreground">
-                      {isLoading ? "Opening..." : formatHistoryDate(conversation.last_message_at)}
+                      {isLoading
+                        ? "Opening..."
+                        : formatHistoryDate(conversation.last_message_at)}
                     </span>
                   </button>
                   <button
@@ -362,7 +397,9 @@ export function AssistantChat({
               {currentConversationId ? "Conversation" : "New conversation"}
             </p>
             <p className="truncate text-xs text-muted-foreground">
-              {isCurrentSaved ? "Saved to your assistant history" : "Ask, then save anything worth keeping"}
+              {isCurrentSaved
+                ? "Saved to your assistant history"
+                : "Ask, then save anything worth keeping"}
             </p>
           </div>
           <div className="flex shrink-0 items-center gap-2">
@@ -379,7 +416,12 @@ export function AssistantChat({
             ) : null}
             <Button
               className="rounded-xl"
-              disabled={!hasMessages || isBusy || saveState === "saving" || !historyReady}
+              disabled={
+                !hasMessages ||
+                isBusy ||
+                saveState === "saving" ||
+                !historyReady
+              }
               onClick={() => void saveCurrentChat()}
               size="sm"
               type="button"
@@ -392,23 +434,32 @@ export function AssistantChat({
               ) : (
                 <Bookmark className="size-4" />
               )}
-              {isCurrentSaved ? "Saved" : saveState === "saved" ? "Saved" : "Save chat"}
+              {isCurrentSaved
+                ? "Saved"
+                : saveState === "saved"
+                  ? "Saved"
+                  : "Save chat"}
             </Button>
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto px-4 py-6 sm:px-6" ref={scrollRef}>
+        <div
+          className="flex-1 overflow-y-auto px-4 py-6 sm:px-6"
+          ref={scrollRef}
+        >
           {!hasMessages ? (
             <div className="mx-auto flex max-w-xl flex-col items-center gap-5 py-8 text-center">
               <span className="flex size-12 items-center justify-center rounded-2xl bg-primary/10 text-primary">
                 <Sparkles className="size-6" />
               </span>
               <div className="space-y-1.5">
-                <h2 className="text-lg font-semibold tracking-tight text-balance">{greeting}</h2>
+                <h2 className="text-lg font-semibold tracking-tight text-balance">
+                  {greeting}
+                </h2>
                 <p className="text-sm text-muted-foreground text-pretty">
-                  Ask me about bills, maintenance, documents, renovations, rough project costs,
-                  contractor questions, or anything about keeping your home running. I can see
-                  what you&apos;ve added to Nestify.
+                  Ask me about bills, maintenance, documents, renovations, rough
+                  project costs, contractor questions, or anything about keeping
+                  your home running. I can see what you&apos;ve added to Rezlee.
                 </p>
               </div>
               <div className="grid w-full gap-2 sm:grid-cols-2">
@@ -431,7 +482,9 @@ export function AssistantChat({
                 const text = getMessageText(message);
                 return (
                   <div
-                    className={isUser ? "flex justify-end" : "flex justify-start"}
+                    className={
+                      isUser ? "flex justify-end" : "flex justify-start"
+                    }
                     key={message.id}
                   >
                     <div
@@ -444,7 +497,9 @@ export function AssistantChat({
                       {text ? (
                         <RichText text={text} />
                       ) : (
-                        <span className="text-muted-foreground">Thinking...</span>
+                        <span className="text-muted-foreground">
+                          Thinking...
+                        </span>
                       )}
                     </div>
                   </div>
@@ -464,7 +519,8 @@ export function AssistantChat({
               {error ? (
                 <div className="flex justify-start">
                   <div className="max-w-[90%] rounded-2xl rounded-bl-sm bg-[color:var(--critical-bg)] px-4 py-3 text-sm text-[color:var(--critical-foreground)]">
-                    Something went wrong reaching the assistant. Please try again.
+                    Something went wrong reaching the assistant. Please try
+                    again.
                   </div>
                 </div>
               ) : null}
@@ -505,7 +561,8 @@ export function AssistantChat({
               </Button>
             </form>
             <p className="mt-2 text-center text-[11px] text-muted-foreground">
-              Estimates are planning ranges, not quotes. For emergencies, contact a professional.
+              Estimates are planning ranges, not quotes. For emergencies,
+              contact a professional.
             </p>
           </div>
         </div>

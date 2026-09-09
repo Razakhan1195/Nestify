@@ -48,7 +48,10 @@ import {
 import { createClient } from "@/lib/supabase/server";
 
 type HelpPageProps = {
-  searchParams: Promise<{ error?: string | string[]; notice?: string | string[] }>;
+  searchParams: Promise<{
+    error?: string | string[];
+    notice?: string | string[];
+  }>;
 };
 
 type IssueRow = {
@@ -164,7 +167,8 @@ function IssueRowCard({ issue }: { issue: IssueRow }) {
             </div>
             <h3 className="mt-2 text-base font-semibold">{issue.title}</h3>
             <p className="mt-1 text-sm text-muted-foreground">
-              {categoryLabel(issue.category)} · {issue.location ?? "Location not set"} ·{" "}
+              {categoryLabel(issue.category)} ·{" "}
+              {issue.location ?? "Location not set"} ·{" "}
               {formatDate(issue.created_at)}
             </p>
           </div>
@@ -176,14 +180,14 @@ function IssueRowCard({ issue }: { issue: IssueRow }) {
             <p className="text-sm font-medium">Possible causes</p>
             {listItems(
               issue.likely_causes,
-              "Track what changed and review if it keeps happening."
+              "Track what changed and review if it keeps happening.",
             )}
           </div>
           <div className="rounded-2xl border bg-muted/10 p-3">
             <p className="text-sm font-medium">Safe first steps</p>
             {listItems(
               issue.recommended_steps,
-              "Avoid unsafe DIY and create a follow-up task if needed."
+              "Avoid unsafe DIY and create a follow-up task if needed.",
             )}
           </div>
           <div className="rounded-2xl border bg-muted/10 p-3">
@@ -196,8 +200,13 @@ function IssueRowCard({ issue }: { issue: IssueRow }) {
         </div>
 
         <details className="rounded-2xl border bg-background p-3">
-          <summary className="cursor-pointer text-sm font-medium">Add note</summary>
-          <form action={addRepairIssueNote} className="mt-3 grid gap-3 sm:grid-cols-[1fr_auto]">
+          <summary className="cursor-pointer text-sm font-medium">
+            Add note
+          </summary>
+          <form
+            action={addRepairIssueNote}
+            className="mt-3 grid gap-3 sm:grid-cols-[1fr_auto]"
+          >
             <input name="issue_id" type="hidden" value={issue.id} />
             <input name="return_path" type="hidden" value="/app/help" />
             <div className="grid gap-2">
@@ -237,7 +246,7 @@ export default async function HelpPage({ searchParams }: HelpPageProps) {
   const { data, error } = await supabase
     .from("repair_issues")
     .select(
-      "id,title,description,category,location,urgency,status,likely_causes,recommended_steps,safety_notes,escalation_recommendation,related_task_id,resolved_at,created_at"
+      "id,title,description,category,location,urgency,status,likely_causes,recommended_steps,safety_notes,escalation_recommendation,related_task_id,resolved_at,created_at",
     )
     .eq("user_id", user.id)
     .eq("home_id", home.id)
@@ -252,16 +261,18 @@ export default async function HelpPage({ searchParams }: HelpPageProps) {
       : null;
   const issues = (data ?? []) as unknown as IssueRow[];
   const openIssues = issues.filter(
-    (issue) => !["resolved", "dismissed"].includes(issue.status)
+    (issue) => !["resolved", "dismissed"].includes(issue.status),
   );
-  const resolvedIssues = issues.filter((issue) => issue.status === "resolved").slice(0, 5);
+  const resolvedIssues = issues
+    .filter((issue) => issue.status === "resolved")
+    .slice(0, 5);
   const urgentOpenIssues = openIssues.filter((issue) =>
     isUrgentIssue({
       category: issue.category,
       description: issue.description,
       title: issue.title,
       urgency: issue.urgency,
-    })
+    }),
   );
 
   return (
@@ -269,7 +280,7 @@ export default async function HelpPage({ searchParams }: HelpPageProps) {
       <PageHeader
         eyebrow="Help"
         title="Get help with a household issue"
-        description="Describe what is going on. Nestify will help you organize the issue, suggest safe next steps, and track the follow-up."
+        description="Describe what is going on. Rezlee will help you organize the issue, suggest safe next steps, and track the follow-up."
         actions={
           <SecondaryCTA asChild>
             <a href="#start-issue-check">Start issue check</a>
@@ -277,7 +288,9 @@ export default async function HelpPage({ searchParams }: HelpPageProps) {
         }
       />
 
-      <ActionFeedbackToast message={typeof notice === "string" ? notice : null} />
+      <ActionFeedbackToast
+        message={typeof notice === "string" ? notice : null}
+      />
       <ActionFeedbackToast message={pageErrorMessage} tone="error" />
 
       {pageErrorMessage ? (
@@ -291,7 +304,7 @@ export default async function HelpPage({ searchParams }: HelpPageProps) {
 
       {migrationRequired ? (
         <MigrationRequiredCard
-          detail="Help needs the guided issue columns before Nestify can save causes, safety steps, follow-up tasks, and resolved state."
+          detail="Help needs the guided issue columns before Rezlee can save causes, safety steps, follow-up tasks, and resolved state."
           error={error}
           migrationPath={schemaMigrationPath}
         />

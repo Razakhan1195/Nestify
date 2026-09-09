@@ -1,3 +1,6 @@
+import { hasSupabaseEnv } from "@/lib/supabase/env";
+import { siteUrl } from "@/lib/site";
+import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 
 import { ClosingCta } from "@/components/marketing/closing-cta";
@@ -9,20 +12,29 @@ import { SiteFooter } from "@/components/marketing/site-footer";
 import { SiteHeader } from "@/components/marketing/site-header";
 import { createClient } from "@/lib/supabase/server";
 
-export default async function RootPage() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+export const metadata: Metadata = {
+  alternates: siteUrl() ? { canonical: siteUrl()!.origin } : undefined,
+};
 
-  if (user) {
-    redirect("/app");
+export default async function RootPage() {
+  if (hasSupabaseEnv()) {
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (user) {
+      redirect("/app");
+    }
   }
 
   return (
     <div className="flex min-h-screen flex-col">
+      <a href="#main-content" className="skip-link">
+        Skip to content
+      </a>
       <SiteHeader />
-      <main className="flex-1">
+      <main id="main-content" tabIndex={-1} className="flex-1">
         <Hero />
         <HowItWorks />
         <FeatureGrid />

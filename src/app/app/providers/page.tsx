@@ -45,7 +45,11 @@ type ProvidersPageProps = {
 };
 
 function providerSlug(value: string) {
-  return value.toLowerCase().replaceAll("&", "and").replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
+  return value
+    .toLowerCase()
+    .replaceAll("&", "and")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)/g, "");
 }
 
 function getProviderMigrationGuidance(error: string) {
@@ -131,16 +135,18 @@ export default async function ProvidersPage({
     ? getProviderMigrationGuidance(providerSchemaError)
     : null;
 
-  const categoriesByName = new Map(categories.map((category) => [category.name, category]));
+  const categoriesByName = new Map(
+    categories.map((category) => [category.name, category]),
+  );
   const providersByCategoryId = new Map(
     providers
       .filter((provider) => provider.category_id)
-      .map((provider) => [provider.category_id, provider])
+      .map((provider) => [provider.category_id, provider]),
   );
   const providersByPriority = new Map(
     providers
       .filter((provider) => provider.provider_priority)
-      .map((provider) => [provider.provider_priority, provider])
+      .map((provider) => [provider.provider_priority, provider]),
   );
   const getProviderForSetup = (setup: (typeof providerSetup)[number]) => {
     const category = categoriesByName.get(setup.name);
@@ -150,17 +156,17 @@ export default async function ProvidersPage({
     );
   };
   const connectedCount = providers.filter((provider) =>
-    ["connected", "healthy"].includes(provider.connection_status)
+    ["connected", "healthy"].includes(provider.connection_status),
   ).length;
   const recommendedSet = new Set<string>(recommendedProviderCategories);
   const recommendedProviders = providers.filter((provider) => {
     const setup = providerSetup.find(
-      (item) => item.priority === provider.provider_priority
+      (item) => item.priority === provider.provider_priority,
     );
     return setup ? recommendedSet.has(setup.name) : false;
   });
   const connectedRecommendedCount = recommendedProviders.filter((provider) =>
-    ["connected", "healthy"].includes(provider.connection_status)
+    ["connected", "healthy"].includes(provider.connection_status),
   ).length;
   const nextRecommendedItem = providerSetup
     .filter((setup) => recommendedSet.has(setup.name))
@@ -175,7 +181,12 @@ export default async function ProvidersPage({
         };
       }
 
-      if (isProviderNameMissing(provider.display_name ?? provider.name, setup.name)) {
+      if (
+        isProviderNameMissing(
+          provider.display_name ?? provider.name,
+          setup.name,
+        )
+      ) {
         return {
           label: `Choose your ${setup.name.toLowerCase()} provider`,
           setup,
@@ -187,7 +198,7 @@ export default async function ProvidersPage({
         return {
           label: `Connect ${getActualProviderName(
             provider.display_name ?? provider.name,
-            setup.name
+            setup.name,
           )}`,
           setup,
           sort: setup.priority,
@@ -199,7 +210,7 @@ export default async function ProvidersPage({
     .filter((item): item is NonNullable<typeof item> => Boolean(item))
     .sort((a, b) => a.sort - b.sort)[0];
   const dashboardReadiness = Math.round(
-    (connectedRecommendedCount / recommendedProviderCategories.length) * 100
+    (connectedRecommendedCount / recommendedProviderCategories.length) * 100,
   );
   const selectedSlug =
     typeof selectedProviderParam === "string" ? selectedProviderParam : null;
@@ -233,15 +244,19 @@ export default async function ProvidersPage({
         <CardContent className="grid gap-4 p-4 sm:p-5 lg:grid-cols-[1fr_auto] lg:items-center">
           <div className="grid gap-4">
             <div>
-              <StatusBadge value={dashboardReadiness >= 70 ? "on track" : "needs setup"} />
+              <StatusBadge
+                value={dashboardReadiness >= 70 ? "on track" : "needs setup"}
+              />
               <h2 className="mt-2 text-xl font-semibold tracking-tight">
                 {nextRecommendedItem?.label ?? "Core provider setup is ready"}
               </h2>
               <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
-                {connectedRecommendedCount} of {recommendedProviderCategories.length} recommended automation sources connected.
+                {connectedRecommendedCount} of{" "}
+                {recommendedProviderCategories.length} recommended automation
+                sources connected.
                 {nextRecommendedItem
                   ? " Add the next source to improve due dates, bill PDFs, and monthly change detection."
-                  : " Nestify has the core provider signals it needs for a stronger monthly summary."}
+                  : " Rezlee has the core provider signals it needs for a stronger monthly summary."}
               </p>
             </div>
             <div className="rounded-2xl border bg-background/80 p-3.5">
@@ -253,7 +268,8 @@ export default async function ProvidersPage({
                 />
               </div>
               <p className="mt-2 text-sm text-muted-foreground">
-                {dashboardReadiness}% ready based on recommended provider connections.
+                {dashboardReadiness}% ready based on recommended provider
+                connections.
               </p>
             </div>
           </div>
@@ -269,7 +285,8 @@ export default async function ProvidersPage({
             <div className="flex items-center justify-between gap-4 text-sm">
               <span className="text-muted-foreground">Recommended</span>
               <span className="font-semibold">
-                {connectedRecommendedCount}/{recommendedProviderCategories.length}
+                {connectedRecommendedCount}/
+                {recommendedProviderCategories.length}
               </span>
             </div>
             <SecondaryCTA asChild size="sm">
@@ -291,25 +308,35 @@ export default async function ProvidersPage({
         />
       ) : null}
 
-      <ActionFeedbackToast message={typeof notice === "string" ? notice : null} />
+      <ActionFeedbackToast
+        message={typeof notice === "string" ? notice : null}
+      />
 
       {providerSchemaError ? (
         <ProductCard tone="critical" variant="insight">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <AlertCircle className="size-5" />
-              {providerMigrationGuidance?.title}
+              {process.env.NODE_ENV === "production"
+                ? "Providers are temporarily unavailable"
+                : providerMigrationGuidance?.title}
             </CardTitle>
-            <CardDescription>{providerSchemaError}</CardDescription>
+            <CardDescription>
+              Please try again later. Your saved records are still yours.
+            </CardDescription>
           </CardHeader>
           <CardContent className="space-y-2 text-sm">
-            <p>{providerMigrationGuidance?.description}</p>
-            <p>
-              Run <code>{providerMigrationGuidance?.file}</code> in the
-              Supabase SQL Editor, then refresh this page.
-            </p>
-            {providerMigrationGuidance?.note ? (
-              <p>{providerMigrationGuidance.note}</p>
+            {process.env.NODE_ENV !== "production" ? (
+              <>
+                <p>{providerMigrationGuidance?.description}</p>
+                <p>
+                  Run <code>{providerMigrationGuidance?.file}</code> in the
+                  Supabase SQL Editor, then refresh this page.
+                </p>
+                {providerMigrationGuidance?.note ? (
+                  <p>{providerMigrationGuidance.note}</p>
+                ) : null}
+              </>
             ) : null}
           </CardContent>
         </ProductCard>
@@ -319,12 +346,12 @@ export default async function ProvidersPage({
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <CheckCircle2 className="size-5" />
-            Connections unlock your monthly report
+            Keep your providers close
           </CardTitle>
           <CardDescription>
-            Bill amount, due date, PDFs, usage where available, bill changes,
-            provider history, and your monthly household summary. Manual providers
-            and contacts are still useful when sync is not available.
+            Keep contact details and linked bills together. Supported
+            connections can refresh bill details; availability varies by
+            provider. You can always start with a manual record.
           </CardDescription>
         </CardHeader>
       </ProductCard>
@@ -336,7 +363,9 @@ export default async function ProvidersPage({
           action={
             nextRecommendedItem ? (
               <SecondaryCTA asChild size="sm">
-                <Link href={`/app/providers?provider=${providerSlug(nextRecommendedItem.setup.name)}#provider-setup`}>
+                <Link
+                  href={`/app/providers?provider=${providerSlug(nextRecommendedItem.setup.name)}#provider-setup`}
+                >
                   {nextRecommendedItem.label}
                 </Link>
               </SecondaryCTA>
@@ -348,7 +377,9 @@ export default async function ProvidersPage({
             <ProviderRegistryPicker
               categories={categories}
               connectedRegistryIds={providers.flatMap((provider) =>
-                provider.registry_provider_id ? [provider.registry_provider_id] : []
+                provider.registry_provider_id
+                  ? [provider.registry_provider_id]
+                  : [],
               )}
               providers={registryResult.registry}
             />
@@ -361,19 +392,28 @@ export default async function ProvidersPage({
               const added = Boolean(provider);
               const connected = Boolean(
                 provider &&
-                  ["connected", "healthy"].includes(provider.connection_status)
+                ["connected", "healthy"].includes(provider.connection_status),
               );
               const needsAction = Boolean(provider?.requires_user_action);
               const providerName =
-                provider && !isProviderNameMissing(provider.display_name ?? provider.name, setup.name)
-                  ? getActualProviderName(provider.display_name ?? provider.name, setup.name)
+                provider &&
+                !isProviderNameMissing(
+                  provider.display_name ?? provider.name,
+                  setup.name,
+                )
+                  ? getActualProviderName(
+                      provider.display_name ?? provider.name,
+                      setup.name,
+                    )
                   : "Choose provider";
 
               return (
                 <Link
                   className={[
                     "rounded-2xl border bg-card p-4 text-left transition-colors hover:bg-muted/40",
-                    selected ? "border-primary ring-2 ring-primary/15" : "border-[color:var(--border-soft)]",
+                    selected
+                      ? "border-primary ring-2 ring-primary/15"
+                      : "border-[color:var(--border-soft)]",
                   ].join(" ")}
                   href={`/app/providers?provider=${providerSlug(setup.name)}#provider-setup`}
                   key={setup.name}
@@ -407,7 +447,11 @@ export default async function ProvidersPage({
 
           <ProviderSetupCard
             category={categoriesByName.get(selectedSetup.name)}
-            disabledReason={providerMigrationGuidance?.disabledReason}
+            disabledReason={
+              providerMigrationGuidance
+                ? "Provider setup is temporarily unavailable. Please try again later."
+                : undefined
+            }
             provider={getProviderForSetup(selectedSetup)}
             setup={selectedSetup}
           />

@@ -1,3 +1,5 @@
+import type { Metadata } from "next";
+import { RezleeLogo } from "@/components/brand/rezlee-logo";
 import Link from "next/link";
 
 import { SignupForm } from "@/components/auth/signup-form";
@@ -5,6 +7,8 @@ import { SignupForm } from "@/components/auth/signup-form";
 type SignupPageProps = {
   searchParams: Promise<{ error?: string | string[] }>;
 };
+
+export const metadata: Metadata = { robots: { index: false, follow: false } };
 
 export default async function SignupPage({ searchParams }: SignupPageProps) {
   const { error } = await searchParams;
@@ -14,11 +18,14 @@ export default async function SignupPage({ searchParams }: SignupPageProps) {
       <header className="border-b border-border/60 bg-background/80 backdrop-blur">
         <div className="mx-auto flex h-16 w-full max-w-6xl items-center justify-between px-4 sm:px-6">
           <Link className="text-lg font-semibold" href="/">
-            Nestify
+            <RezleeLogo />
           </Link>
           <p className="text-sm text-muted-foreground">
             Already have an account?{" "}
-            <Link className="font-medium text-foreground underline" href="/login">
+            <Link
+              className="font-medium text-foreground underline"
+              href="/login"
+            >
               Log in
             </Link>
           </p>

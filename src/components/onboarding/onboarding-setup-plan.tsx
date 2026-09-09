@@ -78,8 +78,7 @@ const allActions = [
   {
     id: "providers",
     title: "Connect or add providers",
-    description:
-      "Provider sync can enrich the dashboard, but it is optional.",
+    description: "Provider sync can enrich the dashboard, but it is optional.",
     href: "/app/providers",
     cta: "Review providers",
     icon: LifeBuoy,
@@ -94,7 +93,7 @@ export function OnboardingSetupPlan({
   homeName: string;
 }) {
   const selectedActions = allActions.filter(
-    (action) => goals.includes(action.id) || action.id === "providers"
+    (action) => goals.includes(action.id) || action.id === "providers",
   );
   const visibleActions = selectedActions.length
     ? selectedActions
@@ -110,7 +109,7 @@ export function OnboardingSetupPlan({
           <CardTitle>{homeName} is ready for setup</CardTitle>
           <CardDescription>
             You do not need to finish everything now. Add one useful record and
-            Nestify will start becoming your home memory.
+            Rezlee will start becoming your home memory.
           </CardDescription>
         </CardHeader>
         <CardContent>

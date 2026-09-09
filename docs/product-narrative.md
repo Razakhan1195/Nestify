@@ -1,12 +1,14 @@
+> Historical design notes. For current Rezlee scope and launch status, read [the launch report](rezlee-launch-report.md) and [preservation map](rezlee-preservation-map.md). Current code takes precedence where older behavior is described.
+
 # Product Narrative
 
-## What Nestify Is
+## What Rezlee Is
 
-Nestify is a household command center for the place you live.
+Rezlee is a household command center for the place you live.
 
 It helps renters, homeowners, couples, families, and roommates know what needs attention, keep proof organized, stay ahead of household tasks, and handle issues without carrying all of it in their head.
 
-Nestify is not:
+Rezlee is not:
 
 - a generic home tracker
 - a random dashboard
@@ -43,7 +45,7 @@ Know what needs attention, keep proof organized, and stay ahead of household tas
 ## Primary Product Loop
 
 Add something important
--> Nestify organizes it
+-> Rezlee organizes it
 -> Dashboard tells you what matters now
 -> the user handles it
 -> activity/history builds trust
@@ -53,7 +55,7 @@ Add something important
 
 Within the first session, the user should understand:
 
-“I can put household bills, records, tasks, and issues here, and Nestify will tell me what needs attention.”
+“I can put household bills, records, tasks, and issues here, and Rezlee will tell me what needs attention.”
 
 ## Activation Event
 
