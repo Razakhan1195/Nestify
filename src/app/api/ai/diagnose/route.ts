@@ -17,13 +17,20 @@ export async function POST(req: Request) {
   try {
     form = await req.formData();
   } catch {
-    return Response.json({ error: "Describe the issue to get help." }, { status: 400 });
+    return Response.json(
+      { error: "Describe the issue to get help." },
+      { status: 400 },
+    );
   }
 
   const description = String(form.get("description") ?? "").trim();
   const location = String(form.get("location") ?? "").trim() || null;
 
-  if (description.length < 8) {
+  if (
+    description.length < 8 ||
+    description.length > 12000 ||
+    (location?.length ?? 0) > 200
+  ) {
     return Response.json(
       { error: "Add a little more detail about what's happening." },
       { status: 400 },
@@ -34,7 +41,10 @@ export async function POST(req: Request) {
   const upload = form.get("file");
   if (upload instanceof File && upload.size > 0) {
     if (upload.size > MAX_FILE_BYTES) {
-      return Response.json({ error: "Photo is too large (max 15 MB)." }, { status: 400 });
+      return Response.json(
+        { error: "Photo is too large (max 15 MB)." },
+        { status: 400 },
+      );
     }
     if (!isAllowedType(upload.type)) {
       return Response.json({ error: "Use an image or PDF." }, { status: 400 });

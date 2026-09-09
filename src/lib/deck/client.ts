@@ -10,9 +10,11 @@ import type {
 
 class RealDeckClient implements DeckClient {
   private readonly apiKey = process.env.DECK_API_KEY;
-  private readonly baseUrl = process.env.DECK_BASE_URL ?? "https://api.deck.co/v2";
+  private readonly baseUrl =
+    process.env.DECK_BASE_URL ?? "https://api.deck.co/v2";
   private readonly durhamWaterAgentId = process.env.DECK_DURHAM_WATER_AGENT_ID;
-  private readonly durhamWaterSourceId = process.env.DECK_DURHAM_WATER_SOURCE_ID;
+  private readonly durhamWaterSourceId =
+    process.env.DECK_DURHAM_WATER_SOURCE_ID;
   private readonly durhamWaterTaskId = process.env.DECK_DURHAM_WATER_TASK_ID;
   private readonly durhamWaterCredentialId =
     process.env.DECK_DURHAM_WATER_CREDENTIAL_ID;
@@ -21,13 +23,13 @@ class RealDeckClient implements DeckClient {
   private getDurhamWaterConfig(credentialId?: string) {
     if (!this.apiKey) {
       throw new Error(
-        "Deck API key is missing. Set DECK_API_KEY in .env.local after rotating the exposed key."
+        "Deck API key is missing. Set DECK_API_KEY in .env.local after rotating the exposed key.",
       );
     }
 
     if (!this.durhamWaterSourceId || !this.durhamWaterTaskId) {
       throw new Error(
-        "Durham Water Deck IDs are missing. Set DECK_DURHAM_WATER_SOURCE_ID and DECK_DURHAM_WATER_TASK_ID."
+        "Durham Water Deck IDs are missing. Set DECK_DURHAM_WATER_SOURCE_ID and DECK_DURHAM_WATER_TASK_ID.",
       );
     }
 
@@ -54,6 +56,7 @@ class RealDeckClient implements DeckClient {
   private async request<T>(path: string, init?: RequestInit): Promise<T> {
     const response = await fetch(`${this.baseUrl}${path}`, {
       ...init,
+      signal: init?.signal ?? AbortSignal.timeout(25000),
       headers: {
         Authorization: `Bearer ${this.apiKey}`,
         "Content-Type": "application/json",
@@ -77,7 +80,7 @@ class RealDeckClient implements DeckClient {
 
   private mapTaskRunToConnection(
     connectionId: string,
-    completedRun: DeckTaskRun
+    completedRun: DeckTaskRun,
   ): DeckConnection {
     if (completedRun.status === "interaction_required") {
       return {
@@ -102,7 +105,10 @@ class RealDeckClient implements DeckClient {
       };
     }
 
-    if (completedRun.status !== "completed" || completedRun.result === "failure") {
+    if (
+      completedRun.status !== "completed" ||
+      completedRun.result === "failure"
+    ) {
       return {
         connectionId,
         providerName: "Durham Water",
@@ -130,7 +136,7 @@ class RealDeckClient implements DeckClient {
   private async runDurhamWaterTask(
     connectionId: string,
     credentialId?: string,
-    taskRunId?: string
+    taskRunId?: string,
   ) {
     const config = this.getDurhamWaterConfig(credentialId);
 
@@ -152,7 +158,7 @@ class RealDeckClient implements DeckClient {
     if (taskRunId) {
       return this.mapTaskRunToConnection(
         connectionId,
-        await this.pollTaskRun(taskRunId)
+        await this.pollTaskRun(taskRunId),
       );
     }
 
@@ -171,12 +177,15 @@ class RealDeckClient implements DeckClient {
       }),
     });
 
-    return this.mapTaskRunToConnection(connectionId, await this.pollTaskRun(run.id));
+    return this.mapTaskRunToConnection(
+      connectionId,
+      await this.pollTaskRun(run.id),
+    );
   }
 
   private async pollTaskRun(
     taskRunId: string,
-    options: { stopOnInteraction?: boolean } = {}
+    options: { stopOnInteraction?: boolean } = {},
   ) {
     const terminalStatuses = new Set([
       "completed",
@@ -188,7 +197,7 @@ class RealDeckClient implements DeckClient {
 
     for (let attempt = 0; attempt < 36; attempt += 1) {
       const run = await this.request<DeckTaskRun>(
-        `/task-runs/${taskRunId}?include=storage`
+        `/task-runs/${taskRunId}?include=storage`,
       );
       latestRun = run;
 
@@ -251,7 +260,7 @@ class RealDeckClient implements DeckClient {
 
     if (!isDurhamWaterProvider(input.providerName, input.category)) {
       throw new Error(
-        "Real Deck credential flow is currently configured only for Durham Water."
+        "Real Deck credential flow is currently configured only for Durham Water.",
       );
     }
 
@@ -268,7 +277,7 @@ class RealDeckClient implements DeckClient {
           source_id: config.sourceId,
           external_id: `${input.userId}:${input.providerId}`,
         }),
-      }
+      },
     );
 
     return {
@@ -296,7 +305,7 @@ class RealDeckClient implements DeckClient {
 
   async syncConnection(
     connectionId: string,
-    input?: { credentialId?: string; taskRunId?: string }
+    input?: { credentialId?: string; taskRunId?: string },
   ): Promise<DeckConnection> {
     if (!connectionId.includes("durham_water")) {
       return {
@@ -312,7 +321,7 @@ class RealDeckClient implements DeckClient {
     return this.runDurhamWaterTask(
       connectionId,
       input?.credentialId,
-      input?.taskRunId
+      input?.taskRunId,
     );
   }
 
@@ -326,12 +335,12 @@ class RealDeckClient implements DeckClient {
       {
         method: "POST",
         body: JSON.stringify({ input: input.values }),
-      }
+      },
     );
 
     return this.mapTaskRunToConnection(
       input.connectionId,
-      await this.pollTaskRun(input.taskRunId, { stopOnInteraction: false })
+      await this.pollTaskRun(input.taskRunId, { stopOnInteraction: false }),
     );
   }
 
@@ -407,7 +416,7 @@ function getDeckErrorMessage(data: unknown, status: number) {
         .map((error) =>
           isRecord(error) && typeof error.message === "string"
             ? error.message
-            : null
+            : null,
         )
         .filter(Boolean)
         .join(" ");
@@ -447,7 +456,8 @@ function sanitizeInteraction(interaction: DeckTaskRun["interaction"]) {
       ? interaction.fields
           .map((field, index) => ({
             label: field.label ?? field.name ?? "Security answer",
-            name: field.name ?? (index === 0 ? "answer" : `answer_${index + 1}`),
+            name:
+              field.name ?? (index === 0 ? "answer" : `answer_${index + 1}`),
             type: field.type ?? "string",
           }))
           .filter((field) => field.name)
@@ -480,7 +490,7 @@ function mapDurhamWaterOutputToBills(output: unknown): DeckBill[] {
 
     const accountNumber = toStringValue(bill.account_number);
     const [billingPeriodStart, billingPeriodEnd] = parseBillingPeriod(
-      toStringValue(bill.billing_period)
+      toStringValue(bill.billing_period),
     );
 
     return [

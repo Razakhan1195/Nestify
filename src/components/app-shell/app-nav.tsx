@@ -1,5 +1,6 @@
 "use client";
 
+import { RezleeLogo } from "@/components/brand/rezlee-logo";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Menu } from "lucide-react";
@@ -23,7 +24,7 @@ function NavLinks({ onMobile }: { onMobile?: boolean }) {
     <nav className={cn("grid gap-5", onMobile && "px-4 pb-4")}>
       {appNavSections.map((section) => (
         <div className="grid gap-1.5" key={section.label}>
-          <p className="px-3 text-[0.68rem] font-semibold uppercase tracking-[0.14em] text-sidebar-foreground/45">
+          <p className="px-3 text-[0.68rem] font-semibold uppercase tracking-[0.14em] text-sidebar-foreground/75">
             {section.label}
           </p>
           <div className="grid gap-1">
@@ -35,13 +36,21 @@ function NavLinks({ onMobile }: { onMobile?: boolean }) {
               const link = (
                 <Link
                   className={cn(
-                    "group flex min-h-10 items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium text-sidebar-foreground/68 transition-colors hover:bg-sidebar-accent/70 hover:text-sidebar-accent-foreground",
+                    "group flex min-h-11 items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium text-sidebar-foreground/85 transition-colors hover:bg-sidebar-accent/70 hover:text-sidebar-accent-foreground",
                     isActive &&
-                      "bg-primary/10 text-sidebar-foreground ring-1 ring-primary/10 hover:bg-primary/10 hover:text-sidebar-foreground"
+                      "bg-primary/10 text-sidebar-foreground ring-1 ring-primary/10 hover:bg-primary/10 hover:text-sidebar-foreground",
                   )}
+                  aria-current={isActive ? "page" : undefined}
                   href={item.href}
                 >
-                  <Icon className={cn("size-4 shrink-0", isActive ? "text-primary" : "text-sidebar-foreground/45 group-hover:text-sidebar-foreground/70")} />
+                  <Icon
+                    className={cn(
+                      "size-4 shrink-0",
+                      isActive
+                        ? "text-primary"
+                        : "text-sidebar-foreground/75 group-hover:text-sidebar-foreground/70",
+                    )}
+                  />
                   <span className="truncate">{item.title}</span>
                 </Link>
               );
@@ -73,22 +82,15 @@ export function MobileNav() {
           <Menu className="size-4" />
         </Button>
       </SheetTrigger>
-      <SheetContent side="left" className="w-72">
+      <SheetContent side="left" className="w-72 overflow-y-auto">
         <SheetHeader>
           <SheetTitle className="flex items-center gap-3 text-left">
-            <span className="flex size-9 items-center justify-center rounded-2xl bg-primary text-sm font-semibold text-primary-foreground">
-              N
-            </span>
-            <span>
-              <span className="block">Nestify</span>
-              <span className="block text-xs font-normal text-muted-foreground">
-                Household command center
-              </span>
-            </span>
+            <RezleeLogo />
           </SheetTitle>
         </SheetHeader>
         <p className="px-4 pb-4 text-sm text-muted-foreground">
-          Know what is due, what changed, what needs attention, and what to do next.
+          Know what is due, what changed, what needs attention, and what to do
+          next.
         </p>
         <NavLinks onMobile />
       </SheetContent>

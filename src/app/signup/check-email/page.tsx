@@ -1,3 +1,5 @@
+import type { Metadata } from "next";
+import { RezleeLogo } from "@/components/brand/rezlee-logo";
 import Link from "next/link";
 import { MailCheck } from "lucide-react";
 
@@ -14,6 +16,8 @@ type CheckEmailPageProps = {
   searchParams: Promise<{ email?: string | string[] }>;
 };
 
+export const metadata: Metadata = { robots: { index: false, follow: false } };
+
 export default async function CheckEmailPage({
   searchParams,
 }: CheckEmailPageProps) {
@@ -24,7 +28,7 @@ export default async function CheckEmailPage({
     <main className="flex min-h-screen flex-col bg-muted/30">
       <div className="mx-auto flex h-16 w-full max-w-6xl items-center px-4 sm:px-6">
         <Link className="text-lg font-semibold" href="/">
-          Nestify
+          <RezleeLogo />
         </Link>
       </div>
       <div className="flex flex-1 items-center justify-center px-4 py-10">
@@ -41,9 +45,9 @@ export default async function CheckEmailPage({
           </CardHeader>
           <CardContent className="grid gap-4 text-sm text-muted-foreground">
             <p>
-              After you click the verification link, Nestify will bring you
-              back to a guided setup flow where you can add the home details
-              that make your dashboard useful.
+              After you click the verification link, Rezlee will bring you back
+              to a guided setup flow where you can add the home details that
+              make your dashboard useful.
             </p>
             <div className="flex flex-col gap-2 sm:flex-row">
               <Button asChild>

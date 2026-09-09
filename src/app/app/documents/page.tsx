@@ -1,11 +1,13 @@
+import { isOwnedDocumentPath } from "@/lib/documents";
+import Link from "next/link";
+import { FilterLinks } from "@/components/product/filter-links";
+import { SubmitButton } from "@/components/submit-button";
 import {
   Calendar,
-  Download,
   FileText,
   FolderOpen,
   Plus,
   Search,
-  Sparkles,
   Upload,
 } from "lucide-react";
 import { redirect } from "next/navigation";
@@ -18,7 +20,12 @@ import { DeleteRecordButton } from "@/components/product/delete-record-button";
 import { PageHeader, PageShell } from "@/components/product/design-system";
 import { SectionCard } from "@/components/section-card";
 import { Button } from "@/components/ui/button";
-import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -42,10 +49,18 @@ type DocumentRow = {
   source: string | null;
   storage_path: string | null;
   title: string;
+  notes: string | null;
+  provider_id: string | null;
 };
 
 type DocumentsPageProps = {
-  searchParams: Promise<{ error?: string | string[]; notice?: string | string[] }>;
+  searchParams: Promise<{
+    q?: string;
+    category?: string;
+    provider?: string;
+    error?: string | string[];
+    notice?: string | string[];
+  }>;
 };
 
 const docCategories = [
@@ -55,13 +70,15 @@ const docCategories = [
   "Receipt",
   "Tax",
   "Contract",
+  "Lease",
+  "Other",
 ] as const;
 
 const missingDocs = [
-  "Home warranty document",
+  "Lease or ownership record",
   "Appliance receipts for warranty claims",
-  "Mortgage statement",
-  "Property tax notice",
+  "Home or tenant insurance policy",
+  "Important service agreement",
 ];
 
 function formatDate(value: string | null) {
@@ -74,7 +91,12 @@ function formatDate(value: string | null) {
 }
 
 function documentCategory(document: DocumentRow) {
-  const haystack = [document.document_type, document.title, document.file_name, document.source]
+  const haystack = [
+    document.document_type,
+    document.title,
+    document.file_name,
+    document.source,
+  ]
     .filter(Boolean)
     .join(" ")
     .toLowerCase();
@@ -82,21 +104,29 @@ function documentCategory(document: DocumentRow) {
   if (haystack.includes("insurance")) return "Insurance";
   if (haystack.includes("warranty")) return "Warranty";
   if (haystack.includes("manual")) return "Manual";
-  if (haystack.includes("receipt") || haystack.includes("invoice")) return "Receipt";
+  if (haystack.includes("receipt") || haystack.includes("invoice"))
+    return "Receipt";
   if (haystack.includes("tax")) return "Tax";
+  if (haystack.includes("lease")) return "Lease";
   if (haystack.includes("contract")) return "Contract";
-  return "Receipt";
+  return "Other";
 }
 
 function sizeLabel(document: DocumentRow) {
-  return document.file_name ? "Saved file" : document.source === "deck" ? "Provider record" : "Record";
+  return document.file_name
+    ? "Saved file"
+    : document.source === "deck"
+      ? "Provider record"
+      : "Record";
 }
 
-export default async function DocumentsPage({ searchParams }: DocumentsPageProps) {
-  const [{ error: pageError, notice }, supabase] = await Promise.all([
-    searchParams,
-    createClient(),
-  ]);
+export default async function DocumentsPage({
+  searchParams,
+}: DocumentsPageProps) {
+  const [
+    { error: pageError, notice, q = "", category = "all", provider },
+    supabase,
+  ] = await Promise.all([searchParams, createClient()]);
   const {
     data: { user },
   } = await supabase.auth.getUser();
@@ -107,7 +137,7 @@ export default async function DocumentsPage({ searchParams }: DocumentsPageProps
   const { data: documents, error } = await supabase
     .from("documents")
     .select(
-      "id,title,document_type,storage_path,file_name,mime_type,issued_on,expires_on,source,created_at,providers(display_name,name)"
+      "id,title,notes,provider_id,document_type,storage_path,file_name,mime_type,issued_on,expires_on,source,created_at,providers(display_name,name)",
     )
     .eq("user_id", user.id)
     .eq("home_id", home.id)
@@ -116,15 +146,37 @@ export default async function DocumentsPage({ searchParams }: DocumentsPageProps
   const documentRows = (documents ?? []) as unknown as DocumentRow[];
   const categoryCounts = docCategories.map((category) => ({
     category,
-    count: documentRows.filter((document) => documentCategory(document) === category).length,
+    count: documentRows.filter(
+      (document) => documentCategory(document) === category,
+    ).length,
   }));
 
+  const selectedCategory = docCategories.some((value) => value === category)
+    ? category
+    : "all";
+  const query = q.trim().slice(0, 200);
+  const visibleDocuments = documentRows.filter(
+    (document) =>
+      (selectedCategory === "all" ||
+        documentCategory(document) === selectedCategory) &&
+      (!provider || document.provider_id === provider) &&
+      [
+        document.title,
+        document.document_type,
+        document.file_name,
+        document.notes,
+      ]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase()
+        .includes(query.toLowerCase()),
+  );
   return (
     <PageShell>
       <PageHeader
-        eyebrow="Documents"
-        title="Documents"
-        description="Policies, receipts, manuals, and proof — all in one place."
+        eyebrow="Keep"
+        title="Vault"
+        description="Your household memory. Keep the details and proof you will want later."
         actions={
           <Button asChild size="sm">
             <a href="#add-document">
@@ -140,77 +192,125 @@ export default async function DocumentsPage({ searchParams }: DocumentsPageProps
           <CardHeader>
             <CardTitle className="text-destructive">Document issue</CardTitle>
             <CardDescription className="text-destructive">
-              {typeof pageError === "string" ? pageError : error?.message}
+              {typeof pageError === "string"
+                ? pageError
+                : "We could not load these records. Please try again shortly."}
             </CardDescription>
           </CardHeader>
         </Card>
       ) : null}
 
-      <ActionFeedbackToast message={typeof notice === "string" ? notice : null} />
+      <ActionFeedbackToast
+        message={typeof notice === "string" ? notice : null}
+      />
 
       <div className="grid gap-6 lg:grid-cols-3 lg:gap-8">
         <div className="flex flex-col gap-6 lg:col-span-2">
-          <div className="flex flex-col gap-3">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-              <Input className="pl-9" placeholder="Search documents..." readOnly />
-            </div>
-            <div className="flex flex-wrap gap-2">
-              <span className="rounded-full border border-primary bg-primary px-3 py-1 text-xs font-medium text-primary-foreground">
-                All <span className="ml-1 opacity-70">{documentRows.length}</span>
-              </span>
-              {categoryCounts.map(({ category, count }) => (
-                <span
-                  className="rounded-full border bg-card px-3 py-1 text-xs font-medium text-muted-foreground"
-                  key={category}
-                >
-                  {category}
-                  <span className="ml-1 opacity-70">{count}</span>
-                </span>
-              ))}
-            </div>
-          </div>
-
+          <form action="/app/documents" className="flex gap-2" role="search">
+            <Label htmlFor="document-search" className="sr-only">
+              Search Vault
+            </Label>
+            <Input
+              id="document-search"
+              name="q"
+              defaultValue={query}
+              placeholder="Search titles, categories, and notes"
+            />
+            <Button type="submit" variant="outline">
+              <Search className="size-4" />
+              <span className="sr-only">Search</span>
+            </Button>
+          </form>
+          <FilterLinks
+            basePath="/app/documents"
+            param="category"
+            selected={selectedCategory}
+            query={query}
+            options={[
+              { value: "all", label: "All", count: documentRows.length },
+              ...categoryCounts.map(({ category, count }) => ({
+                value: category,
+                label: category,
+                count,
+              })),
+            ]}
+          />
+          {provider ? (
+            <p className="text-sm text-muted-foreground">
+              Showing records for this provider.{" "}
+              <Link href="/app/documents" className="underline">
+                Show all records
+              </Link>
+            </p>
+          ) : null}
           <SectionCard
-            action={
-              <Button asChild size="sm">
-                <a href="#add-document">
-                  <Upload className="size-4" />
-                  Add document
-                </a>
-              </Button>
-            }
             description="Policies, receipts, manuals, and proof — all in one place"
             icon={FileText}
-            title="Your documents"
+            title="Your records"
           >
-            {documentRows.length ? (
+            {visibleDocuments.length ? (
               <div className="grid gap-3 sm:grid-cols-2">
-                {documentRows.map((document) => (
-                  <div className="flex flex-col gap-3 rounded-xl border bg-card p-4" key={document.id}>
+                {visibleDocuments.map((document) => (
+                  <div
+                    className="flex flex-col gap-3 rounded-xl border bg-card p-4"
+                    key={document.id}
+                  >
                     <div className="flex items-start gap-3">
                       <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-accent text-accent-foreground">
                         <FileText className="size-5" />
                       </span>
-                      <div className="flex flex-1 flex-col gap-0.5">
-                        <p className="font-medium leading-tight text-pretty">{document.title}</p>
+                      <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+                        <p className="font-medium leading-tight text-pretty">
+                          {document.title}
+                        </p>
                         <span className="text-xs text-muted-foreground">
                           {documentCategory(document)} · {sizeLabel(document)}
                         </span>
                       </div>
                     </div>
-                    <div className="flex items-center gap-x-3 text-xs text-muted-foreground">
+                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
                       <span className="flex items-center gap-1">
                         <Calendar className="size-3.5" />
                         Added {formatDate(document.created_at)}
                       </span>
-                      {document.expires_on ? <span>Expires {formatDate(document.expires_on)}</span> : null}
+                      {document.expires_on ? (
+                        <span>Expires {formatDate(document.expires_on)}</span>
+                      ) : null}
                     </div>
                     <div className="flex items-center gap-2 border-t pt-3">
-                      <Button variant="outline" size="sm" className="h-7 flex-1 gap-1 text-xs">
-                        <Sparkles className="size-3.5" />
-                        AI summary
-                      </Button>
+                      <details className="min-w-0 flex-1">
+                        <summary className="cursor-pointer py-2 text-sm font-medium text-primary">
+                          Record details
+                        </summary>
+                        <div className="mt-2 space-y-2 text-sm text-muted-foreground">
+                          <p>{document.notes || "No notes saved."}</p>
+                          <p>Issued: {formatDate(document.issued_on)}</p>
+                          <p>
+                            {document.file_name
+                              ? `File: ${document.file_name}`
+                              : "No original file attached. Keep your original copy."}
+                          </p>
+                          {document.storage_path &&
+                          isOwnedDocumentPath(
+                            document.storage_path,
+                            user.id,
+                            home.id,
+                          ) ? (
+                            <Link
+                              className="inline-flex min-h-11 items-center font-medium text-primary underline"
+                              href={`/api/documents/${document.id}/download`}
+                            >
+                              Open saved file
+                            </Link>
+                          ) : null}
+                          <Link
+                            className="block py-2 text-primary underline"
+                            href="/app/assistant"
+                          >
+                            Ask about your household records
+                          </Link>
+                        </div>
+                      </details>
                       <DeleteRecordButton
                         iconOnly
                         id={document.id}
@@ -218,9 +318,6 @@ export default async function DocumentsPage({ searchParams }: DocumentsPageProps
                         label={`Delete ${document.title}`}
                         returnPath="/app/documents"
                       />
-                      <Button variant="ghost" size="icon-sm" aria-label="Download">
-                        <Download className="size-4" />
-                      </Button>
                     </div>
                   </div>
                 ))}
@@ -228,8 +325,8 @@ export default async function DocumentsPage({ searchParams }: DocumentsPageProps
             ) : (
               <EmptyState
                 icon={FolderOpen}
-                title="Nothing here yet"
-                description="Add a policy, receipt, manual, or bill PDF so it is easy to find later."
+                title="No records in this view"
+                description="Try another search or category, or save your first household record below."
               />
             )}
           </SectionCard>
@@ -243,26 +340,64 @@ export default async function DocumentsPage({ searchParams }: DocumentsPageProps
             <div className="mb-5">
               <ScanCard kind="document" />
             </div>
-            <form action={createDocumentRecord} className="grid gap-4 lg:grid-cols-4" id="add-document">
+            <span id="add-record" />
+            <form
+              action={createDocumentRecord}
+              className="grid gap-4 lg:grid-cols-4"
+              id="add-document"
+            >
               <div className="grid gap-2 lg:col-span-2">
                 <Label htmlFor="title">Document name</Label>
-                <Input id="title" name="title" placeholder="Home insurance policy" required />
+                <Input
+                  id="title"
+                  name="title"
+                  placeholder="Home insurance policy"
+                  required
+                />
               </div>
               <div className="grid gap-2">
                 <Label htmlFor="category">Category</Label>
-                <Input id="category" name="category" placeholder="Insurance, warranty" required />
+                <Input
+                  id="category"
+                  name="category"
+                  placeholder="Insurance, warranty"
+                  required
+                />
               </div>
               <div className="grid gap-2">
                 <Label htmlFor="expires_on">Expiry date</Label>
                 <Input id="expires_on" name="expires_on" type="date" />
               </div>
+              <div className="grid gap-2">
+                <Label htmlFor="issued_on">Issue date</Label>
+                <Input id="issued_on" name="issued_on" type="date" />
+              </div>
+              <div className="grid gap-2 lg:col-span-4">
+                <Label htmlFor="record_file">Original file (optional)</Label>
+                <Input
+                  id="record_file"
+                  name="record_file"
+                  type="file"
+                  accept="application/pdf,image/jpeg,image/png,image/webp"
+                />
+                <p className="text-xs text-muted-foreground">
+                  PDF, JPG, PNG, or WebP up to 10 MB. A scan extracts details;
+                  attach the original here if you want to keep it.
+                </p>
+              </div>
               <div className="grid gap-2 lg:col-span-4">
                 <Label htmlFor="notes">Notes</Label>
-                <Textarea id="notes" name="notes" placeholder="Anything to remember about this document" />
+                <Textarea
+                  id="notes"
+                  name="notes"
+                  placeholder="Anything to remember about this document"
+                />
               </div>
-              <Button className="lg:col-span-4 lg:w-fit" type="submit">
-                Save document
-              </Button>
+              <SubmitButton
+                className="lg:col-span-4 lg:w-fit"
+                label="Save record"
+                pendingLabel="Saving..."
+              />
             </form>
           </SectionCard>
         </div>
@@ -280,7 +415,12 @@ export default async function DocumentsPage({ searchParams }: DocumentsPageProps
                   key={document}
                 >
                   <span className="text-sm leading-snug">{document}</span>
-                  <Button asChild size="sm" variant="outline" className="h-7 gap-1 px-2 text-xs">
+                  <Button
+                    asChild
+                    size="sm"
+                    variant="outline"
+                    className="h-7 gap-1 px-2 text-xs"
+                  >
                     <a href="#add-document">
                       <Plus className="size-3.5" />
                       Add

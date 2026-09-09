@@ -46,7 +46,10 @@ export async function updateSession(request: NextRequest) {
   if (!user && request.nextUrl.pathname.startsWith("/app")) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
-    return NextResponse.redirect(url);
+    const response = NextResponse.redirect(url);
+    for (const cookie of supabaseResponse.cookies.getAll())
+      response.cookies.set(cookie);
+    return response;
   }
 
   // IMPORTANT: return the supabaseResponse object as-is so refreshed auth

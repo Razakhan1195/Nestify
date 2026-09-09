@@ -30,40 +30,43 @@ export default async function SettingsPage() {
   }
 
   const home = await requireCurrentUserHome(user.id);
-  const [{ data: providers = [] }, { data: timelineEvents = [] }, { data: inventoryItems = [] }] =
-    await Promise.all([
-      supabase
-        .from("providers")
-        .select("id,connection_status,health_status")
-        .eq("user_id", user.id)
-        .eq("home_id", home.id)
-        .then((result) => (result.error ? { data: [] } : result)),
-      supabase
-        .from("timeline_events")
-        .select("id,title,occurred_on,event_type")
-        .eq("user_id", user.id)
-        .eq("home_id", home.id)
-        .order("occurred_on", { ascending: false })
-        .limit(4)
-        .then((result) => (result.error ? { data: [] } : result)),
-      supabase
-        .from("inventory_items")
-        .select("id,name,category,warranty_expires_on")
-        .eq("user_id", user.id)
-        .eq("home_id", home.id)
-        .order("created_at", { ascending: false })
-        .limit(4)
-        .then((result) => (result.error ? { data: [] } : result)),
-    ]);
+  const [
+    { data: providers = [] },
+    { data: timelineEvents = [] },
+    { data: inventoryItems = [] },
+  ] = await Promise.all([
+    supabase
+      .from("providers")
+      .select("id,connection_status,health_status")
+      .eq("user_id", user.id)
+      .eq("home_id", home.id)
+      .then((result) => (result.error ? { data: [] } : result)),
+    supabase
+      .from("timeline_events")
+      .select("id,title,occurred_on,event_type")
+      .eq("user_id", user.id)
+      .eq("home_id", home.id)
+      .order("occurred_on", { ascending: false })
+      .limit(4)
+      .then((result) => (result.error ? { data: [] } : result)),
+    supabase
+      .from("inventory_items")
+      .select("id,name,category,warranty_expires_on")
+      .eq("user_id", user.id)
+      .eq("home_id", home.id)
+      .order("created_at", { ascending: false })
+      .limit(4)
+      .then((result) => (result.error ? { data: [] } : result)),
+  ]);
   const connectedProviders = providers.filter((provider) =>
-    ["connected", "healthy"].includes(provider.connection_status ?? "")
+    ["connected", "healthy"].includes(provider.connection_status ?? ""),
   );
 
   return (
     <PageShell>
       <PageHeader
         eyebrow="Home profile"
-        title="Manage your home"
+        title="Your place"
         description="Update your home details, connected providers, systems, inventory, and household history."
         actions={
           <>
@@ -86,7 +89,9 @@ export default async function SettingsPage() {
             </h2>
             <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
               {home.street_address ? `${home.street_address}, ` : ""}
-              {[home.city, home.province, home.postal_code].filter(Boolean).join(", ")}
+              {[home.city, home.province, home.postal_code]
+                .filter(Boolean)
+                .join(", ")}
             </p>
           </div>
           <SecondaryCTA asChild>
@@ -149,8 +154,8 @@ export default async function SettingsPage() {
       <div className="grid gap-5 lg:grid-cols-[1.1fr_0.9fr]">
         <PageSection id="place-details">
           <SectionHeader
-            title="Home details"
-            description="The place information Nestify uses to make bills, records, care reminders, and provider context more useful."
+            title="Place details"
+            description="The place information Rezlee uses to make bills, records, care reminders, and provider context more useful."
           />
           <HomeSettingsForm home={home} />
         </PageSection>
@@ -172,7 +177,9 @@ export default async function SettingsPage() {
                     <div className="flex items-start justify-between gap-3">
                       <div>
                         <p className="font-medium">{event.title}</p>
-                        <p className="text-sm text-muted-foreground">{event.occurred_on}</p>
+                        <p className="text-sm text-muted-foreground">
+                          {event.occurred_on}
+                        </p>
                       </div>
                       <StatusBadge value={event.event_type} />
                     </div>
@@ -180,7 +187,8 @@ export default async function SettingsPage() {
                 ))
               ) : (
                 <p className="text-sm text-muted-foreground">
-                  Your timeline will fill as bills, records, care tasks, and projects are added.
+                  Your timeline will fill as bills, records, care tasks, and
+                  projects are added.
                 </p>
               )}
             </CardContent>
@@ -207,7 +215,8 @@ export default async function SettingsPage() {
                 ))
               ) : (
                 <p className="text-sm text-muted-foreground">
-                  Add appliances, systems, and warranty records when they matter.
+                  Add appliances, systems, and warranty records when they
+                  matter.
                 </p>
               )}
             </CardContent>

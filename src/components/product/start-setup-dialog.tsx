@@ -1,7 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { FileText, PackageCheck, ReceiptText, RotateCw } from "lucide-react";
+import {
+  CircleHelp,
+  FileText,
+  PackageCheck,
+  ReceiptText,
+  RotateCw,
+} from "lucide-react";
 
 import {
   Dialog,
@@ -15,29 +21,40 @@ import { Button } from "@/components/ui/button";
 
 const setupOptions = [
   {
+    action: "Get help",
+    description: "Understand an issue and save a follow-up.",
+    href: "/app/help#start-issue-check",
+    icon: CircleHelp,
+    title: "Household issue",
+  },
+  {
     action: "Add bill",
-    description: "Track rent, utilities, internet, insurance, or any recurring household cost.",
+    description:
+      "Track rent, utilities, internet, insurance, or any recurring household cost.",
     href: "/app/bills#manual-bill",
     icon: ReceiptText,
     title: "Bill or rent",
   },
   {
     action: "Add document",
-    description: "Save leases, policies, receipts, warranties, manuals, and PDFs.",
+    description:
+      "Save leases, policies, receipts, warranties, manuals, and PDFs.",
     href: "/app/documents#add-document",
     icon: FileText,
     title: "Document",
   },
   {
     action: "Add reminder",
-    description: "Remember chores, repairs, renewals, and recurring care tasks.",
+    description:
+      "Remember chores, repairs, renewals, and recurring care tasks.",
     href: "/app/maintenance#add-task",
     icon: PackageCheck,
     title: "Reminder",
   },
   {
     action: "Connect provider",
-    description: "Connect supported providers to bring in bills and PDFs automatically when available.",
+    description:
+      "Connect supported providers to bring in bills and PDFs automatically when available.",
     href: "/app/providers",
     icon: RotateCw,
     title: "Provider automation",
@@ -48,11 +65,9 @@ export function StartSetupDialog() {
   return (
     <Dialog>
       <DialogTrigger asChild>
-        <Button>
-          Start setup
-        </Button>
+        <Button>Start setup</Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent className="max-h-[85dvh] overflow-y-auto sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>Choose your first step</DialogTitle>
           <DialogDescription>
@@ -82,7 +97,11 @@ export function StartSetupDialog() {
                     </p>
                   ) : null}
                 </div>
-                <Button asChild size="sm" variant={index === 0 ? "default" : "outline"}>
+                <Button
+                  asChild
+                  size="sm"
+                  variant={index === 0 ? "default" : "outline"}
+                >
                   <Link href={option.href}>{option.action}</Link>
                 </Button>
               </div>

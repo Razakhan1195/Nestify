@@ -16,7 +16,7 @@ export function DeleteProviderButton({
       onSubmit={(event) => {
         if (
           !window.confirm(
-            "Delete this provider from Nestify? Historical bills and records will stay, but this provider connection will be removed."
+            "Delete this provider from Rezlee? Historical bills and records will stay, but this provider connection will be removed.",
           )
         ) {
           event.preventDefault();

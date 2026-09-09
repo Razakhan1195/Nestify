@@ -1,7 +1,9 @@
+import Link from "next/link";
+import { SubmitButton } from "@/components/submit-button";
 import { CheckCircle2, Hammer, History, Plus, Sparkles } from "lucide-react";
 import { redirect } from "next/navigation";
 
-import { createProject } from "@/app/actions";
+import { createProject, updateProjectStatus } from "@/app/actions";
 import { RepairDiagnosis } from "@/components/ai/repair-diagnosis";
 import { EmptyState } from "@/components/empty-state";
 import { DeleteRecordButton } from "@/components/product/delete-record-button";
@@ -10,7 +12,12 @@ import { MigrationRequiredCard } from "@/components/product/migration-required-c
 import { SectionCard } from "@/components/section-card";
 import { StatusBadge, type StatusTone } from "@/components/status-badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -35,7 +42,14 @@ type Project = {
   title: string;
 };
 
-const issueCategories = ["Plumbing", "HVAC", "Electrical", "Appliance", "Roof & exterior", "General"];
+const issueCategories = [
+  "Plumbing",
+  "HVAC",
+  "Electrical",
+  "Appliance",
+  "Roof & exterior",
+  "General",
+];
 
 function formatAmount(value: number | null) {
   if (value === null) return "TBD";
@@ -50,7 +64,8 @@ function repairTone(status: string): { label: string; tone: StatusTone } {
     return { label: "Resolved", tone: "success" };
   }
   if (status === "scheduled") return { label: "Scheduled", tone: "info" };
-  if (status === "in_progress") return { label: "In progress", tone: "warning" };
+  if (status === "in_progress")
+    return { label: "In progress", tone: "warning" };
   return { label: status.replaceAll("_", " "), tone: "warning" };
 }
 
@@ -69,18 +84,54 @@ function RepairRow({ project }: { project: Project }) {
         <StatusBadge tone={tone}>{label}</StatusBadge>
       </div>
       <p className="text-sm text-muted-foreground">
-        {project.notes ?? "Track quotes, contractor details, and follow-up notes here."}
+        {project.notes ??
+          "Track quotes, contractor details, and follow-up notes here."}
       </p>
       <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
         <span>
-          Budget: <span className="font-medium text-foreground">{formatAmount(project.budget)}</span>
+          Budget:{" "}
+          <span className="font-medium text-foreground">
+            {formatAmount(project.budget)}
+          </span>
         </span>
         <span>
-          Cost: <span className="font-medium text-foreground">{formatAmount(project.actual_cost)}</span>
+          Cost:{" "}
+          <span className="font-medium text-foreground">
+            {formatAmount(project.actual_cost)}
+          </span>
         </span>
         <span>
-          Priority: <span className="font-medium text-foreground">{project.priority}</span>
+          Priority:{" "}
+          <span className="font-medium text-foreground">
+            {project.priority}
+          </span>
         </span>
+        <form
+          action={updateProjectStatus}
+          className="flex flex-wrap items-center gap-2"
+        >
+          <input type="hidden" name="project_id" value={project.id} />
+          <Label className="sr-only" htmlFor={`status-${project.id}`}>
+            Status for {project.title}
+          </Label>
+          <select
+            className="h-11 rounded-md border bg-background px-2 text-sm"
+            id={`status-${project.id}`}
+            name="status"
+            defaultValue={project.status}
+          >
+            <option value="planning">Planning</option>
+            <option value="scheduled">Scheduled</option>
+            <option value="in_progress">In progress</option>
+            <option value="completed">Completed</option>
+          </select>
+          <SubmitButton
+            label="Update"
+            pendingLabel="Saving..."
+            variant="outline"
+            size="sm"
+          />
+        </form>
         <DeleteRecordButton
           className="h-auto px-0 py-0 text-xs"
           id={project.id}
@@ -93,7 +144,9 @@ function RepairRow({ project }: { project: Project }) {
   );
 }
 
-export default async function ProjectsPage({ searchParams }: ProjectsPageProps) {
+export default async function ProjectsPage({
+  searchParams,
+}: ProjectsPageProps) {
   const [{ error: pageError }, supabase] = await Promise.all([
     searchParams,
     createClient(),
@@ -107,21 +160,27 @@ export default async function ProjectsPage({ searchParams }: ProjectsPageProps) 
   const home = await requireCurrentUserHome(user.id);
   const { data, error } = await supabase
     .from("projects")
-    .select("id,title,project_type,room_or_area,status,priority,budget,actual_cost,target_completion_on,notes")
+    .select(
+      "id,title,project_type,room_or_area,status,priority,budget,actual_cost,target_completion_on,notes",
+    )
     .eq("user_id", user.id)
     .eq("home_id", home.id)
     .order("created_at", { ascending: false });
 
   const projects = (data ?? []) as Project[];
   const migrationRequired = isMissingSchemaError(error);
-  const openProjects = projects.filter((project) => project.status !== "completed");
-  const completedProjects = projects.filter((project) => project.status === "completed");
+  const openProjects = projects.filter(
+    (project) => !["completed", "done"].includes(project.status),
+  );
+  const completedProjects = projects.filter((project) =>
+    ["completed", "done"].includes(project.status),
+  );
 
   return (
     <PageShell>
       <PageHeader
         eyebrow="Repairs"
-        title="Repairs"
+        title="Repairs & projects"
         description="Active fixes with contractors, quotes, and follow-ups."
         actions={
           <Button asChild size="sm">
@@ -135,7 +194,7 @@ export default async function ProjectsPage({ searchParams }: ProjectsPageProps) 
 
       {migrationRequired ? (
         <MigrationRequiredCard
-          detail="Repairs need the Homeowner OS projects table before Nestify can save repairs, quotes, costs, and major home work."
+          detail="Repairs need the Homeowner OS projects table before Rezlee can save repairs, quotes, costs, and major home work."
           error={error}
         />
       ) : typeof pageError === "string" || error ? (
@@ -143,7 +202,9 @@ export default async function ProjectsPage({ searchParams }: ProjectsPageProps) 
           <CardHeader>
             <CardTitle className="text-destructive">Repair issue</CardTitle>
             <CardDescription className="text-destructive">
-              {typeof pageError === "string" ? pageError : error?.message}
+              {typeof pageError === "string"
+                ? pageError
+                : "We could not load these records. Please try again shortly."}
             </CardDescription>
           </CardHeader>
         </Card>
@@ -153,17 +214,9 @@ export default async function ProjectsPage({ searchParams }: ProjectsPageProps) 
         <div className="grid gap-6 lg:grid-cols-3 lg:gap-8">
           <div className="flex flex-col gap-6 lg:col-span-2">
             <SectionCard
-              action={
-                <Button asChild size="sm">
-                  <a href="#log-repair">
-                    <Plus className="size-4" />
-                    Log repair
-                  </a>
-                </Button>
-              }
               description="Active fixes with contractors, quotes, and follow-ups"
               icon={Hammer}
-              title="Open repairs"
+              title="Open work"
             >
               {openProjects.length ? (
                 <div className="flex flex-col gap-3">
@@ -183,7 +236,7 @@ export default async function ProjectsPage({ searchParams }: ProjectsPageProps) 
             <SectionCard
               description="Resolved work builds your home's service record"
               icon={History}
-              title="Repair history"
+              title="Completed work"
             >
               {completedProjects.length ? (
                 <div className="flex flex-col gap-3">
@@ -193,7 +246,8 @@ export default async function ProjectsPage({ searchParams }: ProjectsPageProps) 
                 </div>
               ) : (
                 <p className="text-sm text-muted-foreground">
-                  Completed repairs will appear here as your home history builds.
+                  Completed repairs will appear here as your home history
+                  builds.
                 </p>
               )}
             </SectionCard>
@@ -204,10 +258,19 @@ export default async function ProjectsPage({ searchParams }: ProjectsPageProps) 
               icon={Plus}
               title="Log a repair"
             >
-              <form action={createProject} className="grid gap-4 lg:grid-cols-5" id="log-repair">
+              <form
+                action={createProject}
+                className="grid gap-4 lg:grid-cols-5"
+                id="log-repair"
+              >
                 <div className="grid gap-2 lg:col-span-2">
                   <Label htmlFor="title">What needs fixing?</Label>
-                  <Input id="title" name="title" placeholder="Leaky bathroom faucet" required />
+                  <Input
+                    id="title"
+                    name="title"
+                    placeholder="Leaky bathroom faucet"
+                    required
+                  />
                 </div>
                 <div className="grid gap-2">
                   <Label htmlFor="project_type">Area / system</Label>
@@ -226,7 +289,11 @@ export default async function ProjectsPage({ searchParams }: ProjectsPageProps) 
                 </div>
                 <div className="grid gap-2">
                   <Label htmlFor="room_or_area">Room or area</Label>
-                  <Input id="room_or_area" name="room_or_area" placeholder="Bathroom" />
+                  <Input
+                    id="room_or_area"
+                    name="room_or_area"
+                    placeholder="Bathroom"
+                  />
                 </div>
                 <div className="grid gap-2">
                   <Label htmlFor="priority">Priority</Label>
@@ -243,7 +310,13 @@ export default async function ProjectsPage({ searchParams }: ProjectsPageProps) 
                 </div>
                 <div className="grid gap-2">
                   <Label htmlFor="budget">Quote / budget</Label>
-                  <Input id="budget" name="budget" placeholder="250" step="0.01" type="number" />
+                  <Input
+                    id="budget"
+                    name="budget"
+                    placeholder="250"
+                    step="0.01"
+                    type="number"
+                  />
                 </div>
                 <div className="grid gap-2 lg:col-span-5">
                   <Label htmlFor="notes">Description</Label>
@@ -254,9 +327,19 @@ export default async function ProjectsPage({ searchParams }: ProjectsPageProps) 
                   />
                 </div>
                 <input name="status" type="hidden" value="planning" />
-                <Button className="lg:col-span-5 lg:w-fit" type="submit">
-                  Log repair
-                </Button>
+                <div className="grid gap-2">
+                  <Label htmlFor="target_completion_on">Target date</Label>
+                  <Input
+                    id="target_completion_on"
+                    name="target_completion_on"
+                    type="date"
+                  />
+                </div>
+                <SubmitButton
+                  className="lg:col-span-5 lg:w-fit"
+                  label="Save work"
+                  pendingLabel="Saving..."
+                />
               </form>
             </SectionCard>
           </div>
@@ -265,17 +348,23 @@ export default async function ProjectsPage({ searchParams }: ProjectsPageProps) 
             <SectionCard
               description="Describe what's happening, get likely causes and safe next steps, then log it in one tap"
               icon={Sparkles}
-              title="AI repair help"
+              title="Understand the issue"
             >
               <RepairDiagnosis />
             </SectionCard>
 
+            <Link
+              href="/app/help"
+              className="inline-flex min-h-11 items-center text-sm font-medium text-primary underline"
+            >
+              Track an issue and create a Care follow-up
+            </Link>
             <div className="flex items-start gap-3 rounded-xl border border-warning/40 bg-warning/10 p-4">
               <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-warning-foreground" />
               <p className="text-xs leading-relaxed text-warning-foreground">
                 For immediate danger — gas smell, smoke, carbon monoxide alarms,
-                active flooding, or live electrical concerns — leave the area and
-                contact emergency services or a licensed professional.
+                active flooding, or live electrical concerns — leave the area
+                and contact emergency services or a licensed professional.
               </p>
             </div>
           </div>

@@ -83,7 +83,10 @@ function readableEventType(value: string) {
   return value.replaceAll("_", " ");
 }
 
-function activeStatus(row: { resolution_status: ResolutionStatus; snoozed_until: string | null }) {
+function activeStatus(row: {
+  resolution_status: ResolutionStatus;
+  snoozed_until: string | null;
+}) {
   if (["dismissed", "handled"].includes(row.resolution_status)) return false;
   if (row.resolution_status !== "snoozed") return true;
   return row.snoozed_until ? new Date(row.snoozed_until) <= new Date() : true;
@@ -92,7 +95,10 @@ function activeStatus(row: { resolution_status: ResolutionStatus; snoozed_until:
 function eventPrimaryLabel(eventType: string) {
   if (eventType === "bill_overdue") return "I paid this";
   if (eventType === "bill_due_soon") return "View bill";
-  if (eventType === "bill_amount_increased" || eventType === "bill_amount_decreased") {
+  if (
+    eventType === "bill_amount_increased" ||
+    eventType === "bill_amount_decreased"
+  ) {
     return "Review change";
   }
   if (eventType === "due_date_missing") return "Add due date";
@@ -105,11 +111,15 @@ function eventPrimaryLabel(eventType: string) {
 
 function eventHref(event: Pick<BillEventRow, "event_type" | "provider_id">) {
   if (
-    ["provider_needs_connection", "provider_sync_failed", "missing_expected_bill"].includes(
-      event.event_type
-    )
+    [
+      "provider_needs_connection",
+      "provider_sync_failed",
+      "missing_expected_bill",
+    ].includes(event.event_type)
   ) {
-    return event.provider_id ? `/app/providers/${event.provider_id}` : "/app/providers";
+    return event.provider_id
+      ? `/app/providers/${event.provider_id}`
+      : "/app/providers";
   }
   if (event.event_type === "maintenance_due") return "/app/maintenance";
   if (event.event_type === "document_review") return "/app/documents";
@@ -118,7 +128,8 @@ function eventHref(event: Pick<BillEventRow, "event_type" | "provider_id">) {
 
 function queueItemFromBillEvent(event: BillEventRow): QueueItem {
   const sourceType =
-    event.event_type.startsWith("provider") || event.event_type === "missing_expected_bill"
+    event.event_type.startsWith("provider") ||
+    event.event_type === "missing_expected_bill"
       ? "provider"
       : "bill";
 
@@ -139,17 +150,18 @@ function queueItemFromBillEvent(event: BillEventRow): QueueItem {
 }
 
 function queueItemFromResolution(row: AttentionResolutionRow): QueueItem {
-  const sourceType =
-    row.event_type.includes("provider")
-      ? "provider"
-      : row.event_type.includes("maintenance") || row.event_type.includes("starter")
-        ? "maintenance"
-        : row.event_type.includes("document")
-          ? "vault"
-          : "attention";
+  const sourceType = row.event_type.includes("provider")
+    ? "provider"
+    : row.event_type.includes("maintenance") ||
+        row.event_type.includes("starter")
+      ? "maintenance"
+      : row.event_type.includes("document")
+        ? "vault"
+        : "attention";
 
   return {
-    createdAt: row.handled_at ?? row.dismissed_at ?? row.snoozed_until ?? row.created_at,
+    createdAt:
+      row.handled_at ?? row.dismissed_at ?? row.snoozed_until ?? row.created_at,
     description:
       row.note ??
       (row.snoozed_until
@@ -217,8 +229,13 @@ function primaryActionFor(item: QueueItem) {
   );
 }
 
-export default async function AttentionPage({ searchParams }: AttentionPageProps) {
-  const [{ notice }, supabase] = await Promise.all([searchParams, createClient()]);
+export default async function AttentionPage({
+  searchParams,
+}: AttentionPageProps) {
+  const [{ notice }, supabase] = await Promise.all([
+    searchParams,
+    createClient(),
+  ]);
   const {
     data: { user },
   } = await supabase.auth.getUser();
@@ -228,27 +245,33 @@ export default async function AttentionPage({ searchParams }: AttentionPageProps
   }
 
   const home = await requireCurrentUserHome(user.id);
-  const [{ data: billEvents = [], error: billEventsError }, { data: resolutions = [], error }] =
-    await Promise.all([
-      supabase
-        .from("bill_events")
-        .select(
-          "bill_id,provider_id,event_key,event_type,severity,title,description,resolution_status,snoozed_until,created_at"
-        )
-        .eq("user_id", user.id)
-        .eq("home_id", home.id)
-        .order("created_at", { ascending: false })
-        .then((result) => (result.error ? { data: [], error: result.error } : result)),
-      supabase
-        .from("attention_resolutions")
-        .select(
-          "attention_key,event_type,resolution_status,dismissed_at,handled_at,snoozed_until,note,created_at"
-        )
-        .eq("user_id", user.id)
-        .eq("home_id", home.id)
-        .order("updated_at", { ascending: false })
-        .then((result) => (result.error ? { data: [], error: result.error } : result)),
-    ]);
+  const [
+    { data: billEvents = [], error: billEventsError },
+    { data: resolutions = [], error },
+  ] = await Promise.all([
+    supabase
+      .from("bill_events")
+      .select(
+        "bill_id,provider_id,event_key,event_type,severity,title,description,resolution_status,snoozed_until,created_at",
+      )
+      .eq("user_id", user.id)
+      .eq("home_id", home.id)
+      .order("created_at", { ascending: false })
+      .then((result) =>
+        result.error ? { data: [], error: result.error } : result,
+      ),
+    supabase
+      .from("attention_resolutions")
+      .select(
+        "attention_key,event_type,resolution_status,dismissed_at,handled_at,snoozed_until,note,created_at",
+      )
+      .eq("user_id", user.id)
+      .eq("home_id", home.id)
+      .order("updated_at", { ascending: false })
+      .then((result) =>
+        result.error ? { data: [], error: result.error } : result,
+      ),
+  ]);
 
   const billEventRows = billEvents as BillEventRow[];
   const resolutionRows = resolutions as AttentionResolutionRow[];
@@ -268,9 +291,9 @@ export default async function AttentionPage({ searchParams }: AttentionPageProps
           "missing_expected_bill",
           "provider_sync_failed",
           "provider_needs_connection",
-        ].includes(event.event_type)
+        ].includes(event.event_type),
       )
-      .map(queueItemFromBillEvent)
+      .map(queueItemFromBillEvent),
   ).sort((a, b) => severityRank(a.severity) - severityRank(b.severity));
 
   const historyItems = dedupeQueue([
@@ -279,7 +302,7 @@ export default async function AttentionPage({ searchParams }: AttentionPageProps
       .map(queueItemFromBillEvent),
     ...resolutionRows.map(queueItemFromResolution),
   ]).sort(
-    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
   );
 
   return (
@@ -295,14 +318,17 @@ export default async function AttentionPage({ searchParams }: AttentionPageProps
         }
       />
 
-      <ActionFeedbackToast message={typeof notice === "string" ? notice : null} />
+      <ActionFeedbackToast
+        message={typeof notice === "string" ? notice : null}
+      />
 
       {billEventsError || error ? (
         <InsightCard
           description={
             isMissingSchemaError(billEventsError ?? error)
               ? "Run the attention and bill intelligence migrations in the Supabase SQL Editor."
-              : (billEventsError ?? error)?.message ?? "Could not load attention items."
+              : ((billEventsError ?? error)?.message ??
+                "Could not load attention items.")
           }
           icon={AlertCircle}
           severity="warning"
@@ -333,7 +359,7 @@ export default async function AttentionPage({ searchParams }: AttentionPageProps
                   }}
                   showMarkPaid={Boolean(
                     item.billId &&
-                      ["bill_overdue", "bill_due_soon"].includes(item.eventType)
+                    ["bill_overdue", "bill_due_soon"].includes(item.eventType),
                   )}
                 />
               ),
@@ -371,7 +397,9 @@ export default async function AttentionPage({ searchParams }: AttentionPageProps
                       </span>
                     </div>
                     <p className="mt-1 font-medium">{item.title}</p>
-                    <p className="text-sm text-muted-foreground">{item.description}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {item.description}
+                    </p>
                   </div>
                   <div className="flex items-center gap-2 text-xs text-muted-foreground">
                     <Clock3 className="size-4" />
@@ -385,7 +413,7 @@ export default async function AttentionPage({ searchParams }: AttentionPageProps
           <EmptyState
             icon={CheckCircle2}
             title="No handled items yet"
-            description="Once you pay, review, snooze, or dismiss an item, Nestify keeps a lightweight history here."
+            description="Once you pay, review, snooze, or dismiss an item, Rezlee keeps a lightweight history here."
           />
         )}
       </PageSection>

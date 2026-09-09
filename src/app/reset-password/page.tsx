@@ -1,3 +1,5 @@
+import type { Metadata } from "next";
+import { RezleeLogo } from "@/components/brand/rezlee-logo";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
@@ -19,16 +21,23 @@ type ResetPasswordPageProps = {
   searchParams: Promise<{ error?: string | string[] }>;
 };
 
+export const metadata: Metadata = { robots: { index: false, follow: false } };
+
 export default async function ResetPasswordPage({
   searchParams,
 }: ResetPasswordPageProps) {
-  const [{ error }, supabase] = await Promise.all([searchParams, createClient()]);
+  const [{ error }, supabase] = await Promise.all([
+    searchParams,
+    createClient(),
+  ]);
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
   if (!user) {
-    redirect("/forgot-password?error=Open the reset link from your email first.");
+    redirect(
+      "/forgot-password?error=Open the reset link from your email first.",
+    );
   }
 
   return (
@@ -37,7 +46,7 @@ export default async function ResetPasswordPage({
       <div className="flex flex-col bg-background">
         <div className="flex h-16 items-center px-6 lg:hidden">
           <Link className="text-lg font-semibold" href="/">
-            Nestify
+            <RezleeLogo />
           </Link>
         </div>
         <div className="flex flex-1 items-center justify-center px-4 py-10 sm:px-6">
@@ -45,7 +54,8 @@ export default async function ResetPasswordPage({
             <CardHeader>
               <CardTitle className="text-2xl">Choose a new password</CardTitle>
               <CardDescription>
-                This will replace the password for {user.email ?? "your account"}.
+                This will replace the password for{" "}
+                {user.email ?? "your account"}.
               </CardDescription>
             </CardHeader>
             <CardContent>

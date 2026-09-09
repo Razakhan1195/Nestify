@@ -3,7 +3,11 @@ import { redirect } from "next/navigation";
 import { LifeBuoy } from "lucide-react";
 
 import { AssistantChat } from "@/components/assistant/assistant-chat";
-import { PageHeader, PageShell, SecondaryCTA } from "@/components/product/design-system";
+import {
+  PageHeader,
+  PageShell,
+  SecondaryCTA,
+} from "@/components/product/design-system";
 import type { AssistantConversationSummary } from "@/lib/assistant/history";
 import { getCurrentUserHome } from "@/lib/homes";
 import { isMissingSchemaError } from "@/lib/schema-errors";
@@ -20,7 +24,9 @@ export default async function AssistantPage() {
   const { data: home } = await getCurrentUserHome(user.id);
   if (!home) redirect("/app/onboarding");
 
-  const firstName = (user.user_metadata?.full_name as string | undefined)?.split(" ")[0];
+  const firstName = (
+    user.user_metadata?.full_name as string | undefined
+  )?.split(" ")[0];
   const greeting = firstName
     ? `Hi ${firstName}, how can I help with ${home.nickname ?? "your home"}?`
     : `How can I help with ${home.nickname ?? "your home"}?`;
@@ -49,7 +55,7 @@ export default async function AssistantPage() {
     <PageShell>
       <PageHeader
         eyebrow="Assistant"
-        title="Ask Nestify"
+        title="Ask Rezlee"
         description="Ask about your home, bills, repairs, renovations, rough project costs, contractor planning, and the records you've added."
         actions={
           <SecondaryCTA asChild>

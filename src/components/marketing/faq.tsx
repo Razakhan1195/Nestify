@@ -7,46 +7,49 @@ import {
 
 const faqs = [
   {
+    question: "Is Rezlee for renters too?",
+    value: "residents",
     answer:
-      "Not at all. You can add everything by hand in seconds. Connecting providers is an optional shortcut to auto-fill bills and renewals, but Nestify is fully useful without it.",
-    question: "Do I have to connect my utility accounts?",
+      "Yes. Track rent and household bills, keep lease and policy records, and organize tasks or issues. You do not need to own your place. Shared logins, roommate payments, and household invitations are not currently offered.",
+  },
+  {
+    question: "Do I have to connect my accounts?",
     value: "providers",
+    answer:
+      "No. Add bills, records, reminders, and issues manually. Supported provider connections are an optional way to retrieve available bills and documents.",
   },
   {
-    answer:
-      "Bills and reminders, maintenance schedules, repairs and contractors, documents, warranties, and your appliances and systems. Nestify uses that context to explain what is due, what changed, and what needs attention.",
-    question: "What can I track in Nestify?",
-    value: "tracking",
-  },
-  {
-    answer:
-      "Nestify uses AI to summarize your home status, answer questions about your records, and suggest practical next steps. It does not replace professionals for urgent or unsafe home issues.",
-    question: "What does the AI do?",
-    value: "ai",
-  },
-  {
-    answer:
-      "Nestify watches your due dates, renewals, changes, and seasonal tasks, then uses AI-friendly summaries to surface what needs you before deadlines sneak up.",
-    question: "How do reminders work?",
+    question: "What will the dashboard remind me about?",
     value: "reminders",
+    answer:
+      "Due bills, dated care tasks, expiring records, and relevant provider bill changes appear in the app. Check your dashboard regularly; do not rely on email or push delivery unless that delivery method is explicitly available.",
   },
   {
+    question: "What happens when I scan a document?",
+    value: "scan",
     answer:
-      "Your home records are private to your account. We use trusted infrastructure with secure authentication, and you stay in control of what you add.",
-    question: "Is my home information private?",
+      "Optional AI scanning extracts details for you to review and save as a record. Scanning alone does not save the original file. Keep your original copy unless Rezlee confirms a file has been stored.",
+  },
+  {
+    question: "Can the assistant take action for me?",
+    value: "ai",
+    answer:
+      "The assistant can explain your household context and suggest next steps. You remain in control of changes to your records. AI can make mistakes and is not a substitute for emergency services or qualified professionals.",
+  },
+  {
+    question: "How is account access handled?",
     value: "privacy",
-  },
-  {
     answer:
-      "Yes. You can start free and add your home in minutes, no credit card required.",
-    question: "Can I start for free?",
-    value: "free",
+      "You sign in to access your household records. Account-scoped database policies restrict access to user-owned data. Provider connection options vary, and credentials are handled through the connection service rather than stored as household records.",
   },
 ];
 
 export function Faq() {
   return (
-    <section className="border-t border-[color:var(--border-soft)] bg-background" id="faq">
+    <section
+      className="border-t border-[color:var(--border-soft)] bg-background"
+      id="faq"
+    >
       <div className="mx-auto grid w-full max-w-6xl gap-10 px-4 py-16 sm:px-6 lg:grid-cols-[0.8fr_1.2fr] lg:py-24">
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.14em] text-primary">

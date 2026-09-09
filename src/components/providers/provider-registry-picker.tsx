@@ -73,7 +73,9 @@ export function ProviderRegistryPicker({
 }: ProviderRegistryPickerProps) {
   const [query, setQuery] = useState("");
   const [selectedId, setSelectedId] = useState<string>("");
-  const selectedProvider = providers.find((provider) => provider.id === selectedId);
+  const selectedProvider = providers.find(
+    (provider) => provider.id === selectedId,
+  );
   const categoryName = selectedProvider
     ? categoryNameForRegistryUtility(selectedProvider.utility_type)
     : "";
@@ -99,7 +101,7 @@ export function ProviderRegistryPicker({
 
     return utilityOrder.flatMap((utilityType) => {
       const items = filtered.filter(
-        (provider) => provider.utility_type === utilityType
+        (provider) => provider.utility_type === utilityType,
       );
 
       return items.length ? [{ items, utilityType }] : [];
@@ -109,9 +111,7 @@ export function ProviderRegistryPicker({
   return (
     <div className="grid gap-4 rounded-3xl border bg-card p-4 shadow-sm sm:p-5">
       <div className="grid gap-1">
-        <h2 className="text-lg font-semibold tracking-tight">
-          Add a provider
-        </h2>
+        <h2 className="text-lg font-semibold tracking-tight">Add a provider</h2>
         <p className="text-sm text-muted-foreground">
           Search Canadian utilities, insurers, municipalities, and household
           providers. Pick the real company first, then connect or add bills
@@ -194,11 +194,22 @@ export function ProviderRegistryPicker({
       </div>
 
       {selectedProvider ? (
-        <form action={addProvider} className="grid gap-3 rounded-2xl border bg-muted/20 p-3">
-          <input name="registry_provider_id" type="hidden" value={selectedProvider.id} />
+        <form
+          action={addProvider}
+          className="grid gap-3 rounded-2xl border bg-muted/20 p-3"
+        >
+          <input
+            name="registry_provider_id"
+            type="hidden"
+            value={selectedProvider.id}
+          />
           <input name="category_id" type="hidden" value={categoryId} />
           <input name="category_name" type="hidden" value={categoryName} />
-          <input name="provider_name" type="hidden" value={selectedProvider.name} />
+          <input
+            name="provider_name"
+            type="hidden"
+            value={selectedProvider.name}
+          />
           <div className="grid gap-2">
             <div className="flex flex-wrap items-center gap-2">
               <p className="font-semibold">{selectedProvider.name}</p>
@@ -248,9 +259,9 @@ export function ProviderRegistryPicker({
           <div className="flex gap-2 rounded-lg border bg-background px-3 py-2 text-xs text-muted-foreground sm:text-sm">
             <ShieldCheck className="mt-0.5 size-4 shrink-0" />
             <p>
-              Nestify uses secure provider connections through our integration
+              Rezlee uses secure provider connections through our integration
               partner. You can disconnect anytime. Provider credentials are not
-              stored in Nestify.
+              stored in Rezlee.
             </p>
           </div>
 

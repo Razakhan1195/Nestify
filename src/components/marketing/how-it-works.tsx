@@ -1,72 +1,48 @@
-import { Home, ListChecks, Sparkles } from "lucide-react";
-
 const steps = [
-  {
-    description:
-      "Tell Nestify a little about your place so AI can understand the home, not just a list of tasks.",
-    icon: Home,
-    step: "01",
-    title: "Create your home profile",
-  },
-  {
-    description:
-      "Add records manually or connect supported providers so bills, due dates, documents, and renewals flow into one place.",
-    icon: ListChecks,
-    step: "02",
-    title: "Connect or add what matters",
-  },
-  {
-    description:
-      "AI turns everything into a monthly home report with priorities, reminders, and practical next steps.",
-    icon: Sparkles,
-    step: "03",
-    title: "Get AI guidance",
-  },
+  [
+    "01",
+    "Start with what matters today.",
+    "A bill coming due. A lease you keep searching for. Something that needs fixing. Add one useful thing.",
+  ],
+  [
+    "02",
+    "Give it a place to stay.",
+    "Keep the date, the details, and the record together. Build from there, at your own pace.",
+  ],
+  [
+    "03",
+    "Know what needs you next.",
+    "Return to a dashboard that brings due dates, changes, and follow-ups into view.",
+  ],
 ];
-
 export function HowItWorks() {
   return (
-    <section className="border-t border-[color:var(--border-soft)] bg-background" id="how-it-works">
-      <div className="mx-auto w-full max-w-6xl px-4 py-16 sm:px-6 lg:py-24">
-        <div className="max-w-2xl">
-          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-primary">
-            How it works
+    <section
+      id="how-it-works"
+      className="mx-auto max-w-6xl px-5 py-16 sm:px-6 lg:py-24"
+    >
+      <div className="grid gap-8 lg:grid-cols-2">
+        <h2 className="max-w-md text-3xl font-medium tracking-tight sm:text-4xl">
+          Running a place comes with a surprising amount of stuff.
+        </h2>
+        <div>
+          <p className="text-lg text-muted-foreground">
+            A bill in your inbox. A policy in a folder. A reminder you meant to
+            set. Rezlee gives those loose ends somewhere to come together.
           </p>
-          <h2 className="mt-2 text-balance text-3xl font-semibold tracking-tight sm:text-4xl">
-            From scattered home admin to AI-guided clarity
-          </h2>
-          <p className="mt-3 text-pretty text-lg leading-relaxed text-muted-foreground">
-            No spreadsheets, sticky notes, or buried email receipts. Nestify gives your
-            home a memory and helps you decide what to handle next.
+          <p className="mt-5 border-l-2 border-primary pl-4 text-sm font-medium">
+            You don’t need to organize your whole life to get started.
           </p>
         </div>
-
-        <div className="mt-12 grid gap-5 md:grid-cols-3">
-          {steps.map((step) => {
-            const Icon = step.icon;
-            return (
-              <div
-                className="surface-card flex flex-col gap-4 p-6"
-                key={step.step}
-              >
-                <div className="flex items-center justify-between">
-                  <span className="flex size-11 items-center justify-center rounded-xl bg-primary/10 text-primary">
-                    <Icon className="size-5" />
-                  </span>
-                  <span className="text-sm font-semibold text-muted-foreground/60">
-                    {step.step}
-                  </span>
-                </div>
-                <div>
-                  <h3 className="text-lg font-semibold tracking-tight">{step.title}</h3>
-                  <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-                    {step.description}
-                  </p>
-                </div>
-              </div>
-            );
-          })}
-        </div>
+      </div>
+      <div className="mt-12 grid gap-8 border-t pt-8 md:grid-cols-3">
+        {steps.map(([number, title, description]) => (
+          <div key={number}>
+            <span className="font-mono text-xs text-primary">{number}</span>
+            <h3 className="mt-4 text-lg font-semibold">{title}</h3>
+            <p className="mt-2 text-sm text-muted-foreground">{description}</p>
+          </div>
+        ))}
       </div>
     </section>
   );

@@ -87,7 +87,9 @@ function providerFromRelation(value: IntelligenceBill["providers"]) {
 
 export function billDisplayName(bill: IntelligenceBill) {
   const provider = providerFromRelation(bill.providers);
-  const category = getProviderSetupByPriority(provider?.provider_priority)?.name;
+  const category = getProviderSetupByPriority(
+    provider?.provider_priority,
+  )?.name;
 
   return (
     cleanLabel(provider?.display_name) ??
@@ -121,7 +123,9 @@ function formatMoney(currency: string, amount: number) {
 
 function billingPeriodKey(bill: IntelligenceBill) {
   return (
-    [bill.billing_period_start, bill.billing_period_end].filter(Boolean).join("_") ||
+    [bill.billing_period_start, bill.billing_period_end]
+      .filter(Boolean)
+      .join("_") ||
     bill.issue_date ||
     bill.due_date ||
     bill.created_at.slice(0, 10)
@@ -133,14 +137,21 @@ function eventKey(parts: Array<string | null | undefined>) {
 }
 
 function isPaidOrHandled(bill: IntelligenceBill) {
-  return ["paid", "handled", "cancelled", "canceled", "deleted", "void"].includes(
-    bill.status ?? ""
-  );
+  return [
+    "paid",
+    "handled",
+    "cancelled",
+    "canceled",
+    "deleted",
+    "void",
+  ].includes(bill.status ?? "");
 }
 
 function isUtilityBill(bill: IntelligenceBill) {
   const provider = providerFromRelation(bill.providers);
-  const category = getProviderSetupByPriority(provider?.provider_priority)?.name;
+  const category = getProviderSetupByPriority(
+    provider?.provider_priority,
+  )?.name;
   const haystack = `${category ?? ""} ${provider?.display_name ?? ""} ${
     provider?.name ?? ""
   } ${bill.name}`.toLowerCase();
@@ -179,7 +190,7 @@ async function upsertBillEvent(supabase: Supabase, input: BillEventInput) {
     throw new Error(
       isMissingSchemaError(existingError)
         ? billIntelligenceMigrationMessage
-        : existingError.message
+        : existingError.message,
     );
   }
 
@@ -199,7 +210,9 @@ async function upsertBillEvent(supabase: Supabase, input: BillEventInput) {
 
     if (error) {
       throw new Error(
-        isMissingSchemaError(error) ? billIntelligenceMigrationMessage : error.message
+        isMissingSchemaError(error)
+          ? billIntelligenceMigrationMessage
+          : error.message,
       );
     }
     return;
@@ -208,7 +221,9 @@ async function upsertBillEvent(supabase: Supabase, input: BillEventInput) {
   const { error } = await supabase.from("bill_events").insert(row);
   if (error) {
     throw new Error(
-      isMissingSchemaError(error) ? billIntelligenceMigrationMessage : error.message
+      isMissingSchemaError(error)
+        ? billIntelligenceMigrationMessage
+        : error.message,
     );
   }
 }
@@ -217,12 +232,12 @@ async function fetchBillWithProvider(
   supabase: Supabase,
   billId: string,
   userId: string,
-  homeId: string
+  homeId: string,
 ) {
   const { data, error } = await supabase
     .from("bills")
     .select(
-      "id,user_id,home_id,provider_id,name,amount,currency,due_date,issue_date,billing_period_start,billing_period_end,usage_amount,usage_unit,pdf_available,detected_fees,line_items,source,status,created_at,providers!bills_provider_id_fkey(id,display_name,name,provider_priority,connection_status,health_status,sync_frequency,next_expected_bill_date)"
+      "id,user_id,home_id,provider_id,name,amount,currency,due_date,issue_date,billing_period_start,billing_period_end,usage_amount,usage_unit,pdf_available,detected_fees,line_items,source,status,created_at,providers!bills_provider_id_fkey(id,display_name,name,provider_priority,connection_status,health_status,sync_frequency,next_expected_bill_date)",
     )
     .eq("id", billId)
     .eq("user_id", userId)
@@ -237,7 +252,7 @@ async function fetchPreviousBill(supabase: Supabase, bill: IntelligenceBill) {
   let query = supabase
     .from("bills")
     .select(
-      "id,user_id,home_id,provider_id,name,amount,currency,due_date,issue_date,billing_period_start,billing_period_end,usage_amount,usage_unit,pdf_available,detected_fees,line_items,source,status,created_at,providers!bills_provider_id_fkey(id,display_name,name,provider_priority)"
+      "id,user_id,home_id,provider_id,name,amount,currency,due_date,issue_date,billing_period_start,billing_period_end,usage_amount,usage_unit,pdf_available,detected_fees,line_items,source,status,created_at,providers!bills_provider_id_fkey(id,display_name,name,provider_priority)",
     )
     .eq("user_id", bill.user_id)
     .eq("home_id", bill.home_id)
@@ -268,7 +283,7 @@ export async function refreshBillIntelligenceForBill(input: {
     supabase,
     input.billId,
     input.userId,
-    input.homeId
+    input.homeId,
   );
   const previous = await fetchPreviousBill(supabase, bill);
   const label = billDisplayName(bill);
@@ -281,17 +296,24 @@ export async function refreshBillIntelligenceForBill(input: {
       providerId: bill.provider_id,
       billId: bill.id,
       eventType: "first_bill_baseline",
-      eventKey: eventKey(["first_bill_baseline", bill.provider_id ?? bill.name, periodKey]),
+      eventKey: eventKey([
+        "first_bill_baseline",
+        bill.provider_id ?? bill.name,
+        periodKey,
+      ]),
       severity: "info",
       title: `${label} baseline captured`,
       description:
-        "This is your first bill from this provider. Nestify will compare future bills against this baseline.",
+        "This is your first bill from this provider. Rezlee will compare future bills against this baseline.",
       metadata: { amount: bill.amount, billing_period_key: periodKey },
     });
   } else if (bill.amount !== null && previous.amount !== null) {
     const amountChange = bill.amount - previous.amount;
-    const percentChange = previous.amount ? (amountChange / previous.amount) * 100 : 0;
-    const material = Math.abs(amountChange) >= 10 || Math.abs(percentChange) >= 10;
+    const percentChange = previous.amount
+      ? (amountChange / previous.amount) * 100
+      : 0;
+    const material =
+      Math.abs(amountChange) >= 10 || Math.abs(percentChange) >= 10;
 
     if (material && amountChange > 0) {
       await upsertBillEvent(supabase, {
@@ -300,12 +322,16 @@ export async function refreshBillIntelligenceForBill(input: {
         providerId: bill.provider_id,
         billId: bill.id,
         eventType: "bill_amount_increased",
-        eventKey: eventKey(["bill_amount_increased", bill.provider_id ?? bill.name, periodKey]),
+        eventKey: eventKey([
+          "bill_amount_increased",
+          bill.provider_id ?? bill.name,
+          periodKey,
+        ]),
         severity: percentChange >= 20 ? "critical" : "warning",
         title: `${label} bill increased`,
         description: `Your ${label} bill increased by ${formatMoney(
           bill.currency,
-          amountChange
+          amountChange,
         )} compared with the previous bill.`,
         metadata: {
           previous_amount: previous.amount,
@@ -326,12 +352,16 @@ export async function refreshBillIntelligenceForBill(input: {
         providerId: bill.provider_id,
         billId: bill.id,
         eventType: "bill_amount_decreased",
-        eventKey: eventKey(["bill_amount_decreased", bill.provider_id ?? bill.name, periodKey]),
+        eventKey: eventKey([
+          "bill_amount_decreased",
+          bill.provider_id ?? bill.name,
+          periodKey,
+        ]),
         severity: "info",
         title: `${label} bill decreased`,
         description: `Your ${label} bill is ${formatMoney(
           bill.currency,
-          Math.abs(amountChange)
+          Math.abs(amountChange),
         )} lower than the previous captured bill.`,
         metadata: {
           previous_amount: previous.amount,
@@ -352,7 +382,8 @@ export async function refreshBillIntelligenceForBill(input: {
       previous.usage_amount > 0
     ) {
       const usageChangePercent =
-        ((bill.usage_amount - previous.usage_amount) / previous.usage_amount) * 100;
+        ((bill.usage_amount - previous.usage_amount) / previous.usage_amount) *
+        100;
 
       if (usageChangePercent > 20) {
         await upsertBillEvent(supabase, {
@@ -361,7 +392,11 @@ export async function refreshBillIntelligenceForBill(input: {
           providerId: bill.provider_id,
           billId: bill.id,
           eventType: "usage_increased",
-          eventKey: eventKey(["usage_increased", bill.provider_id ?? bill.name, periodKey]),
+          eventKey: eventKey([
+            "usage_increased",
+            bill.provider_id ?? bill.name,
+            periodKey,
+          ]),
           severity: "warning",
           title: `${label} usage increased`,
           description:
@@ -381,7 +416,11 @@ export async function refreshBillIntelligenceForBill(input: {
           providerId: bill.provider_id,
           billId: bill.id,
           eventType: "usage_decreased",
-          eventKey: eventKey(["usage_decreased", bill.provider_id ?? bill.name, periodKey]),
+          eventKey: eventKey([
+            "usage_decreased",
+            bill.provider_id ?? bill.name,
+            periodKey,
+          ]),
           severity: "info",
           title: `${label} usage decreased`,
           description: "Usage is lower than the previous captured bill.",
@@ -409,7 +448,8 @@ export async function refreshBillIntelligenceForBill(input: {
       eventKey: eventKey(["due_date_missing", bill.id]),
       severity: "warning",
       title: `${label} is missing a due date`,
-      description: "This bill is missing a due date. Add one so Nestify can remind you.",
+      description:
+        "This bill is missing a due date. Add one so Rezlee can remind you.",
       metadata: { amount: bill.amount, billing_period_key: periodKey },
     });
   }
@@ -496,7 +536,10 @@ export async function markBillEventsHandled(input: {
 export async function createBillActivityEvent(input: {
   billId: string;
   description: string;
-  eventType: Extract<BillEventType, "bill_marked_paid" | "bill_marked_reviewed">;
+  eventType: Extract<
+    BillEventType,
+    "bill_marked_paid" | "bill_marked_reviewed"
+  >;
   homeId: string;
   providerId?: string | null;
   supabase?: Supabase;
@@ -511,7 +554,11 @@ export async function createBillActivityEvent(input: {
     providerId: input.providerId,
     billId: input.billId,
     eventType: input.eventType,
-    eventKey: eventKey([input.eventType, input.billId, new Date().toISOString().slice(0, 10)]),
+    eventKey: eventKey([
+      input.eventType,
+      input.billId,
+      new Date().toISOString().slice(0, 10),
+    ]),
     severity: "success",
     title: input.title,
     description: input.description,
@@ -523,7 +570,9 @@ export async function createProviderBillEvent(input: {
   description: string;
   eventType: Extract<
     BillEventType,
-    "provider_sync_failed" | "provider_needs_connection" | "missing_expected_bill"
+    | "provider_sync_failed"
+    | "provider_needs_connection"
+    | "missing_expected_bill"
   >;
   homeId: string;
   metadata?: Record<string, unknown>;
@@ -664,12 +713,15 @@ export async function refreshMissingExpectedBillEvent(input: {
     parseDate(latestBill.issue_date) ??
     new Date(latestBill.created_at);
   const ageInDays = Math.floor(
-    (new Date().getTime() - latestDate.getTime()) / 86_400_000
+    (new Date().getTime() - latestDate.getTime()) / 86_400_000,
   );
 
   if (ageInDays <= 40) return;
 
-  const label = cleanLabel(provider.display_name) ?? cleanLabel(provider.name) ?? "Provider";
+  const label =
+    cleanLabel(provider.display_name) ??
+    cleanLabel(provider.name) ??
+    "Provider";
 
   await createProviderBillEvent({
     userId: input.userId,
@@ -679,7 +731,10 @@ export async function refreshMissingExpectedBillEvent(input: {
     severity: "warning",
     title: `${label} bill has not appeared yet`,
     description: `We have not seen a new bill from ${label} in over 40 days.`,
-    metadata: { latest_bill_id: latestBill.id, latest_bill_age_days: ageInDays },
+    metadata: {
+      latest_bill_id: latestBill.id,
+      latest_bill_age_days: ageInDays,
+    },
     supabase,
   });
 }

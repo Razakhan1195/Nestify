@@ -1,4 +1,4 @@
--- Dwellwise Phase 2 database schema.
+-- Rezlee Phase 2 database schema.
 -- Run this in Supabase SQL editor or through your Supabase migration workflow.
 
 create extension if not exists "pgcrypto";

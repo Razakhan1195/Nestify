@@ -34,7 +34,8 @@ export function buildMonthlySummary({
 }) {
   const knownCostThisMonth = getKnownHomeCostThisMonth(bills, today);
   const billsDueSoon = bills.filter((bill) => {
-    if (bill.status === "paid") return false;
+    if (["paid", "archived", "incomplete", "draft"].includes(bill.status ?? ""))
+      return false;
     const days = daysUntilDate(bill.due_date, today);
     return days !== null && days >= 0 && days <= 14;
   });
@@ -44,7 +45,8 @@ export function buildMonthlySummary({
     return days !== null && days <= 30;
   });
   const careDueSoon = tasks.filter((task) => {
-    if (task.status === "completed") return false;
+    if (["completed", "cancelled", "skipped"].includes(task.status))
+      return false;
     const days = daysUntilDate(task.due_date, today);
     return days !== null && days <= 30;
   });

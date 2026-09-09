@@ -31,7 +31,10 @@ import {
   type ProviderRow,
   type ProviderSetupItem,
 } from "@/lib/providers";
-import { providerPrimaryAction, providerStatusLabel } from "@/lib/action-system";
+import {
+  providerPrimaryAction,
+  providerStatusLabel,
+} from "@/lib/action-system";
 import type { DeckInteraction } from "@/lib/deck/types";
 
 function formatDate(value: string | null) {
@@ -83,7 +86,7 @@ const benefitCopy = [
 
 function getDeckInteraction(
   metadata: Record<string, unknown> | null,
-  fallbackMessage?: string | null
+  fallbackMessage?: string | null,
 ): DeckInteraction | null {
   const interaction = metadata?.interaction;
   const taskRunId = metadata?.taskRunId;
@@ -132,9 +135,7 @@ function getDeckInteraction(
                   ? "answer"
                   : `answer_${index + 1}`,
             type:
-              typeof item.type === "string" && item.type
-                ? item.type
-                : "string",
+              typeof item.type === "string" && item.type ? item.type : "string",
           },
         ];
       })
@@ -147,8 +148,8 @@ function getDeckInteraction(
     message:
       typeof candidate.message === "string" && candidate.message
         ? candidate.message
-        : fallbackMessage ??
-          "Please answer the security question to continue accessing your bills.",
+        : (fallbackMessage ??
+          "Please answer the security question to continue accessing your bills."),
     type: typeof candidate.type === "string" ? candidate.type : "verification",
   };
 }
@@ -170,27 +171,29 @@ export function ProviderSetupCard({
   const suggestions = suggestedProvidersByCategory[setup.name] ?? [];
   const actualProviderName = getActualProviderName(
     provider?.display_name ?? provider?.name,
-    setup.name
+    setup.name,
   );
   const missingProviderName = Boolean(
     provider &&
-      isProviderNameMissing(provider.display_name ?? provider.name, setup.name)
+    isProviderNameMissing(provider.display_name ?? provider.name, setup.name),
   );
   const selectedProviderLabel =
     provider && !missingProviderName ? actualProviderName : "Choose provider";
   const needsReview = Boolean(
     provider?.requires_user_action ||
-      ["needs_attention", "sync_failed"].includes(provider?.health_status ?? "") ||
-      ["sync_failed", "disconnected"].includes(provider?.connection_status ?? "")
+    ["needs_attention", "sync_failed"].includes(
+      provider?.health_status ?? "",
+    ) ||
+    ["sync_failed", "disconnected"].includes(provider?.connection_status ?? ""),
   );
   const syncFailed = Boolean(
     provider &&
-      (provider.health_status === "sync_failed" ||
-        provider.connection_status === "sync_failed")
+    (provider.health_status === "sync_failed" ||
+      provider.connection_status === "sync_failed"),
   );
   const disconnected = provider?.connection_status === "disconnected";
   const isConnected = Boolean(
-    provider && ["connected", "healthy"].includes(provider.connection_status)
+    provider && ["connected", "healthy"].includes(provider.connection_status),
   );
   const primaryActionLabel = providerPrimaryAction({
     connectionStatus: provider?.connection_status,
@@ -201,7 +204,7 @@ export function ProviderSetupCard({
   const deckInteraction = provider
     ? getDeckInteraction(
         provider.deck_connection_metadata,
-        provider.user_action_message
+        provider.user_action_message,
       )
     : null;
   const suggestionListId = `suggested-${setup.name
@@ -217,14 +220,20 @@ export function ProviderSetupCard({
               Category
             </p>
             <CardTitle className="mt-1 text-lg">{setup.name}</CardTitle>
-            <CardDescription className="mt-1 line-clamp-2">{setup.value}</CardDescription>
+            <CardDescription className="mt-1 line-clamp-2">
+              {setup.value}
+            </CardDescription>
           </div>
           <div className="flex flex-wrap items-center gap-2 sm:justify-end">
             <Badge variant={provider ? "secondary" : "outline"}>
               {provider ? "Added" : "Not added"}
             </Badge>
             <Badge
-              className={isConnected ? "gap-1.5 border-emerald-200 bg-emerald-50 text-emerald-800" : ""}
+              className={
+                isConnected
+                  ? "gap-1.5 border-emerald-200 bg-emerald-50 text-emerald-800"
+                  : ""
+              }
               variant="outline"
             >
               {isConnected ? <CheckCircle2 className="size-3.5" /> : null}
@@ -239,7 +248,9 @@ export function ProviderSetupCard({
             <p className="text-xs font-medium uppercase text-muted-foreground">
               Provider
             </p>
-            <p className="truncate text-base font-semibold">{selectedProviderLabel}</p>
+            <p className="truncate text-base font-semibold">
+              {selectedProviderLabel}
+            </p>
             {missingProviderName ? (
               <p className="mt-1 text-sm text-muted-foreground">
                 Choose the company or municipality for this provider.
@@ -300,8 +311,8 @@ export function ProviderSetupCard({
             ) : (
               <div className="grid gap-2 rounded-xl border border-amber-200 bg-background/80 p-3">
                 <p className="text-sm text-muted-foreground">
-                  Nestify does not have a question from Deck yet. Check the
-                  Deck result if you answered it elsewhere, or restart sync to
+                  Rezlee does not have a question from Deck yet. Check the Deck
+                  result if you answered it elsewhere, or restart sync to
                   request the prompt again.
                 </p>
                 <div className="flex flex-col gap-2 sm:flex-row">
@@ -345,7 +356,8 @@ export function ProviderSetupCard({
                   list={suggestionListId}
                   name="provider_name"
                   placeholder={
-                    suggestions[0] ?? `Enter your ${setup.name.toLowerCase()} provider`
+                    suggestions[0] ??
+                    `Enter your ${setup.name.toLowerCase()} provider`
                   }
                   required
                 />
@@ -398,7 +410,11 @@ export function ProviderSetupCard({
             </form>
           ) : !provider ? (
             <form action={addProvider} className="grid w-full gap-3">
-              <input name="category_id" type="hidden" value={category?.id ?? ""} />
+              <input
+                name="category_id"
+                type="hidden"
+                value={category?.id ?? ""}
+              />
               <input name="category_name" type="hidden" value={setup.name} />
               <div className="grid gap-2 sm:max-w-md">
                 <label
@@ -413,7 +429,8 @@ export function ProviderSetupCard({
                   list={suggestionListId}
                   name="provider_name"
                   placeholder={
-                    suggestions[0] ?? `Enter your ${setup.name.toLowerCase()} provider`
+                    suggestions[0] ??
+                    `Enter your ${setup.name.toLowerCase()} provider`
                   }
                   required
                 />
@@ -476,7 +493,9 @@ export function ProviderSetupCard({
             <>
               <Button asChild className="h-9 w-full sm:w-auto">
                 <Link href={`/app/providers/${provider.id}`}>
-                  {deckInteraction ? "Answer security question" : primaryActionLabel}
+                  {deckInteraction
+                    ? "Answer security question"
+                    : primaryActionLabel}
                 </Link>
               </Button>
               <DeckProviderActionButton
@@ -490,7 +509,9 @@ export function ProviderSetupCard({
             </>
           ) : isConnected ? (
             <Button asChild className="h-9 w-full sm:w-auto">
-              <Link href={`/app/providers/${provider.id}`}>{primaryActionLabel}</Link>
+              <Link href={`/app/providers/${provider.id}`}>
+                {primaryActionLabel}
+              </Link>
             </Button>
           ) : (
             <DeckProviderActionButton action="connect" providerId={provider.id}>
@@ -525,13 +546,16 @@ export function ProviderSetupCard({
             </Button>
           ) : null}
           {provider ? (
-            <DeleteProviderButton providerId={provider.id} returnPath="/app/providers" />
+            <DeleteProviderButton
+              providerId={provider.id}
+              returnPath="/app/providers"
+            />
           ) : null}
         </div>
         <div className="flex gap-2 rounded-lg border bg-muted/20 px-3 py-2 text-xs text-muted-foreground sm:text-sm">
           <ShieldCheck className="mt-0.5 size-4 shrink-0" />
           <p>
-            Nestify uses secure provider connections through our integration
+            Rezlee uses secure provider connections through our integration
             partner. You can disconnect anytime.
           </p>
         </div>
@@ -540,9 +564,7 @@ export function ProviderSetupCard({
         ) : null}
 
         <details className="rounded-lg border bg-background p-3 text-sm">
-          <summary className="cursor-pointer font-medium">
-            View details
-          </summary>
+          <summary className="cursor-pointer font-medium">View details</summary>
           <div className="mt-3 grid gap-3 sm:grid-cols-2">
             <div>
               <p className="text-muted-foreground">Health</p>
@@ -568,7 +590,7 @@ export function ProviderSetupCard({
               <p className="font-medium">
                 {provider?.sync_frequency_days
                   ? `Every ${provider.sync_frequency_days} days`
-                  : provider?.sync_frequency ?? setup.syncFrequency}
+                  : (provider?.sync_frequency ?? setup.syncFrequency)}
               </p>
             </div>
             <div>

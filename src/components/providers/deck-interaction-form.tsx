@@ -46,7 +46,7 @@ export function DeckInteractionForm({
       router.refresh();
     } catch (error) {
       setMessage(
-        error instanceof Error ? error.message : "Could not check Deck result."
+        error instanceof Error ? error.message : "Could not check Deck result.",
       );
     } finally {
       setChecking(false);
@@ -63,7 +63,7 @@ export function DeckInteractionForm({
       interaction.fields.map((field) => [
         field.name,
         String(formData.get(field.name) ?? ""),
-      ])
+      ]),
     );
 
     try {
@@ -77,7 +77,9 @@ export function DeckInteractionForm({
       };
 
       if (!response.ok) {
-        throw new Error(result.message ?? "Could not submit verification answer.");
+        throw new Error(
+          result.message ?? "Could not submit verification answer.",
+        );
       }
 
       formRef.current?.reset();
@@ -87,7 +89,7 @@ export function DeckInteractionForm({
       setMessage(
         error instanceof Error
           ? error.message
-          : "Could not submit verification answer."
+          : "Could not submit verification answer.",
       );
     } finally {
       setPending(false);
@@ -97,16 +99,14 @@ export function DeckInteractionForm({
   return (
     <form className="grid gap-3" onSubmit={onSubmit} ref={formRef}>
       <div>
-        <p className="text-sm font-medium">
-          Verification needed
-        </p>
+        <p className="text-sm font-medium">Verification needed</p>
         <p className="text-sm text-muted-foreground">{interaction.message}</p>
         {interaction.fields.some((field) =>
-          field.label.toLowerCase().includes("security")
+          field.label.toLowerCase().includes("security"),
         ) ? (
           <p className="mt-1 text-sm text-muted-foreground">
             If the exact question is not shown here, Deck did not send it back
-            to Nestify. Use the question shown in the Deck session, then enter
+            to Rezlee. Use the question shown in the Deck session, then enter
             the answer below. If you already answered it in Deck, use “Check
             Deck result” below.
           </p>
@@ -148,9 +148,11 @@ export function DeckInteractionForm({
       </div>
       <p className="text-sm text-muted-foreground">
         If you already answered this in Deck and the bill was retrieved, check
-        the Deck result to finish updating Nestify.
+        the Deck result to finish updating Rezlee.
       </p>
-      {message ? <p className="text-sm text-muted-foreground">{message}</p> : null}
+      {message ? (
+        <p className="text-sm text-muted-foreground">{message}</p>
+      ) : null}
     </form>
   );
 }

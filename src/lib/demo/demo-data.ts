@@ -1,4 +1,4 @@
-// Centralized demo dataset for the Dwellwise demo account.
+// Centralized demo dataset for the Rezlee demo account.
 //
 // All data is defined relative to "today" so the dashboard always looks fresh
 // (upcoming bills stay upcoming, the overdue item stays overdue). Everything is
@@ -67,7 +67,8 @@ export function demoBills(): DemoBill[] {
       status: "due_soon",
       account_number_masked: "•••• 0937",
       notes: "Time-of-use pricing.",
-      ai_note: "This bill is about 12% higher than your 3-month average. Cooling use is likely the driver.",
+      ai_note:
+        "This bill is about 12% higher than your 3-month average. Cooling use is likely the driver.",
     },
     {
       marker: "demo-water",
@@ -175,7 +176,8 @@ export function demoRepairs(): DemoRepair[] {
       status: "scheduled",
       priority: "normal",
       budget: 140,
-      notes: "Fan stopped spinning. Electrician scheduled for next week to replace the motor.",
+      notes:
+        "Fan stopped spinning. Electrician scheduled for next week to replace the motor.",
     },
     {
       marker: "demo-window",
@@ -204,7 +206,8 @@ export function demoTasks(): DemoTask[] {
     {
       marker: "demo-furnace-filter",
       title: "Replace furnace filter",
-      description: "A clean filter keeps airflow strong and lowers energy use. Overdue protects your HVAC.",
+      description:
+        "A clean filter keeps airflow strong and lowers energy use. Overdue protects your HVAC.",
       due_date: iso(-2),
       recurrence: "quarterly",
       status: "open",
@@ -212,7 +215,8 @@ export function demoTasks(): DemoTask[] {
     {
       marker: "demo-smoke-alarm",
       title: "Test smoke & CO alarms",
-      description: "Press test on each alarm and replace batteries if needed. Quick safety win.",
+      description:
+        "Press test on each alarm and replace batteries if needed. Quick safety win.",
       due_date: iso(6),
       recurrence: "biannual",
       status: "open",
@@ -220,7 +224,8 @@ export function demoTasks(): DemoTask[] {
     {
       marker: "demo-dryer-vent",
       title: "Clean dryer vent",
-      description: "Lint buildup is a common fire hazard and makes the dryer work harder.",
+      description:
+        "Lint buildup is a common fire hazard and makes the dryer work harder.",
       due_date: iso(14),
       recurrence: "annual",
       status: "open",
@@ -228,7 +233,8 @@ export function demoTasks(): DemoTask[] {
     {
       marker: "demo-hvac-tuneup",
       title: "Schedule HVAC maintenance",
-      description: "A pre-season tune-up prevents breakdowns and keeps the warranty valid.",
+      description:
+        "A pre-season tune-up prevents breakdowns and keeps the warranty valid.",
       due_date: iso(30),
       recurrence: "annual",
       status: "open",
@@ -289,7 +295,8 @@ export function demoDocumentReminders(): DemoTask[] {
     {
       marker: "demo-reminder-insurance",
       title: "Review home insurance before renewal",
-      description: "From document: Intact home insurance policy. Compare coverage before it auto-renews.",
+      description:
+        "From document: Intact home insurance policy. Compare coverage before it auto-renews.",
       due_date: iso(50),
       recurrence: "annual",
       status: "open",
@@ -297,7 +304,8 @@ export function demoDocumentReminders(): DemoTask[] {
     {
       marker: "demo-reminder-mortgage",
       title: "Start mortgage renewal rate shopping",
-      description: "From document: Mortgage renewal reminder. Lock a rate before the term ends.",
+      description:
+        "From document: Mortgage renewal reminder. Lock a rate before the term ends.",
       due_date: iso(90),
       recurrence: "one-time",
       status: "open",

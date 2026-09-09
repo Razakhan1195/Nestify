@@ -1,119 +1,117 @@
-import Image from "next/image";
 import Link from "next/link";
-import { ArrowRight, Bell, CheckCircle2, ReceiptText, Sparkles, Wrench } from "lucide-react";
-
+import { ArrowRight, Check, FileText, ReceiptText, Wrench } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { RezleeMark } from "@/components/brand/rezlee-logo";
 
-const previewAttention = [
+const moments = [
   {
-    accent: "bg-[color:var(--critical)]",
     icon: ReceiptText,
-    meta: "Due in 2 days",
     title: "Hydro bill",
-    value: "$142.80",
+    detail: "Due Friday",
+    amount: "$124.80",
+    tone: "text-amber-800",
   },
   {
-    accent: "bg-[color:var(--warning)]",
+    icon: ReceiptText,
+    title: "Internet bill changed",
+    detail: "$8 more than last month",
+    amount: "Review",
+    tone: "text-amber-800",
+  },
+  {
     icon: Wrench,
-    meta: "This weekend",
-    title: "Replace furnace filter",
-    value: "Seasonal",
-  },
-  {
-    accent: "bg-[color:var(--success)]",
-    icon: CheckCircle2,
-    meta: "Renews in 3 weeks",
-    title: "Dishwasher warranty",
-    value: "Covered",
+    title: "Replace the furnace filter",
+    detail: "Care reminder · This weekend",
+    amount: "Coming up",
+    tone: "text-primary",
   },
 ];
 
 export function Hero() {
   return (
-    <section className="relative overflow-hidden">
-      <div className="app-bg absolute inset-0 -z-10" aria-hidden="true" />
-      <div className="mx-auto grid w-full max-w-6xl gap-12 px-4 pb-16 pt-14 sm:px-6 lg:grid-cols-[1.05fr_0.95fr] lg:items-center lg:gap-10 lg:pb-24 lg:pt-20">
+    <section
+      className="relative overflow-hidden border-b border-border"
+      aria-labelledby="hero-title"
+    >
+      <div className="mx-auto grid max-w-6xl items-center gap-12 px-5 py-16 sm:px-6 lg:grid-cols-[0.95fr_1.05fr] lg:gap-14 lg:py-24">
         <div>
-          <span className="inline-flex items-center gap-2 rounded-full border border-[color:var(--border-soft)] bg-card px-3 py-1 text-xs font-medium text-muted-foreground">
-            <span className="size-1.5 rounded-full bg-[color:var(--success)]" />
-            AI-powered home command center
-          </span>
-          <h1 className="mt-5 text-pretty text-4xl font-semibold leading-[1.08] tracking-tight sm:text-5xl lg:text-[3.4rem]">
-            Know what your home needs before it becomes a problem.
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">
+            Less to keep in your head
+          </p>
+          <h1
+            id="hero-title"
+            className="mt-5 max-w-lg text-5xl font-medium leading-[1.04] tracking-[-0.055em] sm:text-6xl lg:text-[4.5rem]"
+          >
+            Your place,
+            <br />
+            <span className="text-primary">under control.</span>
           </h1>
-          <p className="mt-5 max-w-xl text-pretty text-lg leading-relaxed text-muted-foreground">
-            Nestify uses AI to turn bills, maintenance, repairs, documents, and
-            warranties into one clear monthly home report: what is due, what
-            changed, what needs attention, and what to do next.
+          <p className="mt-6 max-w-md text-lg leading-8 text-muted-foreground">
+            Bills, important records, and things to take care of. Together at
+            last, with a clear view of what needs you next.
           </p>
-          <div className="mt-5 grid max-w-xl gap-2 text-sm text-muted-foreground sm:grid-cols-2">
-            <div className="flex items-center gap-2">
-              <Sparkles className="size-4 text-primary" />
-              AI summarizes your home status
-            </div>
-            <div className="flex items-center gap-2">
-              <CheckCircle2 className="size-4 text-primary" />
-              Clear next steps, not raw lists
-            </div>
-          </div>
-          <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-            <Button asChild size="lg">
-              <Link href="/signup">
-                Get started free
-                <ArrowRight className="size-4" />
-              </Link>
-            </Button>
-            <Button asChild size="lg" variant="outline">
-              <Link href="/login">Sign in</Link>
-            </Button>
-          </div>
+          <Button asChild size="lg" className="mt-8 h-12 px-6">
+            <Link href="/signup">
+              Bring your place together <ArrowRight className="size-4" />
+            </Link>
+          </Button>
           <p className="mt-4 text-sm text-muted-foreground">
-            Free to start. Add your home in minutes, no card required.
+            Rent or own. Start with one thing. Connect providers if you want to.
           </p>
         </div>
-
-        <div className="relative">
-          <div className="overflow-hidden rounded-[var(--card-radius)] border border-[color:var(--border-soft)] shadow-[var(--card-shadow)]">
-            <Image
-              alt="A calm, well-kept living room"
-              className="h-44 w-full object-cover sm:h-52"
-              height={420}
-              priority
-              src="/marketing/hero-home.png"
-              width={720}
-            />
-            <div className="bg-card p-4 sm:p-5">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Bell className="size-4 text-primary" />
-                  <p className="text-sm font-semibold">AI monthly home report</p>
-                </div>
-                <span className="rounded-full bg-[color:var(--critical-bg)] px-2 py-0.5 text-xs font-medium text-[color:var(--critical-foreground)]">
-                  3 items
-                </span>
-              </div>
-              <div className="mt-3 grid gap-2">
-                {previewAttention.map((item) => {
-                  const Icon = item.icon;
-                  return (
-                    <div
-                      className="flex items-center gap-3 rounded-xl border border-[color:var(--border-soft)] bg-background/60 px-3 py-2.5"
-                      key={item.title}
-                    >
-                      <span className={`h-8 w-1 rounded-full ${item.accent}`} />
-                      <Icon className="size-4 shrink-0 text-muted-foreground" />
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-sm font-medium">{item.title}</p>
-                        <p className="text-xs text-muted-foreground">{item.meta}</p>
-                      </div>
-                      <p className="shrink-0 text-sm font-semibold">{item.value}</p>
+        <figure className="min-w-0">
+          <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-[0_24px_70px_-35px_rgba(36,76,64,0.45)]">
+            <div className="flex items-center justify-between border-b px-5 py-4">
+              <span className="flex items-center gap-2 text-sm font-semibold">
+                <RezleeMark className="size-5 text-primary" /> Your place
+              </span>
+              <span className="text-xs text-muted-foreground">
+                Dashboard preview
+              </span>
+            </div>
+            <div className="p-5 sm:p-7">
+              <p className="text-xs font-medium text-muted-foreground">
+                THIS WEEK
+              </p>
+              <h2 className="mt-2 text-2xl font-semibold">
+                A little attention.
+                <br />A lot less to remember.
+              </h2>
+              <div className="mt-6 divide-y border-y">
+                {moments.map(({ icon: Icon, title, detail, amount, tone }) => (
+                  <div key={title} className="flex items-start gap-3 py-4">
+                    <Icon className="mt-1 size-4 shrink-0 text-primary" />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-medium">{title}</p>
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        {detail}
+                      </p>
                     </div>
-                  );
-                })}
+                    <span
+                      className={`max-w-20 text-right text-xs font-semibold sm:max-w-none ${tone}`}
+                    >
+                      {amount}
+                    </span>
+                  </div>
+                ))}
+              </div>
+              <div className="mt-5 flex items-center gap-3 rounded-lg bg-secondary/60 p-3">
+                <FileText className="size-4 shrink-0 text-primary" />
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-medium">Dishwasher warranty</p>
+                  <p className="text-xs text-muted-foreground">
+                    Saved in Vault. Ready when you need it.
+                  </p>
+                </div>
+                <Check className="size-4 text-primary" />
               </div>
             </div>
           </div>
-        </div>
+          <figcaption className="mt-3 text-center text-xs text-muted-foreground">
+            Illustrative household data. Your dashboard uses the records you
+            add.
+          </figcaption>
+        </figure>
       </div>
     </section>
   );

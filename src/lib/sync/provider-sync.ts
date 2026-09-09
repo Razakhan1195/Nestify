@@ -56,7 +56,8 @@ function shouldResumeProviderTaskRun(provider: ProviderRow) {
 
 function isDurhamWaterProvider(provider: ProviderRow) {
   const setup = getProviderSetupByName(provider.name);
-  const text = `${provider.display_name ?? ""} ${provider.name} ${setup?.name ?? ""}`.toLowerCase();
+  const text =
+    `${provider.display_name ?? ""} ${provider.name} ${setup?.name ?? ""}`.toLowerCase();
 
   return text.includes("durham") || text.includes("water");
 }
@@ -135,7 +136,9 @@ async function createProviderSyncRun(input: {
     run_type: input.runType,
     status: input.status,
     message: input.message,
-    finished_at: ["success", "failed", "requires_user_action"].includes(input.status)
+    finished_at: ["success", "failed", "requires_user_action"].includes(
+      input.status,
+    )
       ? new Date().toISOString()
       : null,
     metadata: input.metadata ?? {},
@@ -373,29 +376,50 @@ async function upsertBillAndPdf(input: {
     userId: input.userId,
   });
 
-  const { data: existingBill } = await supabase
+  const { data: existingBill, error: lookupError } = await supabase
     .from("bills")
-    .select("id")
+    .select("id,status,paid_at,payment_status")
+    .eq("user_id", input.userId)
+    .eq("home_id", input.provider.home_id)
     .eq("provider_id", input.provider.id)
     .eq("external_bill_id", input.bill.externalBillId)
     .maybeSingle();
 
+  if (lookupError) throw new Error("Could not check existing provider bills.");
   const billId = existingBill?.id;
   let savedBillId = billId;
 
   if (existingBill) {
-    await supabase.from("bills").update(billRow).eq("id", existingBill.id);
+    const { error } = await supabase
+      .from("bills")
+      .update({
+        ...billRow,
+        status:
+          existingBill.status === "paid" || existingBill.paid_at
+            ? "paid"
+            : existingBill.status === "archived"
+              ? "archived"
+              : billRow.status,
+      })
+      .eq("id", existingBill.id)
+      .eq("user_id", input.userId)
+      .eq("home_id", input.provider.home_id);
+    if (error) throw new Error("Could not update the provider bill.");
   } else {
-    const { data: insertedBill } = await supabase
+    const { data: insertedBill, error: insertError } = await supabase
       .from("bills")
       .insert(billRow)
       .select("id")
       .single();
+    if (insertError) throw new Error("Could not save the provider bill.");
     savedBillId = insertedBill?.id;
   }
 
   if (input.bill.pdfAvailable) {
-    const pdf = await deck.getBillPdf(input.connectionId, input.bill.externalBillId);
+    const pdf = await deck.getBillPdf(
+      input.connectionId,
+      input.bill.externalBillId,
+    );
 
     if (pdf) {
       const documentRow = {
@@ -411,7 +435,7 @@ async function upsertBillAndPdf(input: {
         mime_type: pdf.mimeType,
         file_size_bytes: pdf.sizeBytes,
         issued_on: input.bill.issueDate,
-        expires_on: input.bill.dueDate,
+        expires_on: null, // Bill due dates belong in Bills, not duplicate Vault renewals.
         notes: "PDF metadata retrieved through Deck adapter.",
       };
 
@@ -449,7 +473,10 @@ async function upsertBillAndPdf(input: {
       .maybeSingle();
 
     if (existingInsight) {
-      await supabase.from("insights").update(insight).eq("id", existingInsight.id);
+      await supabase
+        .from("insights")
+        .update(insight)
+        .eq("id", existingInsight.id);
     } else {
       await supabase.from("insights").insert(insight);
     }
@@ -495,7 +522,7 @@ async function finishProviderSync(input: {
   const syncFrequencyDays = provider.sync_frequency_days ?? 30;
   const nextScheduledSyncAt = successful
     ? addCalendarDays(new Date(), syncFrequencyDays).toISOString()
-    : provider.next_scheduled_sync_at ?? null;
+    : (provider.next_scheduled_sync_at ?? null);
   const providerUpdate = {
     deck_connection_id: connectionId,
     deck_connection_status: connection.status,
@@ -517,14 +544,16 @@ async function finishProviderSync(input: {
           : "initial_sync_failed",
     sync_failure_reason: successful
       ? null
-      : connection.userActionMessage ?? "Provider sync is not ready yet.",
+      : (connection.userActionMessage ?? "Provider sync is not ready yet."),
     ...mapped,
     ...(connection.userActionMessage &&
     (connection.status === "requires_user_action" ||
       connection.status === "mfa_required")
       ? { user_action_message: connection.userActionMessage }
       : {}),
-    ...(successful ? { last_successful_sync_at: new Date().toISOString() } : {}),
+    ...(successful
+      ? { last_successful_sync_at: new Date().toISOString() }
+      : {}),
   };
 
   await supabase
@@ -554,7 +583,7 @@ async function finishProviderSync(input: {
   });
 
   const wasAlreadyConnected = ["connected", "healthy"].includes(
-    provider.connection_status ?? ""
+    provider.connection_status ?? "",
   );
 
   if (successful && !wasAlreadyConnected) {
@@ -584,10 +613,10 @@ async function finishProviderSync(input: {
         ? "pending"
         : connection.status === "mfa_required" ||
             connection.status === "requires_user_action"
-        ? "requires_user_action"
-        : successful
-          ? "success"
-          : "failed",
+          ? "requires_user_action"
+          : successful
+            ? "success"
+            : "failed",
     message,
     metadata: {
       deckStatus: connection.status,
@@ -691,9 +720,10 @@ export async function syncProvider(input: {
   try {
     const connection = await deck.syncConnection(connectionId, {
       credentialId: getProviderCredentialId(provider),
-      taskRunId: !input.restart && shouldResumeProviderTaskRun(provider)
-        ? getProviderTaskRunId(provider)
-        : undefined,
+      taskRunId:
+        !input.restart && shouldResumeProviderTaskRun(provider)
+          ? getProviderTaskRunId(provider)
+          : undefined,
     });
     return await finishProviderSync({
       connection,
@@ -704,7 +734,8 @@ export async function syncProvider(input: {
       userId: input.userId,
     });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Deck sync failed.";
+    const message =
+      error instanceof Error ? error.message : "Deck sync failed.";
 
     await supabase
       .from("providers")

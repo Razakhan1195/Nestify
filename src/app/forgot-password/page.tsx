@@ -1,3 +1,5 @@
+import type { Metadata } from "next";
+import { RezleeLogo } from "@/components/brand/rezlee-logo";
 import Link from "next/link";
 import { MailCheck } from "lucide-react";
 
@@ -22,6 +24,8 @@ type ForgotPasswordPageProps = {
   }>;
 };
 
+export const metadata: Metadata = { robots: { index: false, follow: false } };
+
 export default async function ForgotPasswordPage({
   searchParams,
 }: ForgotPasswordPageProps) {
@@ -35,7 +39,7 @@ export default async function ForgotPasswordPage({
       <div className="flex flex-col bg-background">
         <div className="flex h-16 items-center px-6 lg:hidden">
           <Link className="text-lg font-semibold" href="/">
-            Nestify
+            <RezleeLogo />
           </Link>
         </div>
         <div className="flex flex-1 items-center justify-center px-4 py-10 sm:px-6">
@@ -43,7 +47,7 @@ export default async function ForgotPasswordPage({
             <CardHeader>
               <CardTitle className="text-2xl">Reset your password</CardTitle>
               <CardDescription>
-                Enter your email and Nestify will send a secure reset link.
+                Enter your email and Rezlee will send a secure reset link.
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -52,8 +56,8 @@ export default async function ForgotPasswordPage({
                   <div className="flex gap-2">
                     <MailCheck className="mt-0.5 size-4 shrink-0" />
                     <p>
-                      If an account exists for {emailAddress || "that email"},
-                      a reset link is on the way.
+                      If an account exists for {emailAddress || "that email"}, a
+                      reset link is on the way.
                     </p>
                   </div>
                 </div>
@@ -84,7 +88,10 @@ export default async function ForgotPasswordPage({
               </form>
               <p className="mt-5 text-center text-sm text-muted-foreground">
                 Remembered it?{" "}
-                <Link className="font-medium text-foreground underline" href="/login">
+                <Link
+                  className="font-medium text-foreground underline"
+                  href="/login"
+                >
                   Back to login
                 </Link>
               </p>

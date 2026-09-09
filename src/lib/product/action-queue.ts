@@ -1,13 +1,10 @@
+import { daysUntilDate } from "@/lib/product/rules";
 import { getProviderSetupByPriority } from "@/lib/providers";
 import { isBillIncomplete } from "@/lib/product/rules";
 
 export type ProductActionSeverity = "high" | "medium" | "low";
 export type ProductActionSourceType =
-  | "bill"
-  | "care"
-  | "help"
-  | "provider"
-  | "vault";
+  "bill" | "care" | "help" | "provider" | "vault";
 
 export type ProductActionQueueItem = {
   billId?: string | null;
@@ -30,8 +27,16 @@ export type ProductActionQueueItem = {
 };
 
 type ProviderRelation =
-  | { display_name: string | null; name: string; provider_priority?: number | null }
-  | { display_name: string | null; name: string; provider_priority?: number | null }[]
+  | {
+      display_name: string | null;
+      name: string;
+      provider_priority?: number | null;
+    }
+  | {
+      display_name: string | null;
+      name: string;
+      provider_priority?: number | null;
+    }[]
   | null;
 
 export type ActionQueueBill = {
@@ -115,9 +120,7 @@ function parseDate(value: string | null) {
 }
 
 function daysUntil(value: string | null, today: Date) {
-  const date = parseDate(value);
-  if (!date) return null;
-  return Math.ceil((date.getTime() - today.getTime()) / 86_400_000);
+  return daysUntilDate(value, today);
 }
 
 function formatShortDate(value: string | null) {
@@ -185,11 +188,12 @@ function billLabel(bill: ActionQueueBill) {
 function isHiddenByResolution(
   key: string,
   resolutions: Map<string, ActionQueueResolution>,
-  today: Date
+  today: Date,
 ) {
   const resolution = resolutions.get(key);
   if (!resolution) return false;
-  if (["dismissed", "handled"].includes(resolution.resolution_status)) return true;
+  if (["dismissed", "handled"].includes(resolution.resolution_status))
+    return true;
   if (resolution.resolution_status !== "snoozed") return false;
   const snoozedUntil = resolution.snoozed_until
     ? new Date(resolution.snoozed_until)
@@ -200,7 +204,9 @@ function isHiddenByResolution(
 function isOpenBillEvent(event: ActionQueueBillEvent, today: Date) {
   if (["dismissed", "handled"].includes(event.resolution_status)) return false;
   if (event.resolution_status !== "snoozed") return true;
-  const snoozedUntil = event.snoozed_until ? new Date(event.snoozed_until) : null;
+  const snoozedUntil = event.snoozed_until
+    ? new Date(event.snoozed_until)
+    : null;
   return !snoozedUntil || snoozedUntil <= today;
 }
 
@@ -223,7 +229,7 @@ function isUrgentIssue(issue: ActionQueueIssue) {
 
 function billEventToQueueItem(
   event: ActionQueueBillEvent,
-  today: Date
+  today: Date,
 ): ProductActionQueueItem | null {
   if (!isOpenBillEvent(event, today)) return null;
 
@@ -300,12 +306,12 @@ export function buildActionQueue({
   today: Date;
 }) {
   const resolutionMap = new Map(
-    resolutions.map((resolution) => [resolution.attention_key, resolution])
+    resolutions.map((resolution) => [resolution.attention_key, resolution]),
   );
   const items: ProductActionQueueItem[] = [];
 
   for (const bill of bills) {
-    if (bill.status === "paid") continue;
+    if (["paid", "archived"].includes(bill.status)) continue;
     if (isBillIncomplete(bill)) continue;
     const label = billLabel(bill);
     const dueInDays = daysUntil(bill.due_date, today);
@@ -390,7 +396,7 @@ export function buildActionQueue({
   }
 
   for (const task of tasks) {
-    if (task.status === "completed") continue;
+    if (["completed", "cancelled", "skipped"].includes(task.status)) continue;
     const dueInDays = daysUntil(task.due_date, today);
     if (dueInDays === null || dueInDays > 30) continue;
     const key = `maintenance-due-${task.id}`;
@@ -417,7 +423,12 @@ export function buildActionQueue({
   }
 
   for (const issue of issues) {
-    if (issue.related_task_id || !isUrgentIssue(issue)) continue;
+    if (
+      ["resolved", "closed", "completed"].includes(issue.status) ||
+      issue.related_task_id ||
+      !isUrgentIssue(issue)
+    )
+      continue;
     const key = `household-issue-${issue.id}`;
     if (isHiddenByResolution(key, resolutionMap, today)) continue;
 
@@ -441,7 +452,7 @@ export function buildActionQueue({
   for (const provider of providers) {
     const expectedInDays = daysUntil(provider.next_expected_bill_date, today);
     const isConnected = ["connected", "healthy"].includes(
-      provider.connection_status ?? ""
+      provider.connection_status ?? "",
     );
 
     if (expectedInDays === null || expectedInDays >= -7 || !isConnected) {

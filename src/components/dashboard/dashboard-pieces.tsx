@@ -32,15 +32,24 @@ export function DashboardStatRow({ stats }: { stats: DashboardStat[] }) {
       {stats.map((stat) => {
         const Icon = stat.icon;
         return (
-          <Card className="rounded-2xl border-[color:var(--border-soft)]" key={stat.label}>
+          <Card
+            className="rounded-2xl border-[color:var(--border-soft)]"
+            key={stat.label}
+          >
             <CardContent className="flex flex-col gap-3 p-4 md:p-5">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-medium text-muted-foreground">{stat.label}</span>
+                <span className="text-xs font-medium text-muted-foreground">
+                  {stat.label}
+                </span>
                 <Icon className="size-4 text-primary" />
               </div>
               <div className="flex flex-col gap-0.5">
-                <span className="text-2xl font-semibold tracking-tight">{stat.value}</span>
-                <span className="truncate text-xs text-muted-foreground">{stat.note}</span>
+                <span className="text-2xl font-semibold tracking-tight">
+                  {stat.value}
+                </span>
+                <span className="truncate text-xs text-muted-foreground">
+                  {stat.note}
+                </span>
               </div>
             </CardContent>
           </Card>
@@ -51,8 +60,10 @@ export function DashboardStatRow({ stats }: { stats: DashboardStat[] }) {
 }
 
 const timingTone = (timing: string) => {
-  if (timing.includes("overdue")) return "text-[color:var(--critical-foreground)]";
-  if (timing === "Today" || timing === "Tomorrow") return "text-[color:var(--warning-foreground)]";
+  if (timing.includes("overdue"))
+    return "text-[color:var(--critical-foreground)]";
+  if (timing === "Today" || timing === "Tomorrow")
+    return "text-[color:var(--warning-foreground)]";
   return "text-muted-foreground";
 };
 
@@ -66,7 +77,8 @@ export function UpcomingList({ items }: { items: UpcomingItem[] }) {
   if (!items.length) {
     return (
       <p className="rounded-xl border border-dashed border-[color:var(--border-soft)] bg-muted/20 px-4 py-6 text-center text-sm text-muted-foreground">
-        Nothing due in the days ahead. Add a bill, reminder, or renewal and it will show up here.
+        Nothing due in the days ahead. Add a bill, reminder, or renewal and it
+        will show up here.
       </p>
     );
   }
@@ -86,9 +98,16 @@ export function UpcomingList({ items }: { items: UpcomingItem[] }) {
             </span>
             <div className="min-w-0 flex-1">
               <p className="truncate text-sm font-medium">{item.title}</p>
-              <p className="truncate text-xs text-muted-foreground">{item.detail}</p>
+              <p className="truncate text-xs text-muted-foreground">
+                {item.detail}
+              </p>
             </div>
-            <span className={cn("shrink-0 text-xs font-medium", timingTone(item.timing))}>
+            <span
+              className={cn(
+                "shrink-0 text-xs font-medium",
+                timingTone(item.timing),
+              )}
+            >
               {item.timing}
             </span>
             <ChevronRight className="size-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
@@ -135,12 +154,17 @@ export function SetupProgress({ steps }: { steps: SetupStep[] }) {
                   "flex size-5 shrink-0 items-center justify-center rounded-full border text-[10px] font-semibold",
                   step.done
                     ? "border-transparent bg-[color:var(--success)] text-primary-foreground"
-                    : "border-[color:var(--border-soft)] text-muted-foreground"
+                    : "border-[color:var(--border-soft)] text-muted-foreground",
                 )}
               >
                 {step.done ? "\u2713" : ""}
               </span>
-              <span className={cn("flex-1", step.done && "text-muted-foreground line-through")}>
+              <span
+                className={cn(
+                  "flex-1",
+                  step.done && "text-muted-foreground line-through",
+                )}
+              >
                 {step.label}
               </span>
               {!step.done ? (
@@ -154,7 +178,11 @@ export function SetupProgress({ steps }: { steps: SetupStep[] }) {
   );
 }
 
-export function RecentActivityList({ items }: { items: ProductActivityItem[] }) {
+export function RecentActivityList({
+  items,
+}: {
+  items: ProductActivityItem[];
+}) {
   if (!items.length) {
     return (
       <p className="text-sm text-muted-foreground">
@@ -183,12 +211,37 @@ export function RecentActivityList({ items }: { items: ProductActivityItem[] }) 
 }
 
 const quickActions: [string, string, LucideIcon, string][] = [
-  ["Add a bill", "Track a due date or reminder", ReceiptText, "/app/bills#manual-bill"],
-  ["Save a document", "Policies, manuals, receipts", FileText, "/app/documents#add-document"],
-  ["Add a task", "Recurring or one-off upkeep", Wrench, "/app/maintenance#add-task"],
-  ["Log a repair", "Track a fix and contractor", Hammer, "/app/repairs#log-repair"],
+  [
+    "Add a bill",
+    "Track a due date or reminder",
+    ReceiptText,
+    "/app/bills#manual-bill",
+  ],
+  [
+    "Save a document",
+    "Policies, manuals, receipts",
+    FileText,
+    "/app/documents#add-document",
+  ],
+  [
+    "Add a task",
+    "Recurring or one-off upkeep",
+    Wrench,
+    "/app/maintenance#add-task",
+  ],
+  [
+    "Log a repair",
+    "Track a fix and contractor",
+    Hammer,
+    "/app/repairs#log-repair",
+  ],
   ["Track a warranty", "Never miss an expiry", ShieldCheck, "/app/warranties"],
-  ["Add an appliance", "Build your home inventory", Refrigerator, "/app/appliances#add-item"],
+  [
+    "Add an appliance",
+    "Build your home inventory",
+    Refrigerator,
+    "/app/appliances#add-item",
+  ],
 ];
 
 export function QuickActionsGrid() {
@@ -205,7 +258,9 @@ export function QuickActionsGrid() {
           </span>
           <span className="min-w-0 flex-1">
             <span className="block truncate text-sm font-medium">{title}</span>
-            <span className="block truncate text-xs text-muted-foreground">{description}</span>
+            <span className="block truncate text-xs text-muted-foreground">
+              {description}
+            </span>
           </span>
           <ChevronRight className="size-4 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
         </Link>
@@ -215,9 +270,21 @@ export function QuickActionsGrid() {
 }
 
 const onboardingOutcomes: [string, string, LucideIcon][] = [
-  ["Track what's due", "Bills, rent, renewals, and reminders stay visible.", ReceiptText],
-  ["Keep proof organized", "Documents, receipts, warranties, and manuals in one vault.", FileText],
-  ["Stay ahead of upkeep", "Chores, repairs, and recurring reminders, handled.", Wrench],
+  [
+    "Track what's due",
+    "Bills, rent, renewals, and reminders stay visible.",
+    ReceiptText,
+  ],
+  [
+    "Keep proof organized",
+    "Documents, receipts, warranties, and manuals in one vault.",
+    FileText,
+  ],
+  [
+    "Stay ahead of upkeep",
+    "Chores, repairs, and recurring reminders, handled.",
+    Wrench,
+  ],
 ];
 
 export function DashboardEmptyState() {
@@ -233,8 +300,8 @@ export function DashboardEmptyState() {
             Welcome to your home command center
           </h2>
           <p className="mt-2 max-w-xl text-pretty text-sm leading-relaxed text-muted-foreground">
-            Add one thing about your home and Nestify starts surfacing what needs attention,
-            what&apos;s due, and where your records are building.
+            Add one thing about your home and Rezlee starts surfacing what needs
+            attention, what&apos;s due, and where your records are building.
           </p>
           <div className="mt-5">
             <StartSetupDialog />
@@ -249,7 +316,9 @@ export function DashboardEmptyState() {
               <Icon className="size-5" />
             </span>
             <p className="font-semibold">{title}</p>
-            <p className="text-sm leading-relaxed text-muted-foreground">{description}</p>
+            <p className="text-sm leading-relaxed text-muted-foreground">
+              {description}
+            </p>
           </div>
         ))}
       </div>
