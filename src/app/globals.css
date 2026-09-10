@@ -121,6 +121,7 @@
   --page-max-width: 72rem;
   --sidebar-width: 15rem;
   --header-height: 4rem;
+  --bottom-nav-height: 4.25rem;
 }
 
 .dark {

@@ -1,20 +1,10 @@
 "use client";
 
-import { RezleeLogo } from "@/components/brand/rezlee-logo";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Menu } from "lucide-react";
 
 import { appNavSections } from "@/components/app-shell/nav-config";
-import { Button } from "@/components/ui/button";
-import {
-  Sheet,
-  SheetClose,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-} from "@/components/ui/sheet";
+import { SheetClose } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
 
 function NavLinks({ onMobile }: { onMobile?: boolean }) {
@@ -72,28 +62,4 @@ function NavLinks({ onMobile }: { onMobile?: boolean }) {
 
 export function DesktopNav() {
   return <NavLinks />;
-}
-
-export function MobileNav() {
-  return (
-    <Sheet>
-      <SheetTrigger asChild>
-        <Button aria-label="Open navigation" size="icon" variant="ghost">
-          <Menu className="size-4" />
-        </Button>
-      </SheetTrigger>
-      <SheetContent side="left" className="w-72 overflow-y-auto">
-        <SheetHeader>
-          <SheetTitle className="flex items-center gap-3 text-left">
-            <RezleeLogo />
-          </SheetTitle>
-        </SheetHeader>
-        <p className="px-4 pb-4 text-sm text-muted-foreground">
-          Know what is due, what changed, what needs attention, and what to do
-          next.
-        </p>
-        <NavLinks onMobile />
-      </SheetContent>
-    </Sheet>
-  );
 }
