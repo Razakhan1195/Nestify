@@ -3,17 +3,18 @@
 Native iOS/Android app for Rezlee, built with Expo (SDK 57), Expo Router, and
 TypeScript. This is a real React Native app - no WebView, no ported HTML.
 
-This is **Milestone 1**: native app shell, email/password auth, 5-tab
-navigation, and a fully data-wired Home screen. Bills, Care, and Vault show
-real native "coming soon" screens; their full experiences (including
-mutations like marking a bill paid) ship in the next milestone.
+This is **Milestone 2**: native app shell, email/password auth, 5-tab
+navigation, a fully data-wired Home screen, and a full native Bills
+experience (list, filters, detail view, mark as paid). Care and Vault still
+show native "coming soon" screens; their full experiences ship next.
 
 ## How this app talks to Rezlee
 
 This app is a client of the main Rezlee Next.js app's mobile-safe API:
 
 - `src/lib/supabase/mobile.ts` and `src/app/api/mobile/v1/*` (in the root
-  `src/` folder, not here) - a small, read-only bearer-token API surface.
+  `src/` folder, not here) - a bearer-token API surface. Home is read-only;
+  Bills also exposes a `mark-paid` mutation.
 - The mobile app signs in directly against the same Supabase project as the
   web app ("one Rezlee account"), then sends the resulting access token as
   `Authorization: Bearer <token>` on every API call.
@@ -24,6 +25,10 @@ This app is a client of the main Rezlee Next.js app's mobile-safe API:
   coming-up list, monthly summary) are computed by the exact same pure
   functions the web dashboard uses (`src/lib/product/*.ts`), reused as-is
   from the API route. Mobile and web will never disagree about what's true.
+- Marking a bill paid on mobile runs the exact same mutation as the web
+  "Mark paid" button (`src/lib/product/bill-mutations.ts`, shared by the web
+  server action and the mobile API route) - same payment update, same
+  attention-resolution and activity/timeline side effects, on both surfaces.
 
 ## Local setup
 
@@ -88,6 +93,7 @@ your first build; Expo will fail to build without them.
   `app.json` so deep links and OAuth redirects can be added later without
   reconfiguring the app.
 - Push notifications.
-- Any write actions (mark bill paid, complete task, upload a document/photo).
-- Bills/Care/Vault full screens - currently native placeholders that point
-  users back to the web app.
+- Write actions outside Bills (complete a Care task, upload a document or
+  photo) - Bills is the first full read/write vertical.
+- Care/Vault full screens - still native placeholders that point users back
+  to the web app.

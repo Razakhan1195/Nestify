@@ -17,17 +17,31 @@ export class ApiError extends Error {
  * access token as a Bearer header - the server re-validates it and scopes
  * every query through RLS, so this client never trusts the app itself.
  */
-export async function apiGet<T>(path: string): Promise<T> {
-  if (!apiUrl) {
-    throw new ApiError("EXPO_PUBLIC_API_URL is not configured.", 500);
-  }
-
+async function getAccessToken() {
   const { data } = await supabase.auth.getSession();
   const accessToken = data.session?.access_token;
 
   if (!accessToken) {
     throw new ApiError("Not signed in.", 401);
   }
+
+  return accessToken;
+}
+
+async function parseErrorBody(response: Response): Promise<never> {
+  const body = await response.json().catch(() => null);
+  throw new ApiError(
+    body?.error ?? `Request failed with status ${response.status}`,
+    response.status,
+  );
+}
+
+export async function apiGet<T>(path: string): Promise<T> {
+  if (!apiUrl) {
+    throw new ApiError("EXPO_PUBLIC_API_URL is not configured.", 500);
+  }
+
+  const accessToken = await getAccessToken();
 
   const response = await fetch(`${apiUrl}${path}`, {
     headers: {
@@ -37,11 +51,31 @@ export async function apiGet<T>(path: string): Promise<T> {
   });
 
   if (!response.ok) {
-    const body = await response.json().catch(() => null);
-    throw new ApiError(
-      body?.error ?? `Request failed with status ${response.status}`,
-      response.status,
-    );
+    return parseErrorBody(response);
+  }
+
+  return response.json() as Promise<T>;
+}
+
+export async function apiPost<T>(path: string, body?: unknown): Promise<T> {
+  if (!apiUrl) {
+    throw new ApiError("EXPO_PUBLIC_API_URL is not configured.", 500);
+  }
+
+  const accessToken = await getAccessToken();
+
+  const response = await fetch(`${apiUrl}${path}`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      Accept: "application/json",
+      "Content-Type": "application/json",
+    },
+    body: body ? JSON.stringify(body) : undefined,
+  });
+
+  if (!response.ok) {
+    return parseErrorBody(response);
   }
 
   return response.json() as Promise<T>;

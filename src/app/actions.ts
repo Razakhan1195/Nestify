@@ -36,6 +36,7 @@ import {
   homeownerOsMigrationMessage,
   isMissingSchemaError,
 } from "@/lib/schema-errors";
+import { markBillPaidForUser } from "@/lib/product/bill-mutations";
 import {
   isBillIncomplete,
   statusAfterBillDetailsCompleted,
@@ -1469,72 +1470,18 @@ export async function markBillPaid(formData: FormData) {
   }
 
   const values = parsed.data;
-  const { data: paidBill, error } = await supabase
-    .from("bills")
-    .update({
-      paid_at: new Date().toISOString(),
-      status: "paid",
-      payment_status: "paid",
-    })
-    .eq("id", values.bill_id)
-    .eq("user_id", user.id)
-    .eq("home_id", home.id)
-    .neq("status", "paid")
-    .select("id")
-    .maybeSingle();
-
-  if (error) {
-    redirectWithNotice(
-      values.return_path,
-      isMissingSchemaError(error) ? homeownerOsMigrationMessage : error.message,
-    );
-  }
-
-  if (!paidBill)
-    redirectWithNotice(
-      values.return_path,
-      "This bill is already paid or no longer available.",
-    );
-
-  if (values.attention_key && values.event_type) {
-    await upsertAttentionResolution({
-      userId: user.id,
-      homeId: home.id,
-      attentionKey: values.attention_key,
-      eventType: values.event_type,
-      relatedTable: "bills",
-      relatedId: values.bill_id,
-      resolutionStatus: "handled",
-      note: "Bill marked as paid.",
-    });
-  }
-
-  await markBillEventsHandled({
+  const result = await markBillPaidForUser({
+    attentionKey: values.attention_key,
     billId: values.bill_id,
-    eventTypes: ["bill_due_soon", "bill_overdue"],
+    eventType: values.event_type,
     homeId: home.id,
     supabase,
     userId: user.id,
   });
 
-  await createBillActivityEvent({
-    billId: values.bill_id,
-    description: "Bill marked as paid.",
-    eventType: "bill_marked_paid",
-    homeId: home.id,
-    supabase,
-    title: "Bill marked paid",
-    userId: user.id,
-  });
-
-  await createTimelineEvent({
-    userId: user.id,
-    homeId: home.id,
-    eventType: "bill_paid",
-    title: "Bill marked paid",
-    relatedTable: "bills",
-    relatedId: values.bill_id,
-  });
+  if (!result.ok) {
+    redirectWithNotice(values.return_path, result.message);
+  }
 
   revalidatePath("/app");
   revalidatePath("/app/bills");
