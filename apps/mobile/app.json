@@ -39,7 +39,11 @@
       "expo-font"
     ],
     "extra": {
-      "router": {}
-    }
+      "router": {},
+      "eas": {
+        "projectId": "776a9268-af12-47bb-a5a9-4f22c42d474a"
+      }
+    },
+    "owner": "razakhan92"
   }
 }
