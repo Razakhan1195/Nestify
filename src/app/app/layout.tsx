@@ -7,6 +7,7 @@ import { connection } from "next/server";
 import { logout } from "@/app/actions";
 import { AppHeader } from "@/components/app-shell/app-header";
 import { DesktopNav } from "@/components/app-shell/app-nav";
+import { BottomNav } from "@/components/app-shell/bottom-nav";
 import { Button } from "@/components/ui/button";
 import { hasSupabaseEnv, missingSupabaseEnvMessage } from "@/lib/supabase/env";
 import { getCurrentUserHome } from "@/lib/homes";
@@ -137,11 +138,12 @@ export default async function AppLayout({
         <main
           id="main-content"
           tabIndex={-1}
-          className="mx-auto w-full max-w-[var(--page-max-width)] px-4 py-5 sm:px-6 lg:py-8"
+          className="mx-auto w-full max-w-[var(--page-max-width)] px-4 py-5 pb-[calc(var(--bottom-nav-height)+env(safe-area-inset-bottom)+1rem)] sm:px-6 lg:py-8 lg:pb-8"
         >
           {children}
         </main>
       </div>
+      <BottomNav />
     </div>
   );
 }

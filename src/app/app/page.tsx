@@ -1,34 +1,25 @@
 import { isBillIncomplete } from "@/lib/product/rules";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import {
-  AlertCircle,
-  ChevronRight,
-  Clock3,
-  FileText,
-  PackageCheck,
-  ReceiptText,
-} from "lucide-react";
+import { Clock3, FileText, PackageCheck, ReceiptText } from "lucide-react";
 
-import { ActionFeedbackToast } from "@/components/product/action-feedback-toast";
-import {
-  AttentionActionMenu,
-  MarkBillPaidAction,
-} from "@/components/product/attention-action-menu";
+import { AttentionActionMenu } from "@/components/product/attention-action-menu";
 import { StartSetupDialog } from "@/components/product/start-setup-dialog";
-import { completeMaintenanceTask } from "@/app/actions";
-import {
-  InsightCard,
-  PageShell,
-  PrimaryCTA,
-  SecondaryCTA,
-} from "@/components/product/design-system";
-import { SubmitButton } from "@/components/submit-button";
+import { PageShell, PrimaryCTA } from "@/components/product/design-system";
 import { SectionCard } from "@/components/section-card";
+import type { AttentionItem } from "@/components/dashboard/attention-queue";
+import {
+  AttentionQueue,
+  primaryAttentionAction,
+} from "@/components/dashboard/attention-queue";
+import { DashboardHero } from "@/components/dashboard/dashboard-hero";
+import { HouseholdRecord } from "@/components/dashboard/household-record";
 import {
   RecentActivityList,
   UpcomingList,
 } from "@/components/dashboard/dashboard-pieces";
+import type { HeroMetric } from "@/components/dashboard/this-month-metrics";
+import { ThisMonthMetrics } from "@/components/dashboard/this-month-metrics";
 import { Card } from "@/components/ui/card";
 import { CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { getCurrentUserHome } from "@/lib/homes";
@@ -41,7 +32,6 @@ import {
 } from "@/lib/product/summary";
 import { buildUpcomingItems } from "@/lib/product/upcoming";
 import {
-  getProviderStatusLabel,
   getActualProviderName,
   getProviderSetupByPriority,
 } from "@/lib/providers";
@@ -140,65 +130,6 @@ type TimelineEventRow = {
   related_id: string | null;
   created_at: string;
 };
-
-type AttentionItem = {
-  billId?: string | null;
-  documentId?: string | null;
-  eventType: string;
-  issueId?: string | null;
-  key: string;
-  providerId?: string | null;
-  relatedTable?: string | null;
-  taskId?: string | null;
-  title: string;
-  explanation: string;
-  severity: "high" | "medium" | "low";
-  cta: string;
-  href: string;
-  meta?: string;
-};
-
-function isPayableAttention(item: AttentionItem) {
-  return Boolean(
-    item.billId && ["bill_overdue", "bill_due_soon"].includes(item.eventType),
-  );
-}
-
-function primaryAttentionAction(item: AttentionItem) {
-  if (item.eventType === "bill_overdue" && item.billId) {
-    return (
-      <MarkBillPaidAction
-        attentionKey={item.key}
-        billId={item.billId}
-        eventType={item.eventType}
-        returnPath="/app"
-      />
-    );
-  }
-
-  if (item.eventType === "maintenance_due" && item.taskId) {
-    return (
-      <form action={completeMaintenanceTask}>
-        <input name="attention_key" type="hidden" value={item.key} />
-        <input name="event_type" type="hidden" value={item.eventType} />
-        <input name="return_path" type="hidden" value="/app" />
-        <input name="task_id" type="hidden" value={item.taskId} />
-        <SubmitButton
-          label="Complete"
-          pendingLabel="Completing..."
-          size="sm"
-          variant="outline"
-        />
-      </form>
-    );
-  }
-
-  return (
-    <SecondaryCTA asChild size="sm">
-      <Link href={item.href}>{item.cta}</Link>
-    </SecondaryCTA>
-  );
-}
 
 type AttentionResolution = {
   attention_key: string;
@@ -608,7 +539,7 @@ export default async function AppHomePage({
     upcomingDueItemsCount: operatingTimeline.length,
     vaultRecordsCount: recordCount,
   });
-  const heroMetrics = [
+  const heroMetrics: HeroMetric[] = [
     {
       icon: ReceiptText,
       label: "Bills",
@@ -732,62 +663,18 @@ export default async function AppHomePage({
 
   return (
     <PageShell>
-      <header
-        data-dashboard-state={dashboardState}
-        className="rounded-xl border bg-card p-5 sm:p-8"
-      >
-        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">
-          {home.nickname} ·{" "}
-          {new Intl.DateTimeFormat("en-CA", {
-            month: "long",
-            day: "numeric",
-          }).format(today)}
-        </p>
-        <div className="mt-4 flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
-          <div className="min-w-0">
-            <h1 className="text-3xl font-medium tracking-tight sm:text-4xl">
-              {loadError
-                ? "Part of your dashboard is unavailable."
-                : heroHeadline}
-            </h1>
-            <p className="mt-3 max-w-2xl text-sm text-muted-foreground">
-              {loadError
-                ? "Some records could not be loaded. Refresh before relying on the totals below."
-                : heroSummary}
-            </p>
-          </div>
-          <div className="flex shrink-0 items-center gap-2">
-            {heroPrimaryAction}
-            {primaryAttention ? (
-              <AttentionActionMenu
-                context={{
-                  attentionKey: primaryAttention.key,
-                  billId: primaryAttention.billId,
-                  eventType: primaryAttention.eventType,
-                  providerId: primaryAttention.providerId,
-                  relatedId:
-                    primaryAttention.taskId ??
-                    primaryAttention.documentId ??
-                    primaryAttention.issueId,
-                  relatedTable: primaryAttention.relatedTable,
-                  returnPath: "/app",
-                }}
-              />
-            ) : null}
-          </div>
-        </div>
-      </header>
-      <ActionFeedbackToast
-        message={typeof notice === "string" ? notice : null}
+      <DashboardHero
+        dashboardState={dashboardState}
+        hasAttentionResolutionError={Boolean(attentionResolutionError)}
+        hasLoadError={Boolean(loadError)}
+        heroHeadline={heroHeadline}
+        heroPrimaryAction={heroPrimaryAction}
+        heroSummary={heroSummary}
+        homeNickname={home.nickname}
+        notice={typeof notice === "string" ? notice : null}
+        primaryAttention={primaryAttention}
+        today={today}
       />
-      {attentionResolutionError ? (
-        <InsightCard
-          title="Some attention actions are unavailable"
-          description="We could not load your saved review and snooze states. Please try again shortly."
-          severity="warning"
-          icon={AlertCircle}
-        />
-      ) : null}
       {!hasMeaningfulHouseholdData ? (
         <>
           <section
@@ -813,74 +700,10 @@ export default async function AppHomePage({
         </>
       ) : (
         <>
-          <section
-            id="this-month"
-            aria-label="This month"
-            className="grid grid-cols-2 gap-x-6 gap-y-5 border-y px-1 py-5 sm:grid-cols-4"
-          >
-            {heroMetrics.map((metric) => (
-              <div key={metric.label}>
-                <p className="text-xs text-muted-foreground">{metric.label}</p>
-                <p className="mt-1 break-words text-2xl font-semibold tabular-nums">
-                  {metric.value}
-                </p>
-                <p className="mt-1 text-xs text-muted-foreground">
-                  {metric.detail}
-                </p>
-              </div>
-            ))}
-          </section>
+          <AttentionQueue items={handleItems} />
+          <ThisMonthMetrics metrics={heroMetrics} />
           <div className="grid items-start gap-6 xl:grid-cols-[1.65fr_1fr]">
             <div className="grid gap-6">
-              {handleItems.length ? (
-                <SectionCard
-                  title="Also needs a look"
-                  description="Open actions, ordered by urgency"
-                  action={
-                    <Link
-                      className="text-sm font-medium text-primary"
-                      href="/app/attention"
-                    >
-                      View all
-                    </Link>
-                  }
-                >
-                  <div className="divide-y">
-                    {handleItems.map((item) => (
-                      <div
-                        className="flex flex-col gap-3 py-4 first:pt-0 sm:flex-row sm:items-start"
-                        key={item.key}
-                      >
-                        <div className="min-w-0 flex-1">
-                          <p className="text-sm font-semibold">{item.title}</p>
-                          <p className="mt-1 text-sm text-muted-foreground">
-                            {item.explanation}
-                          </p>
-                          <p className="mt-1 text-xs text-muted-foreground">
-                            {item.meta}
-                          </p>
-                        </div>
-                        <div className="flex shrink-0 items-center gap-2">
-                          {primaryAttentionAction(item)}
-                          <AttentionActionMenu
-                            showMarkPaid={isPayableAttention(item)}
-                            context={{
-                              attentionKey: item.key,
-                              billId: item.billId,
-                              eventType: item.eventType,
-                              providerId: item.providerId,
-                              relatedId:
-                                item.taskId ?? item.documentId ?? item.issueId,
-                              relatedTable: item.relatedTable,
-                              returnPath: "/app",
-                            }}
-                          />
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </SectionCard>
-              ) : null}
               {operatingTimeline.length ? (
                 <SectionCard
                   title="Coming up"
@@ -933,98 +756,12 @@ export default async function AppHomePage({
                 </SectionCard>
               ) : null}
             </div>
-            <div className="grid gap-6">
-              <SectionCard
-                title="Your household record"
-                description="The details behind your next decision"
-              >
-                <div className="divide-y">
-                  {[
-                    [
-                      "Vault",
-                      `${documentRows.length} records`,
-                      "/app/documents",
-                    ],
-                    [
-                      "Appliances & inventory",
-                      `${inventoryRows.length} items`,
-                      "/app/inventory",
-                    ],
-                    [
-                      "Warranties",
-                      "Coverage and expiry dates",
-                      "/app/warranties",
-                    ],
-                    [
-                      "Repairs & projects",
-                      "Work, costs, and follow-ups",
-                      "/app/repairs",
-                    ],
-                    ["Place", "Profile and household history", "/app/home"],
-                  ].map(([title, detail, href]) => (
-                    <Link
-                      className="flex min-h-14 items-center justify-between gap-3 py-3"
-                      href={href}
-                      key={href}
-                    >
-                      <div>
-                        <p className="text-sm font-medium">{title}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {detail}
-                        </p>
-                      </div>
-                      <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
-                    </Link>
-                  ))}
-                </div>
-              </SectionCard>
-              {providerRows.length ? (
-                <SectionCard
-                  title="Providers"
-                  description={`${connectedProviderCount} connected · ${providerRows.length} recorded`}
-                >
-                  <div className="divide-y">
-                    {providerRows.slice(0, 4).map((provider) => (
-                      <Link
-                        key={provider.id}
-                        className="block py-3 first:pt-0"
-                        href={`/app/providers/${provider.id}`}
-                      >
-                        <p className="text-sm font-medium">
-                          {provider.display_name || provider.name}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          {getProviderStatusLabel(provider.connection_status)}
-                        </p>
-                      </Link>
-                    ))}
-                  </div>
-                  <Link
-                    className="mt-3 inline-flex min-h-11 items-center text-sm text-primary"
-                    href="/app/providers"
-                  >
-                    Manage providers
-                  </Link>
-                </SectionCard>
-              ) : null}
-              <SectionCard
-                title="Something needs fixing?"
-                description="Start with an issue, then keep the next step on record."
-              >
-                <Link
-                  className="inline-flex min-h-11 items-center gap-2 text-sm font-semibold text-primary"
-                  href="/app/help"
-                >
-                  Get help <ChevronRight className="size-4" />
-                </Link>
-                <Link
-                  className="mt-2 block text-sm text-muted-foreground underline underline-offset-4"
-                  href="/app/assistant"
-                >
-                  Ask Rezlee or open saved chats
-                </Link>
-              </SectionCard>
-            </div>
+            <HouseholdRecord
+              connectedProviderCount={connectedProviderCount}
+              documentCount={documentRows.length}
+              inventoryCount={inventoryRows.length}
+              providers={providerRows}
+            />
           </div>
         </>
       )}

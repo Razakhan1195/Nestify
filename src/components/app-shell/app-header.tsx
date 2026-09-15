@@ -13,7 +13,6 @@ import {
   Wrench,
 } from "lucide-react";
 
-import { MobileNav } from "@/components/app-shell/app-nav";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -23,7 +22,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Separator } from "@/components/ui/separator";
 
 type HeaderNotification = {
   body: string | null;
@@ -81,13 +79,6 @@ export function AppHeader({
 }) {
   return (
     <header className="sticky top-0 z-30 flex h-[var(--header-height)] flex-1 shrink-0 items-center gap-2 bg-background/95 px-4 backdrop-blur-xl sm:px-6">
-      <div className="lg:hidden">
-        <MobileNav />
-      </div>
-      <Separator
-        className="hidden h-5 sm:block lg:hidden"
-        orientation="vertical"
-      />
       <div className="flex min-w-0 flex-col">
         <p className="truncate text-sm font-semibold leading-tight md:text-base">
           Rezlee
