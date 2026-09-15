@@ -1,4 +1,4 @@
-import { Link, useRouter } from "expo-router";
+import { Link } from "expo-router";
 import { useState } from "react";
 import {
   KeyboardAvoidingView,
@@ -16,7 +16,6 @@ import { colors, spacing, typography } from "@/theme/tokens";
 
 export default function SignupScreen() {
   const { signUp } = useAuth();
-  const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);

@@ -52,11 +52,10 @@ export default function BillsScreen() {
     }, [load]),
   );
 
-  const bills = payload && !payload.needsOnboarding ? payload.bills : [];
-  const visibleBills = useMemo(
-    () => bills.filter((bill) => filter === "all" || bill.status === filter),
-    [bills, filter],
-  );
+  const visibleBills = useMemo(() => {
+    const bills = payload && !payload.needsOnboarding ? payload.bills : [];
+    return bills.filter((bill) => filter === "all" || bill.status === filter);
+  }, [payload, filter]);
 
   if (isLoading) {
     return (
