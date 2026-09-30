@@ -52,3 +52,5 @@ New isolated website release dpl_HGx92pJhz4S2x2PdDK1Ett2Gyd5h was BLOCKED by Ver
 
 ## Founder identity confirmation — September 30, 16:26 Toronto
 Founder explicitly confirmed razakhan92@gmail.com as the verified GitHub email and raza@rezlee.com as public contact/reply email. Repository-local Git identity now uses that confirmed email for new commits; no published history rewritten. Production support/reply configuration updated. Mailing address and actual email acceptance remain required; waitlist stays disabled. Retrying the isolated website release with this authorized identity.
+
+Founder correction, September 30 16:26 Toronto: verified GitHub email is raza.khan48@hotmail.com, replacing the earlier confirmation. Public contact remains raza@rezlee.com; production admin identity remains razakhan92@gmail.com (not changed). First corrected-identity attempt dpl_CAWw6uUHpAJ1hFUgbCj1wH6L8tmE was also BLOCKED before build. Repository-local Git identity now uses the explicitly corrected email for a new commit; no history rewritten.
