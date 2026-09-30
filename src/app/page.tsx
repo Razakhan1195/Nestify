@@ -1,3 +1,4 @@
+import {waitlistConfig} from "@/lib/waitlist/server";
 import { hasSupabaseEnv } from "@/lib/supabase/env";
 import { siteUrl } from "@/lib/site";
 import type { Metadata } from "next";
@@ -23,5 +24,6 @@ export default async function RootPage() {
     }
   }
 
-  return <RezleeLanding supportEmail={process.env.NEXT_PUBLIC_SUPPORT_EMAIL} privacyUrl={process.env.NEXT_PUBLIC_PRIVACY_URL} termsUrl={process.env.NEXT_PUBLIC_TERMS_URL} />;
+  const waitlist=waitlistConfig();
+  return <RezleeLanding waitlist={waitlist.ready?{address:waitlist.address,contact:waitlist.contact}:undefined} supportEmail={process.env.NEXT_PUBLIC_SUPPORT_EMAIL} privacyUrl={process.env.NEXT_PUBLIC_PRIVACY_URL} termsUrl={process.env.NEXT_PUBLIC_TERMS_URL} />;
 }

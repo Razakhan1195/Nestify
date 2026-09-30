@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRef, useState } from "react";
 import { ArrowDown, ArrowRight, Check, ChevronRight, FileText, Menu, MessageCircle, Plus, ShieldCheck, Smartphone, X } from "lucide-react";
+import {WaitlistForm} from "./waitlist-form";
 import styles from "./rezlee-landing.module.css";
 
 const features = [
@@ -60,7 +61,7 @@ const questions = [
   ["What can Ask Rezlee help with?", "Ask Rezlee can help explain available household information, organise next steps and work through home questions. It can make mistakes. Check important details against your documents and use qualified help for hazardous repairs or emergencies."],
   ["Is Rezlee available yet?", "Rezlee is in beta testing on iPhone and Android. Public App Store and Google Play downloads are not available yet. The download section will link to each store once the app is released. Some features and connections may vary during beta."],
 ];
-export function RezleeLanding({ supportEmail, privacyUrl, termsUrl }: { supportEmail?: string; privacyUrl?: string; termsUrl?: string }) {
+export function RezleeLanding({ supportEmail, privacyUrl, termsUrl, waitlist }: { supportEmail?: string; privacyUrl?: string; termsUrl?: string; waitlist?: {address:string;contact:string} }) {
   const [selected, setSelected] = useState<Feature>("bills");
   const [menuOpen, setMenuOpen] = useState(false);
   const menuButton = useRef<HTMLButtonElement>(null);
@@ -74,9 +75,10 @@ export function RezleeLanding({ supportEmail, privacyUrl, termsUrl }: { supportE
     </header>
     <main id="main-content" tabIndex={-1}>
       <section className={styles.hero}>
-        <div className={styles.heroCopy}><p className={styles.eyebrow}>YOUR PLACE, UNDER CONTROL.</p><h1>Less home admin.<br/><em>More home.</em></h1><p className={styles.heroDescription}>Understand your bills. Share the costs. Keep the important stuff together. A little more clarity for the place you call home.</p><div className={styles.heroActions}><a href="#product" className={styles.primary}>Meet Rezlee <ArrowDown size={18}/></a><Link href="#download" className={styles.textLink}>Get the app <ArrowRight size={18}/></Link></div><p className={styles.heroFootnote}>For Canadian renters, homeowners and the people they share with.</p></div>
+        <div className={styles.heroCopy}><p className={styles.eyebrow}>YOUR PLACE, UNDER CONTROL.</p><h1>Less home admin.<br/><em>More home.</em></h1><p className={styles.heroDescription}>Understand your bills. Share the costs. Keep the important stuff together. A little more clarity for the place you call home.</p><div className={styles.heroActions}><a href="#product" className={styles.primary}>Meet Rezlee <ArrowDown size={18}/></a><Link href={waitlist?"#waitlist":"#download"} className={styles.textLink}>{waitlist?"Join the founding 10,000":"Get the app"} <ArrowRight size={18}/></Link></div><p className={styles.heroFootnote}>For Canadian renters, homeowners and the people they share with.</p></div>
         <div className={styles.heroVisual}><Image src="/marketing/hero-home.png" alt="A sunlit living room with a green sofa and warm natural details" fill priority sizes="(max-width: 760px) 100vw, 50vw" className={styles.heroPhoto}/><div className={styles.heroPhotoShade}/><div className={styles.homeCard}><div className={styles.homeCardHeading}><span className={styles.smallMark}><Image src="/rezlee-mark.svg" alt="" width={22} height={22}/></span><span>Good to be home.</span><span className={styles.liveDot}/></div><div className={styles.homeCardRow}><span className={styles.homeCardIcon}><FileText size={20}/></span><div><strong>Your internet bill changed</strong><span>See what is behind the difference</span></div><ChevronRight size={17}/></div><div className={styles.homeCardRow}><span className={styles.homeCardIcon}><Check size={20}/></span><div><strong>Everyone’s share, clear</strong><span>Household shop · Split three ways</span></div><ChevronRight size={17}/></div><p>Illustrative product preview</p></div></div>
       </section>
+      {waitlist?<section id="waitlist" className={styles.waitlistSection}><div><p className={styles.eyebrow}>THE FOUNDING 10,000</p><h2>Your home, sorted.<br/>Your membership, free for life.</h2><p>Join the waitlist. The first 10,000 people to confirm their email receive a free lifetime Rezlee app membership when we launch.</p><span>No card required. No subscription fee.</span></div><WaitlistForm address={waitlist.address} contact={waitlist.contact}/></section>:null}
       <section className={styles.introStrip} aria-label="A simpler starting point"><span>Start with what you have.</span><p>A bill. A receipt. A reminder.<br/>You do not need to connect an account to get started.</p><a href="#product" aria-label="Explore how Rezlee works"><ArrowDown size={22}/></a></section>
       <section id="product" className={styles.product}>
         <div className={styles.sectionHeading}><p className={styles.eyebrow}>ONE HOME. A CLEARER PICTURE.</p><h2>Less scattered.<br/>More sorted.</h2><p>Bring the everyday details together, without turning home into another job.</p></div>
