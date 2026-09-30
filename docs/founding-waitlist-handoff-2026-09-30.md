@@ -49,3 +49,6 @@ New isolated website release dpl_HGx92pJhz4S2x2PdDK1Ett2Gyd5h was BLOCKED by Ver
 - Android APK 6 EAS 8edbdd0c-2f9b-475d-a4a5-7c4cf3b48be2 IN_QUEUE at last check; do not start duplicate build.
 - Reused earlier overnight evidence: isolated no-provider Auth/Storage deletion succeeded with exact-byte removal; this turn reran regression tests only. Connected-provider revocation/deletion, background recovery, native social auth/real email and device acceptance remain gates.
 - Founder handles Play account. Production database/Storage restore rehearsal and full app migration promotion remain distinct from website waitlist deployment.
+
+## Founder identity confirmation — September 30, 16:26 Toronto
+Founder explicitly confirmed razakhan92@gmail.com as the verified GitHub email and raza@rezlee.com as public contact/reply email. Repository-local Git identity now uses that confirmed email for new commits; no published history rewritten. Production support/reply configuration updated. Mailing address and actual email acceptance remain required; waitlist stays disabled. Retrying the isolated website release with this authorized identity.
