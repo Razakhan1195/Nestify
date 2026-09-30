@@ -33,7 +33,7 @@ export async function GET(request: Request) {
         .range(page * size, page * size + size - 1),
       db
         .from("rezlee_waitlist_campaign")
-        .select("allocated")
+        .select("allocated,held_back")
         .eq("singleton", true)
         .single(),
       ...["pending", "confirmed", "unsubscribed"].map((status) =>
@@ -52,6 +52,8 @@ export async function GET(request: Request) {
         pageSize: size,
         total: rows.count,
         allocated: campaign.data.allocated,
+        heldBack: campaign.data.held_back,
+        remaining: Math.max(0,10000-campaign.data.allocated-campaign.data.held_back),
         pending: counts[0].count,
         confirmed: counts[1].count,
         unsubscribed: counts[2].count,

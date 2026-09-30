@@ -16,6 +16,8 @@ type Snapshot = {
   pageSize: number;
   total: number;
   allocated: number;
+  heldBack: number;
+  remaining: number;
   pending: number;
   confirmed: number;
   unsubscribed: number;
@@ -77,7 +79,7 @@ export function WaitlistDashboard() {
           </a>
           <h1 className="mt-3 text-3xl font-semibold">Founding members</h1>
           <p className="mt-2 text-sm text-muted-foreground">
-            First 10,000 confirmed emails reserve lifetime app access.
+            Public waitlist reservations and campaign allocations are tracked separately.
           </p>
         </div>
         <Button
@@ -101,7 +103,9 @@ export function WaitlistDashboard() {
         <>
           <section className="grid grid-cols-2 gap-3 sm:grid-cols-4">
             {[
-              ["Lifetime places", data.allocated],
+              ["Reserved by people", data.allocated],
+              ["Held back from public signup", data.heldBack],
+              ["Public places remaining", data.remaining],
               ["Confirmed", data.confirmed],
               ["Awaiting confirmation", data.pending],
               ["Unsubscribed", data.unsubscribed],

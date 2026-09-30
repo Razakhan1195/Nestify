@@ -10,16 +10,23 @@ export function WaitlistForm() {
   const [busy, setBusy] = useState(false),
     [saved, setSaved] = useState(false),
     [error, setError] = useState(""),
-    [remaining, setRemaining] = useState<number | null>(null);
+    [remaining, setRemaining] = useState<number | null>(null),
+    [stale, setStale] = useState(false);
   useEffect(() => {
-    const controller = new AbortController();
-    fetch("/api/waitlist", { cache: "no-store", signal: controller.signal })
-      .then((r) => (r.ok ? r.json() : null))
-      .then((v) => {
-        if (typeof v?.remaining === "number") setRemaining(v.remaining);
-      })
-      .catch(() => {});
-    return () => controller.abort();
+    let active=true, inFlight=false;
+    let controller:AbortController | null=null;
+    async function refresh(){
+      if(!active || inFlight || document.visibilityState!=="visible")return;
+      inFlight=true;controller=new AbortController();
+      const timeout=setTimeout(()=>controller?.abort(),10000);
+      try {const r=await fetch("/api/waitlist",{cache:"no-store",signal:controller.signal});const v=await r.json();if(!r.ok || v.available!==true || !Number.isInteger(v.remaining))throw Error();if(active){setRemaining(v.remaining);setStale(false);}}
+      catch {if(active)setStale(true);}
+      finally{clearTimeout(timeout);inFlight=false;}
+    }
+    void refresh();const timer=setInterval(()=>void refresh(),30000);
+    const visible=()=>{if(document.visibilityState==="visible")void refresh();};
+    document.addEventListener("visibilitychange",visible);window.addEventListener("focus",visible);
+    return()=>{active=false;clearInterval(timer);controller?.abort();document.removeEventListener("visibilitychange",visible);window.removeEventListener("focus",visible);};
   }, []);
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -128,10 +135,11 @@ export function WaitlistForm() {
       {remaining !== null ? (
         <p className={styles.waitlistFine}>
           {remaining > 0
-            ? `${remaining.toLocaleString("en-CA")} of 10,000 lifetime places available. Updated when this page loads.`
-            : "The lifetime offer is full. You can still join for launch updates."}
+            ? `${remaining.toLocaleString("en-CA")} of 10,000 founding memberships available through this waitlist.`
+            : "Public lifetime places are currently allocated. You can still join for launch updates."}
         </p>
       ) : null}
+      <p className={styles.waitlistFine}>{stale ? "Availability could not refresh. The last shown count may be out of date." : "Availability refreshes every 30 seconds while this page is open."} Some places are held back from public signup; see offer terms.</p>
       {error ? (
         <p role="alert" className={styles.waitlistError}>
           {error}

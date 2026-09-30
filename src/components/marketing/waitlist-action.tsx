@@ -53,7 +53,7 @@ export function WaitlistAction({
             ? "You won’t receive waitlist or launch emails. Any lifetime place already reserved remains yours."
             : result.slot
               ? `Founding member #${result.slot.toLocaleString("en-CA")}. Create your Rezlee account with this same email when the app launches. Your app membership will be free for life.`
-              : "The 10,000 lifetime places have been reserved. We’ll let you know when Rezlee launches."}
+              : "Public lifetime places are currently allocated. We’ll let you know when Rezlee launches."}
         </p>
       </div>
     );
@@ -66,7 +66,7 @@ export function WaitlistAction({
       </h1>
       <p className="mt-4">
         {action === "confirm"
-          ? "Finish joining the Rezlee waitlist. Lifetime places go to the first 10,000 confirmed signups."
+          ? "Finish joining the Rezlee waitlist. A free lifetime place is reserved on confirmation while public places remain."
           : "Unsubscribe from Rezlee waitlist and launch emails. This does not cancel a lifetime place already reserved."}
       </p>
       <button

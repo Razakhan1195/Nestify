@@ -22,13 +22,14 @@ export async function GET() {
     if (!c.ready) return reply({ available: false });
     const r = await createAdminClient()
       .from("rezlee_waitlist_campaign")
-      .select("allocated")
+      .select("allocated,held_back")
       .eq("singleton", true)
       .single();
     if (r.error) throw Error();
     return reply({
       available: true,
-      remaining: Math.max(0, 10000 - r.data.allocated),
+      remaining: Math.max(0, 10000 - r.data.held_back - r.data.allocated),
+      heldBack: r.data.held_back,
     });
   } catch {
     return reply({ available: false }, 503);

@@ -185,3 +185,23 @@ test("database: private access, idempotency, limits, expiry and final reservatio
     await db.close();
   }
 });
+
+test("public allocation is separate from people and enforces the final available place",async()=>{
+ const db=new PGlite();try{
+ await db.exec("create role anon; create role authenticated; create role service_role;");
+ await db.exec(readFileSync("supabase/migrations/202609300002_founding_waitlist.sql","utf8"));
+ await db.exec(readFileSync("supabase/migrations/202609300003_waitlist_public_allocation.sql","utf8"));
+ const initial=(await db.query<{allocated:number;held_back:number}>("select allocated,held_back from public.rezlee_waitlist_campaign")).rows[0];
+ assert.deepEqual(initial,{allocated:0,held_back:4679});
+ assert.equal((await db.query<{n:number}>("select count(*)::integer n from public.rezlee_waitlist")).rows[0].n,0);
+ await db.exec("update public.rezlee_waitlist_campaign set allocated=5320");
+ const join=async(email:string)=>(await db.query<{r:{id:string}}>("select public.rezlee_join_waitlist($1,$2) r",[email,tokenHash('proof')])).rows[0].r;
+ const first=await join('first@example.com'),second=await join('second@example.com');
+ const confirm=async(id:string)=>(await db.query<{r:{slot:number|null}}>("select public.rezlee_confirm_waitlist($1,$2) r",[id,tokenHash('proof')])).rows[0].r;
+ const results=await Promise.all([confirm(first.id),confirm(second.id)]);
+ assert.deepEqual(results.map(x=>x.slot).sort((a,b)=>(a??99999)-(b??99999)),[5321,null]);
+ assert.equal((await db.query<{allocated:number}>("select allocated from public.rezlee_waitlist_campaign")).rows[0].allocated,5321);
+ await assert.rejects(()=>db.exec("update public.rezlee_waitlist_campaign set held_back=4680"));
+ await db.exec("set role anon");await assert.rejects(()=>db.query("select * from public.rezlee_waitlist_campaign"));
+ }finally{await db.close();}
+});
