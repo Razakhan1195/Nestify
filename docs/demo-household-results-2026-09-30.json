@@ -1,0 +1,48 @@
+{
+  "demoKey": "rezlee-marketing-home-2026-09-v1",
+  "environment": "staging",
+  "home": "Demo Home · Sample data",
+  "accountEmail": "demo.home@rezlee.com",
+  "verifiedAt": "2026-09-30T23:23:55.953Z",
+  "accounts": [
+    {
+      "provider": "Elexicon Energy",
+      "statements": 12,
+      "graphPoints": 12,
+      "latestCharges": 180.29,
+      "latestChange": -13.39,
+      "usageUnit": "kWh",
+      "timeBands": 3,
+      "originalVerified": true
+    },
+    {
+      "provider": "Enbridge Gas",
+      "statements": 12,
+      "graphPoints": 12,
+      "latestCharges": 45.45,
+      "latestChange": 2.71,
+      "usageUnit": "m³",
+      "timeBands": 0,
+      "originalVerified": true
+    },
+    {
+      "provider": "Rogers",
+      "statements": 12,
+      "graphPoints": 12,
+      "latestCharges": 101.7,
+      "latestChange": 22.6,
+      "usageUnit": null,
+      "timeBands": 0,
+      "originalVerified": true
+    }
+  ],
+  "careTasks": 2,
+  "privateOriginals": 36,
+  "loginVerified": true,
+  "homeApiVerified": true,
+  "unauthenticatedOriginalRejected": true,
+  "liveConnections": 0,
+  "paidCalls": 0,
+  "scheduledPulls": false,
+  "phoneVisualVerified": false
+}
