@@ -1,0 +1,53 @@
+--- /dev/null
++++ b/apps/mobile/src/lib/public-links.ts
+@@ -0,0 +1,6 @@
++import { Alert, Linking } from "react-native";
++export const publicLinks = {contact:"https://rezlee.com/contact",privacy:"https://rezlee.com/privacy",terms:"https://rezlee.com/terms",disclosures:"https://rezlee.com/disclosures",deletion:"https://rezlee.com/delete-account"} as const;
++export async function openPublicLink(key:keyof typeof publicLinks) {
++ try {await Linking.openURL(publicLinks[key]);}
++ catch {Alert.alert("Couldn’t open this page",`Please try again, or open ${publicLinks[key]} in your browser.`);}
++}
+--- /dev/null
++++ b/apps/mobile/src/components/LegalLinks.tsx
+@@ -0,0 +1,6 @@
++import {Pressable,Text,View} from "react-native";
++import {openPublicLink} from "@/lib/public-links";
++import {colors,spacing,typography} from "@/theme/tokens";
++export function LegalLinks({disabled=false}:{disabled?:boolean}) {
++ return <View style={{flexDirection:"row",flexWrap:"wrap",justifyContent:"center",gap:spacing.md}}>{([["privacy","Privacy"],["terms","Terms"],["contact","Help"]] as const).map(([key,label])=><Pressable key={key} accessibilityRole="link" accessibilityLabel={`${label}, opens website`} disabled={disabled} onPress={()=>void openPublicLink(key)} style={{minHeight:44,paddingHorizontal:spacing.sm,justifyContent:"center",opacity:disabled?0.5:1}}><Text style={[typography.meta,{color:colors.primary,textDecorationLine:"underline"}]}>{label}</Text></Pressable>)}</View>;
++}
+--- a/apps/mobile/src/components/AuthFrame.tsx
++++ b/apps/mobile/src/components/AuthFrame.tsx
+@@ -1,3 +1,4 @@
++import { LegalLinks } from "./LegalLinks";
+ import { RezleeLoading } from "./RezleeLoading";
+ import { Feather } from "@expo/vector-icons";
+ import { useRouter } from "expo-router";
+@@ -23,6 +24,7 @@
+           <Text style={[typography.body, { color: colors.mutedForeground }]}>{detail}</Text>
+         </View>
+         {children}
++        <LegalLinks disabled={busy} />
+       </ScrollView>
+     </KeyboardAvoidingView>
+   </SafeAreaView>;
+--- a/apps/mobile/app/account-settings.tsx
++++ b/apps/mobile/app/account-settings.tsx
+@@ -1,3 +1,4 @@
++import { openPublicLink } from "@/lib/public-links";
+ import { Redirect, useFocusEffect, useRouter } from "expo-router";
+ import { useCallback, useState } from "react";
+ import { ActivityIndicator, Alert, ScrollView, Text } from "react-native";
+@@ -41,6 +42,12 @@
+         {owner ? <BriefRow title="Bill connections" onPress={() => router.push("/provider")} /> : null}
+       </ProfileGroup>
+       {owner ? <ProfileGroup title="Preferences"><BriefRow title="Recall notifications" detail="Monitoring and notification preferences" onPress={() => router.push("/recall-settings")} /></ProfileGroup> : null}
++      <ProfileGroup title="Help and legal">
++        <BriefRow title="Contact Rezlee" detail="Support, feedback and privacy requests" onPress={() => void openPublicLink("contact")} />
++        <BriefRow title="Privacy policy" onPress={() => void openPublicLink("privacy")} />
++        <BriefRow title="Terms of use" onPress={() => void openPublicLink("terms")} />
++        <BriefRow title="Feature disclosures" detail="AI, bill insights and connection limitations" onPress={() => void openPublicLink("disclosures")} />
++      </ProfileGroup>
+       <ProfileGroup title="Account controls"><BriefRow title="Delete account" detail="Review saved data and household effects before continuing" onPress={() => router.push("/delete-account")} /></ProfileGroup>
+       <Text style={[typography.meta, { color: colors.mutedForeground }]}>Signed in as {session.user.email}</Text>
+       {error ? <ReadNotice message="We couldn’t sign you out. Please try again." onRetry={() => void logout()} busy={busy} /> : null}
