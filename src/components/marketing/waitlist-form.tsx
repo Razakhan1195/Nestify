@@ -1,13 +1,7 @@
 "use client";
 import { useEffect, useId, useRef, useState } from "react";
 import styles from "./rezlee-landing.module.css";
-export function WaitlistForm({
-  address,
-  contact,
-}: {
-  address: string;
-  contact: string;
-}) {
+export function WaitlistForm() {
   const id = useId(),
     lock = useRef(false);
   const [email, setEmail] = useState(""),
@@ -124,7 +118,7 @@ export function WaitlistForm({
         </span>
       </label>
       <p className={styles.waitlistFine}>
-        Rezlee · {address} · <a href={`mailto:${contact}`}>{contact}</a>
+        Emails from Rezlee. <a href="#rezlee-contact">Contact and mailing details</a>.
       </p>
       <p className={styles.waitlistFine}>
         By joining, you accept the{" "}
