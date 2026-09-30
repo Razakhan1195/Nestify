@@ -29,3 +29,9 @@ Added Help and legal rows in app Settings, plus Privacy/Terms/Help links in Auth
 - Apple privacy/review: https://developer.apple.com/app-store/review/guidelines/#privacy
 
 Stable destinations: https://rezlee.com/contact (support), /privacy (website/app policy), /terms, /disclosures, /delete-account (web deletion requests), /waitlist/terms and /waitlist/privacy.
+
+
+## Live website acceptance
+- Production promoted: https://nestify-mnlql0j4c-razakhan1195s-projects.vercel.app (dpl_9YuKDfsVJBhVwhRseJV8V4fL9WzL). Supersedes dpl_Eye8LG3PbG7UugJC8nZu5ur6Rgug for a contact-label polish only.
+- All six public destinations returned expected HTML; homepage HTML contains neither home street address nor standalone founder email. Waitlist API remains available=true (10,000 places when checked). Contact wrong-origin and invalid-payload requests correctly rejected before sending. No actual human-inbox delivery claimed.
+- Live desktop screenshots inspected: grouped footer and Contact form. Links and mailing disclosure present. Mobile source typecheck passed; no physical phone or TestFlight acceptance for these additions. No utility/AI calls or scheduling changes.

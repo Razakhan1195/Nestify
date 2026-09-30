@@ -74,3 +74,9 @@ View registrations: https://rezlee.com/admin/access -> approved Google account r
 - Restyled offer as dark green panel with contrasting form and restrained lime headline. Address now in footer Contact Rezlee area, directly linked from consent form. Email address/footer sending logic unchanged.
 - Source commit 9cdc1ef; promoted production deployment https://nestify-kl3keybmp-razakhan1195s-projects.vercel.app (dpl_D1GY3KZukSUpxhwXuoLTLM7FnSYY).
 - Verified: TypeScript, scoped ESLint, diff whitespace, hosted production build; waitlist GET available true/10,000 remaining; rendered HTML omits street address from offer and includes footer contact anchor. Live desktop visual inspection, nav anchor, consent enable/disable and contact anchor passed. No new email submission or reservation created. Mobile device visual acceptance not executed in this pass. Placement is not legal compliance certification.
+
+
+## Live website acceptance
+- Production promoted: https://nestify-mnlql0j4c-razakhan1195s-projects.vercel.app (dpl_9YuKDfsVJBhVwhRseJV8V4fL9WzL). Supersedes dpl_Eye8LG3PbG7UugJC8nZu5ur6Rgug for a contact-label polish only.
+- All six public destinations returned expected HTML; homepage HTML contains neither home street address nor standalone founder email. Waitlist API remains available=true (10,000 places when checked). Contact wrong-origin and invalid-payload requests correctly rejected before sending. No actual human-inbox delivery claimed.
+- Live desktop screenshots inspected: grouped footer and Contact form. Links and mailing disclosure present. Mobile source typecheck passed; no physical phone or TestFlight acceptance for these additions. No utility/AI calls or scheduling changes.
