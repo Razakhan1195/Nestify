@@ -118,7 +118,7 @@ export function WaitlistForm() {
         </span>
       </label>
       <p className={styles.waitlistFine}>
-        Emails from Rezlee. <a href="#rezlee-contact">Contact and mailing details</a>.
+        Emails from Rezlee. <a href="/contact#mailing">Contact and mailing details</a>.
       </p>
       <p className={styles.waitlistFine}>
         By joining, you accept the{" "}

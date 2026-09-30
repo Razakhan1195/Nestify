@@ -25,5 +25,5 @@ export default async function RootPage() {
   }
 
   const waitlist=waitlistConfig();
-  return <RezleeLanding waitlist={waitlist.ready?{address:waitlist.address,contact:waitlist.contact}:undefined} supportEmail={process.env.NEXT_PUBLIC_SUPPORT_EMAIL} privacyUrl={process.env.NEXT_PUBLIC_PRIVACY_URL} termsUrl={process.env.NEXT_PUBLIC_TERMS_URL} />;
+  return <RezleeLanding waitlist={waitlist.ready} />;
 }
