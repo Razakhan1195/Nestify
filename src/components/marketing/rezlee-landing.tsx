@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRef, useState } from "react";
 import { ArrowDown, ArrowRight, Check, ChevronRight, FileText, Menu, MessageCircle, Plus, ShieldCheck, Smartphone, X } from "lucide-react";
 import {WaitlistForm} from "./waitlist-form";
+import { ProductFilm } from "./product-film";
 import styles from "./rezlee-landing.module.css";
 
 const features = [
@@ -15,44 +16,6 @@ const features = [
 ] as const;
 type Feature = typeof features[number]["key"];
 
-function BillDemo() {
-  const [history, setHistory] = useState(true);
-  return <div className={styles.billDemo}>
-    <div className={styles.demoTop}><span className={styles.miniBrand}><Image src="/marketing/providers/rogers.png" alt="Rogers" width={108} height={35} /></span><span className={styles.account}>Internet · •• 3083</span></div>
-    <div className={styles.demoSwitch} aria-label="Example data available">
-      <button type="button" aria-pressed={!history} onClick={() => setHistory(false)}>One bill</button>
-      <button type="button" aria-pressed={history} onClick={() => setHistory(true)}>With history</button>
-    </div>
-    <div className={styles.amount}><span>Current-period charges</span><strong>$90.40 <small>CAD</small></strong><span>September 1–30 · Includes $10.40 HST</span></div>
-    {history ? <><div className={styles.chartHeader}><strong>Your bill history</strong><span>Monthly charges · CAD</span></div>
-      <div className={styles.chart} role="img" aria-label="Example monthly charges including tax: April, May and June $79.10; July, August and September $90.40.">
-        {[["Apr",79.1],["May",79.1],["Jun",79.1],["Jul",90.4],["Aug",90.4],["Sep",90.4]].map(([month, amount]) => <div key={month}><span style={{ height: `${Number(amount) * 1.12}px` }} /><small>{month}</small></div>)}
-      </div><div className={styles.finding}><span className={styles.findingDot} /><div><strong>A discount ended in July</strong><p>In this example, the $10 monthly credit ended. That explains the $11.30 increase after tax.</p></div></div></>
-      : <><div className={styles.chargeRow}><span>Internet service</span><strong>$80.00</strong></div><div className={styles.chargeRow}><span>HST</span><strong>$10.40</strong></div><div className={styles.finding}><FileText size={20} /><div><strong>Your charges, explained</strong><p>One statement gives you a breakdown. Add an earlier bill to see what changed.</p></div></div></>}
-    <p className={styles.exampleNote}>Illustrative data, not a customer account or an assessment of this provider.</p>
-  </div>;
-}
-function SharingDemo() {
-  return <div className={styles.sharingDemo}><div className={styles.demoTop}><strong>Our place</strong><span className={styles.tag}>Shared expenses</span></div>
-    <div className={styles.receipt}><div className={styles.receiptTitle}><FileText size={22}/><span>Household shop</span></div><strong>$126.00</strong><p>Paid by Maya · Split equally</p><div className={styles.receiptLine}/>{[["M","Maya","Paid $126"],["A","Alex","Owes Maya $42"],["J","Jordan","Owes Maya $42"]].map(([initial,name,amount])=><div className={styles.personRow} key={name}><span className={styles.avatar}>{initial}</span><span>{name}</span><strong>{amount}</strong></div>)}</div>
-    <div className={styles.finding}><Check size={20}/><div><strong>Everyone’s share, clear</strong><p>Each person’s share is $42. Record settlements when they happen.</p></div></div>
-    <p className={styles.exampleNote}>Illustrative split in CAD. Rezlee records expenses and settlements; it does not move money.</p>
-  </div>;
-}
-function VaultDemo() {
-  return <div className={styles.vaultDemo}><div className={styles.demoTop}><strong>Your Vault</strong><span className={styles.tag}>Everything in its place</span></div>
-    <div className={styles.paperStack}><div className={styles.paperBehind}/><div className={styles.paper}><Image src="/marketing/providers/canadian-tire.png" alt="Canadian Tire" width={105} height={45}/><span>PURCHASE RECEIPT</span><strong>Ready when<br/>you need it.</strong><i/><i/><i/><div className={styles.paperCheck}><Check size={16}/> Original saved</div></div></div>
-    <div className={styles.recordRow}><FileText size={22}/><div><strong>Kitchen appliance receipt</strong><span>Linked to your home item</span></div><ChevronRight size={18}/></div>
-    <p className={styles.exampleNote}>Illustrative record. Warranty coverage depends on the original terms.</p>
-  </div>;
-}
-function CareDemo() {
-  return <div className={styles.careDemo}><div className={styles.demoTop}><strong>A little care goes a long way</strong><span className={styles.tag}>This week</span></div>
-    <div className={styles.calendarArt}><span>OCTOBER</span><strong>01</strong><small>A fresh start.</small></div>
-    {[["Check the furnace filter","Maintenance · Thursday",false],["Clean the kitchen","Cleaning routine · Saturday",false],["Save the service receipt","Completed",true]].map(([title,detail,done])=><div className={styles.taskRow} key={String(title)}><span className={done ? styles.taskDone : styles.taskCircle}>{done ? <Check size={16}/> : null}</span><div><strong>{title}</strong><span>{detail}</span></div></div>)}
-    <p className={styles.exampleNote}>Example tasks. Choose a schedule that fits your home and equipment.</p>
-  </div>;
-}
 const questions = [
   ["Do I need to connect a utility account?", "No. Upload a statement or enter a bill yourself. One bill can give you a charge breakdown; a history of comparable bills can reveal changes over time. Connections are optional."],
   ["Which providers can I connect?", "Green Button connections are available for supported Ontario utilities. Availability and the data returned vary by provider. Other provider connections are being tested and are offered only where available in the app. If your provider is not listed, you can still upload statements."],
@@ -75,7 +38,7 @@ export function RezleeLanding({ waitlist }: { waitlist?: boolean }) {
     </header>
     <main id="main-content" tabIndex={-1}>
       <section className={styles.hero}>
-        <div className={styles.heroCopy}><p className={styles.eyebrow}>YOUR PLACE, UNDER CONTROL.</p><h1>Less home admin.<br/><em>More home.</em></h1><p className={styles.heroDescription}>Understand your bills. Share the costs. Keep the important stuff together. A little more clarity for the place you call home.</p><div className={styles.heroActions}><a href={waitlist?"#waitlist":"#product"} className={styles.primary}>{waitlist?"Join free for life":"Meet Rezlee"} <ArrowRight size={18}/></a><Link href={waitlist?"#product":"#download"} className={styles.textLink}>{waitlist?"Explore the app":"Get the app"} <ArrowDown size={18}/></Link></div><p className={styles.heroFootnote}>{waitlist?"10,000 founding memberships. Limited public waitlist availability.":"For Canadian renters, homeowners and the people they share with."}</p></div>
+        <div className={styles.heroCopy}><p className={styles.eyebrow}>YOUR PLACE, UNDER CONTROL.</p><h1>Less home admin.<br/><em>More home.</em></h1><p className={styles.heroDescription}>Understand your bills. Share the costs. Keep the important stuff together. A little more clarity for the place you call home.</p><div className={styles.heroActions}><a href={waitlist?"#waitlist":"#product"} className={styles.primary}>{waitlist?"Join free for life":"Meet Rezlee"} <ArrowRight size={18}/></a><Link href={waitlist?"#product":"#download"} className={styles.textLink}>{waitlist?"Watch the app":"Get the app"} <ArrowDown size={18}/></Link></div><p className={styles.heroFootnote}>{waitlist?"10,000 founding memberships. Limited public waitlist availability.":"For Canadian renters, homeowners and the people they share with."}</p></div>
         <div className={styles.heroVisual}><Image src="/marketing/hero-home.png" alt="A sunlit living room with a green sofa and warm natural details" fill priority sizes="(max-width: 760px) 100vw, 50vw" className={styles.heroPhoto}/><div className={styles.heroPhotoShade}/><div className={styles.homeCard}><div className={styles.homeCardHeading}><span className={styles.smallMark}><Image src="/rezlee-mark.svg" alt="" width={22} height={22}/></span><span>Good to be home.</span><span className={styles.liveDot}/></div><div className={styles.homeCardRow}><span className={styles.homeCardIcon}><FileText size={20}/></span><div><strong>Your internet bill changed</strong><span>See what is behind the difference</span></div><ChevronRight size={17}/></div><div className={styles.homeCardRow}><span className={styles.homeCardIcon}><Check size={20}/></span><div><strong>Everyone’s share, clear</strong><span>Household shop · Split three ways</span></div><ChevronRight size={17}/></div><p>Illustrative product preview</p></div></div>
       </section>
       {waitlist?<section id="waitlist" className={styles.waitlistSection}><div><p className={styles.eyebrow}>THE FOUNDING 10,000</p><h2>Your home, sorted.<br/><em>Free for life.</em></h2><p>We’re offering 10,000 free lifetime Rezlee app memberships. Confirm your email to reserve a public waitlist place while available.</p><span>No card required. No subscription fee.</span></div><WaitlistForm/></section>:null}
@@ -84,8 +47,8 @@ export function RezleeLanding({ waitlist }: { waitlist?: boolean }) {
         <div className={styles.sectionHeading}><p className={styles.eyebrow}>ONE HOME. A CLEARER PICTURE.</p><h2>Less scattered.<br/>More sorted.</h2><p>Bring the everyday details together, without turning home into another job.</p></div>
         <div className={styles.productTabs} role="tablist" aria-label="Explore Rezlee features">{features.map((item,index)=><button key={item.key} id={`tab-${item.key}`} role="tab" type="button" aria-selected={selected===item.key} aria-controls="feature-panel" tabIndex={selected===item.key?0:-1} onClick={()=>setSelected(item.key)} onKeyDown={event=>{let target=index;if(event.key==="ArrowRight")target=(index+1)%features.length;else if(event.key==="ArrowLeft")target=(index+features.length-1)%features.length;else if(event.key==="Home")target=0;else if(event.key==="End")target=features.length-1;else return;event.preventDefault();setSelected(features[target].key);document.getElementById(`tab-${features[target].key}`)?.focus();}}><span>{item.number}</span>{item.label}<ArrowRight size={17}/></button>)}</div>
         <div id="feature-panel" role="tabpanel" aria-labelledby={`tab-${selected}`} className={styles.featurePanel}>
-          <div className={styles.featureCopy}><span className={styles.featureNumber}>{feature.number} / REZLEE</span><h3>{feature.title}</h3><p>{feature.description}</p><Link href={feature.href} className={styles.textLink}>{feature.action}<ArrowRight size={18}/></Link><small>Product examples below use illustrative data.</small></div>
-          <div className={`${styles.demoSurface} ${styles[selected]}`} key={selected}>{selected==="bills"?<BillDemo/>:selected==="sharing"?<SharingDemo/>:selected==="vault"?<VaultDemo/>:<CareDemo/>}</div>
+          <div className={styles.featureCopy}><span className={styles.featureNumber}>{feature.number} / REZLEE</span><h3>{feature.title}</h3><p>{feature.description}</p><Link href={feature.href} className={styles.textLink}>{feature.action}<ArrowRight size={18}/></Link><small>Actual beta app. Sample household data.</small></div>
+          <ProductFilm key={selected} feature={selected}/>
         </div>
       </section>
       <section id="connections" className={styles.connections}>

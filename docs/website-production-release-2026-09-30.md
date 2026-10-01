@@ -13,3 +13,7 @@ Checks: release TypeScript/scoped ESLint passed; all 11 production-baseline regr
 Next: complete deletion/recovery/social sign-in lifecycle; native iOS/Android acceptance of bills, sharing, care, repair AI and utility freshness; production schema/backup rehearsal and controlled promotion; monitoring/limits/privacy/store declarations; production-backed builds, invited cohort, then public store review. No new feature expansion required first. Quote comparison/expanded capture/benchmarks remain after these gates.
 
 Build8: iOS EAS FINISHED, submission 8961543f-79c0-454e-ab71-cc6c3fb50f40 IN_QUEUE at check. Do not equate cloud build with TestFlight visibility.
+
+
+## Follow-up: actual app demo release
+The real iPhone-framed demo update is now live. See `docs/website-demo-release-2026-09-30.md` for deployment, verification, rollback and marketing handoff. This supersedes the prior website deployment only; application work and waitlist behavior remain preserved.
