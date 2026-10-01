@@ -56,7 +56,7 @@ export function OperationsAccess({ mode, google, initialError = null }: {
   return <main className="mx-auto flex min-h-screen max-w-md flex-col justify-center gap-6 px-6 py-10">
     <p className="text-sm font-semibold text-primary">REZLEE · OPERATIONS</p>
     <h1 className="text-3xl font-semibold">{mode === "login" ? "Operator sign-in" : mode === "denied" ? "Use your operator account" : "Verify it’s you"}</h1>
-    <p className="text-muted-foreground">{mode === "denied" ? "This account does not have operations access. Sign out here, then use your approved account." : "Access is restricted to approved operators and requires an authenticator code."}</p>
+    <p className="text-muted-foreground">{mode === "denied" ? "This account does not have operations access. Sign out here, then use your approved account." : "Access is restricted to approved operators."}</p>
     {mode === "login" ? <>
       <div className="space-y-3">
         <Button variant="outline" className="h-11 w-full" disabled={busy || google !== "ready"} onClick={() => void signInWithGoogle()}>{busy ? "Connecting…" : "Continue with Google"}</Button>

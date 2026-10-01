@@ -8,8 +8,10 @@ export async function operatorAccess() {
     const { data: { user }, error } = await db.auth.getUser();
     if (error || !user) return { state: "signed_out" as const };
     if (!user.email_confirmed_at || !operatorAllowed(user.id)) return { state: "forbidden" as const };
-    const claims = await db.auth.getClaims();
-    if (claims.error || !operatorVerified(user.id, claims.data?.claims ?? null)) return { state: "mfa" as const };
+    if (process.env.REZLEE_OPS_REQUIRE_MFA === "true") {
+      const claims = await db.auth.getClaims();
+      if (claims.error || !operatorVerified(user.id, claims.data?.claims ?? null)) return { state: "mfa" as const };
+    }
     return { state: "ready" as const, userId: user.id };
   } catch { return { state: "unavailable" as const }; }
 }
