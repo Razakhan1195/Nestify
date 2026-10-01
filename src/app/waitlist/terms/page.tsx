@@ -13,13 +13,14 @@ export default function Page() {
         Joining the waitlist is free. No payment card is required.
       </p>
       <p>
-        Places are allocated in email-confirmation order, one membership per
-        person. A pending signup does not reserve a place. Your confirmation
-        page shows whether you received a place. After public places are allocated,
+        Places are allocated when you submit the signup form, one membership per
+        person. No email confirmation is required. The success message shows
+        whether a lifetime place was reserved. Repeat submissions of the same
+        email do not use another place. After public places are allocated,
         you can still join the launch waitlist without a lifetime membership.
       </p>
       <p>
-        Create your Rezlee account using your confirmed waitlist email to claim
+        Create your Rezlee account using your waitlist email to claim
         your membership at launch. Your reservation is personal and
         non-transferable. Lifetime means for as long as Rezlee operates the app;
         it is not a guarantee that the service will operate indefinitely.
@@ -34,7 +35,7 @@ export default function Page() {
         reservation. App availability and the launch date are not yet
         guaranteed.
       </p>
-      <p>Offer version: founding-public-v2 · September 30, 2026.</p>
+      <p>Offer version: founding-public-v3 · September 30, 2026.</p>
       <a href="/waitlist/privacy">Waitlist privacy →</a>
     </main>
   );

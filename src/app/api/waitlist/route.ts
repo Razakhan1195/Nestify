@@ -1,4 +1,3 @@
-import { randomBytes } from "node:crypto";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { readBoundedJson } from "@/lib/security/request";
 import {
@@ -10,7 +9,6 @@ import {
 import {
   waitlistConfig,
   admit,
-  sendConfirmation,
   privateHeaders,
 } from "@/lib/waitlist/server";
 export const dynamic = "force-dynamic";
@@ -104,7 +102,7 @@ export async function POST(request: Request) {
         },
         503,
       );
-    if (b.website) return reply({ state: "pending" });
+    if (b.website) return reply({ state: "joined", reserved: false });
     const email = normalizedEmail(b.email);
     if (!email || b.consent !== true)
       return reply(
@@ -119,47 +117,9 @@ export async function POST(request: Request) {
         { error: "Too many attempts. Please try again later." },
         429,
       );
-    const token = randomBytes(32).toString("hex"),
-      r = await db.rpc("rezlee_join_waitlist", {
-        p_email: email,
-        p_hash: tokenHash(token),
-      });
-    if (r.error) throw Error();
-    if (r.data.id) {
-      try {
-        for (const [key, max, seconds] of [
-          ["waitlist-mail-day", 80, 86400],
-          ["waitlist-mail-month", 2000, 2592000],
-        ] as const) {
-          const limit = await db.rpc("rezlee_waitlist_limit", {
-            p_key: key,
-            p_max: max,
-            p_seconds: seconds,
-          });
-          if (limit.error || limit.data !== true) throw Error("email_budget");
-        }
-        await sendConfirmation(r.data.id, email, token);
-        await db
-          .from("rezlee_waitlist")
-          .update({ delivery_status: "sent" })
-          .eq("id", r.data.id)
-          .eq("confirmation_hash", tokenHash(token));
-      } catch {
-        await db
-          .from("rezlee_waitlist")
-          .update({ delivery_status: "failed" })
-          .eq("id", r.data.id)
-          .eq("confirmation_hash", tokenHash(token));
-        return reply(
-          {
-            error:
-              "Your signup is saved, but we could not send the confirmation. Please try again later. Your place is reserved only after confirmation.",
-          },
-          503,
-        );
-      }
-    }
-    return reply({ state: "pending" });
+    const result = await db.rpc("rezlee_register_waitlist", { p_email: email });
+    if (result.error || result.data?.state !== "joined") throw Error();
+    return reply({ state: "joined", reserved: result.data.reserved === true });
   } catch {
     return reply(
       { error: "We could not complete that request. Please try again." },

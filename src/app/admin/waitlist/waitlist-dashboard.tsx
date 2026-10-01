@@ -11,6 +11,7 @@ type Snapshot = {
     created_at: string;
     confirmed_at: string | null;
     delivery_status: string;
+    email_verified_at: string | null;
   }[];
   page: number;
   pageSize: number;
@@ -106,8 +107,8 @@ export function WaitlistDashboard() {
               ["Reserved by people", data.allocated],
               ["Held back from public signup", data.heldBack],
               ["Public places remaining", data.remaining],
-              ["Confirmed", data.confirmed],
-              ["Awaiting confirmation", data.pending],
+              ["Joined", data.confirmed],
+              ["Legacy pending", data.pending],
               ["Unsubscribed", data.unsubscribed],
             ].map(([label, value]) => (
               <div key={label} className="rounded-2xl border bg-card p-5">
@@ -134,7 +135,7 @@ export function WaitlistDashboard() {
                     "Email",
                     "Status",
                     "Lifetime place",
-                    "Email delivery",
+                    "Email ownership",
                     "Joined",
                   ].map((x) => (
                     <th key={x} scope="col" className="p-4">
@@ -147,12 +148,10 @@ export function WaitlistDashboard() {
                 {data.rows.map((row) => (
                   <tr key={row.id} className="border-b last:border-0">
                     <td className="p-4">{row.email}</td>
-                    <td className="p-4">{row.status}</td>
+                    <td className="p-4">{row.status === "confirmed" ? "Joined" : row.status}</td>
                     <td className="p-4">{row.slot ? "#" + row.slot : "—"}</td>
                     <td className="p-4">
-                      {row.delivery_status === "failed"
-                        ? "Confirmation failed"
-                        : row.delivery_status}
+                      {row.email_verified_at ? "Verified" : "Not verified — signup complete"}
                     </td>
                     <td className="p-4">
                       {new Date(row.created_at).toLocaleDateString()}
@@ -163,7 +162,7 @@ export function WaitlistDashboard() {
             </table>
             {!data.rows.length ? (
               <p className="p-8 text-center text-muted-foreground">
-                No signups yet. Confirmed and pending signups will appear here.
+                No signups yet. New and existing signups will appear here.
               </p>
             ) : null}
           </div>
@@ -189,8 +188,8 @@ export function WaitlistDashboard() {
             </div>
           </footer>
           <p className="text-xs text-muted-foreground">
-            Pending addresses are unverified. Only confirmed, subscribed
-            addresses may receive launch emails. Access to this list is
+            Joining does not verify email ownership. Respect recorded consent,
+            unsubscribe status and delivery suppression before sending updates. Access to this list is
             restricted and logged.
           </p>
         </>

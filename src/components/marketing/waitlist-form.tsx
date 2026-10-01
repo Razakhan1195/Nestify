@@ -9,6 +9,7 @@ export function WaitlistForm() {
     [website, setWebsite] = useState("");
   const [busy, setBusy] = useState(false),
     [saved, setSaved] = useState(false),
+    [reserved, setReserved] = useState(false),
     [error, setError] = useState(""),
     [remaining, setRemaining] = useState<number | null>(null),
     [stale, setStale] = useState(false);
@@ -45,6 +46,8 @@ export function WaitlistForm() {
       });
       const b = await r.json();
       if (!r.ok) throw Error(b.error || "Please try again.");
+      if (b.state !== "joined") throw Error("Please try joining again.");
+      setReserved(b.reserved === true);
       setSaved(true);
     } catch (e) {
       setError(
@@ -60,15 +63,9 @@ export function WaitlistForm() {
   if (saved)
     return (
       <div className={styles.waitlistSuccess} role="status">
-        <h3>Check your email.</h3>
-        <p>
-          Use the confirmation link to finish joining. A lifetime place is
-          reserved when your email is confirmed, while places remain.
-        </p>
-        <p>
-          Already confirmed? You’re still on the list—no duplicate place is
-          taken.
-        </p>
+        <h3>You’re on the list.</h3>
+        <p>{reserved ? "Your free lifetime membership is reserved. We’ll email you when Rezlee is ready." : "You’re signed up for launch updates. The public lifetime places have all been allocated."}</p>
+        <p>No email confirmation needed.</p>
         <button
           type="button"
           onClick={() => {
@@ -76,7 +73,7 @@ export function WaitlistForm() {
             setError("");
           }}
         >
-          Use a different email or retry
+          Use a different email
         </button>
       </div>
     );

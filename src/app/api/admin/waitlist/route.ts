@@ -25,7 +25,7 @@ export async function GET(request: Request) {
       db
         .from("rezlee_waitlist")
         .select(
-          "id,email,status,slot,created_at,confirmed_at,delivery_status",
+          "id,email,status,slot,created_at,confirmed_at,delivery_status,email_verified_at",
           { count: "exact" },
         )
         .order("created_at", { ascending: false })

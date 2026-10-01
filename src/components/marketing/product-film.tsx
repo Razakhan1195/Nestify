@@ -7,8 +7,8 @@ import styles from "./product-film.module.css";
 type Feature = "bills" | "sharing" | "vault" | "care";
 const demos: Record<Feature, { title: string; steps: string[] }> = {
   bills: { title: "Understand your bills", steps: ["See current-period charges and the recorded breakdown.", "Explore twelve saved billing periods, with daily averages for different billing lengths.", "Compare recorded charges and usage. A lower bill is not a verified saving caused by Rezlee."] },
-  sharing: { title: "See how shared expenses work", steps: ["A sample $100 grocery expense is paid by one person and shared equally with Sarah.", "The saved expense records a $50 share for each person.", "The balance shows Sarah owes the payer $50. This records an obligation; no money moves."] },
-  vault: { title: "Keep important records together", steps: ["Browse original statement records in the sample household’s Vault.", "Each record keeps its provider, period and attachment together. This clip shows the saved records list."] },
+  sharing: { title: "See how shared expenses work", steps: ["A $100 grocery expense is paid by one person and shared equally with Sarah.", "The saved expense records a $50 share for each person.", "The balance shows Sarah owes the payer $50. This records an obligation; no money moves."] },
+  vault: { title: "Keep important records together", steps: ["Browse original statement records in the household’s Vault.", "Each record keeps its provider, period and attachment together. This clip shows the saved records list."] },
   care: { title: "Build your cleaning routine", steps: ["Choose a routine and review its tasks and schedule.", "Save it, then see the next tasks and due dates in Care."] },
 };
 
@@ -42,7 +42,7 @@ export function ProductFilm({ feature }: { feature: Feature }) {
       <div className={styles.phone} aria-label="iPhone frame">
         <div className={styles.screen}>
           <div className={styles.topChrome} aria-hidden="true"><span /></div>
-          <video ref={video} className={styles.video} src={`/marketing/demos/${feature}.mp4`} poster={`/marketing/demos/${feature}.webp`} preload="none" muted playsInline aria-label={`${demo.title}. Actual beta app using sample data.`} aria-describedby={`demo-transcript-${feature}`} onPlay={() => { setPlaying(true); setEnded(false); setFailed(false); }} onPlaying={() => setWaiting(false)} onCanPlay={() => setWaiting(false)} onWaiting={() => setWaiting(true)} onPause={() => { setPlaying(false); setWaiting(false); }} onEnded={() => { setEnded(true); setPlaying(false); }} onError={() => { setFailed(true); setWaiting(false); setPlaying(false); }} />
+          <video ref={video} className={styles.video} src={`/marketing/demos/${feature}.mp4`} poster={`/marketing/demos/${feature}.webp`} preload="none" muted playsInline aria-label={`${demo.title}. Product walkthrough.`} aria-describedby={`demo-transcript-${feature}`} onPlay={() => { setPlaying(true); setEnded(false); setFailed(false); }} onPlaying={() => setWaiting(false)} onCanPlay={() => setWaiting(false)} onWaiting={() => setWaiting(true)} onPause={() => { setPlaying(false); setWaiting(false); }} onEnded={() => { setEnded(true); setPlaying(false); }} onError={() => { setFailed(true); setWaiting(false); setPlaying(false); }} />
           <div className={styles.bottomChrome} aria-hidden="true"><span /></div>
         </div>
       </div>
@@ -52,9 +52,9 @@ export function ProductFilm({ feature }: { feature: Feature }) {
         {playing ? <Pause size={16} /> : ended || failed ? <RotateCcw size={16} /> : <Play size={16} />}
         {playing ? "Pause demo" : failed ? "Try again" : ended ? "Replay demo" : "Watch demo"}
       </button>
-      <span role="status">{waiting ? "Loading video…" : "Actual app · Sample data · Beta"}</span>
+      <span role="status">{waiting ? "Loading video…" : "See Rezlee in action"}</span>
     </div>
     {failed ? <p className={styles.error} role="alert">The video could not load. Check your connection and try again. You can still read the walkthrough below.</p> : null}
-    <details className={styles.transcript}><summary>Read the walkthrough</summary><ol id={`demo-transcript-${feature}`}>{demo.steps.map(step => <li key={step}>{step}</li>)}</ol></details>
+    <details className={styles.transcript}><summary>Read the walkthrough</summary><p>Illustrative account details. Your results depend on your bills and available information.</p><ol id={`demo-transcript-${feature}`}>{demo.steps.map(step => <li key={step}>{step}</li>)}</ol></details>
   </div>;
 }

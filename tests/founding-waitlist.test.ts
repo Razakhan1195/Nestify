@@ -205,3 +205,28 @@ test("public allocation is separate from people and enforces the final available
  await db.exec("set role anon");await assert.rejects(()=>db.query("select * from public.rezlee_waitlist_campaign"));
  }finally{await db.close();}
 });
+
+test("immediate registration preserves old signups, separates verification and allocates atomically",async()=>{
+ const db=new PGlite();try{
+ await db.exec("create role anon; create role authenticated; create role service_role;");
+ for(const f of ['202609300002_founding_waitlist.sql','202609300003_waitlist_public_allocation.sql'])await db.exec(readFileSync('supabase/migrations/'+f,'utf8'));
+ await db.query("select public.rezlee_join_waitlist('pending@example.com','old')");
+ await db.query("select public.rezlee_join_waitlist('left@example.com','old')");
+ await db.exec("update public.rezlee_waitlist set status='unsubscribed' where email='left@example.com'");
+ await db.exec(readFileSync('supabase/migrations/202610010001_waitlist_instant_registration.sql','utf8'));
+ const old=(await db.query<{status:string;slot:number;email_verified_at:null}>("select status,slot,email_verified_at from public.rezlee_waitlist where email='pending@example.com'")).rows[0];
+ assert.deepEqual(old,{status:'confirmed',slot:1,email_verified_at:null});
+ assert.equal((await db.query<{status:string}>("select status from public.rezlee_waitlist where email='left@example.com'")).rows[0].status,'unsubscribed');
+ const join=async(email:string)=>(await db.query<{r:{state:string;reserved:boolean}}>("select public.rezlee_register_waitlist($1) r",[email])).rows[0].r;
+ assert.deepEqual(await join(' PENDING@EXAMPLE.COM '),{state:'joined',reserved:true});
+ assert.equal((await db.query<{allocated:number}>("select allocated from public.rezlee_waitlist_campaign")).rows[0].allocated,1);
+ await db.exec("update public.rezlee_waitlist_campaign set allocated=5320");
+ const last=await Promise.all([join('a@example.com'),join('b@example.com')]);
+ assert.equal(last.filter(x=>x.reserved).length,1);
+ assert.equal((await db.query<{allocated:number}>("select allocated from public.rezlee_waitlist_campaign")).rows[0].allocated,5321);
+ await db.exec("update public.rezlee_waitlist set status='unsubscribed' where email='pending@example.com'");
+ assert.equal((await join('pending@example.com')).reserved,true);
+ await assert.rejects(()=>join('bad'));
+ await db.exec('set role anon');await assert.rejects(()=>join('intruder@example.com'),/permission denied/);
+ }finally{await db.close();}
+});

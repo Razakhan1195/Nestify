@@ -19,10 +19,7 @@ export function waitlistConfig() {
     ready:
       process.env.REZLEE_WAITLIST_ENABLED === "true" &&
       secret.length >= 32 &&
-      address.length > 8 &&
-      contact.includes("@") &&
-      !!process.env.RESEND_API_KEY &&
-      !!process.env.RESEND_FROM_EMAIL,
+      contact.includes("@"),
   };
 }
 export async function admit(request: Request, kind = "join") {

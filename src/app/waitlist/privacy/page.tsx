@@ -8,14 +8,14 @@ export default function Page() {
       <Link href="/#waitlist">← Rezlee</Link>
       <h1 className="text-3xl font-semibold">Your waitlist information</h1>
       <p>
-        We collect your email, signup and confirmation dates, consent record,
+        We collect your email, signup dates and any historical confirmation dates, consent record,
         email-delivery status and any lifetime-membership reservation. We use
-        these to confirm your signup, reserve eligible memberships and send the
+        these to register your signup, reserve eligible memberships and send the
         waitlist and launch updates you requested.
       </p>
       <p>
         Rezlee uses Supabase to store the list, Vercel to operate this website
-        and Resend to deliver confirmation emails. These providers may process
+        and Resend to deliver requested waitlist and launch emails. Joining does not require an email confirmation. These providers may process
         information outside Canada. We do not sell the waitlist or publish email
         addresses.
       </p>
