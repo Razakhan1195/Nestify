@@ -1,3 +1,4 @@
+import { customerWebAccessEnabled } from "@/lib/auth/web-access";
 import { safeLocalPath } from "@/lib/security/redirect";
 import { NextResponse } from "next/server";
 
@@ -10,6 +11,14 @@ export async function GET(request: Request) {
     requestUrl.searchParams.get("next"),
     "/app/onboarding",
   );
+
+  // Keep password recovery usable, but do not exchange customer login/signup
+  // codes while web access is paused. Admin OAuth has its own fixed callback.
+  if (!customerWebAccessEnabled() && next !== "/reset-password") {
+    const response = NextResponse.redirect(new URL("/login", requestUrl.origin));
+    response.headers.set("Cache-Control", "no-store");
+    return response;
+  }
 
   if (!code) {
     return NextResponse.redirect(

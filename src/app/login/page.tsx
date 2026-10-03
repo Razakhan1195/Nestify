@@ -1,4 +1,7 @@
 import type { Metadata } from "next";
+import { redirect } from "next/navigation";
+import { customerWebAccessEnabled } from "@/lib/auth/web-access";
+import { operatorAccess } from "@/lib/ops/auth";
 import { RezleeLogo } from "@/components/brand/rezlee-logo";
 import Link from "next/link";
 
@@ -16,6 +19,17 @@ type LoginPageProps = {
 export const metadata: Metadata = { robots: { index: false, follow: false } };
 
 export default async function LoginPage({ searchParams }: LoginPageProps) {
+  if (!customerWebAccessEnabled()) {
+    const access = await operatorAccess();
+    if (access.state === "ready") redirect("/admin");
+    return <main className="mx-auto flex min-h-screen w-full max-w-lg flex-col justify-center gap-6 px-6 py-12">
+      <Link href="/" aria-label="Rezlee home"><RezleeLogo /></Link>
+      <h1 className="text-3xl font-semibold">Customer web sign-in is paused</h1>
+      <p className="text-base text-muted-foreground">If you already have the Rezlee mobile app, continue there. Your account and saved information are still available in the app.</p>
+      <Link href="/#waitlist" className="font-medium text-primary underline">Join the waitlist</Link>
+      <Link href="/" className="text-sm underline">Back to Rezlee</Link>
+    </main>;
+  }
   const { error, notice } = await searchParams;
 
   return (

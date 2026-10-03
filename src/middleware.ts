@@ -1,8 +1,17 @@
-import { type NextRequest } from "next/server";
+import { NextResponse, type NextRequest } from "next/server";
+
+import { customerWebAccessEnabled, isCustomerWebRoute } from "@/lib/auth/web-access";
 
 import { updateSession } from "@/lib/supabase/proxy";
 
 export async function middleware(request: NextRequest) {
+  // Block before auth refresh, for anonymous users and existing customer sessions.
+  // Do not revoke shared Supabase sessions: native apps and admins still use them.
+  if (!customerWebAccessEnabled() && isCustomerWebRoute(request.nextUrl.pathname)) {
+    const response = NextResponse.redirect(new URL("/login", request.url), 303);
+    response.headers.set("Cache-Control", "private, no-store");
+    return response;
+  }
   return await updateSession(request);
 }
 

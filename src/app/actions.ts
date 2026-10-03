@@ -1,5 +1,7 @@
 "use server";
 
+import { customerWebAccessEnabled } from "@/lib/auth/web-access";
+
 import { safeLocalPath } from "@/lib/security/redirect";
 import {
   isOwnedDocumentPath,
@@ -486,6 +488,7 @@ function safeAuthNextPath(value: string) {
 }
 
 export async function login(formData: FormData) {
+  if (!customerWebAccessEnabled()) redirect("/login");
   if (!hasSupabaseEnv()) {
     redirectWithError("/login", missingSupabaseEnvMessage);
   }
@@ -519,6 +522,7 @@ export async function login(formData: FormData) {
 }
 
 export async function signup(formData: FormData) {
+  if (!customerWebAccessEnabled()) redirect("/login");
   if (!hasSupabaseEnv()) {
     redirectWithError("/signup", missingSupabaseEnvMessage);
   }
@@ -576,6 +580,7 @@ export async function signup(formData: FormData) {
 }
 
 export async function signInWithGoogle(formData: FormData) {
+  if (!customerWebAccessEnabled()) redirect("/login");
   if (!hasSupabaseEnv()) {
     redirectWithError("/login", missingSupabaseEnvMessage);
   }

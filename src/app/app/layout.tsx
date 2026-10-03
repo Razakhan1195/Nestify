@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { customerWebAccessEnabled } from "@/lib/auth/web-access";
 import { RezleeLogo } from "@/components/brand/rezlee-logo";
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -20,6 +21,7 @@ export default async function AppLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  if (!customerWebAccessEnabled()) redirect("/login");
   await connection();
 
   if (!hasSupabaseEnv()) {
