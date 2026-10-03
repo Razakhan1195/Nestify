@@ -1,8 +1,6 @@
 import {waitlistConfig} from "@/lib/waitlist/server";
-import { operatorAccess } from "@/lib/ops/auth";
 import { siteUrl } from "@/lib/site";
 import type { Metadata } from "next";
-import { redirect } from "next/navigation";
 
 import { RezleeLanding } from "@/components/marketing/rezlee-landing";
 
@@ -12,10 +10,7 @@ export const metadata: Metadata = {
 };
 
 export default async function RootPage() {
-  // An operator session must never fall through to the legacy customer app.
-  const access = await operatorAccess();
-  if (access.state === "ready") redirect("/admin");
-
+  // The marketing site remains public regardless of the browser's admin session.
   const waitlist=waitlistConfig();
   return <RezleeLanding waitlist={waitlist.ready} />;
 }

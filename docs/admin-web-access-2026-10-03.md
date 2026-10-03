@@ -78,3 +78,9 @@ Live HTTP results:
   }
 ]
 ```
+
+## Follow-up: public homepage remains accessible to operators
+
+The user clarified that signed-in admins must still be able to visit rezlee.com. Removed the homepage operator redirect; the public homepage now renders for every session. Admin routes retain authorization/session refresh, and customer web access remains paused. The earlier description and original homepage redirect test above are superseded by this correction.
+
+Lint, TypeScript and 23 regression tests pass. Seven synthetic-session HTTP checks against the real Next.js routes pass, including admin dashboard → public homepage → homepage reload → admin dashboard with the same cookie, anonymous public homepage, paused customer login, and blocked legacy /app. No cookie clearing and no redirect from the public homepage.
