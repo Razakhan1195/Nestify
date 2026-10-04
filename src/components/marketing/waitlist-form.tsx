@@ -5,7 +5,6 @@ export function WaitlistForm() {
   const id = useId(),
     lock = useRef(false);
   const [email, setEmail] = useState(""),
-    [consent, setConsent] = useState(false),
     [website, setWebsite] = useState("");
   const [busy, setBusy] = useState(false),
     [saved, setSaved] = useState(false),
@@ -41,7 +40,7 @@ export function WaitlistForm() {
       const r = await fetch("/api/waitlist", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, consent, website }),
+        body: JSON.stringify({ email, consent: true, website }),
         signal: AbortSignal.timeout(15000),
       });
       const b = await r.json();
@@ -86,6 +85,7 @@ export function WaitlistForm() {
           type="email"
           autoComplete="email"
           inputMode="email"
+          aria-describedby={id + "-notice"}
           maxLength={254}
           required
           value={email}
@@ -93,7 +93,7 @@ export function WaitlistForm() {
           disabled={busy}
           placeholder="you@example.com"
         />
-        <button type="submit" disabled={busy || !consent}>
+        <button type="submit" disabled={busy}>
           {busy ? "Joining…" : "Join the waitlist"}
         </button>
       </div>
@@ -108,21 +108,9 @@ export function WaitlistForm() {
           />
         </label>
       </div>
-      <label className={styles.waitlistConsent}>
-        <input
-          type="checkbox"
-          required
-          checked={consent}
-          onChange={(e) => setConsent(e.target.checked)}
-          disabled={busy}
-        />
-        <span>
-          Send me Rezlee waitlist and launch emails. I can unsubscribe at any
-          time.
-        </span>
-      </label>
-      <p className={styles.waitlistFine}>
-        Emails from Rezlee. <a href="/contact#mailing">Contact and mailing details</a>.
+      <p id={id + "-notice"} className={styles.waitlistFine}>
+        By joining, you agree to receive Rezlee waitlist and launch emails.
+        Unsubscribe anytime. <a href="/contact#mailing">Contact and mailing details</a>.
       </p>
       <p className={styles.waitlistFine}>
         By joining, you accept the{" "}
