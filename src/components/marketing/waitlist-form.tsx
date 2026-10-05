@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useId, useRef, useState } from "react";
-import { trackWaitlistRegistration } from "@/lib/tiktok-pixel";
+import { trackWaitlistRegistration, waitlistMarketingContext } from "@/lib/tiktok-pixel";
 import styles from "./rezlee-landing.module.css";
 export function WaitlistForm() {
   const id = useId(),
@@ -41,7 +41,7 @@ export function WaitlistForm() {
       const r = await fetch("/api/waitlist", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, consent: true, website }),
+        body: JSON.stringify({ email, consent: true, website, marketing: website ? undefined : waitlistMarketingContext() }),
         signal: AbortSignal.timeout(15000),
       });
       const b = await r.json();
@@ -49,7 +49,7 @@ export function WaitlistForm() {
       if (b.state !== "joined") throw Error("Please try joining again.");
       setReserved(b.reserved === true);
       setSaved(true);
-      if (!website) trackWaitlistRegistration();
+      if (!website) trackWaitlistRegistration(b.marketingEventId);
     } catch (e) {
       setError(
         e instanceof Error && e.name !== "TimeoutError"

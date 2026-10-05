@@ -42,7 +42,7 @@ export default function Page() {
         . Deleting the record needed to identify a reservation may prevent us
         from recognising it; we will explain this before proceeding.
       </p>
-      <p>With your separate permission, the homepage uses the TikTok Pixel to measure visits and successful waitlist signups and match activity to TikTok accounts. This marketing-cookie choice is separate from agreeing to receive Rezlee emails. You can decline tracking and still join. See our <a href="/privacy">privacy policy</a> for the information TikTok receives and use <Link href="/#privacy-settings">Cookie settings</Link> to change your choice.</p>
+      <p>With your separate permission, the homepage uses the TikTok Pixel and, when enabled, a server connection to measure visits and successful waitlist signups and match activity to TikTok accounts. The server connection sends successful signups with a matching event ID and available advertising identifiers, IP address and browser information; it does not send your email or phone number. This marketing-cookie choice is separate from agreeing to receive Rezlee emails. You can decline tracking and still join. See our <a href="/privacy">privacy policy</a> for the information TikTok receives and use <Link href="/#privacy-settings">Cookie settings</Link> to change your choice.</p>
       <p>Updated October 4, 2026.</p>
     </main>
   );

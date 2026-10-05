@@ -1,3 +1,5 @@
+import { after } from "next/server";
+import { prepareTikTokRegistration, sendTikTokRegistration } from "@/lib/tiktok-events";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { readBoundedJson } from "@/lib/security/request";
 import {
@@ -119,7 +121,24 @@ export async function POST(request: Request) {
       );
     const result = await db.rpc("rezlee_register_waitlist", { p_email: email });
     if (result.error || result.data?.state !== "joined") throw Error();
-    return reply({ state: "joined", reserved: result.data.reserved === true });
+    let marketingEventId: string | undefined;
+    // Optional analytics is isolated from the completed database registration.
+    try {
+      if (process.env.VERCEL_ENV === "production") {
+        const event = prepareTikTokRegistration(request, b.marketing);
+        if (event) {
+          marketingEventId = event.data[0].event_id;
+          const accessToken = process.env.TIKTOK_EVENTS_ACCESS_TOKEN;
+          if (accessToken?.trim()) after(async () => {
+            const delivery = await sendTikTokRegistration(event, accessToken);
+            if (delivery.status === "failed") console.warn("tiktok_events_api_delivery_failed", {
+              httpStatus: delivery.httpStatus, code: delivery.code,
+            });
+          });
+        }
+      }
+    } catch { /* Optional analytics never changes a successful signup response. */ }
+    return reply({ state: "joined", reserved: result.data.reserved === true, ...(marketingEventId && { marketingEventId }) });
   } catch {
     return reply(
       { error: "We could not complete that request. Please try again." },

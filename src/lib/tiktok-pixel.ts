@@ -8,7 +8,7 @@ export type MarketingConsent = "accepted" | "declined" | null;
 declare global {
   interface Window {
     ttq?: {
-      track: (event: string) => void;
+      track: (event: string, properties?: Record<string, unknown>, options?: { event_id: string }) => void;
       revokeConsent: () => void;
       disableCookie: () => void;
     };
@@ -72,14 +72,28 @@ export function saveMarketingConsent(value: Exclude<MarketingConsent, null>): vo
 }
 
 let registrationTracked = false;
-export function trackWaitlistRegistration(): void {
-  // Analytics must never turn a successful signup into an error.
+export function waitlistMarketingContext(): { consent: true; ttclid?: string; ttp?: string } | undefined {
   try {
-    if (readMarketingConsent() !== "accepted" || !isPixelPage(new URL(window.location.href)) ||
-        !window.ttq || registrationTracked) return;
+    if (readMarketingConsent() !== "accepted" || !isPixelPage(new URL(window.location.href)) || registrationTracked) return;
     try { if (sessionStorage.getItem(REGISTRATION_KEY)) return; } catch { /* Optional storage. */ }
-    window.ttq.track("CompleteRegistration");
+    const rawClick = new URL(window.location.href).searchParams.get("ttclid");
+    const rawCookie = document.cookie.split("; ").find(part => part.startsWith("_ttp="))?.slice(5);
+    const valid = (value: string | null | undefined) => value && /^[A-Za-z0-9._~-]{1,512}$/.test(value) ? value : undefined;
+    return { consent: true, ttclid: valid(rawClick), ttp: valid(rawCookie) };
+  } catch { return; }
+}
+
+export function trackWaitlistRegistration(eventId?: string): void {
+  // Both copies use the server-issued event ID. Ad blockers never affect signup.
+  try {
+    if (!waitlistMarketingContext()) return;
+    const validId = typeof eventId === "string" && /^[a-f0-9-]{36}$/.test(eventId) ? eventId : undefined;
+    if (validId) {
+      try { window.ttq?.track("CompleteRegistration", {}, { event_id: validId }); } catch { /* Server copy can still arrive. */ }
+    } else if (window.ttq) {
+      window.ttq.track("CompleteRegistration");
+    } else return;
     registrationTracked = true;
     try { sessionStorage.setItem(REGISTRATION_KEY, "1"); } catch { /* Optional storage. */ }
-  } catch { /* Ad blockers and SDK failures must not affect the waitlist. */ }
+  } catch { /* Analytics must never turn a successful signup into an error. */ }
 }

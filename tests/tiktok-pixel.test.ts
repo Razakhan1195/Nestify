@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import vm from "node:vm";
-import { isPixelPage, loadTikTokPixel, saveMarketingConsent, trackWaitlistRegistration, TIKTOK_PIXEL_ID } from "../src/lib/tiktok-pixel";
+import { isPixelPage, loadTikTokPixel, saveMarketingConsent, trackWaitlistRegistration, waitlistMarketingContext, TIKTOK_PIXEL_ID } from "../src/lib/tiktok-pixel";
 
 test("pixel is limited to the production homepage and campaign URLs", () => {
   for (const url of ["https://rezlee.com/", "https://www.rezlee.com/?ttclid=campaign&utm_source=tiktok#waitlist"])
@@ -31,6 +31,7 @@ test("no SDK before consent; one page event; one successful signup per session; 
     loadTikTokPixel();
     trackWaitlistRegistration();
     assert.equal(requests.length, 0);
+    assert.equal(waitlistMarketingContext(), undefined);
     saveMarketingConsent("declined");
     loadTikTokPixel();
     assert.equal(requests.length, 0);
@@ -40,13 +41,16 @@ test("no SDK before consent; one page event; one successful signup per session; 
     assert(requests[0].includes("sdkid=" + TIKTOK_PIXEL_ID));
     const queue = win.ttq as unknown as unknown[][];
     assert.equal(queue.filter(entry => entry[0] === "page").length, 1);
+    assert.deepEqual(waitlistMarketingContext(), { consent: true, ttclid: "example", ttp: undefined });
+    const eventId = "c58d9f80-a02d-4c93-9934-a95d5b047301";
     const originalTrack = win.ttq!.track;
     win.ttq!.track = () => { throw Error("blocked"); };
     assert.doesNotThrow(trackWaitlistRegistration);
     win.ttq!.track = originalTrack;
-    trackWaitlistRegistration();
-    trackWaitlistRegistration();
-    assert.deepEqual(Array.from(queue.filter(entry => entry[0] === "track"), entry => Array.from(entry)), [["track", "CompleteRegistration"]]);
+    trackWaitlistRegistration(eventId);
+    trackWaitlistRegistration(eventId);
+    assert.deepEqual(Array.from(queue.filter(entry => entry[0] === "track"), entry => Array.from(entry)), [["track", "CompleteRegistration", {}, { event_id: eventId }]]);
+    assert.equal(waitlistMarketingContext(), undefined);
     saveMarketingConsent("declined");
     assert.equal(reloads, 1);
     assert(queue.some(entry => entry[0] === "revokeConsent"));
