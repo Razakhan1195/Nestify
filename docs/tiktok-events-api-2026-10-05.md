@@ -42,3 +42,30 @@ Production Vercel build passed. Live homepage, privacy notice and read-only wait
 The user confirmed adding the token. Vercel environment metadata confirmed TIKTOK_EVENTS_ACCESS_TOKEN as a sensitive Production variable; its value was neither read nor printed. Redeployed source ebcf78f to https://nestify-2ul09f0xc-razakhan1195s-projects.vercel.app and Vercel confirmed READY/aliased to https://rezlee.com. The new deployment picks up the Production secret, enabling the existing server send path. Build and live homepage/waitlist availability checks passed. No additional application code changed.
 
 This supersedes the missing-token blocker above. Actual TikTok token validity/event acceptance has not been exercised. Controlled verification still needs the pixel's Test Events code, available in TikTok Events Manager. No existing TikTok tab was available in the connected browser. Do not equate successful deployment with confirmed TikTok receipt, send fake production signups, or expose the token to test it.
+
+## Controlled server receipt verified
+
+The user supplied Test Events code TEST00314. An explicitly invoked diagnostic ran in an unpromoted Vercel production-environment build, allowing the stored sensitive token to be used without retrieving or exposing it. It used the same production payload builder and sender, plus top-level test_event_code. Only synthetic documentation IP/user-agent data was included. No waitlist record or live conversion was created.
+
+TikTok receipt:
+
+```json
+{
+  "pixelId": "DB1FAO3C77U1PLPL6HHG",
+  "event": "CompleteRegistration",
+  "eventId": "2fb55fa6-f3ce-43dd-bdfe-363f344fad8f",
+  "testCode": "TEST00314",
+  "result": {
+    "status": "sent"
+  },
+  "receipt": {
+    "httpStatus": 200,
+    "code": 0,
+    "requestId": "20261005020420BD9D5EE71CC2E72D8012"
+  }
+}
+```
+
+This confirms token validity, pixel access and Events API acceptance of CompleteRegistration in test mode. It does not independently verify the Test Events UI, a real customer's signup, or cross-channel deduplication in TikTok reporting. The browser/server shared-ID behavior was previously tested locally.
+
+The diagnostic script scripts/test-tiktok-events.ts is opt-in only and is not called by normal builds or the application. It requires REZLEE_TIKTOK_TEST_CODE and refuses to send without that parameter. The temporary local Vercel config overriding buildCommand was outside the repository and was used only with --skip-domain. Do not promote or redeploy that diagnostic candidate as a standard production release; use the normal tracked vercel.json.
