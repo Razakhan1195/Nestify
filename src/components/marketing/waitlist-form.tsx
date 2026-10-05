@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useId, useRef, useState } from "react";
+import { trackWaitlistRegistration } from "@/lib/tiktok-pixel";
 import styles from "./rezlee-landing.module.css";
 export function WaitlistForm() {
   const id = useId(),
@@ -48,6 +49,7 @@ export function WaitlistForm() {
       if (b.state !== "joined") throw Error("Please try joining again.");
       setReserved(b.reserved === true);
       setSaved(true);
+      if (!website) trackWaitlistRegistration();
     } catch (e) {
       setError(
         e instanceof Error && e.name !== "TimeoutError"
