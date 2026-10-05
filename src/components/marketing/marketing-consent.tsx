@@ -30,6 +30,9 @@ export function MarketingConsent() {
   }, []);
 
   function choose(value: "accepted" | "declined") {
+    if (window.location.hash === "#privacy-settings") {
+      window.history.replaceState(window.history.state, "", window.location.pathname + window.location.search);
+    }
     saveMarketingConsent(value);
     setOpen(false);
   }
