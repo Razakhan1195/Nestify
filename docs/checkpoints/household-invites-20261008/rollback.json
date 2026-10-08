@@ -1,0 +1,12 @@
+{
+  "head": "a621d32edfda2e695f5081872a0c9991db799805",
+  "previousDeployment": "https://nestify-3tg9w0v69-razakhan1195s-projects.vercel.app",
+  "alias": "staging.rezlee.com",
+  "productionChanged": false,
+  "appSourceChanges": [],
+  "baselineCheck": {
+    "status": 503,
+    "error": "Household invitations are temporarily unavailable.",
+    "emailsSent": 0
+  }
+}

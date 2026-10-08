@@ -1,0 +1,15 @@
+{
+  "url": "https://nestify-pl2jzc8bt-razakhan1195s-projects.vercel.app",
+  "aliasApplied": true,
+  "productionChanged": false,
+  "smtpAuthenticationPassed": true,
+  "emailsSent": 0,
+  "runtimeReadinessPassed": true,
+  "configurationOverrideFilesCorrected": [
+    "gmail-staging-deploy-settings.json",
+    "rogers-hosted-staging-settings.json",
+    "deck-telecom-staging-settings.json",
+    "app-notifications-staging-settings.json",
+    "rezlee-staging-deploy-settings.json"
+  ]
+}
