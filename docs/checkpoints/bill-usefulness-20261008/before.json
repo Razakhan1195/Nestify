@@ -1,0 +1,13 @@
+{
+  "head": "961a97c5a3d8a1a51a247a99346cd0e2baa2b843",
+  "previousStaging": "https://nestify-pl2jzc8bt-razakhan1195s-projects.vercel.app",
+  "files": {
+    "src/lib/ezgb/analytics.ts": "72ffbf6ecc5e2655933c5b094c673400e4c6ed33d09a67d74b5fc4db2537a6d4",
+    "src/app/api/mobile/v1/bills/route.ts": "94aacb1e39fc13c722f5a084411e7391eb8209bd17fc36a7fc49aaf3d47b17c0",
+    "apps/mobile/src/lib/bills-data.ts": "54e8d6886f6b2c3e341e4dde5c07db9e8b70a99a7a9a89c98fd9cbd82b05adab",
+    "apps/mobile/app/utility/[providerId].tsx": "cfbc7c2622591581a724b8fd6833dd18eeabe64e974aa7a50f6c42d2432b57c9",
+    "apps/mobile/src/components/utility/UtilityCostChart.tsx": "326192c0b9f5cc4d27ddd70e1091a87cad2e01910bc2e894ee07160619b9c165",
+    "apps/mobile/src/components/SavedBillInsights.tsx": "06c0b6ad354f90c7ac12b8e92c24910e57d7b9df59ae3fbc0b4af290d1bd03fa",
+    "tests/ezgb.test.ts": "5999ae25256d9c56e259a8bf34962e8653e0ae32b52e4ec6f43b7697aa34a4ef"
+  }
+}

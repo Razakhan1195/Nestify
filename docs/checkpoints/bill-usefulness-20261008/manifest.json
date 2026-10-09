@@ -1,0 +1,26 @@
+{
+  "previousHead": "961a97c5a3d8a1a51a247a99346cd0e2baa2b843",
+  "files": {
+    "src/lib/ezgb/analytics.ts": "6aa2cccf1b5e731481a8a5d50b08d9d8a58188add09ccdc9e0cf78af3bd05104",
+    "src/app/api/mobile/v1/bills/route.ts": "2c187d9d0efa20e8e94165bfd758b61540fb4e2b268047f9d310fd2d2b80c8fb",
+    "apps/mobile/src/lib/bills-data.ts": "feb3e9b3d0d774b61e2903948bc46c64386833f7151b77f5223c8ad01be79672",
+    "apps/mobile/app/utility/[providerId].tsx": "0e6e17270e57530f87c131048841f9bdf5711a0ef53d09f12e988ea8fcbac9a8",
+    "apps/mobile/src/components/utility/UtilityCostChart.tsx": "b73bdad465089664cb4259dd6540e0b181b9c1160a2dd8a8cc3f821058fd9d21",
+    "apps/mobile/src/components/SavedBillInsights.tsx": "a53ae0683def5da35ce47e490507da826bdffc8cca1aade6f2f80211645c31dc",
+    "tests/ezgb.test.ts": "db1660440db1e056108cb742e128c9129b54517eba38f54d7ef9493d9b7361fa",
+    "src/lib/ezgb/statement-history.ts": "e651aa677ed47cebd8e075e3334e6faa127db47837f844bbb55ffd2b94e4f5e0",
+    "apps/mobile/src/components/StatementBarChart.tsx": "5939d0c98aae77b7b4efe76351540ba8341a004b08371763eeb02cbecab45ad0",
+    "tests/connected-statement-history.test.ts": "717b3c8d26c1ebc982b70faa71a764d02194d48764f6e24c3f03134c137d1028"
+  },
+  "newFiles": [
+    "src/lib/ezgb/statement-history.ts",
+    "apps/mobile/src/components/StatementBarChart.tsx",
+    "tests/connected-statement-history.test.ts"
+  ],
+  "productionChanged": false,
+  "scheduledPullsEnabled": false,
+  "paidProviderCalls": 0,
+  "realEmailsSent": 0,
+  "nativeAcceptance": false,
+  "testflightUpdated": false
+}

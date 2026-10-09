@@ -1,0 +1,778 @@
+--- a/src/lib/ezgb/analytics.ts
++++ b/src/lib/ezgb/analytics.ts
+@@ -1,3 +1,5 @@
++import { connectedStatementHistory, type ConnectedPeriodComparison } from "./statement-history";
++
+ export type UtilityStatementInput = {
+   id: string;
+   providerId: string;
+@@ -10,6 +12,8 @@
+   issueDate: string | null;
+   usage: number | null;
+   usageUnit: string | null;
++  currency?: string;
++  readingQuality?: string | null;
+ };
+ 
+ export type UtilityConnectionMeta = {
+@@ -27,6 +31,7 @@
+   label: string;
+   amount: number | null;
+   usageIndex: number | null;
++  dailyUsageIndex?: number | null;
+ };
+ 
+ export type UtilityInsight = {
+@@ -35,6 +40,13 @@
+   category: string;
+   categoryId: string;
+   statementCount: number;
++  amountBasis?: "amount_due";
++  currency?: string | null;
++  amountStatementCount?: number;
++  periodComparison?: ConnectedPeriodComparison | null;
++  comparisonNote?: string | null;
++  usageBasis?: "daily";
++  usageComparisonCount?: number;
+   firstPeriodStart: string | null;
+   latestPeriodEnd: string | null;
+   latestBillId: string | null;
+@@ -88,10 +100,6 @@
+   return Math.round(((current - previous) / previous) * 100);
+ }
+ 
+-function statementDate(statement: UtilityStatementInput) {
+-  return statement.periodEnd ?? statement.periodStart ?? statement.issueDate ?? "";
+-}
+-
+ function monthLabel(value: string | null) {
+   if (!value) return "Earlier";
+   const date = new Date(`${value}T12:00:00`);
+@@ -110,7 +118,7 @@
+ 
+   // Green Button feeds can carry a meter multiplier even when the display unit
+   // is kWh. Until interval/multiplier normalization is applied, avoid showing
+-  // implausible residential absolute values. Relative changes remain valid.
++  // implausible residential values and comparisons until the scale is verified.
+   if (lowered === "kwh" && (max > 20_000 || avg > 10_000)) return false;
+   return true;
+ }
+@@ -118,6 +126,7 @@
+ export function buildUtilityInsights(
+   statements: UtilityStatementInput[],
+   connectionMeta: UtilityConnectionMeta[] = [],
++  options: { today?: string; complete?: boolean } = {},
+ ): UtilityInsight[] {
+   const groups = new Map<string, UtilityStatementInput[]>();
+ 
+@@ -133,9 +142,8 @@
+ 
+   return [...groups.entries()]
+     .map(([providerId, rows]) => {
+-      const ordered = [...rows].sort((a, b) =>
+-        statementDate(a).localeCompare(statementDate(b)),
+-      );
++      const periods = connectedStatementHistory(rows, options.today ?? new Date().toISOString().slice(0, 10), options.complete ?? true);
++      const ordered = periods.ordered;
+       const latest = ordered.at(-1) ?? null;
+       const previous = ordered.at(-2) ?? null;
+       const trailing12 = ordered.slice(-12);
+@@ -160,18 +168,11 @@
+         null,
+       );
+ 
+-      const latestVsPreviousPercent = percentChange(
+-        latest?.amount ?? null,
+-        previous?.amount ?? null,
+-      );
+-      const latestVsAveragePercent = percentChange(
+-        latest?.amount ?? null,
+-        trailing12Average,
+-      );
+-      const recent3VsPrior3Percent = percentChange(
+-        average(recent3Amounts),
+-        average(prior3Amounts),
+-      );
++      const latestVsPreviousPercent = periods.comparison ? percentChange(latest?.amount ?? null, previous?.amount ?? null) : null;
++      const priorAmounts = ordered.slice(-13, -1);
++      const latestVsAveragePercent = latest && periods.comparisonAllowed && periods.eligible(latest) && priorAmounts.length >= 2 && priorAmounts.every(periods.eligible)
++        ? percentChange(latest.amount, average(numeric(priorAmounts.map(row => row.amount)))) : null;
++      const recent3VsPrior3Percent = periods.recentSixComparable ? percentChange(average(recent3Amounts), average(prior3Amounts)) : null;
+ 
+       const usageRows = trailing12.filter(
+         (row) => typeof row.usage === "number" && Number.isFinite(row.usage),
+@@ -180,7 +181,7 @@
+       const averageUsage = average(usageValues);
+       const latestUsage = latest?.usage ?? null;
+       const previousUsage = previous?.usage ?? null;
+-      const usageTrendPercent = percentChange(latestUsage, previousUsage);
++      const usageTrendPercent = periods.comparison?.usageUnit && periods.comparison.latestDays === periods.comparison.previousDays ? percentChange(latestUsage, previousUsage) : null;
+       const usageUnit =
+         latest?.usageUnit ??
+         [...ordered].reverse().find((row) => row.usageUnit)?.usageUnit ??
+@@ -195,42 +196,10 @@
+       const usageSummaryCount =
+         (meta?.usageSummaryCount ?? ordered.length) || null;
+ 
+-      let savingsSignal: UtilityInsight["savingsSignal"];
+-      if (
+-        recent3VsPrior3Percent !== null &&
+-        recent3VsPrior3Percent >= 15 &&
+-        average(recent3Amounts) !== null
+-      ) {
+-        savingsSignal = {
+-          tone: "attention",
+-          title: "Recent bills are running higher",
+-          body: `Your last 3 bills average ${recent3VsPrior3Percent}% more than the previous 3. Rezlee can use your Green Button history to help isolate what changed.`,
+-        };
+-      } else if (
+-        latestVsAveragePercent !== null &&
+-        latestVsAveragePercent >= 15
+-      ) {
+-        savingsSignal = {
+-          tone: "attention",
+-          title: "Latest bill is above your recent normal",
+-          body: `Your latest bill is ${latestVsAveragePercent}% above your 12-month average. That makes this period a good place to look for avoidable usage.`,
+-        };
+-      } else if (
+-        latestVsPreviousPercent !== null &&
+-        latestVsPreviousPercent <= -10
+-      ) {
+-        savingsSignal = {
+-          tone: "positive",
+-          title: "Your latest bill moved down",
+-          body: `Your latest bill is ${Math.abs(latestVsPreviousPercent)}% lower than the previous one. Rezlee will keep watching whether that improvement holds.`,
+-        };
+-      } else {
+-        savingsSignal = {
+-          tone: "neutral",
+-          title: "Costs are close to your recent range",
+-          body: "Rezlee will keep comparing new bills with your own history so unusual changes stand out quickly.",
+-        };
+-      }
++      const savingsSignal: UtilityInsight["savingsSignal"] = {
++        tone: "neutral", title: latestVsPreviousPercent === null ? "Your saved statement history" : "Your statement amount changed",
++        body: periods.note ?? "Amounts due can include previous balances and credits. Compare billing days and recorded usage before drawing a conclusion about costs or savings.",
++      };
+ 
+       const history = trailing12.map((row) => ({
+         billId: row.id,
+@@ -238,7 +207,10 @@
+         periodEnd: row.periodEnd,
+         label: monthLabel(row.periodEnd ?? row.periodStart ?? row.issueDate),
+         amount: row.amount,
++        dailyUsageIndex: periods.dailyUsageIndex(row.id),
+         usageIndex:
++          absoluteUsageReliable && periods.dailyUsage.has(row.id) && periods.comparisonAllowed && periods.eligible(row) &&
++          trailing12.every(other => periods.dailyUsage.has(other.id) && periods.durations.get(other.id) === periods.durations.get(row.id)) &&
+           typeof row.usage === "number" &&
+           averageUsage !== null &&
+           averageUsage > 0
+@@ -252,6 +224,13 @@
+         category: latest?.category ?? rows[0]?.category ?? "Utility",
+         categoryId: latest?.categoryId ?? rows[0]?.categoryId ?? "other",
+         statementCount: ordered.length,
++        amountBasis: "amount_due",
++        currency: latest?.currency ?? "CAD",
++        amountStatementCount: periods.amountCount,
++        periodComparison: periods.comparison,
++        comparisonNote: periods.note,
++        usageBasis: "daily",
++        usageComparisonCount: periods.usageCount,
+         firstPeriodStart: ordered[0]?.periodStart ?? null,
+         latestPeriodEnd: latest?.periodEnd ?? null,
+         latestBillId: latest?.id ?? null,
+@@ -259,9 +238,9 @@
+         previousBillAmount: previous?.amount ?? null,
+         latestVsPreviousPercent,
+         latestVsAveragePercent,
+-        trailing12Average,
+-        trailing12Total,
+-        highestBillAmount: highest?.amount ?? null,
++        trailing12Average: periods.comparisonAllowed ? trailing12Average : null,
++        trailing12Total: periods.comparisonAllowed ? trailing12Total : null,
++        highestBillAmount: periods.comparisonAllowed ? highest?.amount ?? null : null,
+         highestBillPeriod: highest?.periodEnd ?? highest?.periodStart ?? null,
+         recent3VsPrior3Percent,
+         usageTrendPercent,
+--- a/src/app/api/mobile/v1/bills/route.ts
++++ b/src/app/api/mobile/v1/bills/route.ts
+@@ -422,6 +422,10 @@
+     .eq("home_id", home.id)
+     .eq("status", "connected");
+ 
++  const readingQualityById = new Map(billRows.map(row => {
++    const raw = row.raw_data && typeof row.raw_data === "object" ? row.raw_data as Record<string, unknown> : {};
++    return [row.id, typeof raw.quality_of_reading === "string" ? raw.quality_of_reading : null] as const;
++  }));
+   const utilityInsights = buildUtilityInsights(
+     items
+       .filter(
+@@ -437,11 +441,13 @@
+         category: item.category,
+         categoryId: item.categoryId,
+         amount: item.amount,
++        currency: item.currency,
+         periodStart: item.billingPeriodStart,
+         periodEnd: item.billingPeriodEnd,
+         issueDate: item.issueDate,
+         usage: item.usageAmount,
+         usageUnit: item.usageUnit,
++        readingQuality: readingQualityById.get(item.id),
+       })),
+     (ezgbIntegrationRows ?? [])
+       .filter((row) => Boolean(row.provider_id))
+@@ -466,6 +472,7 @@
+           lastSyncAt: row.last_sync_at ?? null,
+         };
+       }),
++    { today: now.toISOString().slice(0, 10), complete: count !== null && count === billRows.length },
+   );
+ 
+   return NextResponse.json({
+--- a/apps/mobile/src/lib/bills-data.ts
++++ b/apps/mobile/src/lib/bills-data.ts
+@@ -78,6 +78,7 @@
+   label: string;
+   amount: number | null;
+   usageIndex: number | null;
++  dailyUsageIndex?: number | null;
+ };
+ 
+ export type UtilityInsight = {
+@@ -86,6 +87,13 @@
+   category: string;
+   categoryId: string;
+   statementCount: number;
++  amountBasis?: "amount_due";
++  currency?: string | null;
++  amountStatementCount?: number;
++  periodComparison?: { latestDays: number; previousDays: number; gapDays: number; latestUsagePerDay: number | null; previousUsagePerDay: number | null; usageUnit: string | null; usageChangePercent: number | null } | null;
++  comparisonNote?: string | null;
++  usageBasis?: "daily";
++  usageComparisonCount?: number;
+   firstPeriodStart: string | null;
+   latestPeriodEnd: string | null;
+   latestBillId: string | null;
+--- a/apps/mobile/app/utility/[providerId].tsx
++++ b/apps/mobile/app/utility/[providerId].tsx
+@@ -84,37 +84,37 @@
+ }
+ 
+ function UsageTrend({ insight }: { insight: UtilityInsight }) {
+-  const points = insight.history.filter((point) => point.usageIndex !== null);
++  const points = insight.history.filter((point) => point.dailyUsageIndex !== null && point.dailyUsageIndex !== undefined);
+   if (!points.length) return null;
+ 
+-  const max = Math.max(...points.map((point) => point.usageIndex ?? 0), 100);
++  const max = Math.max(...points.map((point) => point.dailyUsageIndex ?? 0), 100);
+ 
+   return (
+     <View style={{ gap: spacing.md }}>
+       <View style={{ gap: 3 }}>
+         <Text style={[typography.section, { color: colors.foreground }]}>
+-          Statement usage pattern
++          Usage per day
+         </Text>
+         <Text style={[typography.caption, { color: colors.mutedForeground, lineHeight: 18 }]}>
+-          {`Consumption on your saved bills, relative to the recent average. This is a statement-level comparison, not time-of-day meter data.`}
++          {`Provider-reported usage per day, compared with the daily average across ${insight.usageComparisonCount ?? points.length} usable saved periods. Billing length is accounted for; weather is not.`}
+         </Text>
+       </View>
+       <Surface tone="subtle" style={{ gap: spacing.md }}>
+         {points.slice(-6).map((point) => (
+           <View key={point.billId} style={{ gap: 6 }}>
+-            <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
++            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: spacing.xs, justifyContent: "space-between" }}>
+               <Text style={[typography.caption, { color: colors.mutedForeground }]}>
+                 {point.label}
+               </Text>
+               <Text style={{ fontSize: 12, fontWeight: "700", color: colors.foreground }}>
+-                {point.usageIndex}% of recent average
++                {point.dailyUsageIndex}% of daily average
+               </Text>
+             </View>
+             <View style={{ height: 6, borderRadius: 3, backgroundColor: colors.border, overflow: "hidden" }}>
+               <View
+                 style={{
+                   height: "100%",
+-                  width: `${Math.min(100, ((point.usageIndex ?? 0) / max) * 100)}%`,
++                  width: `${Math.min(100, ((point.dailyUsageIndex ?? 0) / max) * 100)}%`,
+                   backgroundColor: colors.primary,
+                 }}
+               />
+@@ -230,6 +230,10 @@
+ 
+   const isElectricity = insight.categoryId === "electricity";
+   const latestDelta = insight.latestVsPreviousPercent;
++  const comparison = insight.periodComparison;
++  const currency = insight.currency ?? "CAD";
++  const statementMoney = (value: number) => new Intl.NumberFormat("en-CA", { style: "currency", currency }).format(value);
++  const usageNumber = (value: number) => new Intl.NumberFormat("en-CA", { maximumFractionDigits: 2 }).format(value);
+   const assistantPrompt = isElectricity && utilityData
+     ? [
+         `Help me understand my saved ${insight.providerName} Green Button data.`,
+@@ -314,18 +318,18 @@
+ 
+           <View style={{ gap: 4 }}>
+             <Text style={[typography.caption, { color: colors.mutedForeground }]}>
+-              LATEST BILL
++              {insight.amountBasis === "amount_due" ? "AMOUNT DUE WHEN ISSUED" : "LATEST SAVED AMOUNT"}
+             </Text>
+             <Text style={{ fontSize: 38, lineHeight: 44, fontWeight: "800", color: colors.foreground }}>
+               {insight.latestBillAmount === null
+                 ? "—"
+-                : formatCurrency(insight.latestBillAmount)}
++                : statementMoney(insight.latestBillAmount)}
+             </Text>
+             <Text style={[typography.body, { color: colors.mutedForeground }]}>
+-              {latestDelta === null
+-                ? "One more comparable statement is needed to show a change. View the saved details below."
+-                : latestDelta === 0 ? "The recorded amount is about the same as the previous statement." : `${deltaCopy(latestDelta, "Latest")} than the previous statement. Amounts alone do not explain the cause.`}
+-            </Text>
++              {insight.history.at(-1)?.periodStart && insight.latestPeriodEnd ? `${formatDueDate(insight.history.at(-1)!.periodStart)} – ${formatDueDate(insight.latestPeriodEnd)}` : "Billing dates unavailable"}
++            </Text>
++            <Text style={[typography.caption, { color: colors.mutedForeground }]}>Amounts due may include previous balances or credits. They do not confirm payment.</Text>
++            {insight.lastSyncAt ? <Text style={[typography.caption, { color: colors.mutedForeground }]}>Saved data updated {formatDueDate(insight.lastSyncAt.slice(0, 10))}</Text> : null}
+           </View>
+ 
+           {insight.latestBillId ? (
+@@ -341,39 +345,51 @@
+           ) : null}
+         </Surface>
+ 
++        {comparison ? <Surface tone="subtle" style={{ gap: spacing.md }}>
++          <Text style={[typography.section, { color: colors.foreground }]}>What changed</Text>
++          <Text style={[typography.body, { color: colors.foreground }]}>{latestDelta === null ? "Review the recorded amounts below." : latestDelta === 0 ? "The amount due is about the same as on the previous statement." : `${deltaCopy(latestDelta, "Amount due")} amount due than on the previous statement.`}</Text>
++          <Text style={[typography.body, { color: colors.mutedForeground }]}>Billing days: {comparison.previousDays} → {comparison.latestDays}{comparison.gapDays ? " · There is a gap between these periods" : ""}</Text>
++          {comparison.latestUsagePerDay !== null && comparison.previousUsagePerDay !== null ? <View style={{ gap: spacing.xs }}>
++            <Text style={[typography.body, { color: colors.foreground }]}>Usage per day: {usageNumber(comparison.previousUsagePerDay)} → {usageNumber(comparison.latestUsagePerDay)} {comparison.usageUnit}</Text>
++            {comparison.usageChangePercent !== null ? <Text style={[typography.meta, { color: colors.mutedForeground }]}>{comparison.usageChangePercent === 0 ? "Daily usage is about the same." : `${deltaCopy(comparison.usageChangePercent, "Daily usage")} usage per day.`}</Text> : null}
++          </View> : <Text style={[typography.meta, { color: colors.mutedForeground }]}>Usage isn’t comparable for these two periods. The saved statement details remain available below.</Text>}
++          <Text style={[typography.caption, { color: colors.mutedForeground }]}>Daily usage accounts for billing length. These figures do not establish weather effects, rate changes or savings.</Text>
++        </Surface> : insight.comparisonNote ? <Surface tone="subtle"><Text style={[typography.body, { color: colors.mutedForeground }]}>{insight.comparisonNote}</Text></Surface> : null}
++
++        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: spacing.sm }}>
++          <InsightStat
++            label="STATEMENT AVERAGE"
++            value={insight.trailing12Average === null ? "—" : statementMoney(insight.trailing12Average)}
++            detail={`${insight.amountStatementCount ?? Math.min(12, insight.statementCount)} amounts available in the latest ${Math.min(12, insight.statementCount)} saved statements`}
++          />
++          <InsightStat
++            label="STATEMENT TOTAL"
++            value={insight.trailing12Total === null ? "—" : statementMoney(insight.trailing12Total)}
++            detail="Saved amounts due; not annual spending"
++          />
++          <InsightStat
++            label="HIGHEST BILL"
++            value={insight.highestBillAmount === null ? "—" : statementMoney(insight.highestBillAmount)}
++            detail={insight.highestBillPeriod ? formatDueDate(insight.highestBillPeriod) : undefined}
++          />
++          <InsightStat
++            label="RECENT AMOUNTS"
++            value={
++              insight.recent3VsPrior3Percent === null
++                ? "Not enough history"
++                : insight.recent3VsPrior3Percent === 0 ? "About the same" : `${Math.abs(insight.recent3VsPrior3Percent)}% ${insight.recent3VsPrior3Percent > 0 ? "up" : "down"}`
++            }
++            detail="Amounts due on the last 3 vs previous 3 statements; periods may differ"
++          />
++        </View>
++
++        <UtilityCostChart key={providerId} insight={insight} onOpenStatement={id => router.push((`/bill/${id}`) as never)} />
++
++
+         {isElectricity ? <>
+           <ElectricityPlanComparison key={providerId} providerId={providerId} />
+           <MultiPeriodComparison key={`history-${providerId}`} providerId={providerId} />
+         </> : null}
+-
+-        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: spacing.sm }}>
+-          <InsightStat
+-            label="STATEMENT AVERAGE"
+-            value={insight.trailing12Average === null ? "—" : formatCurrency(insight.trailing12Average)}
+-            detail={`Latest ${Math.min(12, insight.statementCount)} saved statements`}
+-          />
+-          <InsightStat
+-            label="STATEMENT TOTAL"
+-            value={insight.trailing12Total === null ? "—" : formatCurrency(insight.trailing12Total)}
+-            detail="Same saved periods; not an annual total"
+-          />
+-          <InsightStat
+-            label="HIGHEST BILL"
+-            value={insight.highestBillAmount === null ? "—" : formatCurrency(insight.highestBillAmount)}
+-            detail={insight.highestBillPeriod ? formatDueDate(insight.highestBillPeriod) : undefined}
+-          />
+-          <InsightStat
+-            label="RECENT DIRECTION"
+-            value={
+-              insight.recent3VsPrior3Percent === null
+-                ? "Not enough history"
+-                : `${Math.abs(insight.recent3VsPrior3Percent)}% ${insight.recent3VsPrior3Percent > 0 ? "up" : "down"}`
+-            }
+-            detail="Last 3 vs previous 3 saved statements"
+-          />
+-        </View>
+-
+-        <UtilityCostChart key={providerId} insight={insight} onOpenStatement={id => router.push((`/bill/${id}`) as never)} />
+ 
+ 
+         {isElectricity && utilityData ? <UtilityUsageIntelligence data={utilityData} /> : null}
+@@ -455,7 +471,7 @@
+                     </Text>
+                   </View>
+                   <Text style={{ fontSize: 14, fontWeight: "800", color: colors.foreground }}>
+-                    {point.amount === null ? "—" : formatCurrency(point.amount)}
++                    {point.amount === null ? "—" : statementMoney(point.amount)}
+                   </Text>
+                   <Feather name="chevron-right" size={16} color={colors.mutedForeground} />
+                 </Pressable>
+--- a/apps/mobile/src/components/utility/UtilityCostChart.tsx
++++ b/apps/mobile/src/components/utility/UtilityCostChart.tsx
+@@ -1,56 +1,26 @@
+-import { Feather } from "@expo/vector-icons";
+-import { useState } from "react";
+-import { Pressable, Text, View } from "react-native";
++import { Text, View } from "react-native";
+ import { Surface } from "@/components/ui/Surface";
++import { StatementBarChart } from "@/components/StatementBarChart";
+ import { formatDueDate, type UtilityInsight } from "@/lib/bills-data";
+ import { colors, spacing, typography } from "@/theme/tokens";
+ 
+-const money = (value: number) => new Intl.NumberFormat("en-CA", { style: "currency", currency: "CAD" }).format(value);
+-
+ export function UtilityCostChart({ insight, onOpenStatement }: { insight: UtilityInsight; onOpenStatement: (id: string) => void }) {
+- const [selectedId, setSelectedId] = useState<string | null>(null);
+  const points = insight.history.filter(point => typeof point.amount === "number" && Number.isFinite(point.amount));
+  if (!points.length) return null;
+- const selected = points.find(point => point.billId === selectedId) ?? points[points.length - 1];
+- const selectedIndex = points.indexOf(selected);
+- const max = Math.max(...points.map(point => Math.abs(point.amount!)), 1);
++ const currency = insight.currency ?? "CAD";
++ const money = (value: number) => new Intl.NumberFormat("en-CA", { style: "currency", currency }).format(value);
+  return <View style={{ gap: spacing.md }}>
+-  <View style={{ gap: 3 }}>
++  <View style={{ gap: spacing.xs }}>
+    <Text style={[typography.section, { color: colors.foreground }]}>Bill trend</Text>
+-   <Text style={[typography.caption, { color: colors.mutedForeground }]}>Last {points.length} saved {points.length === 1 ? "statement" : "statements"} · Tap a bar to explore</Text>
++   <Text style={[typography.caption, { color: colors.mutedForeground }]}>{points.length} saved {points.length === 1 ? "amount" : "amounts"} · Tap a bar to explore</Text>
+   </View>
+   <Surface tone="subtle" style={{ gap: spacing.md }}>
+-   <View style={{ height: 146, flexDirection: "row", alignItems: "flex-end", gap: 4 }}>
+-    {points.map((point, index) => <Pressable key={point.billId}
+-     accessibilityRole="button" accessibilityLabel={`${point.label}, ${money(point.amount!)}${point.amount! < 0 ? ", credit" : ""}`}
+-     accessibilityHint="Show this statement’s amount and billing period" accessibilityState={{ selected: point.billId === selected.billId }}
+-     onPress={() => setSelectedId(point.billId)}
+-     style={{ flex: 1, height: "100%", alignItems: "center", justifyContent: "flex-end", gap: 6 }}>
+-     <View style={{ width: "100%", maxWidth: 26, height: Math.max(4, Math.abs(point.amount!) / max * 118), borderRadius: 6, backgroundColor: point.billId === selected.billId ? colors.primary : colors.border }} />
+-     {index === 0 || index === points.length - 1 || points.length <= 4
+-      ? <Text numberOfLines={1} style={{ fontSize: 10, color: colors.mutedForeground }}>{point.label.split(" ")[0]}</Text>
+-      : <View style={{ height: 12 }} />}
+-    </Pressable>)}
+-   </View>
+-   <View style={{ borderTopWidth: 1, borderColor: colors.border, paddingTop: spacing.md, gap: spacing.sm }}>
+-    <View style={{ flexDirection: "row", alignItems: "center", gap: spacing.sm }}>
+-     <View accessibilityLiveRegion="polite" style={{ flex: 1, gap: 3 }}>
+-      <Text style={[typography.caption, { color: colors.mutedForeground }]}>{selected.label}{selected.amount! < 0 ? " · Credit" : ""}</Text>
+-      <Text style={[typography.section, { color: colors.foreground }]}>{money(selected.amount!)} <Text style={typography.caption}>CAD</Text></Text>
+-     </View>
+-     {([-1, 1] as const).map(direction => {
+-      const next = points[selectedIndex + direction];
+-      return <Pressable key={direction} accessibilityRole="button" accessibilityLabel={direction < 0 ? "Previous statement" : "Next statement"} accessibilityState={{ disabled: !next }} disabled={!next}
+-       onPress={() => next && setSelectedId(next.billId)} style={{ width: 44, height: 44, alignItems: "center", justifyContent: "center", opacity: next ? 1 : 0.3 }}>
+-       <Feather name={direction < 0 ? "chevron-left" : "chevron-right"} size={20} color={colors.primary} />
+-      </Pressable>;
+-     })}
+-    </View>
+-    <Text style={[typography.caption, { color: colors.mutedForeground }]}>{selected.periodStart && selected.periodEnd ? `${formatDueDate(selected.periodStart)} – ${formatDueDate(selected.periodEnd)}` : "Billing dates unavailable"}</Text>
+-    <Pressable accessibilityRole="button" accessibilityLabel={`View ${selected.label} statement`} onPress={() => onOpenStatement(selected.billId)} style={{ minHeight: 44, flexDirection: "row", alignItems: "center", gap: 8 }}>
+-     <Text style={[typography.body, { color: colors.primary, fontWeight: "600" }]}>View statement</Text><Feather name="arrow-right" size={16} color={colors.primary}/>
+-    </Pressable>
+-   </View>
++   <StatementBarChart key={insight.providerId} points={points.map(point => ({
++     id: point.billId, label: point.label, value: point.amount,
++     period: point.periodStart && point.periodEnd ? `${formatDueDate(point.periodStart)} – ${formatDueDate(point.periodEnd)}` : "Billing dates unavailable",
++     formattedValue: money(point.amount!) + " " + currency,
++     detail: point.amount! < 0 ? "Credit on this statement" : insight.amountBasis === "amount_due" ? "Amount due when issued · payment status is separate" : "Recorded statement amount",
++   }))} onOpen={onOpenStatement} />
+    {points.some(point => point.amount! < 0) ? <Text style={[typography.caption, { color: colors.mutedForeground }]}>Bar height shows the size of each amount. Credits are labelled with a minus sign.</Text> : null}
+   </Surface>
+  </View>;
+--- a/apps/mobile/src/components/SavedBillInsights.tsx
++++ b/apps/mobile/src/components/SavedBillInsights.tsx
+@@ -1,3 +1,4 @@
++import { StatementBarChart } from "./StatementBarChart";
+ import { ElectricityPlanComparison } from "./utility/ElectricityPlanComparison";
+ import {EnergyEvidenceReview} from "./EnergyEvidenceReview";
+ import {energyKindLabels} from "@/lib/energy-evidence";
+@@ -45,7 +46,6 @@
+   const { points, unit, excluded, older, missingUsage, gapDays } = story.history;
+   if (points.length < 2) return null;
+   const values = points.map(p => metric === "charges" ? p.dailyMinor : p.usage?.daily ?? null);
+-  const max = Math.max(1, ...values.filter((v): v is number => v !== null));
+   return <View style={{ gap: spacing.md, padding: spacing.lg, backgroundColor: colors.surfaceRaised, borderRadius: radii.xl }}>
+     <SectionHeading title="History" />
+     {story.kind ? <View accessibilityRole="radiogroup" accessibilityLabel="History measure" style={{ flexDirection: "row", flexWrap: "wrap", gap: spacing.lg }}>
+@@ -55,12 +55,12 @@
+     </View> : null}
+     {values.filter(v => v !== null).length >= 2 ? <>
+       <Text style={[typography.meta, { color: colors.mutedForeground }]}>{metric === "charges" ? currency + " per day" : unit + " per day · actual readings"}</Text>
+-      <View accessible accessibilityRole="image" accessibilityLabel={points.map((p, i) => date(p.end) + ": " + (values[i] === null ? "Usage not comparable" : metric === "charges" ? money(values[i], currency) + " per day" : number(values[i]!) + " " + unit + " per day")).join(". ")} style={{ height: 124, flexDirection: "row", alignItems: "flex-end", gap: spacing.xs }}>
+-        {points.map((p, i) => <View key={p.bill.id} style={{ flex: 1, height: 124, justifyContent: "flex-end", alignItems: "center" }}>
+-          {values[i] === null ? <Text style={[typography.meta, { color: colors.mutedForeground }]}>—</Text> : <View style={{ width: "76%", height: values[i] === 0 ? 1 : Math.max(2, values[i]! / max * 120), borderTopLeftRadius: 4, borderTopRightRadius: 4, backgroundColor: i === points.length - 1 ? colors.primary : colors.info }} />}
+-        </View>)}
+-      </View>
+-      <View style={{ flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between", gap: spacing.sm }}><Text style={[typography.caption, { color: colors.mutedForeground }]}>{date(points[0].end, true)}</Text><Text style={[typography.caption, { color: colors.mutedForeground }]}>{date(points[points.length - 1].end, true)}</Text></View>
++      <Text style={[typography.caption, { color: colors.mutedForeground }]}>Tap a bar to explore a saved period.</Text>
++      <StatementBarChart points={points.map((p, i) => ({
++        id: p.bill.id, label: date(p.end, true), period: date(p.start) + " – " + date(p.end), value: values[i],
++        formattedValue: values[i] === null ? "Usage not comparable" : metric === "charges" ? money(values[i], currency) + " / day" : number(values[i]!) + " " + unit + " / day",
++        detail: p.days + " days · " + (metric === "charges" ? money(p.minor, currency) + " period charges" : p.usage ? number(p.usage.amount) + " " + unit + " recorded usage" : "A matching actual reading is not saved for this period"),
++      }))} onOpen={onOpen} />
+     </> : <Text style={[typography.body, { color: colors.mutedForeground }]}>There aren’t two comparable actual readings yet. Charges remain available; missing usage is not treated as zero.</Text>}
+     <Text style={[typography.caption, { color: colors.mutedForeground }]}>{points.length} saved periods. Daily averages allow for different billing lengths.{gapDays > 0 ? " Gaps are not filled in." : ""}{excluded > 0 ? " Overlapping, unfinished or invalid periods and net credits are excluded." : ""}{older > 0 ? " Older statements remain below." : ""}{metric === "usage" && missingUsage > 0 ? " Missing, estimated or differently measured usage is excluded." : ""}</Text>
+     <Disclosure title="Period details" open={details} onPress={() => setDetails(value => !value)} />
+--- a/tests/ezgb.test.ts
++++ b/tests/ezgb.test.ts
+@@ -170,7 +170,7 @@
+   assert.equal(insight.history.length, 3);
+ });
+ 
+-test("EZGB analytics suppress implausible absolute kWh but preserve relative usage trends", () => {
++test("EZGB analytics suppress usage trends when meter scale is unvalidated", () => {
+   const statements = [
+     { id: "b1", providerId: "p1", providerName: "Elexicon Energy", category: "Electricity", categoryId: "electricity", amount: 100, periodStart: "2026-01-01", periodEnd: "2026-01-31", issueDate: null, usage: 500000, usageUnit: "kWh" },
+     { id: "b2", providerId: "p1", providerName: "Elexicon Energy", category: "Electricity", categoryId: "electricity", amount: 120, periodStart: "2026-02-01", periodEnd: "2026-02-28", issueDate: null, usage: 625000, usageUnit: "kWh" },
+@@ -180,7 +180,7 @@
+ 
+   assert.equal(insight.absoluteUsageReliable, false);
+   assert.equal(insight.usageUnit, null);
+-  assert.equal(insight.usageTrendPercent, 25);
+-  assert.equal(insight.history[0].usageIndex, 89);
+-  assert.equal(insight.history[1].usageIndex, 111);
++  assert.equal(insight.usageTrendPercent, null);
++  assert.equal(insight.history[0].usageIndex, null);
++  assert.equal(insight.history[1].usageIndex, null);
+ });
+--- /dev/null
++++ b/src/lib/ezgb/statement-history.ts
+@@ -0,0 +1,78 @@
++import type { UtilityStatementInput } from "./analytics";
++
++const dayMs = 86_400_000;
++function date(value: string | null): value is string {
++  if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
++  const time = Date.parse(value + "T00:00:00Z");
++  return Number.isFinite(time) && new Date(time).toISOString().slice(0, 10) === value;
++}
++function days(row: UtilityStatementInput, today: string) {
++  if (!date(today) || !date(row.periodStart) || !date(row.periodEnd) || row.periodStart > row.periodEnd || row.periodEnd >= today) return null;
++  return (Date.parse(row.periodEnd) - Date.parse(row.periodStart)) / dayMs + 1;
++}
++function unit(value: string | null) {
++  const normalized = value?.trim().toLowerCase();
++  return normalized === "kwh" ? "kWh" : normalized === "m3" || normalized === "m³" ? "m³" : normalized === "gj" ? "GJ" : normalized === "l" ? "L" : null;
++}
++function validUsage(row: UtilityStatementInput, expected: string | null) {
++  const amount = row.usage;
++  if (!expected || unit(row.usageUnit) !== expected || amount === null || !Number.isFinite(amount) || amount < 0) return false;
++  if (/estimated|mixed/i.test(row.readingQuality ?? "")) return false;
++  const compatible = row.categoryId === "electricity" ? expected === "kWh" : row.categoryId === "gas" ? ["m³", "GJ"].includes(expected) : row.categoryId === "water" && ["m³", "L"].includes(expected);
++  // Preserve the existing conservative multiplier check. Do not infer a scale.
++  return compatible && !(expected === "kWh" && amount > 20_000);
++}
++function percent(current: number, previous: number) {
++  return previous > 0 ? Math.round((current / previous - 1) * 1000) / 10 : null;
++}
++export type ConnectedPeriodComparison = {
++  latestDays: number; previousDays: number; gapDays: number;
++  latestUsagePerDay: number | null; previousUsagePerDay: number | null;
++  usageUnit: string | null; usageChangePercent: number | null;
++};
++
++export function connectedStatementHistory(rows: UtilityStatementInput[], today: string, complete: boolean) {
++  const unique = [...new Map(rows.map(row => [row.id, row])).values()];
++  const ordered = unique.sort((a, b) => (a.periodEnd ?? a.issueDate ?? "").localeCompare(b.periodEnd ?? b.issueDate ?? "") || a.id.localeCompare(b.id));
++  const durations = new Map(ordered.map(row => [row.id, days(row, today)]));
++  const overlaps = new Set(ordered.filter(row => date(row.periodStart) && date(row.periodEnd) && ordered.some(other => other.id !== row.id && date(other.periodStart) && date(other.periodEnd) && other.periodStart <= row.periodEnd! && other.periodEnd >= row.periodStart!)).map(row => row.id));
++  const currencies = new Set(ordered.map(row => row.currency ?? "CAD"));
++  const categories = new Set(ordered.map(row => row.categoryId));
++  const latest = ordered.at(-1), previous = ordered.at(-2);
++  const usablePeriod = (row: UtilityStatementInput) => durations.get(row.id) !== null && !overlaps.has(row.id);
++  const eligible = (row: UtilityStatementInput) => usablePeriod(row) && row.amount !== null && Number.isFinite(row.amount) && row.amount >= 0;
++  const comparisonAllowed = complete && currencies.size === 1 && categories.size === 1;
++  let comparison: ConnectedPeriodComparison | null = null;
++  if (latest && previous && comparisonAllowed && eligible(latest) && eligible(previous)) {
++    const latestDays = durations.get(latest.id)!, previousDays = durations.get(previous.id)!;
++    const expected = unit(latest.usageUnit);
++    const validPair = validUsage(latest, expected) && validUsage(previous, expected);
++    const latestUsagePerDay = validPair ? latest.usage! / latestDays : null;
++    const previousUsagePerDay = validPair ? previous.usage! / previousDays : null;
++    comparison = { latestDays, previousDays, gapDays: Math.max(0, (Date.parse(latest.periodStart!) - Date.parse(previous.periodEnd!)) / dayMs - 1),
++      latestUsagePerDay, previousUsagePerDay, usageUnit: validPair ? expected : null,
++      usageChangePercent: latestUsagePerDay !== null && previousUsagePerDay !== null ? percent(latestUsagePerDay, previousUsagePerDay) : null };
++  }
++  const latest12 = ordered.slice(-12);
++  const usageUnit = latest ? unit(latest.usageUnit) : null;
++  const usageRows = comparisonAllowed ? latest12.filter(row => usablePeriod(row) && validUsage(row, usageUnit)) : [];
++  // A weighted daily baseline respects different billing lengths and missing periods.
++  const totalDays = usageRows.reduce((sum, row) => sum + durations.get(row.id)!, 0);
++  const usageDailyAverage = usageRows.length >= 2 && totalDays ? usageRows.reduce((sum, row) => sum + row.usage!, 0) / totalDays : null;
++  const dailyUsage = new Map(usageRows.map(row => [row.id, row.usage! / durations.get(row.id)!]));
++  const note = !complete ? "Only part of your saved history is available. Refresh to check for the remaining statements."
++    : currencies.size > 1 || categories.size > 1 ? "These records contain different currencies or services. Review the statements separately."
++    : !latest ? "No statements are saved yet."
++    : durations.get(latest.id) === null ? "The latest statement has missing dates or a service period that has not ended. Its saved amount remains available."
++    : overlaps.has(latest.id) || (previous && overlaps.has(previous.id)) ? "The latest periods overlap. Review the statements for a correction or duplicate before comparing."
++    : latest.amount === null || !Number.isFinite(latest.amount) ? "The latest amount is unavailable. Open the statement to review its saved details."
++    : latest.amount < 0 || (previous?.amount !== null && previous?.amount !== undefined && previous.amount < 0) ? "A recent statement includes a net credit. A credit does not establish ongoing savings."
++    : !previous ? "Your first statement is saved. A second completed period lets you compare billing days and recorded usage."
++    : !comparison ? "The previous statement is missing comparable dates or an amount. You can still review both originals."
++    : null;
++  return { ordered, latest12, comparison, note, durations, eligible, comparisonAllowed, usageUnit,
++    dailyUsage, usageDailyAverage, usageCount: usageRows.length,
++    amountCount: latest12.filter(row => row.amount !== null && Number.isFinite(row.amount)).length,
++    recentSixComparable: comparisonAllowed && ordered.length >= 6 && ordered.slice(-6).every(eligible),
++    dailyUsageIndex: (id: string) => usageDailyAverage !== null && usageDailyAverage > 0 && dailyUsage.has(id) ? Math.round(dailyUsage.get(id)! / usageDailyAverage * 100) : null };
++}
+--- /dev/null
++++ b/apps/mobile/src/components/StatementBarChart.tsx
+@@ -0,0 +1,54 @@
++import { Feather } from "@expo/vector-icons";
++import { useState } from "react";
++import { Pressable, Text, View, useWindowDimensions } from "react-native";
++import { colors, layout, spacing, typography } from "@/theme/tokens";
++
++export type StatementChartPoint = {
++  id: string; label: string; period: string; value: number | null;
++  formattedValue: string; detail: string;
++};
++// Selection is by statement ID so corrected/reordered history keeps its identity.
++// Arrow controls provide full-sized alternatives to narrow monthly bars.
++export function StatementBarChart({ points, onOpen }: { points: StatementChartPoint[]; onOpen: (id: string) => void }) {
++  const [selectedId, setSelectedId] = useState<string | null>(null);
++  const { width, fontScale } = useWindowDimensions();
++  if (!points.length) return null;
++  const selected = points.find(point => point.id === selectedId) ?? points[points.length - 1];
++  const selectedIndex = points.indexOf(selected);
++  const max = Math.max(1, ...points.map(point => point.value !== null && Number.isFinite(point.value) ? Math.abs(point.value) : 0));
++  const stacked = width < 350 || fontScale > 1.3;
++  return <View style={{ gap: spacing.md }}>
++    <View style={{ height: 146, flexDirection: "row", alignItems: "flex-end", gap: spacing.xs }}>
++      {points.map((point, index) => <Pressable key={point.id} accessibilityRole="button"
++        accessibilityLabel={`${point.period}, ${point.formattedValue}`} accessibilityHint="Show this saved statement’s details"
++        accessibilityState={{ selected: point.id === selected.id }} onPress={() => setSelectedId(point.id)}
++        style={{ flex: 1, height: "100%", alignItems: "center", justifyContent: "flex-end", gap: spacing.xs }}>
++        {point.value === null || !Number.isFinite(point.value) ? <Text style={[typography.caption, { color: colors.mutedForeground }]}>—</Text> : <View style={{ width: "100%", maxWidth: 26, height: Math.max(2, Math.abs(point.value) / max * 118), borderRadius: 5, backgroundColor: point.id === selected.id ? colors.primary : colors.borderStrong }} />}
++        {index === 0 || index === points.length - 1 || points.length <= 4 ? <Text numberOfLines={1} style={{ fontSize: 10, color: colors.mutedForeground }}>{point.label.split(" ")[0]}</Text> : <View style={{ height: 12 }} />}
++      </Pressable>)}
++    </View>
++    <View style={{ borderTopWidth: 1, borderTopColor: colors.border, paddingTop: spacing.md, gap: spacing.sm }}>
++      <View style={{ flexDirection: stacked ? "column" : "row", alignItems: stacked ? "flex-start" : "center", gap: spacing.sm }}>
++        <View accessibilityLiveRegion="polite" style={{ flex: stacked ? undefined : 1, gap: spacing.xs }}>
++          <Text style={[typography.caption, { color: colors.mutedForeground }]}>{selected.period}</Text>
++          <Text style={[typography.section, { color: colors.foreground, fontVariant: ["tabular-nums"] }]}>{selected.formattedValue}</Text>
++          <Text style={[typography.caption, { color: colors.mutedForeground }]}>{selected.detail}</Text>
++        </View>
++        <View style={{ flexDirection: "row", alignSelf: stacked ? "flex-end" : "auto" }}>
++          {([-1, 1] as const).map(direction => {
++            const next = points[selectedIndex + direction];
++            return <Pressable key={direction} accessibilityRole="button" accessibilityLabel={direction < 0 ? "Previous statement" : "Next statement"}
++              accessibilityState={{ disabled: !next }} disabled={!next} onPress={() => next && setSelectedId(next.id)}
++              style={{ width: layout.touchMin, height: layout.touchMin, alignItems: "center", justifyContent: "center", opacity: next ? 1 : 0.3 }}>
++              <Feather name={direction < 0 ? "chevron-left" : "chevron-right"} size={20} color={colors.primary} />
++            </Pressable>;
++          })}
++        </View>
++      </View>
++      <Pressable accessibilityRole="button" accessibilityLabel={`View ${selected.label} statement`} onPress={() => onOpen(selected.id)}
++        style={{ minHeight: layout.touchMin, flexDirection: "row", alignItems: "center", gap: spacing.sm }}>
++        <Text style={[typography.body, { color: colors.primary, fontWeight: "600", flexShrink: 1 }]}>View statement</Text><Feather name="arrow-right" size={16} color={colors.primary} />
++      </Pressable>
++    </View>
++  </View>;
++}
+--- /dev/null
++++ b/tests/connected-statement-history.test.ts
+@@ -0,0 +1,81 @@
++import test from "node:test";
++import assert from "node:assert/strict";
++import { buildUtilityInsights, type UtilityStatementInput } from "../src/lib/ezgb/analytics";
++const today = "2026-10-08";
++const row = (id: string, start: string, end: string, amount: number | null, usage: number | null, extra: Partial<UtilityStatementInput> = {}): UtilityStatementInput => ({ id, providerId: "gas-account", providerName: "Enbridge Gas", category: "Natural Gas", categoryId: "gas", amount, periodStart: start, periodEnd: end, issueDate: null, usage, usageUnit: "m3", currency: "CAD", ...extra });
++const jan = row("jan", "2026-01-01", "2026-01-31", 124, 310);
++const feb = row("feb", "2026-02-01", "2026-02-28", 112, 280);
++const insight = (rows: UtilityStatementInput[], complete = true) => buildUtilityInsights(rows, [], { today, complete })[0];
++
++test("unequal periods do not manufacture a usage reduction", () => {
++ const value = insight([feb, jan]);
++ assert.equal(value.amountBasis, "amount_due");
++ assert.equal(value.periodComparison?.previousDays, 31);
++ assert.equal(value.periodComparison?.latestDays, 28);
++ assert.equal(value.periodComparison?.previousUsagePerDay, 10);
++ assert.equal(value.periodComparison?.latestUsagePerDay, 10);
++ assert.equal(value.periodComparison?.usageChangePercent, 0);
++ assert.deepEqual(value.history.map(p => p.dailyUsageIndex), [100, 100]);
++ assert.equal(value.usageTrendPercent, null); // Legacy clients do not get a false raw-usage trend.
++ assert.equal(value.latestVsPreviousPercent, -10); // Explicitly amount due, not consumption or savings.
++ assert.doesNotMatch(value.savingsSignal.body, /keep watching|avoidable usage|12-month|will keep comparing/);
++});
++test("one statement is useful without a fabricated comparison", () => {
++ const value = insight([jan]); assert.equal(value.latestBillAmount, 124); assert.equal(value.periodComparison, null);
++ assert.equal(value.recent3VsPrior3Percent, null); assert.equal(value.history[0].dailyUsageIndex, null);
++ assert.match(value.comparisonNote!, /first statement/);
++});
++test("gaps stay explicit and repeated IDs are not counted twice", () => {
++ const value = insight([jan, jan, row("apr", "2026-04-01", "2026-04-30", 120, 300)]);
++ assert.equal(value.statementCount, 2); assert.equal(value.periodComparison?.gapDays, 59);
++ assert.deepEqual(value.history.map(p => p.dailyUsageIndex), [100, 100]);
++});
++test("overlapping revisions are preserved but excluded from comparisons", () => {
++ const value = insight([jan, feb, { ...feb, id: "corrected" }]);
++ assert.equal(value.statementCount, 3); assert.equal(value.periodComparison, null);
++ assert.match(value.comparisonNote!, /overlap/);
++ assert.ok(value.history.every(p => p.dailyUsageIndex === null));
++});
++test("unknown, mismatched and estimated readings do not form a usage comparison", () => {
++ for (const extra of [{ usageUnit: "GJ" }, { usageUnit: null }, { usage: -1 }, { usage: NaN }, { readingQuality: "Estimated" }, { readingQuality: "mixed" }]) {
++  const value = insight([jan, { ...feb, ...extra }]);
++  assert.ok(value.periodComparison); assert.equal(value.periodComparison.usageChangePercent, null);
++  assert.equal(value.history[1].dailyUsageIndex, null);
++ }
++});
++test("equivalent unit spelling is supported without inventing conversions", () => {
++ const value = insight([jan, { ...feb, usageUnit: "m³" }]);
++ assert.equal(value.periodComparison?.usageUnit, "m³"); assert.equal(value.periodComparison?.usageChangePercent, 0);
++});
++test("zero usage remains zero and a zero baseline gets no percentage", () => {
++ const value = insight([{ ...jan, usage: 0 }, { ...feb, usage: 0, amount: 0 }]);
++ assert.equal(value.latestBillAmount, 0); assert.equal(value.periodComparison?.latestUsagePerDay, 0);
++ assert.equal(value.periodComparison?.usageChangePercent, null); assert.ok(value.history.every(p => p.dailyUsageIndex === null));
++});
++test("invalid, open, missing and credit statements keep amounts without unsafe comparison", () => {
++ for (const extra of [{ periodEnd: "2026-02-30" }, { periodEnd: today }, { periodStart: null }, { amount: null }, { amount: -10 }]) {
++  const value = insight([jan, { ...feb, ...extra }]);
++  assert.equal(value.periodComparison, null); assert.equal(value.latestVsPreviousPercent, null); assert.ok(value.comparisonNote);
++ }
++});
++test("partial history and mixed currency or service fail closed", () => {
++ for (const value of [insight([jan, feb], false), insight([jan, { ...feb, currency: "USD" }]), insight([jan, { ...feb, categoryId: "water" }])]) {
++  assert.equal(value.periodComparison, null); assert.equal(value.trailing12Total, null);
++  assert.ok(value.history.every(p => p.dailyUsageIndex === null)); assert.ok(value.comparisonNote);
++ }
++});
++test("a three-versus-three comparison requires all six complete amounts", () => {
++ const rows = Array.from({ length: 6 }, (_, i) => row(String(i), `2026-0${i + 1}-01`, `2026-0${i + 1}-20`, i < 3 ? 100 : 120, 200));
++ assert.equal(insight(rows).recent3VsPrior3Percent, 20);
++ assert.equal(insight(rows.slice(1)).recent3VsPrior3Percent, null);
++ assert.equal(insight(rows.map((r, i) => i === 1 ? { ...r, amount: null } : r)).recent3VsPrior3Percent, null);
++});
++test("amount coverage counts real amounts rather than silently treating missing as zero", () => {
++ const value = insight([jan, { ...feb, amount: null }]); assert.equal(value.amountStatementCount, 1);
++ assert.equal(value.trailing12Average, 124); assert.equal(value.trailing12Total, 124);
++});
++test("provider boundaries and electricity multiplier uncertainty are preserved", () => {
++ const values = buildUtilityInsights([jan, feb, { ...jan, providerId: "electric", categoryId: "electricity", usage: 500000, usageUnit: "kWh" }, { ...feb, providerId: "electric", categoryId: "electricity", usage: 600000, usageUnit: "kWh" }], [], { today });
++ assert.equal(values.length, 2); const electric = values.find(v => v.providerId === "electric")!;
++ assert.equal(electric.periodComparison?.usageChangePercent, null); assert.ok(electric.history.every(p => p.dailyUsageIndex === null));
++});

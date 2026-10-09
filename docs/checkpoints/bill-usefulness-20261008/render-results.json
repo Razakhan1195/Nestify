@@ -1,0 +1,224 @@
+{
+  "checks": [
+    {
+      "width": 320,
+      "scenario": "gas",
+      "overflow": false,
+      "errors": [],
+      "requests": [
+        "/api/mobile/v1/bills"
+      ]
+    },
+    {
+      "width": 320,
+      "scenario": "manual",
+      "overflow": false,
+      "errors": [],
+      "requests": []
+    },
+    {
+      "width": 320,
+      "scenario": "one",
+      "overflow": false,
+      "errors": [],
+      "requests": [
+        "/api/mobile/v1/bills"
+      ]
+    },
+    {
+      "width": 320,
+      "scenario": "partial",
+      "overflow": false,
+      "errors": [],
+      "requests": [
+        "/api/mobile/v1/bills"
+      ]
+    },
+    {
+      "width": 320,
+      "scenario": "electric",
+      "overflow": false,
+      "errors": [],
+      "requests": [
+        "/api/mobile/v1/bills",
+        "/api/mobile/v1/utilities/gas-account/intelligence",
+        "/api/mobile/v1/utilities/gas-account/comparison?request=0"
+      ]
+    },
+    {
+      "width": 320,
+      "scenario": "failure",
+      "overflow": false,
+      "errors": [],
+      "requests": [
+        "/api/mobile/v1/bills",
+        "/api/mobile/v1/bills"
+      ]
+    },
+    {
+      "width": 320,
+      "scenario": "empty",
+      "overflow": false,
+      "errors": [],
+      "requests": [
+        "/api/mobile/v1/bills"
+      ]
+    },
+    {
+      "width": 320,
+      "scenario": "loading",
+      "overflow": false,
+      "errors": [],
+      "requests": [
+        "/api/mobile/v1/bills"
+      ]
+    },
+    {
+      "width": 390,
+      "scenario": "gas",
+      "overflow": false,
+      "errors": [],
+      "requests": [
+        "/api/mobile/v1/bills"
+      ]
+    },
+    {
+      "width": 390,
+      "scenario": "manual",
+      "overflow": false,
+      "errors": [],
+      "requests": []
+    },
+    {
+      "width": 390,
+      "scenario": "one",
+      "overflow": false,
+      "errors": [],
+      "requests": [
+        "/api/mobile/v1/bills"
+      ]
+    },
+    {
+      "width": 390,
+      "scenario": "partial",
+      "overflow": false,
+      "errors": [],
+      "requests": [
+        "/api/mobile/v1/bills"
+      ]
+    },
+    {
+      "width": 390,
+      "scenario": "electric",
+      "overflow": false,
+      "errors": [],
+      "requests": [
+        "/api/mobile/v1/bills",
+        "/api/mobile/v1/utilities/gas-account/intelligence",
+        "/api/mobile/v1/utilities/gas-account/comparison?request=0"
+      ]
+    },
+    {
+      "width": 390,
+      "scenario": "failure",
+      "overflow": false,
+      "errors": [],
+      "requests": [
+        "/api/mobile/v1/bills",
+        "/api/mobile/v1/bills"
+      ]
+    },
+    {
+      "width": 390,
+      "scenario": "empty",
+      "overflow": false,
+      "errors": [],
+      "requests": [
+        "/api/mobile/v1/bills"
+      ]
+    },
+    {
+      "width": 390,
+      "scenario": "loading",
+      "overflow": false,
+      "errors": [],
+      "requests": [
+        "/api/mobile/v1/bills"
+      ]
+    },
+    {
+      "width": 430,
+      "scenario": "gas",
+      "overflow": false,
+      "errors": [],
+      "requests": [
+        "/api/mobile/v1/bills"
+      ]
+    },
+    {
+      "width": 430,
+      "scenario": "manual",
+      "overflow": false,
+      "errors": [],
+      "requests": []
+    },
+    {
+      "width": 430,
+      "scenario": "one",
+      "overflow": false,
+      "errors": [],
+      "requests": [
+        "/api/mobile/v1/bills"
+      ]
+    },
+    {
+      "width": 430,
+      "scenario": "partial",
+      "overflow": false,
+      "errors": [],
+      "requests": [
+        "/api/mobile/v1/bills"
+      ]
+    },
+    {
+      "width": 430,
+      "scenario": "electric",
+      "overflow": false,
+      "errors": [],
+      "requests": [
+        "/api/mobile/v1/bills",
+        "/api/mobile/v1/utilities/gas-account/intelligence",
+        "/api/mobile/v1/utilities/gas-account/comparison?request=0"
+      ]
+    },
+    {
+      "width": 430,
+      "scenario": "failure",
+      "overflow": false,
+      "errors": [],
+      "requests": [
+        "/api/mobile/v1/bills",
+        "/api/mobile/v1/bills"
+      ]
+    },
+    {
+      "width": 430,
+      "scenario": "empty",
+      "overflow": false,
+      "errors": [],
+      "requests": [
+        "/api/mobile/v1/bills"
+      ]
+    },
+    {
+      "width": 430,
+      "scenario": "loading",
+      "overflow": false,
+      "errors": [],
+      "requests": [
+        "/api/mobile/v1/bills"
+      ]
+    }
+  ],
+  "method": "Actual React Native components through React Native Web. Explicit synthetic fixtures and API/router/native boundary mocks. Not device acceptance."
+}

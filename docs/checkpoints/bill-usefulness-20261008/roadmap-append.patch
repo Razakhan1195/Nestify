@@ -1,0 +1,10 @@
+--- a/docs/beta-product-engineering-roadmap.md
++++ b/docs/beta-product-engineering-roadmap.md
+@@ -162,3 +162,7 @@
+ 
+ ## Current priorities — October 2 overnight
+ The previous “Hobby blocks ZDR” note is superseded: founder upgraded; live extraction succeeded, then the app's usage allowance paused the search. Discovery was corrected for the missed Enercare notice; billing-notice review, safe Gmail operations visibility and Gmail deletion cleanup added. No public release. See docs/release-readiness-2026-10-02.md for the prioritized roadmap, exact observed tests, remaining gates, build IDs and rollback. Existing core features require native acceptance; do not restart them from old September roadmap descriptions. Website/waitlist remains unchanged, scheduled pulls off, paid provider tests require approval.
++
++
++## Core feature quality — 2026-10-08
++First bill-usefulness slice implemented: truthful connected amount basis, comparable usage/day, selected-period charts for manual and connected history. Backend on staging; mobile development source updated; TestFlight unchanged. 61 unit tests, 24 rendered scenarios, hosted smoke/invitation readiness and both native bundle exports passed. Physical/provider acceptance remains. See docs/bill-usefulness-2026-10-08.md for exact scope, evidence, rollback and next import-to-insight milestone. Scheduled pulls remain off.

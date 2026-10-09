@@ -1,0 +1,4 @@
+Hosted empty-household Bills payload passed; no unrelated household data.
+{"status":400,"error":"You are already part of this household.","emailSendingConfigured":true,"emailsSent":0}
+Shared-expense invitation passed email readiness and rejected an invalid participant. Emails sent: 0.
+Disposable fixture removed
