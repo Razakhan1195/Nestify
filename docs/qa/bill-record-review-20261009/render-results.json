@@ -1,0 +1,113 @@
+{
+  "checks": [
+    {
+      "scenario": "choose",
+      "width": 320,
+      "errors": [],
+      "overflow": false
+    },
+    {
+      "scenario": "separate",
+      "width": 320,
+      "errors": [],
+      "overflow": false
+    },
+    {
+      "scenario": "lost",
+      "width": 320,
+      "errors": [],
+      "overflow": false
+    },
+    {
+      "scenario": "stale",
+      "width": 320,
+      "errors": [],
+      "overflow": false
+    },
+    {
+      "scenario": "offline",
+      "width": 320,
+      "errors": [],
+      "overflow": false
+    },
+    {
+      "scenario": "history",
+      "width": 320,
+      "errors": [],
+      "overflow": false
+    },
+    {
+      "scenario": "empty",
+      "width": 320,
+      "errors": [],
+      "overflow": false
+    },
+    {
+      "scenario": "disabled",
+      "width": 320,
+      "errors": [],
+      "overflow": false
+    },
+    {
+      "scenario": "basis",
+      "width": 320,
+      "errors": [],
+      "overflow": false
+    },
+    {
+      "scenario": "choose",
+      "width": 390,
+      "errors": [],
+      "overflow": false
+    },
+    {
+      "scenario": "separate",
+      "width": 390,
+      "errors": [],
+      "overflow": false
+    },
+    {
+      "scenario": "lost",
+      "width": 390,
+      "errors": [],
+      "overflow": false
+    },
+    {
+      "scenario": "stale",
+      "width": 390,
+      "errors": [],
+      "overflow": false
+    },
+    {
+      "scenario": "offline",
+      "width": 390,
+      "errors": [],
+      "overflow": false
+    },
+    {
+      "scenario": "history",
+      "width": 390,
+      "errors": [],
+      "overflow": false
+    },
+    {
+      "scenario": "empty",
+      "width": 390,
+      "errors": [],
+      "overflow": false
+    },
+    {
+      "scenario": "disabled",
+      "width": 390,
+      "errors": [],
+      "overflow": false
+    },
+    {
+      "scenario": "basis",
+      "width": 390,
+      "errors": [],
+      "overflow": false
+    }
+  ],
+  "method": "Actual statement record screen via React Native Web with synthetic fixtures, mocked API/router/native boundaries."
+}

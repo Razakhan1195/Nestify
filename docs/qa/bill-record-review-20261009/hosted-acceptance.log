@@ -1,0 +1,126 @@
+REQUEST GET /api/mobile/v1/vault/records?capabilities=1
+RESPONSE 200 731ms
+PASS Receipt batch is enabled in staging
+REQUEST POST /api/mobile/v1/vault/records
+RESPONSE 200 448ms
+PASS Receipt saved with original
+REQUEST PATCH /api/mobile/v1/vault/records?requestId=[fixture]
+RESPONSE 200 243ms
+PASS Lost-response recovery returns same receipt
+REQUEST GET /api/mobile/v1/vault/records?id=[fixture]&file=1
+RESPONSE 200 328ms
+PASS Original signed download available
+PASS Saved receipt bytes match uploaded PDF
+REQUEST POST /api/mobile/v1/vault/records
+RESPONSE 409 272ms
+PASS Renamed identical receipt resolves to existing record
+REQUEST POST /api/mobile/v1/bills/history/upload
+RESPONSE 200 541ms
+PASS Reviewed historical statement saved
+REQUEST PATCH /api/mobile/v1/bills/history/upload?requestId=[fixture]
+RESPONSE 200 194ms
+PASS Historical save replay returns same bill
+REQUEST POST /api/mobile/v1/bills/history/upload
+RESPONSE 409 227ms
+PASS Historical duplicate does not create another bill
+REQUEST GET /api/mobile/v1/bills/[fixture]/original
+RESPONSE 200 430ms
+PASS Bill original remains accessible
+PASS Saved bill original bytes match
+REQUEST GET /api/mobile/v1/bills
+RESPONSE 200 440ms
+PASS History returns reviewed charges without claiming payment
+REQUEST GET /api/mobile/v1/bills/[fixture]/records
+RESPONSE 200 160ms
+PASS Hosted review returns cross-source candidate
+REQUEST POST /api/mobile/v1/bills/[fixture]/records
+RESPONSE 200 172ms
+PASS Hosted explicit choice saved
+REQUEST POST /api/mobile/v1/bills/[fixture]/records
+RESPONSE 200 163ms
+PASS Hosted choice replay is idempotent
+REQUEST GET /api/mobile/v1/bills
+RESPONSE 200 366ms
+PASS Bills API uses effective records with provider relationship intact
+REQUEST GET /api/mobile/v1/bills?recordId=[fixture]
+RESPONSE 200 305ms
+PASS Excluded record remains directly accessible
+REQUEST GET /api/mobile/v1/bills/[fixture]/original
+RESPONSE 200 310ms
+PASS Original remains accessible after duplicate choice
+REQUEST GET /api/mobile/v1/home
+RESPONSE 200 312ms
+PASS Canonical read works: /api/mobile/v1/home
+REQUEST GET /api/mobile/v1/needs-you
+RESPONSE 200 301ms
+PASS Canonical read works: /api/mobile/v1/needs-you
+REQUEST GET /api/mobile/v1/providers/[fixture]
+RESPONSE 200 248ms
+PASS Canonical read works: /api/mobile/v1/providers/[fixture]
+REQUEST POST /api/mobile/v1/bills/[fixture]/records
+RESPONSE 409 177ms
+PASS Stale financial choice rejected by hosted API
+REQUEST GET /api/mobile/v1/bills/[fixture]/records
+RESPONSE 200 154ms
+PASS Revision reopens previous choice
+REQUEST GET /api/mobile/v1/bills/[fixture]/records
+RESPONSE 200 184ms
+PASS Prior financial value retained
+REQUEST GET /api/mobile/v1/bills
+RESPONSE 200 259ms
+PASS Changed statement restores both records to history
+REQUEST POST /api/mobile/v1/bills/[fixture]/records
+RESPONSE 200 145ms
+PASS Keep-both choice works after revision
+REQUEST GET /api/mobile/v1/bills/[fixture]/records
+RESPONSE 200 154ms
+REQUEST POST /api/mobile/v1/bills/[fixture]/records
+RESPONSE 400 163ms
+PASS Amount due cannot replace current-period charges
+REQUEST GET /api/mobile/v1/bills/[fixture]/original
+RESPONSE 404 174ms
+PASS Another account cannot download original
+REQUEST GET /api/mobile/v1/bills/[fixture]/records
+RESPONSE 404 183ms
+PASS Other user cannot read statement review
+REQUEST POST /api/mobile/v1/bills/[fixture]/records
+RESPONSE 403 175ms
+PASS Other user cannot change review
+{
+  "checks": [
+    "Receipt batch is enabled in staging",
+    "Receipt saved with original",
+    "Lost-response recovery returns same receipt",
+    "Original signed download available",
+    "Saved receipt bytes match uploaded PDF",
+    "Renamed identical receipt resolves to existing record",
+    "Reviewed historical statement saved",
+    "Historical save replay returns same bill",
+    "Historical duplicate does not create another bill",
+    "Bill original remains accessible",
+    "Saved bill original bytes match",
+    "History returns reviewed charges without claiming payment",
+    "Hosted review returns cross-source candidate",
+    "Hosted explicit choice saved",
+    "Hosted choice replay is idempotent",
+    "Bills API uses effective records with provider relationship intact",
+    "Excluded record remains directly accessible",
+    "Original remains accessible after duplicate choice",
+    "Canonical read works: /api/mobile/v1/home",
+    "Canonical read works: /api/mobile/v1/needs-you",
+    "Canonical read works: /api/mobile/v1/providers/[fixture]",
+    "Stale financial choice rejected by hosted API",
+    "Revision reopens previous choice",
+    "Prior financial value retained",
+    "Changed statement restores both records to history",
+    "Keep-both choice works after revision",
+    "Amount due cannot replace current-period charges",
+    "Another account cannot download original",
+    "Other user cannot read statement review",
+    "Other user cannot change review"
+  ],
+  "paidCalls": 0,
+  "emailsSent": 0,
+  "realCustomerDataChanged": false
+}
+Disposable users and uploaded originals removed.

@@ -1,0 +1,699 @@
+--- a/src/app/api/mobile/v1/bills/route.ts
++++ b/src/app/api/mobile/v1/bills/route.ts
+@@ -1,3 +1,4 @@
++import {effectiveBillTable,billRecordsEnabled} from "@/lib/product/bill-records";
+ import { readTelecomDetails, type TelecomBillDetails } from "../../../../../../apps/mobile/src/lib/telecom-bill";
+ import {currentReviewedEnergyEvidence} from "@/lib/product/statement-evidence";
+ import type {EnergyEvidence} from "../../../../../../apps/mobile/src/lib/energy-evidence";
+@@ -273,8 +274,10 @@
+ 
+   const uploadCapability = await supabase.rpc("rezlee_bill_upload_available");
+   const originalColumns = !uploadCapability.error && uploadCapability.data === true ? "original_document_id,original_storage_path," : "";
+-  const { data: bills, error, count } = await supabase
+-    .from("bills")
++  const recordId = new URL(request.url).searchParams.get("recordId");
++  if(recordId && !/^[a-f0-9-]{36}$/i.test(recordId))return NextResponse.json({error:"Invalid statement."},{status:400});
++  let billQuery = supabase
++    .from(recordId ? "bills" : effectiveBillTable())
+     .select(
+       `id,provider_id,name,amount,current_amount_due,amount_paid,payment_date,currency,due_date,issue_date,billing_period_start,billing_period_end,status,payment_status,autopay_status,autopay_scheduled_amount,autopay_scheduled_date,autopay_payment_method,recurrence,frequency,custom_provider_name,account_number_masked,usage_amount,usage_unit,notes,source,raw_data,${originalColumns}providers!bills_provider_id_fkey(display_name,name,provider_priority)`,
+       { count: "exact" },
+@@ -282,6 +285,8 @@
+     .eq("user_id", user.id)
+     .eq("home_id", home.id)
+     .order("due_date", { ascending: true, nullsFirst: false });
++  if(recordId)billQuery=billQuery.eq("id",recordId);
++  const {data:bills,error,count}=await billQuery;
+ 
+   if (error) {
+     return NextResponse.json({ error: "Could not load your bills." }, { status: 500 });
+@@ -477,6 +482,7 @@
+ 
+   return NextResponse.json({
+     bills: items,
++    billRecordReview: billRecordsEnabled(),
+     historyCoverage: { complete: count !== null && count === billRows.length, loadedCount: billRows.length, totalCount: count },
+     utilityInsights,
+     monthlyTotal,
+--- a/apps/mobile/app/bill/[id].tsx
++++ b/apps/mobile/app/bill/[id].tsx
+@@ -1,3 +1,4 @@
++import {BillRecordNotice} from "@/components/BillRecordNotice";
+ import { isTelecomCategory } from "@/lib/bill-review";
+ import {ScreenNavigation} from "@/components/ScreenNavigation";
+ import { editorial, QuietAction, ReadNotice } from "@/components/Brief";
+@@ -116,13 +117,14 @@
+     setError(null);
+     try {
+       const payload = await fetchBills();
+-      const found = !payload.needsOnboarding && payload.bills.find((item) => item.id === id);
++      let found = !payload.needsOnboarding && payload.bills.find((item) => item.id === id);
++       if(!found&&id){const direct=await fetchBills(id);found=!direct.needsOnboarding&&direct.bills.find(item=>item.id===id);}
+       if (!found) {
+         setError("This bill is no longer available.");
+         setBill(null);
+       } else {
+         setBill(found);
+-        const related = earlierBills(found, payload.bills);
++        const related = earlierBills(found, payload.needsOnboarding ? [] : payload.bills);
+         setHistory(related);
+       }
+     } catch (fetchError) {
+@@ -472,6 +474,7 @@
+           {isTelecomCategory(bill.category) ? <QuietAction label={bill.outcomeSummary ? "View tracked bill change" : "Track an agreed bill amount"} onPress={() => router.push({pathname:"/bill/outcome",params:{billId:bill.id}})} /> : null}
+         </View> : null}
+ 
++        <BillRecordNotice billId={bill.id}/>
+         <Surface
+           style={{
+             gap: spacing.sm,
+--- a/apps/mobile/src/lib/bills-data.ts
++++ b/apps/mobile/src/lib/bills-data.ts
+@@ -160,8 +160,8 @@
+   kind: "bill";
+   data: Record<string, unknown>;
+ };
+-export function fetchBills() {
+-  return apiGet<BillsPayload>("/api/mobile/v1/bills");
++export function fetchBills(recordId?:string) {
++  return apiGet<BillsPayload>("/api/mobile/v1/bills"+(recordId?"?recordId="+encodeURIComponent(recordId):""));
+ }
+ 
+ export function fetchBillCapabilities() {
+--- a/src/lib/assistant/home-context.ts
++++ b/src/lib/assistant/home-context.ts
+@@ -1,3 +1,4 @@
++import {effectiveBillTable} from "@/lib/product/bill-records";
+ import type { AssistantReference } from "./references";
+ import type { SupabaseClient } from "@supabase/supabase-js";
+ 
+@@ -100,7 +101,7 @@
+   const unavailable: string[] = [];
+   const scope = async <T>(table: string, columns: string) => {
+     try {
+-      let query = supabase.from(table).select(columns)
++      let query = supabase.from(table === "bills" ? effectiveBillTable() : table).select(columns)
+         .eq("user_id", userId).eq("home_id", home.id);
+       if (table === "bills") query = query
+         .order("billing_period_end", { ascending: false, nullsFirst: false })
+--- a/src/app/api/mobile/v1/home/route.ts
++++ b/src/app/api/mobile/v1/home/route.ts
+@@ -1,3 +1,4 @@
++import {effectiveBillTable} from "@/lib/product/bill-records";
+ import { homeAvailability, type HomeSource } from "@/lib/product/home-availability";
+ import { NextResponse } from "next/server";
+ 
+@@ -141,7 +142,7 @@
+       .order("provider_priority", { ascending: true, nullsFirst: false })
+       .then((result) => { if (result.error) { failures.push("providers"); return { data: [] }; } return result; }),
+     supabase
+-      .from("bills")
++      .from(effectiveBillTable())
+       .select(
+         "id,provider_id,name,amount,currency,due_date,status,paid_at,payment_status,source,raw_data,created_at,providers!bills_provider_id_fkey(display_name,name,provider_priority)",
+       )
+--- a/src/app/api/mobile/v1/needs-you/route.ts
++++ b/src/app/api/mobile/v1/needs-you/route.ts
+@@ -1,3 +1,4 @@
++import {effectiveBillTable} from "@/lib/product/bill-records";
+ import { NextResponse } from "next/server";
+ 
+ import { resolveAccessibleHome } from "@/lib/household/access";
+@@ -89,7 +90,7 @@
+       .order("provider_priority", { ascending: true, nullsFirst: false })
+       .then((result) => (result.error ? { data: [] } : result)),
+     supabase
+-      .from("bills")
++      .from(effectiveBillTable())
+       .select(
+         "id,provider_id,name,amount,currency,due_date,status,paid_at,payment_status,source,raw_data,created_at,providers!bills_provider_id_fkey(display_name,name,provider_priority)",
+       )
+--- a/src/app/api/mobile/v1/utilities/[providerId]/intelligence/route.ts
++++ b/src/app/api/mobile/v1/utilities/[providerId]/intelligence/route.ts
+@@ -1,3 +1,4 @@
++import {effectiveBillTable} from "@/lib/product/bill-records";
+ import { isElectricityProvider, supportedElectricityReading } from "@/lib/utility/service";
+ import type { SupabaseClient } from "@supabase/supabase-js";
+ import { NextResponse } from "next/server";
+@@ -129,7 +130,7 @@
+   }
+ 
+   const { data: billRows, error: billError } = await auth.supabase
+-    .from("bills")
++    .from(effectiveBillTable())
+     .select(
+       "id,amount,currency,billing_period_start,billing_period_end,raw_data",
+     )
+--- a/src/app/api/mobile/v1/utilities/[providerId]/comparison/route.ts
++++ b/src/app/api/mobile/v1/utilities/[providerId]/comparison/route.ts
+@@ -1,3 +1,4 @@
++import {effectiveBillTable} from "@/lib/product/bill-records";
+ import { isElectricityProvider, supportedElectricityReading } from "@/lib/utility/service";
+ import { NextResponse } from "next/server";
+ import { authenticateMobileRequest } from "@/lib/supabase/mobile";
+@@ -21,7 +22,7 @@
+     .eq("provider_id",providerId).eq("user_id",auth.user.id).eq("adapter","ezgb").maybeSingle();
+   if(integration.error) return NextResponse.json({error:"Could not load saved utility data."},{status:500});
+   if(!integration.data) return NextResponse.json({error:"Saved Green Button data was not found."},{status:404});
+-  const bills=await auth.supabase.from("bills")
++  const bills=await auth.supabase.from(effectiveBillTable())
+     .select("id,currency,billing_period_start,billing_period_end,raw_data")
+     .eq("provider_id",providerId).eq("user_id",auth.user.id).eq("home_id",integration.data.home_id)
+     .eq("source","ezgb").eq("status","archived")
+--- a/src/app/api/mobile/v1/providers/[id]/route.ts
++++ b/src/app/api/mobile/v1/providers/[id]/route.ts
+@@ -1,3 +1,4 @@
++import {effectiveBillTable} from "@/lib/product/bill-records";
+ import { telecomSummary } from "@/lib/sync/deck-telecom-runtime";
+ import { createAdminClient } from "@/lib/supabase/admin";
+ import { deckAdmission } from "@/lib/deck/admission";
+@@ -72,7 +73,7 @@
+     .maybeSingle();
+ 
+   const { data: latestBill } = await auth.supabase
+-    .from("bills")
++    .from(effectiveBillTable())
+     .select("id,name,amount,currency,due_date,status,created_at")
+     .eq("provider_id", provider.id)
+     .eq("user_id", auth.user.id)
+--- a/src/app/app/page.tsx
++++ b/src/app/app/page.tsx
+@@ -1,3 +1,4 @@
++import {effectiveBillTable} from "@/lib/product/bill-records";
+ import { isBillIncomplete } from "@/lib/product/rules";
+ import Link from "next/link";
+ import { redirect } from "next/navigation";
+@@ -335,7 +336,7 @@
+       .eq("home_id", home.id)
+       .order("provider_priority", { ascending: true, nullsFirst: false }),
+     supabase
+-      .from("bills")
++      .from(effectiveBillTable())
+       .select(
+         "id,provider_id,name,amount,currency,due_date,issue_date,billing_period_start,billing_period_end,pdf_available,status,source,raw_data,created_at,providers!bills_provider_id_fkey(display_name,name,provider_priority)",
+       )
+--- a/src/app/app/bills/page.tsx
++++ b/src/app/app/bills/page.tsx
+@@ -1,3 +1,4 @@
++import {effectiveBillTable} from "@/lib/product/bill-records";
+ import { FilterLinks } from "@/components/product/filter-links";
+ import { classifyBillStatus } from "@/lib/product/rules";
+ import { SubmitButton } from "@/components/submit-button";
+@@ -298,7 +299,7 @@
+   const home = await requireCurrentUserHome(user.id);
+   const [{ data: bills, error }, { data: providers }] = await Promise.all([
+     supabase
+-      .from("bills")
++      .from(effectiveBillTable())
+       .select(
+         "id,name,amount,currency,due_date,status,source,payment_status,recurrence,custom_provider_name,provider_id,raw_data,providers!bills_provider_id_fkey(display_name,name,provider_priority)",
+       )
+--- a/src/app/app/providers/[id]/page.tsx
++++ b/src/app/app/providers/[id]/page.tsx
+@@ -1,3 +1,4 @@
++import {effectiveBillTable} from "@/lib/product/bill-records";
+ import Link from "next/link";
+ import {
+   ArrowLeft,
+@@ -174,7 +175,7 @@
+       .order("created_at", { ascending: false })
+       .limit(5),
+     supabase
+-      .from("bills")
++      .from(effectiveBillTable())
+       .select(
+         "id,name,amount,currency,due_date,issue_date,billing_period_start,billing_period_end,account_number_masked,status,created_at",
+       )
+--- a/src/lib/insights/bill-intelligence.ts
++++ b/src/lib/insights/bill-intelligence.ts
+@@ -1,3 +1,4 @@
++import {effectiveBillTable} from "@/lib/product/bill-records";
+ import { getProviderSetupByPriority } from "@/lib/providers";
+ import {
+   billIntelligenceMigrationMessage,
+@@ -235,7 +236,7 @@
+   homeId: string,
+ ) {
+   const { data, error } = await supabase
+-    .from("bills")
++    .from(effectiveBillTable())
+     .select(
+       "id,user_id,home_id,provider_id,name,amount,currency,due_date,issue_date,billing_period_start,billing_period_end,usage_amount,usage_unit,pdf_available,detected_fees,line_items,source,status,created_at,providers!bills_provider_id_fkey(id,display_name,name,provider_priority,connection_status,health_status,sync_frequency,next_expected_bill_date)",
+     )
+@@ -250,7 +251,7 @@
+ 
+ async function fetchPreviousBill(supabase: Supabase, bill: IntelligenceBill) {
+   let query = supabase
+-    .from("bills")
++    .from(effectiveBillTable())
+     .select(
+       "id,user_id,home_id,provider_id,name,amount,currency,due_date,issue_date,billing_period_start,billing_period_end,usage_amount,usage_unit,pdf_available,detected_fees,line_items,source,status,created_at,providers!bills_provider_id_fkey(id,display_name,name,provider_priority)",
+     )
+@@ -699,7 +700,7 @@
+   }
+ 
+   const { data: latestBill } = await supabase
+-    .from("bills")
++    .from(effectiveBillTable())
+     .select("id,due_date,issue_date,created_at")
+     .eq("user_id", input.userId)
+     .eq("home_id", input.homeId)
+@@ -750,7 +751,7 @@
+ }) {
+   const supabase = input.supabase ?? (await createClient());
+   const { data: bills, error } = await supabase
+-    .from("bills")
++    .from(effectiveBillTable())
+     .select("id")
+     .eq("user_id", input.userId)
+     .eq("home_id", input.homeId)
+--- a/src/app/api/mobile/v1/bills/[id]/outcome/route.ts
++++ b/src/app/api/mobile/v1/bills/[id]/outcome/route.ts
+@@ -1,3 +1,4 @@
++import {effectiveBillTable} from "@/lib/product/bill-records";
+ import { randomUUID } from "node:crypto";
+ import { z } from "zod";
+ import { authenticateMobileRequest } from "@/lib/supabase/mobile";
+@@ -34,7 +35,7 @@
+   if (!isTelecomCategory(loaded.payload.category)) return { response: respond({ error: "Agreed-amount tracking currently supports saved internet and mobile statements. Utility usage savings need a different comparison." }, 409) };
+   const baseline = statement(loaded.bill, loaded.payload.category);
+   if (!baseline.provider.trim() || !baseline.account.trim()) return { response: respond({ error: "Add this statement’s provider and account nickname before tracking a change." }, 409) };
+-  const history = await auth.supabase.from("bills")
++  const history = await auth.supabase.from(effectiveBillTable())
+     .select("id,custom_provider_name,account_number_masked,currency,amount,billing_period_start,billing_period_end,original_document_id")
+     .eq("user_id", ctx.userId).eq("home_id", ctx.homeId).eq("source", "manual").eq("status", "archived").eq("currency", baseline.currency)
+     .eq("raw_data->>record_kind", "historical").eq("raw_data->>amount_basis", "period_charges").eq("raw_data->>category", baseline.category)
+--- /dev/null
++++ b/supabase/migrations/202610090001_bill_record_review.sql
+@@ -0,0 +1,143 @@
++-- Additive, owner-private evidence and explicitly confirmed duplicate choices.
++-- Existing bills, originals, provider identities and payment fields are not rewritten.
++create function public.rezlee_bill_snapshot(b public.bills) returns jsonb
++language sql immutable set search_path='' as $$
++ select jsonb_build_object('historical',b.status='archived','amount',b.amount,'currency',b.currency,'periodStart',b.billing_period_start,'periodEnd',b.billing_period_end,
++ 'issueDate',b.issue_date,'dueDate',b.due_date,'account',b.account_number_masked,'providerId',b.provider_id,'providerName',b.custom_provider_name,
++ 'source',b.source,'category',b.raw_data->>'category','amountBasis',case when b.source='ezgb' then 'amount_due_when_issued' else coalesce(b.raw_data->>'amount_basis','recorded_amount') end,
++ 'usage',b.usage_amount,'unit',b.usage_unit,'lineItems',b.line_items,'originalDocumentId',b.original_document_id,
++ 'evidence',b.raw_data->'statement_evidence','energyEvidence',b.raw_data->'statement_energy_evidence')
++$$;
++create function public.rezlee_bill_fingerprint(b public.bills) returns text
++language sql immutable set search_path='' as $$ select md5(public.rezlee_bill_snapshot(b)::text) $$;
++
++create table public.bill_record_versions (
++ id uuid primary key default gen_random_uuid(),
++ bill_id uuid not null references public.bills(id) on delete cascade,
++ user_id uuid not null references auth.users(id) on delete cascade,
++ home_id uuid not null references public.homes(id) on delete cascade,
++ snapshot jsonb not null, recorded_at timestamptz not null default now()
++);
++create index bill_record_versions_bill_idx on public.bill_record_versions(bill_id,recorded_at desc);
++alter table public.bill_record_versions enable row level security;
++create policy bill_record_versions_owner on public.bill_record_versions for select to authenticated using(user_id=auth.uid());
++grant select on public.bill_record_versions to authenticated;
++grant all on public.bill_record_versions to service_role;
++create function public.retain_rezlee_bill_version() returns trigger
++language plpgsql security definer set search_path='' as $$
++begin
++ if public.rezlee_bill_snapshot(old) is distinct from public.rezlee_bill_snapshot(new) then
++  insert into public.bill_record_versions(bill_id,user_id,home_id,snapshot)
++  values(old.id,old.user_id,old.home_id,public.rezlee_bill_snapshot(old));
++ end if;
++ return new;
++end $$;
++create trigger retain_rezlee_bill_version after update on public.bills for each row execute function public.retain_rezlee_bill_version();
++revoke all on function public.retain_rezlee_bill_version() from public,anon,authenticated;
++
++create table public.bill_record_choices (
++ user_id uuid not null references auth.users(id) on delete cascade,
++ home_id uuid not null references public.homes(id) on delete cascade,
++ first_bill_id uuid not null references public.bills(id) on delete cascade,
++ second_bill_id uuid not null references public.bills(id) on delete cascade,
++ selected_bill_id uuid references public.bills(id) on delete cascade,
++ first_fingerprint text not null, second_fingerprint text not null,
++ updated_at timestamptz not null default now(),
++ primary key(first_bill_id,second_bill_id),
++ check(first_bill_id<second_bill_id),
++ check(selected_bill_id is null or selected_bill_id in(first_bill_id,second_bill_id))
++);
++create index bill_record_choices_home_idx on public.bill_record_choices(user_id,home_id);
++alter table public.bill_record_choices enable row level security;
++create policy bill_record_choices_owner on public.bill_record_choices for select to authenticated using(user_id=auth.uid());
++grant select on public.bill_record_choices to authenticated;
++grant all on public.bill_record_choices to service_role;
++
++-- A changed amount/period/evidence invalidates a choice automatically. Nothing
++-- disappears because of a name match, and old clients keep their existing table.
++create view public.rezlee_effective_bills with (security_invoker=true) as
++ select b.* from public.bills b where not exists (
++  select 1 from public.bill_record_choices c
++  join public.bills x on x.id=c.first_bill_id
++  join public.bills y on y.id=c.second_bill_id
++  where b.id in(c.first_bill_id,c.second_bill_id) and c.selected_bill_id is not null and c.selected_bill_id<>b.id
++  and c.user_id=b.user_id and c.home_id=b.home_id
++  and c.first_fingerprint=public.rezlee_bill_fingerprint(x)
++  and c.second_fingerprint=public.rezlee_bill_fingerprint(y)
++ );
++grant select on public.rezlee_effective_bills to authenticated,service_role;
++
++create function public.choose_rezlee_bill_record(p_first uuid,p_second uuid,p_first_fingerprint text,p_second_fingerprint text,p_selected uuid)
++returns jsonb language plpgsql security definer set search_path='' as $$
++declare u uuid:=auth.uid(); a public.bills%rowtype; b public.bills%rowtype; first_id uuid;second_id uuid; losing uuid; f text; s text;
++begin
++ if u is null or not public.rezlee_account_active(u) then raise exception 'Sign in required' using errcode='42501';end if;
++ perform pg_advisory_xact_lock(hashtextextended(u::text,742));
++ select * into a from public.bills where id=p_first and user_id=u for update;
++ select * into b from public.bills where id=p_second and user_id=u for update;
++ if a.id is null or b.id is null or a.id=b.id or a.home_id<>b.home_id then raise exception 'Statements unavailable' using errcode='42501';end if;
++ if public.rezlee_bill_fingerprint(a) is distinct from p_first_fingerprint or public.rezlee_bill_fingerprint(b) is distinct from p_second_fingerprint then raise exception 'Statements changed' using errcode='40001';end if;
++ if p_selected is not null and p_selected not in(a.id,b.id) then raise exception 'Invalid choice' using errcode='22023';end if;
++ if p_selected is not null and (a.status<>'archived' or b.status<>'archived' or a.currency<>b.currency or a.billing_period_start is null or a.billing_period_end is null
++ or a.billing_period_start is distinct from b.billing_period_start or a.billing_period_end is distinct from b.billing_period_end)
++ then raise exception 'Periods differ' using errcode='22023';end if;
++ if p_selected is not null and ((public.rezlee_bill_snapshot(a)->>'amountBasis') not in ('period_charges','amount_due_when_issued','statement_total')
++ or (public.rezlee_bill_snapshot(a)->>'amountBasis') is distinct from (public.rezlee_bill_snapshot(b)->>'amountBasis'))
++ then raise exception 'Amounts describe different information' using errcode='22023';end if;
++ first_id:=least(a.id,b.id);second_id:=greatest(a.id,b.id);
++ f:=case when first_id=a.id then p_first_fingerprint else p_second_fingerprint end;
++ s:=case when second_id=b.id then p_second_fingerprint else p_first_fingerprint end;
++ if p_selected is not null then
++  losing:=case when p_selected=a.id then b.id else a.id end;
++  -- Do not create chains or conflicting choices. Stale choices no longer count.
++  if exists(select 1 from public.bill_record_choices c join public.bills x on x.id=c.first_bill_id join public.bills y on y.id=c.second_bill_id
++   where c.user_id=u and (c.first_bill_id,c.second_bill_id)<>(first_id,second_id)
++   and c.selected_bill_id is not null and c.first_fingerprint=public.rezlee_bill_fingerprint(x) and c.second_fingerprint=public.rezlee_bill_fingerprint(y)
++   and (c.selected_bill_id=losing or (p_selected in(c.first_bill_id,c.second_bill_id) and c.selected_bill_id<>p_selected)))
++  then raise exception 'Review the existing choice first' using errcode='40001';end if;
++ end if;
++ insert into public.bill_record_choices(user_id,home_id,first_bill_id,second_bill_id,selected_bill_id,first_fingerprint,second_fingerprint)
++ values(u,a.home_id,first_id,second_id,p_selected,f,s)
++ on conflict(first_bill_id,second_bill_id) do update set selected_bill_id=excluded.selected_bill_id,first_fingerprint=excluded.first_fingerprint,second_fingerprint=excluded.second_fingerprint,updated_at=now();
++ return jsonb_build_object('ok',true,'selectedBillId',p_selected);
++end $$;
++revoke all on function public.rezlee_bill_snapshot(public.bills),public.rezlee_bill_fingerprint(public.bills),public.choose_rezlee_bill_record(uuid,uuid,text,text,uuid) from public,anon;
++grant execute on function public.rezlee_bill_snapshot(public.bills),public.rezlee_bill_fingerprint(public.bills) to authenticated,service_role;
++grant execute on function public.choose_rezlee_bill_record(uuid,uuid,text,text,uuid) to authenticated;
++notify pgrst,'reload schema';
++
++create function public.rezlee_bill_record_summary(b public.bills) returns jsonb
++language sql stable set search_path='' as $$
++ select public.rezlee_bill_snapshot(b)||jsonb_build_object('id',b.id,'name',b.name,'fingerprint',public.rezlee_bill_fingerprint(b),
++ 'source',case when exists(select 1 from public.email_capture_jobs e where e.user_id=b.user_id and e.bill_id=b.id and e.status='saved') then 'email' when b.source='manual' and b.raw_data->>'reviewed_upload'='true' then 'upload' else b.source end,
++ 'providerName',coalesce(nullif(b.custom_provider_name,''),(select coalesce(p.display_name,p.name) from public.providers p where p.id=b.provider_id),b.raw_data->>'utility',b.name),
++ 'amountBasis',case when b.source='ezgb' then 'amount_due_when_issued' else coalesce(b.raw_data->>'amount_basis','recorded_amount') end)
++$$;
++revoke all on function public.rezlee_bill_record_summary(public.bills) from public,anon;
++grant execute on function public.rezlee_bill_record_summary(public.bills) to authenticated,service_role;
++create function public.get_rezlee_bill_records(p_bill uuid) returns jsonb
++language plpgsql stable security definer set search_path='' as $$
++declare u uuid:=auth.uid(); b public.bills%rowtype; candidates jsonb;choices jsonb;versions jsonb;
++begin
++ if u is null or not public.rezlee_account_active(u) then raise exception 'Sign in required' using errcode='42501';end if;
++ select * into b from public.bills where id=p_bill and user_id=u;
++ if not found then raise exception 'Statement unavailable' using errcode='P0002';end if;
++ select coalesce(jsonb_agg(public.rezlee_bill_record_summary(x)),'[]'::jsonb) into candidates from (
++  select * from public.bills x where x.user_id=u and x.home_id=b.home_id and x.id<>b.id
++  and x.currency=b.currency and x.billing_period_start=b.billing_period_start and x.billing_period_end=b.billing_period_end
++  order by x.id limit 51
++ ) x;
++ select coalesce(jsonb_agg(jsonb_build_object('firstId',c.first_bill_id,'secondId',c.second_bill_id,'selectedId',c.selected_bill_id,
++ 'current',c.first_fingerprint=public.rezlee_bill_fingerprint(x) and c.second_fingerprint=public.rezlee_bill_fingerprint(y),
++ 'other',public.rezlee_bill_record_summary(case when b.id=x.id then y else x end))),'[]'::jsonb)
++ into choices from public.bill_record_choices c join public.bills x on x.id=c.first_bill_id join public.bills y on y.id=c.second_bill_id
++ where c.user_id=u and c.home_id=b.home_id and b.id in(c.first_bill_id,c.second_bill_id);
++ select coalesce(jsonb_agg(jsonb_build_object('id',v.id,'recordedAt',v.recorded_at,'snapshot',v.snapshot)),'[]'::jsonb)
++ into versions from (select * from public.bill_record_versions where bill_id=b.id and user_id=u order by recorded_at desc,id desc limit 21) v;
++ return jsonb_build_object('bill',public.rezlee_bill_record_summary(b),'candidates',candidates,'choices',choices,'versions',versions);
++end $$;
++revoke all on function public.get_rezlee_bill_records(uuid) from public,anon;
++grant execute on function public.get_rezlee_bill_records(uuid) to authenticated;
++notify pgrst,'reload schema';
++
++create index if not exists email_capture_bill_source_idx on public.email_capture_jobs(user_id,bill_id) where bill_id is not null;
+--- /dev/null
++++ b/supabase/migrations/202610090002_bill_record_conflict.sql
+@@ -0,0 +1,37 @@
++-- Expected review conflicts must not use PostgreSQL serialization failures.
++-- PostgREST can retry 40001 indefinitely; PT409 returns a bounded conflict.
++create or replace function public.choose_rezlee_bill_record(p_first uuid,p_second uuid,p_first_fingerprint text,p_second_fingerprint text,p_selected uuid)
++returns jsonb language plpgsql security definer set search_path='' as $$
++declare u uuid:=auth.uid(); a public.bills%rowtype; b public.bills%rowtype; first_id uuid;second_id uuid; losing uuid; f text; s text;
++begin
++ if u is null or not public.rezlee_account_active(u) then raise exception 'Sign in required' using errcode='42501';end if;
++ perform pg_advisory_xact_lock(hashtextextended(u::text,742));
++ select * into a from public.bills where id=p_first and user_id=u for update;
++ select * into b from public.bills where id=p_second and user_id=u for update;
++ if a.id is null or b.id is null or a.id=b.id or a.home_id<>b.home_id then raise exception 'Statements unavailable' using errcode='42501';end if;
++ if public.rezlee_bill_fingerprint(a) is distinct from p_first_fingerprint or public.rezlee_bill_fingerprint(b) is distinct from p_second_fingerprint then raise exception 'Statements changed' using errcode='PT409';end if;
++ if p_selected is not null and p_selected not in(a.id,b.id) then raise exception 'Invalid choice' using errcode='22023';end if;
++ if p_selected is not null and (a.status<>'archived' or b.status<>'archived' or a.currency<>b.currency or a.billing_period_start is null or a.billing_period_end is null
++ or a.billing_period_start is distinct from b.billing_period_start or a.billing_period_end is distinct from b.billing_period_end)
++ then raise exception 'Periods differ' using errcode='22023';end if;
++ if p_selected is not null and ((public.rezlee_bill_snapshot(a)->>'amountBasis') not in ('period_charges','amount_due_when_issued','statement_total')
++ or (public.rezlee_bill_snapshot(a)->>'amountBasis') is distinct from (public.rezlee_bill_snapshot(b)->>'amountBasis'))
++ then raise exception 'Amounts describe different information' using errcode='22023';end if;
++ first_id:=least(a.id,b.id);second_id:=greatest(a.id,b.id);
++ f:=case when first_id=a.id then p_first_fingerprint else p_second_fingerprint end;
++ s:=case when second_id=b.id then p_second_fingerprint else p_first_fingerprint end;
++ if p_selected is not null then
++  losing:=case when p_selected=a.id then b.id else a.id end;
++  -- Do not create chains or conflicting choices. Stale choices no longer count.
++  if exists(select 1 from public.bill_record_choices c join public.bills x on x.id=c.first_bill_id join public.bills y on y.id=c.second_bill_id
++   where c.user_id=u and (c.first_bill_id,c.second_bill_id)<>(first_id,second_id)
++   and c.selected_bill_id is not null and c.first_fingerprint=public.rezlee_bill_fingerprint(x) and c.second_fingerprint=public.rezlee_bill_fingerprint(y)
++   and (c.selected_bill_id=losing or (p_selected in(c.first_bill_id,c.second_bill_id) and c.selected_bill_id<>p_selected)))
++  then raise exception 'Review the existing choice first' using errcode='PT409';end if;
++ end if;
++ insert into public.bill_record_choices(user_id,home_id,first_bill_id,second_bill_id,selected_bill_id,first_fingerprint,second_fingerprint)
++ values(u,a.home_id,first_id,second_id,p_selected,f,s)
++ on conflict(first_bill_id,second_bill_id) do update set selected_bill_id=excluded.selected_bill_id,first_fingerprint=excluded.first_fingerprint,second_fingerprint=excluded.second_fingerprint,updated_at=now();
++ return jsonb_build_object('ok',true,'selectedBillId',p_selected);
++end $$;
++notify pgrst,'reload schema';
+--- /dev/null
++++ b/src/lib/product/bill-records.ts
+@@ -0,0 +1,3 @@
++/** Kept behind the deployment gate until the additive migration is verified. */
++export const billRecordsEnabled = () => process.env.REZLEE_BILL_RECORD_REVIEW === "true";
++export const effectiveBillTable = () => billRecordsEnabled() ? "rezlee_effective_bills" : "bills";
+--- /dev/null
++++ b/apps/mobile/src/lib/bill-record-review.ts
+@@ -0,0 +1,35 @@
++export type BillRecord = {
++ historical:boolean;id:string;name:string;providerName:string|null;providerId:string|null;account:string|null;source:string|null;category:string|null;
++ fingerprint:string;amount:number|null;currency:string;amountBasis:string;periodStart:string|null;periodEnd:string|null;issueDate:string|null;dueDate:string|null;
++ usage:number|null;unit:string|null;originalDocumentId:string|null;
++};
++export type BillRecordChoice={firstId:string;secondId:string;selectedId:string|null;current:boolean;other:BillRecord};
++export type BillRecordPayload={enabled:boolean;bill:BillRecord;candidates:BillRecord[];choices:BillRecordChoice[];versions:Array<{id:string;recordedAt:string;snapshot:BillRecord}>;moreCandidates?:boolean;moreVersions?:boolean};
++const normalized=(v:string|null|undefined)=>(v??"").toLowerCase().replace(/[^a-z0-9]/g,"");
++export function possibleBillCopy(a:BillRecord,b:BillRecord){
++ if(!a.historical||!b.historical||a.id===b.id||!a.periodStart||!a.periodEnd||a.periodStart!==b.periodStart||a.periodEnd!==b.periodEnd||a.currency!==b.currency)return false;
++ if(!(a.providerId&&a.providerId===b.providerId)&&(!normalized(a.providerName)||normalized(a.providerName)!==normalized(b.providerName)))return false;
++ const x=(a.account??"").replace(/\D/g,""),y=(b.account??"").replace(/\D/g,"");
++ if(x.length>=4&&y.length>=4){if(x.length>4&&y.length>4)return x===y;return x.slice(-4)===y.slice(-4);}
++ // Missing/label-only account identity is a candidate for review, never proof.
++ return !a.category||!b.category||normalized(a.category)===normalized(b.category);
++}
++export function unresolvedBillCopies(data:BillRecordPayload){
++ return data.candidates.filter(candidate=>possibleBillCopy(data.bill,candidate)&&!data.choices.some(c=>c.current&&c.other.id===candidate.id));
++}
++export function canCountBillOnce(a:BillRecord,b:BillRecord){return a.historical&&b.historical&&a.currency===b.currency&&Boolean(a.periodStart&&a.periodEnd)&&a.periodStart===b.periodStart&&a.periodEnd===b.periodEnd&&a.amountBasis===b.amountBasis&&["period_charges","amount_due_when_issued","statement_total"].includes(a.amountBasis);}
++export function recordSource(b:BillRecord){return b.source==="ezgb"?"Green Button":b.source==="deck"?"Provider connection":b.source==="email"?"Email":b.source==="upload"?"Uploaded statement":"Saved bill";}
++export function recordAmountLabel(b:Pick<BillRecord,"amountBasis">){return b.amountBasis==="period_charges"?"Period charges":b.amountBasis==="amount_due_when_issued"?"Amount due when issued":b.amountBasis==="statement_total"?"Statement total":"Recorded amount";}
++export function recordMoney(b:Pick<BillRecord,"amount"|"currency">){
++ if(b.amount===null||!Number.isFinite(Number(b.amount)))return "Not recorded";
++ try{return new Intl.NumberFormat("en-CA",{style:"currency",currency:b.currency}).format(Number(b.amount));}catch{return String(b.amount)+" "+b.currency;}
++}
++export function recordChanges(before:BillRecord,after:BillRecord){
++ const fields:Array<[keyof BillRecord,string]>=[["amount","Amount"],["currency","Currency"],["periodStart","Period start"],["periodEnd","Period end"],["issueDate","Issue date"],["dueDate","Due date"],["usage","Usage"],["unit","Unit"],["account","Account"],["originalDocumentId","Original"]];
++ return fields.filter(([key])=>before[key]!==after[key]).map(([key,label])=>({label,before:key==="amount"?recordMoney(before):key==="originalDocumentId"?(before[key]?"Attached":"None") :String(before[key]??"Not recorded"),after:key==="amount"?recordMoney(after):key==="originalDocumentId"?(after[key]?"Attached":"None"):String(after[key]??"Not recorded")}));
++}
++
++export function recordPeriod(b:Pick<BillRecord,"periodStart"|"periodEnd">){
++ const display=(value:string|null)=>{if(!value||!/^\d{4}-\d{2}-\d{2}$/.test(value))return "Not recorded";const date=new Date(value+"T12:00:00Z");return Number.isFinite(date.getTime())?date.toLocaleDateString("en-CA",{month:"short",day:"numeric",year:"numeric",timeZone:"UTC"}):"Not recorded";};
++ return display(b.periodStart)+" – "+display(b.periodEnd);
++}
+--- /dev/null
++++ b/src/app/api/mobile/v1/bills/[id]/records/route.ts
+@@ -0,0 +1,23 @@
++import {authenticateMobileRequest} from "@/lib/supabase/mobile";
++import {billRecordsEnabled} from "@/lib/product/bill-records";
++import {z} from "zod";
++export const dynamic="force-dynamic";
++const respond=(data:unknown,status=200)=>Response.json(data,{status,headers:{"Cache-Control":"private, no-store"}});
++const choice=z.object({otherId:z.string().uuid(),fingerprint:z.string().regex(/^[a-f0-9]{32}$/),otherFingerprint:z.string().regex(/^[a-f0-9]{32}$/),selectedId:z.string().uuid().nullable()});
++export async function GET(request:Request,{params}:{params:Promise<{id:string}>}){
++ const auth=await authenticateMobileRequest(request);if(auth.error)return respond({error:auth.error.message},auth.error.status);
++ if(!billRecordsEnabled())return respond({enabled:false});
++ const {id}=await params;if(!z.string().uuid().safeParse(id).success)return respond({error:"Invalid statement."},400);
++ const result=await auth.supabase.rpc("get_rezlee_bill_records",{p_bill:id});
++ if(result.error)return respond({error:result.error.code==="P0002"?"This statement is no longer available.":"Could not load statement records. Try again."},result.error.code==="P0002"?404:503);
++ return respond({...result.data,enabled:true,moreCandidates:result.data.candidates.length>50,moreVersions:result.data.versions.length>20,candidates:result.data.candidates.slice(0,50),versions:result.data.versions.slice(0,20)});
++}
++export async function POST(request:Request,{params}:{params:Promise<{id:string}>}){
++ const auth=await authenticateMobileRequest(request);if(auth.error)return respond({error:auth.error.message},auth.error.status);
++ if(!billRecordsEnabled())return respond({error:"Statement review is unavailable right now. Your records are unchanged."},503);
++ const {id}=await params;const input=choice.safeParse(await request.json().catch(()=>null));
++ if(!z.string().uuid().safeParse(id).success||!input.success)return respond({error:"Check both statements before choosing."},400);
++ const v=input.data;const result=await auth.supabase.rpc("choose_rezlee_bill_record",{p_first:id,p_second:v.otherId,p_first_fingerprint:v.fingerprint,p_second_fingerprint:v.otherFingerprint,p_selected:v.selectedId});
++ if(result.error){const code=result.error.code;return respond({error:(code==="PT409"||code==="40001")?"One of these records or choices changed. Reload before choosing again.":code==="42501"?"These statements are no longer available to this account.":code==="22023"?"These records describe different periods, amounts or payment states. Keep them separate.":"Could not confirm this choice. Check the saved choice before retrying."},(code==="PT409"||code==="40001")?409:code==="42501"?403:code==="22023"?400:503);}
++ return respond(result.data);
++}
+--- /dev/null
++++ b/apps/mobile/src/components/BillRecordNotice.tsx
+@@ -0,0 +1,20 @@
++import {useCallback,useState} from "react";
++import {useFocusEffect,useRouter} from "expo-router";
++import {View,Text} from "react-native";
++import {QuietAction} from "./Brief";
++import {apiGet} from "@/lib/api";
++import {unresolvedBillCopies,type BillRecordPayload} from "@/lib/bill-record-review";
++import {colors,spacing,typography} from "@/theme/tokens";
++export function BillRecordNotice({billId}:{billId:string}){
++ const router=useRouter();const [data,setData]=useState<BillRecordPayload|null>(null),[failed,setFailed]=useState(false),[retry,setRetry]=useState(0);
++ // Retry intentionally restarts this focused lookup without changing the bill.
++ // eslint-disable-next-line react-hooks/exhaustive-deps
++ useFocusEffect(useCallback(()=>{let active=true;setFailed(false);void apiGet<BillRecordPayload>("/api/mobile/v1/bills/"+billId+"/records",{timeoutMs:10000}).then(r=>{if(active)setData(r);},()=>{if(active)setFailed(true);});return()=>{active=false;};},[billId,retry]));
++ if(failed)return <QuietAction label="Check statement records again" onPress={()=>setRetry(v=>v+1)}/>;
++ if(!data?.enabled)return null;
++ const copies=unresolvedBillCopies(data),changed=data.choices.some(c=>!c.current);
++ return <View style={{gap:spacing.sm}}>
++  {copies.length||changed?<Text style={[typography.body,{color:colors.mutedForeground}]}>{changed?"A record changed since your last choice. Check which version to count.":"Another saved record may cover this statement. Compare them before counting both."}</Text>:null}
++  <QuietAction label={copies.length||changed?"Review statement copies":"Originals & changes"} onPress={()=>router.push({pathname:"/bill/records",params:{billId}})}/>
++ </View>;
++}
+--- /dev/null
++++ b/apps/mobile/app/bill/records.tsx
+@@ -0,0 +1,58 @@
++import {useCallback,useRef,useState} from "react";
++import {useFocusEffect,useLocalSearchParams,useRouter} from "expo-router";
++import {ActivityIndicator,Alert,Linking,Pressable,ScrollView,Text,View} from "react-native";
++import {SafeAreaView} from "react-native-safe-area-context";
++import {ScreenNavigation} from "@/components/ScreenNavigation";
++import {Surface} from "@/components/ui/Surface";
++import {Button} from "@/components/Button";
++import {QuietAction,BriefRow} from "@/components/Brief";
++import {apiGet,apiPost,ApiError} from "@/lib/api";
++import {canCountBillOnce,recordPeriod,recordAmountLabel,recordChanges,recordMoney,recordSource,unresolvedBillCopies,type BillRecord,type BillRecordPayload} from "@/lib/bill-record-review";
++import {colors,spacing,typography} from "@/theme/tokens";
++export default function BillRecords(){const {billId}=useLocalSearchParams<{billId:string}>();return <Records key={billId} id={billId}/>;}
++function Records({id}:{id:string}){
++ const router=useRouter(),lock=useRef(false);const [data,setData]=useState<BillRecordPayload|null>(null),[loading,setLoading]=useState(true),[busy,setBusy]=useState(false),[error,setError]=useState<string|null>(null),[success,setSuccess]=useState<string|null>(null),[other,setOther]=useState<BillRecord|null>(null),[selected,setSelected]=useState<string|null>(null),[history,setHistory]=useState(false);
++ const endpoint="/api/mobile/v1/bills/"+encodeURIComponent(id)+"/records";
++ const load=useCallback(async()=>{setLoading(true);setError(null);try{setData(await apiGet<BillRecordPayload>(endpoint,{timeoutMs:15000}));setOther(null);setSelected(null);}catch(e){setError(e instanceof ApiError?e.message:"Could not load statement records. Check your connection and try again.");}finally{setLoading(false);}},[endpoint]);
++ useFocusEffect(useCallback(()=>{void load();},[load]));
++ async function original(b:BillRecord){if(lock.current)return;lock.current=true;setBusy(true);setError(null);try{const r=await apiGet<{url:string}>("/api/mobile/v1/bills/"+b.id+"/original",{timeoutMs:15000});await Linking.openURL(r.url);}catch(e){setError(e instanceof ApiError?e.message:"Could not open the original. Try again.");}finally{lock.current=false;setBusy(false);}}
++ async function earlierOriginal(documentId:string){if(lock.current)return;lock.current=true;setBusy(true);setError(null);try{const r=await apiGet<{url:string}>("/api/mobile/v1/vault/records?id="+encodeURIComponent(documentId)+"&file=1",{timeoutMs:15000});await Linking.openURL(r.url);}catch(e){setError(e instanceof ApiError?e.message:"The earlier original is unavailable. It may have been removed from Vault.");}finally{lock.current=false;setBusy(false);}}
++ async function save(selectedId:string|null){if(!data||!other||lock.current)return;lock.current=true;setBusy(true);setError(null);try{await apiPost(endpoint,{otherId:other.id,fingerprint:data.bill.fingerprint,otherFingerprint:other.fingerprint,selectedId},{timeoutMs:20000});setSuccess(selectedId?"Choice saved. Only your selected record counts in bill history. Both originals are kept.":"Both records kept. Nothing was combined.");await load();}catch(e){setError(e instanceof ApiError?e.message:"Could not confirm this choice. Reload to check before retrying.");}finally{lock.current=false;setBusy(false);}}
++ function choose(b:BillRecord){setOther(b);setSelected(null);setSuccess(null);setError(null);}
++ const text=(value:string)=><Text style={[typography.body,{color:colors.mutedForeground}]}>{value}</Text>;
++ function card(b:BillRecord,selectable=false){return <Surface style={{gap:spacing.sm,...(selectable&&selected===b.id?{borderColor:colors.primary,borderWidth:2}:{})}}>
++  <Text style={[typography.caption,{color:colors.mutedForeground}]}>{recordSource(b)}</Text>
++  <Text style={[typography.section,{color:colors.foreground}]}>{b.providerName??b.name}</Text>
++  {b.account?text(b.account):text("Account not recorded")}
++  <View style={{gap:4}}><Text style={[typography.caption,{color:colors.mutedForeground}]}>{recordAmountLabel(b)}</Text><Text style={[typography.section,{color:colors.foreground}]}>{recordMoney(b)}</Text></View>
++  {text(recordPeriod(b))}
++  {b.originalDocumentId?<QuietAction label="Open original" disabled={busy} onPress={()=>void original(b)}/>:text("No original file attached")}
++  {selectable?<Pressable accessibilityRole="radio" accessibilityState={{checked:selected===b.id,disabled:busy}} disabled={busy} onPress={()=>setSelected(b.id)} style={{paddingVertical:spacing.md,minHeight:48}}><Text style={[typography.body,{fontWeight:"600",color:colors.primary}]}>{selected===b.id?"✓ Selected for history":"Use this record"}</Text></Pressable>:null}
++ </Surface>;}
++ const pending=data?.enabled?unresolvedBillCopies(data):[];
++ return <SafeAreaView edges={["left","right","bottom"]} style={{flex:1,backgroundColor:colors.background}}><ScreenNavigation title="Statement records" fallback={"/bill/"+id}/><ScrollView contentContainerStyle={{padding:spacing.xl,gap:spacing.lg}}>
++  {loading?<ActivityIndicator accessibilityLabel="Loading statement records"/>:null}
++  {error?<View style={{gap:spacing.sm}}><Text accessibilityRole="alert" style={[typography.body,{color:colors.criticalForeground}]}>{error}</Text><QuietAction label="Reload saved records" disabled={busy} onPress={()=>void load()}/></View>:null}
++  {!loading&&data&&!data.enabled?text("Statement review is unavailable right now. Your saved bills are unchanged."):null}
++  {!loading&&data?.enabled?<>
++   {success?<Text accessibilityLiveRegion="polite" style={[typography.body,{color:colors.primary}]}>{success}</Text>:null}
++   {other?<>
++    <Text style={[typography.section,{color:colors.foreground}]}>Compare saved records</Text>
++    {text(canCountBillOnce(data.bill,other)?"Check the account and original. If these are the same bill, choose one record for history. Both originals stay.":"These records describe different information. Keep both so charges, balances and utility data stay available.")}
++    {!canCountBillOnce(data.bill,other)?text("Different amount labels do not by themselves indicate an error."):null}
++    {card(data.bill,canCountBillOnce(data.bill,other))}{card(other,canCountBillOnce(data.bill,other))}
++    {canCountBillOnce(data.bill,other)?<Button label="Save selected record" disabled={busy||!selected} loading={busy} onPress={()=>{if(selected)Alert.alert("Count this record once?","The other copy stays accessible here. Shared expenses and payment records are unchanged.",[{text:"Cancel",style:"cancel"},{text:"Confirm choice",onPress:()=>void save(selected)}]);}}/>:null}
++    <QuietAction label={canCountBillOnce(data.bill,other)?"These are different bills":"Keep both records"} disabled={busy} onPress={()=>void save(null)}/>
++    <QuietAction label="Back to records" disabled={busy} onPress={()=>{setOther(null);setSelected(null);}}/>
++   </>:<>
++    {card(data.bill)}
++    {pending.length?<View style={{gap:spacing.sm}}><Text style={[typography.section,{color:colors.foreground}]}>Possible copies</Text>{text("Same provider and period. Confirm the account before combining.")}{pending.map(b=><BriefRow key={b.id} title={recordSource(b)+" · "+recordMoney(b)} detail={b.account??"Account not recorded"} onPress={()=>choose(b)}/>)}</View>:null}
++    {data.choices.map(c=><Surface key={c.other.id} tone="subtle" style={{gap:spacing.sm}}><Text style={[typography.section,{color:colors.foreground}]}>{!c.current?"Check your previous choice":c.selectedId?"Two records, counted once":"Both records kept"}</Text>{text(recordSource(c.other)+" · "+recordMoney(c.other))}{!c.current?text("A statement changed. Both records are visible again until you review the change."):null}{c.selectedId&&c.current?<QuietAction label="Open record used in history" disabled={busy} onPress={()=>router.push("/bill/"+c.selectedId)}/>:null}{c.other.originalDocumentId?<QuietAction label="Open other original" disabled={busy} onPress={()=>void original(c.other)}/>:null}<QuietAction label="Review or change choice" disabled={busy} onPress={()=>choose(c.other)}/></Surface>)}
++    <QuietAction label={history?"Hide change history":"View change history"} onPress={()=>setHistory(v=>!v)}/>
++    {history?<View style={{gap:spacing.md}}>{!data.versions.length?text("No changes recorded since change history was enabled. Earlier versions cannot be reconstructed."):text("Previous values are retained when a saved statement changes. A change does not by itself mean an error or a saving.")}{data.versions.map((v,i)=>{const next=i===0?data.bill:data.versions[i-1].snapshot;const changes=recordChanges(v.snapshot,next);return <Surface key={v.id} tone="subtle" style={{gap:spacing.sm}}><Text style={[typography.meta,{color:colors.foreground}]}>Changed {new Date(v.recordedAt).toLocaleDateString("en-CA")}</Text>{changes.length?changes.map(c=><View key={c.label} style={{gap:4}}><Text style={[typography.caption,{color:colors.mutedForeground}]}>{c.label}</Text>{text(c.before+" → "+c.after)}</View>):text("Supporting statement details changed.")}{v.snapshot.originalDocumentId&&v.snapshot.originalDocumentId!==next.originalDocumentId?<QuietAction label="Open earlier original" disabled={busy} onPress={()=>void earlierOriginal(v.snapshot.originalDocumentId!)}/>:null}</Surface>;})}{data.moreVersions?text("Showing the 20 most recent changes. Earlier saved versions are retained."):null}</View>:null}
++    {!pending.length&&!data.choices.length?text("No matching statement copies found in the checked history."):null}
++    {data.moreCandidates?text("Only the first 50 records for this period were checked. This is not a complete duplicate check."):null}
++   </>}
++  </>:null}
++ </ScrollView></SafeAreaView>;
++}
+--- /dev/null
++++ b/tests/bill-record-review.test.ts
+@@ -0,0 +1,17 @@
++import test from "node:test";import assert from "node:assert/strict";
++import {canCountBillOnce,possibleBillCopy,unresolvedBillCopies,recordChanges,recordAmountLabel,type BillRecord,type BillRecordPayload} from "../apps/mobile/src/lib/bill-record-review";
++const bill:BillRecord={historical:true,id:"a",name:"Gas",providerName:"Enbridge Gas",providerId:null,account:"Account ending 3083",source:"manual",category:"Gas",fingerprint:"a".repeat(32),amount:42,currency:"CAD",amountBasis:"period_charges",periodStart:"2026-09-01",periodEnd:"2026-09-30",issueDate:"2026-10-01",dueDate:null,usage:30,unit:"m3",originalDocumentId:null};
++test("possible copies require a matching provider and period; account endings never merge automatically",()=>{
++ const connected={...bill,id:"b",account:"•••• 3083",source:"ezgb",amount:52,amountBasis:"amount_due_when_issued"};assert.equal(possibleBillCopy(bill,connected),true);
++ for(const patch of [{currency:"USD"},{periodStart:"2026-08-01"},{providerName:"Other Gas"},{account:"•••• 5432"},{historical:false}])assert.equal(possibleBillCopy(bill,{...connected,...patch}),false);
++ assert.equal(possibleBillCopy({...bill,account:"123453083"},{...connected,account:"987653083"}),false);
++ assert.equal(canCountBillOnce(bill,connected),false);assert.equal(canCountBillOnce(bill,{...connected,amountBasis:"period_charges"}),true);
++ assert.equal(recordAmountLabel(bill),"Period charges");assert.equal(recordAmountLabel(connected),"Amount due when issued");
++});
++test("a keep-separate choice is respected until either record changes",()=>{
++ const other={...bill,id:"b"};const data:BillRecordPayload={enabled:true,bill,candidates:[other],choices:[{firstId:"a",secondId:"b",selectedId:null,current:true,other}],versions:[]};
++ assert.equal(unresolvedBillCopies(data).length,0);data.choices[0].current=false;assert.equal(unresolvedBillCopies(data).length,1);
++});
++test("change history explains recorded differences without asserting savings or paid state",()=>{
++ const changes=recordChanges(bill,{...bill,amount:40,usage:29});assert.deepEqual(changes.map(c=>c.label),["Amount","Usage"]);assert.equal(changes[0].before,"$42.00");assert.equal(changes[0].after,"$40.00");
++});
+--- /dev/null
++++ b/tests/bill-record-review-database.test.ts
+@@ -0,0 +1,51 @@
++import assert from "node:assert/strict";
++import test from "node:test";
++import {readFile,readdir} from "node:fs/promises";
++import {PGlite} from "@electric-sql/pglite";
++test("confirmed cross-source copies count once, revisions reopen review, evidence and tenant boundaries survive",async()=>{
++ const db=new PGlite();const a="11111111-1111-4111-8111-111111111111",b="22222222-2222-4222-8222-222222222222",ha="aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",hb="bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
++ const key=(n:number)=>`dddddddd-dddd-4ddd-8ddd-${String(n).padStart(12,"0")}`;
++ type RecordSummary={id:string;fingerprint:string;amount:number;source:string};
++ type State={bill:RecordSummary;choices:Array<{current:boolean;selectedId:string}>;versions:unknown[];candidates:RecordSummary[]};
++ const state=async(n:number)=>(await db.query<{r:State}>("select public.get_rezlee_bill_records($1) r",[key(n)])).rows[0].r;
++ const visible=async()=>(await db.query<{id:string}>("select id from public.rezlee_effective_bills order by id")).rows.map(x=>x.id);
++ const choose=async(x:RecordSummary,y:RecordSummary,selected:string|null)=>db.query("select public.choose_rezlee_bill_record($1,$2,$3,$4,$5)",[x.id,y.id,x.fingerprint,y.fingerprint,selected]);
++ try{
++  await db.exec(`create role anon;create role authenticated;create role service_role bypassrls;create schema auth;create schema storage;
++   create table auth.users(id uuid primary key,email text);
++   create function auth.uid() returns uuid language sql stable as $$select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid$$;
++   create table storage.buckets(id text primary key,name text,public boolean,file_size_limit bigint,allowed_mime_types text[]);
++   create table storage.objects(id uuid primary key default gen_random_uuid(),bucket_id text,name text);alter table storage.objects enable row level security;
++   create function storage.foldername(name text) returns text[] language sql immutable as $$select string_to_array(name,'/')$$;
++   grant usage on schema public,auth,storage to authenticated,service_role;`);
++  for(const file of ["supabase/schema.sql",...(await readdir("supabase/migrations")).filter(f=>f.endsWith(".sql")).sort().map(f=>"supabase/migrations/"+f)])
++   await db.exec((await readFile(file,"utf8")).replace(/create extension if not exists "pgcrypto";/g,""));
++  await db.exec(`grant select,insert,update,delete on public.homes,public.documents,public.bills to authenticated; grant select on public.providers to authenticated;
++   insert into auth.users values('${a}','a@example.invalid'),('${b}','b@example.invalid');
++   insert into public.homes(id,user_id,nickname) values('${ha}','${a}','A'),('${hb}','${b}','B');
++   set role authenticated;set request.jwt.claim.sub='${a}';`);
++
++  const insert=async(n:number,source="deck",period="2026-09-01",amount=42)=>db.query(`insert into public.bills(id,user_id,home_id,name,custom_provider_name,account_number_masked,currency,amount,billing_period_start,billing_period_end,payment_status,status,source,raw_data) values($1,$2,$3,'Synthetic gas statement','Enbridge Gas','Account ending 3083','CAD',$4,$5,'2026-09-30',null,'archived',$6,$7::jsonb)`,[key(n),a,ha,amount,period,source,JSON.stringify(source==="manual"?{category:"Gas",record_kind:"historical",amount_basis:"period_charges"}:{category:"Gas",amount_basis:"period_charges"})]);
++  await insert(1);await insert(2,"manual");await insert(3,"deck");
++  let x=(await state(1)).bill;const y=(await state(2)).bill;
++  assert.equal((await visible()).length,3,"candidates are not silently hidden");
++  await choose(x,y,x.id);await choose(x,y,x.id);assert.deepEqual(await visible(),[key(1),key(3)],"idempotent choice counts once");
++  assert.equal((await db.query("select id from public.bills")).rows.length,3,"no source record deleted");
++  assert.equal((await state(2)).choices[0].selectedId,x.id,"excluded record stays accessible");
++  await assert.rejects(choose(x,(await state(3)).bill,key(3)),/existing choice/);
++  await choose(x,y,null);assert.equal((await visible()).length,3,"undo restores both");
++  await choose(x,y,y.id);assert.deepEqual(await visible(),[key(2),key(3)]);
++  await db.query("update public.bills set amount=45 where id=$1",[key(1)]);
++  assert.equal((await visible()).length,3,"new provider revision is not hidden by an old choice");
++  assert.equal((await state(1)).choices[0].current,false);assert.equal((await state(1)).versions.length,1);
++  await assert.rejects(choose(x,y,y.id),(e:unknown)=>{assert.equal((e as {code:string}).code,"PT409");return /changed/.test(String(e));});
++  x=(await state(1)).bill;await choose(x,y,x.id);assert.deepEqual(await visible(),[key(1),key(3)]);
++  await db.query("update public.bills set updated_at=now() where id=$1",[key(1)]);assert.equal((await state(1)).versions.length,1,"unchanged refresh creates no noise");
++  await insert(5,"ezgb");await assert.rejects(choose(x,(await state(5)).bill,x.id),/different information/);
++  await insert(4,"ezgb","2026-08-01");await assert.rejects(choose(x,(await state(4)).bill,x.id),/Periods differ/);
++  await db.query("update public.bills set status='upcoming' where id=$1",[key(3)]);await assert.rejects(choose(x,(await state(3)).bill,x.id),/Periods differ/);
++  await db.exec(`set request.jwt.claim.sub='${b}'`);assert.equal((await visible()).length,0);assert.equal((await db.query("select * from public.bill_record_choices")).rows.length,0);assert.equal((await db.query("select * from public.bill_record_versions")).rows.length,0);await assert.rejects(state(1),/unavailable/);await assert.rejects(choose(x,y,x.id),/unavailable/);
++  await db.exec(`set request.jwt.claim.sub='${a}'`);await assert.rejects(db.query("delete from public.bill_record_choices"),/permission denied/);
++  await db.exec("reset role");await db.query("delete from auth.users where id=$1",[a]);assert.equal((await db.query("select * from public.bill_record_choices")).rows.length,0);assert.equal((await db.query("select * from public.bill_record_versions")).rows.length,0);
++ }finally{await db.close();}
++});

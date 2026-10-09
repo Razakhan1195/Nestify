@@ -1,0 +1,21 @@
+{
+  "head": "7fa766215273bacc9168ba05c2ba327746746a3f",
+  "files": {
+    "src/app/api/mobile/v1/bills/route.ts": "2c187d9d0efa20e8e94165bfd758b61540fb4e2b268047f9d310fd2d2b80c8fb",
+    "apps/mobile/app/bill/[id].tsx": "c7f1a1779120e4a6b17936fd5639e854ac47b17a56f84847325a1cc57f6326b8",
+    "apps/mobile/src/lib/bills-data.ts": "feb3e9b3d0d774b61e2903948bc46c64386833f7151b77f5223c8ad01be79672",
+    "src/lib/assistant/home-context.ts": "f49c07f49d5d6e089c2449dddadbdd0c091c19f2b51e60f0d2cca67a3b7f1d8f",
+    "src/app/api/mobile/v1/home/route.ts": "f46b755af59e755186989176fd0f029653e92002fdcf871c8c261e1b0e4a4e8d",
+    "src/app/api/mobile/v1/needs-you/route.ts": "a733a89fdfc771edd3d964c2faa447dae0a3bae9e060037557d9eac17fd31824",
+    "src/app/api/mobile/v1/utilities/[providerId]/intelligence/route.ts": "b90b76eb967f5d231ce76b489c27855b5e0c215a3ead0a32b11d562646cc5706",
+    "src/app/api/mobile/v1/utilities/[providerId]/comparison/route.ts": "204406d7e4ce1b5f257c74588f3e54b2e1e4777deddc03811379be4c17a9e1b8",
+    "src/app/api/mobile/v1/providers/[id]/route.ts": "7d8c1791a6f87da51d66836d8f6837691376ef3157d4c238015cd04697e52f49",
+    "src/app/app/page.tsx": "0f8f1236162f1273b975285e2c17d109d7605a25b309bd408b10d79288a11543",
+    "src/app/app/bills/page.tsx": "318f6b8ec7213638ac12982938fc8623858a6021f91744a6fc4d6a3a9c664c02",
+    "src/app/app/providers/[id]/page.tsx": "99fc8b714c505e5cda8e013d073aac8f8d289eb551ecd257a3b628095616af06",
+    "src/lib/insights/bill-intelligence.ts": "3e92acb8cad32f256b11edbd298c8a859365c2a1580c44b17f04a9cbf10189fe",
+    "src/app/api/mobile/v1/bills/[id]/outcome/route.ts": "0be8968d151f82dfbaf71155754ceb3767adcfbc566ce868cd7c78f828d6ee1d",
+    "src/app/api/mobile/v1/shared-expenses/route.ts": "d428acf8534a16b01f7ec55905470b2fc635157859ebdd4d262aae197e87469f"
+  },
+  "stagingRollback": "https://nestify-o7lv2nlz4-razakhan1195s-projects.vercel.app"
+}

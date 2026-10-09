@@ -1,0 +1,11 @@
+{
+  "url": "https://nestify-facnlgftm-razakhan1195s-projects.vercel.app",
+  "aliasApplied": true,
+  "productionChanged": false,
+  "alias": "https://staging.rezlee.com",
+  "stagingMigrations": [
+    "202610090001",
+    "202610090002"
+  ],
+  "scheduledUtilityPulls": "off"
+}

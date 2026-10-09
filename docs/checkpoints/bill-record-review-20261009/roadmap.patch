@@ -1,0 +1,12 @@
+--- a/docs/beta-product-engineering-roadmap.md
++++ b/docs/beta-product-engineering-roadmap.md
+@@ -172,3 +172,9 @@
+ The next bounded capture slice is complete: receipt originals and read state survive reopening, retries retain corrections, skipped receipts can resume, batch photos use existing local preparation, and confirmed Vault saves no longer appear failed after device-cleanup errors. Receipt duplicate protection was installed but disabled in staging; enabled it in the retained staging settings and Vercel Preview only. Hosted receipt/bill originals, exact duplicates, save replay and household isolation passed. 70 focused tests, 14 rendered interaction scenarios, 13 live staging assertions and both native bundle exports passed.
+ 
+ Mobile UI is in the development source (Metro 8082 running); TestFlight is unchanged. Physical camera/preview/offline acceptance remains. Exact email/manual receipt originals are covered; semantic duplicates, revised bills and cross-provider duplicates are not universally certified. Next: the remaining cross-source bill/revision review plus physical capture acceptance, then expense/repair completion. See docs/capture-recovery-2026-10-09.md. Production website, customer data and utility schedules unchanged.
++
++
++## Bill record review and revisions — 2026-10-09
++Historical cross-source statement review is staged: explicit count-once or keep-both, originals retained, changed evidence reopens choices and records prior values. Only comparable historical amount bases can be combined; Green Button amount due is not interchangeable with uploaded period charges. Canonical reads use confirmed choices; source imports, payment records and shared expenses remain intact.
++26 tests, 18 rendered interaction scenarios and 30 live staging assertions passed, plus root/mobile types, scoped lint, Next build and both native bundle exports. Hosted testing exposed and fixed a retrying serialization conflict; stale choices now return an immediate review conflict. No provider/AI calls or emails were sent. Staging alias is nestify-facnlgftm; mobile development source updated, TestFlight unchanged. Feature flag is staging/Preview only, scheduled pulls off, production untouched.
++Physical-device acceptance remains. No universal fuzzy matching, current-balance dedup or reconstruction of historical overwritten values is claimed. Next: existing shared-expense completion/recovery, then repair completion; native acceptance remains a release gate. See docs/bill-record-review-2026-10-09.md for scope, evidence and rollback.
