@@ -1,0 +1,9 @@
+{
+  "url": "https://nestify-o7lv2nlz4-razakhan1195s-projects.vercel.app",
+  "aliasApplied": true,
+  "productionChanged": false,
+  "alias": "https://staging.rezlee.com",
+  "receiptDedup": true,
+  "previewEnvironmentFlag": true,
+  "rollback": "https://nestify-j30htf3jw-razakhan1195s-projects.vercel.app"
+}

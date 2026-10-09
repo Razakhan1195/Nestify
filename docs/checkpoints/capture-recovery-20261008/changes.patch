@@ -1,0 +1,441 @@
+--- a/apps/mobile/app/receipt-batch.tsx
++++ b/apps/mobile/app/receipt-batch.tsx
+@@ -1,3 +1,6 @@
++import {CollectionAddSheet} from "@/components/CollectionUI";
++import {prepareAttachment} from "@/lib/prepare-attachment";
++import {statementReadFailure} from "@/lib/statement-reading";
+ import {useEffect,useRef,useState} from "react";
+ import {useRouter,useNavigation} from "expo-router";
+ import {usePreventRemove} from "expo-router/react-navigation";
+@@ -9,7 +12,7 @@
+ import {batchCounts,validBatchId,type ReceiptBatch,type ReceiptBatchItem,type ReceiptFields} from "@/lib/receipt-batch-core";
+ import {newVaultSaveRequestId} from "@/lib/vault-save-intent";
+ import {fetchOnboarding} from "@/lib/onboarding-data";
+-import {receiptSuggestions} from "@/lib/receipt-review";
++import {receiptSuggestions,mergeReceiptSuggestions,receiptReadLabel} from "@/lib/receipt-review";
+ import {apiGet,apiPatch,apiFormPost,ApiError} from "@/lib/api";
+ import {RECORD_FILE_TYPES,uploadMimeType,uploadValidationError} from "@/lib/upload-validation";
+ import {ScreenNavigation} from "@/components/ScreenNavigation";
+@@ -21,7 +24,6 @@
+ const endpoint="/api/mobile/v1/vault/records";
+ type FilePart=Pick<DocumentPicker.DocumentPickerAsset,"uri"|"name"|"mimeType"|"size">;
+ const empty:ReceiptFields={title:"",category:"Receipt",issued_on:"",expires_on:"",notes:""};
+-const labels={review:"Review details",submitting:"Save needs confirmation",needs_file:"Original needed",saved:"Saved",duplicate:"Already in Vault",blocked:"Needs review",skipped:"Skipped"};
+ export default function ReceiptBatchScreen(){const {session}=useAuth();return <Batch key={session?.user.id??"out"} userId={session?.user.id}/>;}
+ function Batch({userId}:{userId?:string}){
+  const router=useRouter(),navigation=useNavigation();
+@@ -32,12 +34,12 @@
+  const [fields,setFields]=useState<ReceiptFields>(empty),[dirty,setDirty]=useState(false),[reviewed,setReviewed]=useState(false);
+  const [files,setFiles]=useState<Record<string,FilePart>>({});
+  const [reload,setReload]=useState(0);
+- const [exit,setExit]=useState(false);
++ const [exit,setExit]=useState(false),[readConsent,setReadConsent]=useState(false),[options,setOptions]=useState(false);
+  useEffect(()=>{if(exit&&!busy)router.replace("/(tabs)/vault");},[exit,busy,router]);
+  useEffect(()=>{
+   let active=true;if(!userId)return;
+   void Promise.all([receiptBatches.read(userId),fetchOnboarding(),apiGet<{receiptBatch?:boolean}>(endpoint+"?capabilities=1",{timeoutMs:10000}),apiGet<{receiptExtraction?:boolean}>("/api/mobile/v1/ai/scan",{timeoutMs:10000}).catch(()=>null)])
+-   .then(([saved,setup,caps,scan])=>{if(!active)return;current.current=saved;setBatch(saved);setHome(setup.home&&setup.accessRole!=="member"?{id:setup.home.id,name:setup.home.nickname}:null);setAvailable(caps.receiptBatch===true);setAi(scan?.receiptExtraction===true);setError(null);})
++   .then(([saved,setup,caps,scan])=>{if(!active)return;current.current=saved;setBatch(saved);setFiles(Object.fromEntries((saved?.items??[]).filter(i=>i.file).map(i=>[i.requestId,i.file!])));setHome(setup.home&&setup.accessRole!=="member"?{id:setup.home.id,name:setup.home.nickname}:null);setAvailable(caps.receiptBatch===true);setAi(scan?.receiptExtraction===true);setError(null);})
+    .catch(()=>{if(active)setError("Could not load the batch and your home. Check your connection and try again.");})
+    .finally(()=>{if(active)setLoading(false);});
+   return()=>{active=false;};
+@@ -56,7 +58,7 @@
+   return persist({...current.current,items:current.current.items.map(i=>i.requestId===id?{...i,...patch}:i)});
+  }
+  function chooseItem(item:ReceiptBatchItem){
+-  const apply=()=>{setSelected(item.requestId);setFields(item.fields);setReviewed(false);setDirty(false);setError(null);};
++  const apply=()=>{setOptions(false);setSelected(item.requestId);setFields(item.fields);setReviewed(false);setDirty(false);setError(null);};
+   if(dirty)Alert.alert("Discard unsaved edits?","Save your draft to keep these changes.",[{text:"Keep editing",style:"cancel"},{text:"Discard",style:"destructive",onPress:apply}]);else apply();
+  }
+  async function pickBatch(){
+@@ -67,14 +69,16 @@
+    if(result.canceled)return;
+    if(result.assets.length>5){setError("Choose up to five receipts at a time. No files were added.");return;}
+    const items:ReceiptBatchItem[]=[];const chosen:Record<string,FilePart>={};
+-   for(const file of result.assets){
++   for(const asset of result.assets){
++    const prepared=await prepareAttachment({uri:asset.uri,name:asset.name,type:uploadMimeType(asset.name,asset.mimeType),size:asset.size});
++    const file={...prepared,mimeType:prepared.type};
+     const invalid=uploadValidationError(file.size,uploadMimeType(file.name,file.mimeType),RECORD_FILE_TYPES);
+     if(invalid){setError(file.name+": "+invalid+" No files were added.");return;}
+     const requestId=newVaultSaveRequestId();chosen[requestId]=file;
+-    items.push({requestId,name:file.name.slice(0,250),status:"review",readAttempted:false,fields:{...empty,title:file.name.replace(/\.[^.]+$/,"").slice(0,200)}});
++    items.push({requestId,name:file.name.slice(0,250),status:"review",readAttempted:false,file:{uri:file.uri,name:file.name,mimeType:file.mimeType,size:file.size},fields:{...empty,title:file.name.replace(/\.[^.]+$/,"").slice(0,200)}});
+    }
+    const saved=await persist({version:1,revision:0,homeId:home.id,homeName:home.name,items});
+-   setFiles(chosen);chooseItem(saved.items[0]);
++   setFiles(chosen);setReadConsent(true);chooseItem(saved.items[0]);
+   }catch{setError("Could not save the batch on this device. No receipts were submitted.");}
+   finally{lock.current=false;setBusy(false);}
+  }
+@@ -85,10 +89,15 @@
+   if(!item||lock.current)return;lock.current=true;setBusy(true);
+   try{
+    const result=await DocumentPicker.getDocumentAsync({type:RECORD_FILE_TYPES,copyToCacheDirectory:true});
+-   if(result.canceled)return;const chosen=result.assets[0];
+-   if(chosen.name!==item.name){setError("Choose the original named "+item.name+". Start a new batch for a different receipt.");return;}
++   if(result.canceled)return;const asset=result.assets[0];
++   const original={uri:asset.uri,name:asset.name,type:uploadMimeType(asset.name,asset.mimeType),size:asset.size};
++   // An in-flight save has an immutable fingerprint. Never re-encode its original.
++   const prepared=item.status==="review"?await prepareAttachment(original):original;
++   const chosen={...prepared,mimeType:prepared.type};
++   if(chosen.name!==item.name&&asset.name!==item.name){setError("Choose the original named "+item.name+". Start a new batch for a different receipt.");return;}
+    const invalid=uploadValidationError(chosen.size,uploadMimeType(chosen.name,chosen.mimeType),RECORD_FILE_TYPES);
+    if(invalid){setError(invalid);return;}
++   await updateItem(item.requestId,{file:{uri:chosen.uri,name:chosen.name,mimeType:chosen.mimeType,size:chosen.size}});
+    setFiles(previous=>({...previous,[item.requestId]:chosen}));setReviewed(false);setError(null);
+   }catch{setError("Could not select the original. Try again.");}
+   finally{lock.current=false;setBusy(false);}
+@@ -100,23 +109,34 @@
+   finally{lock.current=false;setBusy(false);}
+  }
+  async function read(){
+-  if(!item||!file||lock.current||item.readAttempted||!ai)return;
++  if(!item||!file||lock.current||!ai||!sameHome||item.status!=="review")return;
+   lock.current=true;setBusy(true);setError(null);setReviewed(false);
+   try{
+-   await updateItem(item.requestId,{readAttempted:true,fields});setDirty(false);
++   await updateItem(item.requestId,{readAttempted:true,readState:"reading",fields});setDirty(false);
+    const form=new FormData();form.append("kind","receipt");form.append("file",{uri:file.uri,name:file.name,type:uploadMimeType(file.name,file.mimeType)} as unknown as Blob);
+    const response=await apiFormPost<{data:Record<string,unknown>}>("/api/mobile/v1/ai/scan",form,{timeoutMs:55000});
+    const result=receiptSuggestions(response.data);
+-   if(!result){setError("This was not clearly one receipt. Enter the details yourself or skip this file.");return;}
++   if(!result){await updateItem(item.requestId,{readState:"failed",message:"We couldn’t identify a receipt. Try a clearer copy, or save the original with a title."});setError("We couldn’t identify a receipt. Try a clearer copy, or save the original with a title.");return;}
+    const {reviewNotes,...suggested}=result;
+-   const next={...suggested,category:"Receipt" as const};
+-   await updateItem(item.requestId,{fields:next,message:reviewNotes.join(" ").slice(0,500)});setFields(next);
+-  }catch{setError("Reading could not be confirmed. Your draft remains; enter or correct the details manually. No automatic AI retry will run.");}
+-  finally{lock.current=false;setBusy(false);}
+- }
+- async function submit(){
++   const next=mergeReceiptSuggestions(fields,{...suggested,category:"Receipt" as const},item.name);
++   await updateItem(item.requestId,{readState:"complete",fields:next,message:reviewNotes.join(" ").slice(0,500)});setFields(next);
++  }catch(e){
++   const message=statementReadFailure(e instanceof ApiError?e.status:undefined).replace(/Statement/g,"Receipt").replace(/statement/g,"receipt");
++   try{await updateItem(item.requestId,{readState:"failed",message});}catch{/* The last reading reference stays recoverable. */}
++   setError(message);
++  }
++  finally{lock.current=false;setBusy(false);}
++ }
++ // Auto-read only a newly selected batch, never a failed/interrupted read or a dirty draft.
++ useEffect(()=>{
++  if(!item||!file||!readConsent||!ai||!sameHome||busy||dirty||item.status!=="review"||item.readAttempted)return;
++  const timer=setTimeout(()=>void read(),0);return()=>clearTimeout(timer);
++  // read uses the current render; the state dependencies below cancel before dispatch.
++  // eslint-disable-next-line react-hooks/exhaustive-deps
++ },[item,file,readConsent,ai,sameHome,busy,dirty]);
++ async function submit(confirmed=false){
+   if(!item||lock.current||!sameHome||(item.status==="review"&&!available))return;
+-  if(item.status==="review"&&(!reviewed||!file||!fields.title.trim()))return;
++  if(item.status==="review"&&((!reviewed&&!confirmed)||!file||!fields.title.trim()))return;
+   lock.current=true;setBusy(true);setError(null);
+   const key=item.requestId;
+   try{
+@@ -124,7 +144,7 @@
+    if(item.status!=="review"){
+     try{
+      const saved=await apiPatch<{id:string}>(endpoint+"?requestId="+key,undefined,{timeoutMs:45000});
+-     await updateItem(key,{status:"saved",documentId:saved.id,message:undefined});setSelected(null);setDirty(false);return;
++     await updateItem(key,{status:"saved",documentId:saved.id,message:undefined,file:undefined});setSelected(null);setDirty(false);return;
+     }catch(e){
+      if(!(e instanceof ApiError&&[404,428].includes(e.status)))throw e;
+      if(e.status===428){
+@@ -146,11 +166,11 @@
+    if(originalExpected)form.append("expectedVersion",originalExpected);
+    form.append("file",{uri:file.uri,name:file.name,type:uploadMimeType(file.name,file.mimeType)} as unknown as Blob);
+    const response=await apiFormPost<{id:string}>(endpoint,form,{timeoutMs:45000});
+-   await updateItem(key,{status:"saved",documentId:response.id,message:undefined});setFiles(previous=>{const next={...previous};delete next[key];return next;});setSelected(null);setDirty(false);
++   await updateItem(key,{status:"saved",documentId:response.id,message:undefined,file:undefined});setFiles(previous=>{const next={...previous};delete next[key];return next;});setSelected(null);setDirty(false);
+   }catch(e){
+    try{
+     const detail=e instanceof ApiError&&e.details&&typeof e.details==="object"?e.details as {duplicateId?:unknown;recoveryRequestId?:unknown}:{};
+-    if(validBatchId(detail.duplicateId)){await updateItem(key,{status:"duplicate",documentId:detail.duplicateId,message:undefined});setSelected(null);setDirty(false);}
++    if(validBatchId(detail.duplicateId)){await updateItem(key,{status:"duplicate",documentId:detail.duplicateId,message:undefined,file:undefined});setSelected(null);setDirty(false);}
+     else if(validBatchId(detail.recoveryRequestId)){
+      await updateItem(key,{status:"blocked",message:"This original has an earlier unfinished save. Open it to finish before retrying this item."});
+      setError("An earlier save needs attention.");
+@@ -167,8 +187,15 @@
+  async function skip(){
+   if(!item||lock.current||item.status!=="review")return;
+   lock.current=true;setBusy(true);
+-  try{await updateItem(item.requestId,{status:"skipped"});setSelected(null);setDirty(false);}
++  try{await updateItem(item.requestId,{status:"skipped",fields});setSelected(null);setDirty(false);}
+   catch{setError("Could not skip this item. Try again.");}
++  finally{lock.current=false;setBusy(false);}
++ }
++ async function restoreSkipped(){
++  if(!item||item.status!=="skipped"||lock.current||!sameHome)return;
++  lock.current=true;setBusy(true);setError(null);
++  try{await updateItem(item.requestId,{status:"review"});setFields(item.fields);setReviewed(false);setDirty(false);}
++  catch{setError("Could not restore this receipt. Your other saved records are unchanged.");}
+   finally{lock.current=false;setBusy(false);}
+  }
+  function discardBatch(){
+@@ -188,43 +215,59 @@
+   catch{setError("Could not clear the completed batch. Saved records remain in Vault.");}
+   finally{lock.current=false;setBusy(false);}
+  }
++ async function showReceipts(){
++  if(lock.current)return;
++  if(dirty&&item){
++   lock.current=true;setBusy(true);
++   try{await updateItem(item.requestId,{fields});setDirty(false);}catch{setError("Could not keep these edits. Please stay here and try again.");return;}
++   finally{lock.current=false;setBusy(false);}
++  }
++  setSelected(null);setError(null);
++ }
++ function confirmRead(){Alert.alert("Read receipt?","Send this original to Rezlee’s document-reading service? Your entered details stay; only missing details are filled.",[{text:"Cancel",style:"cancel"},{text:"Read receipt",onPress:()=>void read()}]);}
+  function edit(key:keyof ReceiptFields,value:string){setFields(v=>({...v,[key]:value}));setDirty(true);setReviewed(false);}
+  if(!userId)return <SafeAreaView><Text>Sign in to manage receipt uploads.</Text><Button label="Sign in" onPress={()=>router.replace("/(auth)/login")}/></SafeAreaView>;
+  const counts=batch?batchCounts(batch):null;
+  return <SafeAreaView edges={["left","right","bottom"]} style={{flex:1,backgroundColor:colors.background}}>
+-  <ScreenNavigation title="Add receipts" fallback="/(tabs)/vault"/>
++  <ScreenNavigation title={item?"Review receipt":"Add receipts"} fallback="/(tabs)/vault"/>
+   <KeyboardAvoidingView style={{flex:1}} behavior={Platform.OS==="ios"?"padding":undefined}>
+   <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{padding:spacing.xl,gap:spacing.lg}}>
+    {loading?<ActivityIndicator accessibilityLabel="Loading receipt batch"/>:<>
+     {error?<Text accessibilityRole="alert" style={[typography.body,{color:colors.criticalForeground}]}>{error}</Text>:null}
+     {!available?<Text style={[typography.body,{color:colors.mutedForeground}]}>Batch saving is not available right now. Existing records are unchanged.</Text>:null}
+-    {!batch?<><Text style={[typography.section,{color:colors.foreground}]}>Keep your receipts together</Text><Text style={[typography.body,{color:colors.mutedForeground}]}>Choose up to five files, one receipt per file, up to 4 MB each. Review and save each separately. Originals stay private in Vault.</Text>{home?<Text style={[typography.caption,{color:colors.mutedForeground}]}>Saving to {home.name}</Text>:null}<Button label="Choose receipts" disabled={busy||!available||!home} onPress={()=>void pickBatch()}/>{error?<QuietAction label="Check again" onPress={()=>{setLoading(true);setReload(v=>v+1);}}/>:null}<QuietAction label="Add one record instead" onPress={()=>router.push("/vault-record")}/></>:<>
+-     <Text accessibilityLiveRegion="polite" style={[typography.body,{color:colors.foreground}]}>{counts!.saved} saved · {counts!.duplicates} already saved · {counts!.pending} unfinished{counts!.skipped?" · "+counts!.skipped+" skipped":""}</Text>
+-     <Text style={[typography.caption,{color:colors.mutedForeground}]}>For {batch.homeName}. Reviewed drafts are kept on this device. After restarting, you may need to choose originals again. AI reading does not retry automatically.</Text>
++    {!batch?<><Text style={[typography.section,{color:colors.foreground}]}>Keep your receipts together</Text><Text style={[typography.body,{color:colors.mutedForeground}]}>Choose up to five receipts. Rezlee reads the details; you review and save. Originals stay private in Vault.</Text>{home?<Text style={[typography.caption,{color:colors.mutedForeground}]}>Saving to {home.name}</Text>:null}<Text style={[typography.caption,{color:colors.mutedForeground}]}>{ai?"Files are sent to the document-reading service. PDFs up to 4 MB; photos are prepared on your device.":"Automatic reading is unavailable. You can still save each original with a title."}</Text><Button label="Choose receipts" disabled={busy||!available||!home} onPress={()=>void pickBatch()}/>{error?<QuietAction label="Check again" onPress={()=>{setLoading(true);setReload(v=>v+1);}}/>:null}<QuietAction label="Add one record instead" onPress={()=>router.push("/vault-record")}/></>:<>
++     {!item?<><Text accessibilityLiveRegion="polite" style={[typography.body,{color:colors.foreground}]}>{counts!.saved} saved · {counts!.duplicates} already saved · {counts!.pending} unfinished{counts!.skipped?" · "+counts!.skipped+" skipped":""}</Text>
++     <Text style={[typography.caption,{color:colors.mutedForeground}]}>For {batch.homeName}. Your drafts and selected files are kept on this device. If a file is no longer available, choose it again. Failed reading only retries when you ask.</Text>
+      {!sameHome?<Text accessibilityRole="alert" style={[typography.body,{color:colors.criticalForeground}]}>This batch belongs to a different home, or your home could not be verified. Return to the matching home before saving.</Text>:null}
+-     {batch.items.map((row,i)=><BriefRow key={row.requestId} title={(i+1)+". "+row.name} detail={labels[row.status]} onPress={()=>{if(!busy)chooseItem(row);}}/>)}
++     {batch.items.map((row,i)=><BriefRow key={row.requestId} title={(i+1)+". "+row.name} detail={receiptReadLabel(row)} onPress={()=>{if(!busy)chooseItem(row);}}/>)}</>:<View style={{flexDirection:"row",alignItems:"center",justifyContent:"space-between",gap:spacing.sm}}><QuietAction label="All receipts" disabled={busy} onPress={()=>void showReceipts()}/><Text style={[typography.caption,{color:colors.mutedForeground}]}>{batch.items.findIndex(row=>row.requestId===item.requestId)+1} of {batch.items.length}</Text></View>}
++     {item&&!sameHome?<Text accessibilityRole="alert" style={[typography.body,{color:colors.criticalForeground}]}>Return to {batch.homeName} before saving.</Text>:null}
+      {item?<View style={{gap:spacing.md}}>
+-      <Text style={[typography.section,{color:colors.foreground}]}>{item.name}</Text>
+-      {item.message?<Text style={[typography.body,{color:colors.mutedForeground}]}>{item.message}</Text>:null}
+-      {item.documentId?<QuietAction label="Open saved receipt" onPress={()=>router.push({pathname:"/vault-record",params:{id:item.documentId!}})}/>:item.status==="skipped"?<Text style={[typography.body,{color:colors.mutedForeground}]}>Not submitted to Vault.</Text>:<>
+-       <QuietAction label={file?"Choose original again":"Choose original"} disabled={busy||!sameHome} onPress={()=>void selectOriginal()}/>
+-       {file?<QuietAction label="Open selected file" disabled={busy} onPress={()=>void Linking.openURL(file.uri).catch(()=>setError("Preview unavailable. Check the original in Files before confirming."))}/>:null}
++      <Text style={[typography.caption,{color:colors.mutedForeground}]}>{item.name}</Text>
++      {item.message&&item.message!==error?<Text style={[typography.body,{color:colors.mutedForeground}]}>{item.message}</Text>:null}
++      {item.documentId?<QuietAction label="Open saved receipt" onPress={()=>router.push({pathname:"/vault-record",params:{id:item.documentId!}})}/>:item.status==="skipped"?<><Text style={[typography.body,{color:colors.mutedForeground}]}>Not submitted to Vault. Your draft is kept in this batch.</Text><Button label="Review this receipt" disabled={busy||!sameHome} onPress={()=>void restoreSkipped()}/></>:<>
++       {!file?<Button label="Choose original" variant="secondary" disabled={busy||!sameHome} onPress={()=>void selectOriginal()}/>:<QuietAction label="Original & reading" disabled={busy} onPress={()=>setOptions(true)}/>}
+        {item.status==="review"?<>
+-        {ai&&file?<Button label={item.readAttempted?"Reading attempted · review below":"Read with Rezlee"} variant="secondary" disabled={busy||item.readAttempted} onPress={()=>Alert.alert("Read receipt?","Send this original to Rezlee’s AI service? Suggested details replace the fields below and still need your review.",[{text:"Cancel",style:"cancel"},{text:"Read receipt",onPress:()=>void read()}])}/>:null}
++        {busy&&item.readState==="reading"?<View style={{gap:spacing.sm,paddingVertical:spacing.lg}}><ActivityIndicator accessibilityLabel="Reading receipt"/><Text accessibilityLiveRegion="polite" style={[typography.body,{color:colors.mutedForeground,textAlign:"center"}]}>Reading your receipt…</Text></View>:null}
++        {ai&&file&&item.readState!=="complete"?<Button label={item.readAttempted?"Retry reading":"Read receipt"} variant="secondary" disabled={busy||!sameHome} onPress={confirmRead}/>:null}
+         <TextField label="Receipt title" maxLength={200} value={fields.title} editable={!busy} onChangeText={v=>edit("title",v)}/>
+         <DateField label="Purchase date" optional value={fields.issued_on} onChange={v=>{if(!busy)edit("issued_on",v);}}/>
+-        <TextField label="Printed details and notes" maxLength={5000} multiline value={fields.notes} editable={!busy} onChangeText={v=>edit("notes",v)}/>
+-        <QuietAction label="Keep draft" disabled={busy||!dirty} onPress={()=>void saveDraft()}/>
+-        <Button variant="secondary" label={reviewed?"Details checked ✓":"Confirm details match the original"} disabled={busy||!file} onPress={()=>setReviewed(v=>!v)}/>
+-        <Button label={busy?"Working…":"Save this receipt"} disabled={busy||!sameHome||!available||!reviewed||!file||!fields.title.trim()} onPress={()=>void submit()}/>
++        <TextField label="Printed details and notes" style={{minHeight:120,textAlignVertical:"top",paddingTop:12}} maxLength={5000} multiline value={fields.notes} editable={!busy} onChangeText={v=>edit("notes",v)}/>
++        {dirty?<QuietAction label="Keep draft" disabled={busy} onPress={()=>void saveDraft()}/>:null}
++        <Text style={[typography.caption,{color:colors.mutedForeground}]}>Check the details before saving. Your original will be kept with this receipt.</Text>
++        <Button label={busy?"Working…":"Save this receipt"} disabled={busy||!sameHome||!available||!file||!fields.title.trim()} onPress={()=>void submit(true)}/>
+         <QuietAction label="Skip this receipt" disabled={busy} onPress={()=>Alert.alert("Skip this receipt?","This file will not be saved. Your other receipts are kept.",[{text:"Keep reviewing",style:"cancel"},{text:"Skip",onPress:()=>void skip()}])}/>
+        </>:<><Text style={[typography.body,{color:colors.mutedForeground}]}>Your submitted details are locked. Check the previous attempt before creating another copy.</Text><Button label={busy?"Checking…":"Check and finish save"} disabled={busy||!sameHome} onPress={()=>void submit()}/></>}
+       </>}
+      </View>:null}
+-     {counts!.pending>0?<QuietAction label="Remove unfinished batch from this device" disabled={busy} onPress={discardBatch}/>:null}
+-     {counts!.pending===0?<Button label="Done · return to Vault" disabled={busy} onPress={()=>void finish()}/>:null}
++     {!item&&counts!.pending>0?<QuietAction label="Remove unfinished batch from this device" disabled={busy} onPress={discardBatch}/>:null}
++     {!item&&counts!.pending===0?<Button label="Done · return to Vault" disabled={busy} onPress={()=>void finish()}/>:null}
+     </>}
+    </>}
+   </ScrollView></KeyboardAvoidingView>
++  <CollectionAddSheet visible={options} onClose={()=>setOptions(false)} title="Original & reading" choices={[
++   {key:"view",title:"View original",detail:item?.name??"Selected receipt",icon:"file-text",onPress:()=>{if(file)void Linking.openURL(file.uri).catch(()=>setError("Preview unavailable. Choose the original again if it is no longer on this device."));}},
++   {key:"choose",title:"Choose original again",detail:"Use this if the file is no longer available.",icon:"upload",onPress:()=>void selectOriginal()},
++   ...(ai&&file&&sameHome&&item?.status==="review"?[{key:"read",title:"Read again",detail:"Fill missing details while keeping your edits.",icon:"refresh-cw" as const,onPress:confirmRead}]:[]),
++  ]}/>
+  </SafeAreaView>;
+ }
+--- a/apps/mobile/app/bill/batch.tsx
++++ b/apps/mobile/app/bill/batch.tsx
+@@ -1,3 +1,4 @@
++import {prepareAttachment} from "@/lib/prepare-attachment";
+ import {energyEvidenceError} from "@/lib/energy-evidence";
+ import {statementUploadForm} from "@/lib/statement-upload-form";
+ import {StatementIntakeDetails} from "@/components/StatementIntakeDetails";
+@@ -79,7 +80,9 @@
+    if(result.canceled)return;
+    if(result.assets.length>5){setError("Choose up to five statements at a time. No files were added.");return;}
+    const items:StatementBatchItem[]=[];const chosen:Record<string,FilePart>={};
+-   for(const file of result.assets){
++   for(const asset of result.assets){
++    const prepared=await prepareAttachment({uri:asset.uri,name:asset.name,type:uploadMimeType(asset.name,asset.mimeType),size:asset.size});
++    const file={...prepared,mimeType:prepared.type};
+     const invalid=uploadValidationError(file.size,uploadMimeType(file.name,file.mimeType),RECORD_FILE_TYPES);
+     if(invalid){setError(file.name+": "+invalid+" No files were added.");return;}
+     const requestId=newVaultSaveRequestId();chosen[requestId]=file;
+@@ -101,8 +104,12 @@
+   if(!item||lock.current)return;lock.current=true;setBusy(true);
+   try{
+    const result=await DocumentPicker.getDocumentAsync({type:RECORD_FILE_TYPES,copyToCacheDirectory:true});
+-   if(result.canceled)return;const chosen=result.assets[0];
+-   if(chosen.name!==item.name){setError("Choose the original named "+item.name+". Start a new batch for a different statement.");return;}
++   if(result.canceled)return;const asset=result.assets[0];
++   const original={uri:asset.uri,name:asset.name,type:uploadMimeType(asset.name,asset.mimeType),size:asset.size};
++   // An in-flight save has an immutable fingerprint. Never re-encode its original.
++   const prepared=item.status==="review"?await prepareAttachment(original):original;
++   const chosen={...prepared,mimeType:prepared.type};
++   if(chosen.name!==item.name&&asset.name!==item.name){setError("Choose the original named "+item.name+". Start a new batch for a different statement.");return;}
+    const invalid=uploadValidationError(chosen.size,uploadMimeType(chosen.name,chosen.mimeType),RECORD_FILE_TYPES);
+    if(invalid){setError(invalid);return;}
+    await updateItem(item.requestId,{file:{uri:chosen.uri,name:chosen.name,mimeType:chosen.mimeType,size:chosen.size}});
+--- a/apps/mobile/app/vault-record.tsx
++++ b/apps/mobile/app/vault-record.tsx
+@@ -163,7 +163,7 @@
+    if(recordVersion.current)form.append("expectedVersion",recordVersion.current);
+    if(file)form.append("file",{uri:file.uri,name:file.name,type:uploadMimeType(file.name,file.mimeType)} as unknown as Blob);
+    const result=await apiFormPost<{id:string}>("/api/mobile/v1/vault/records",form,{timeoutMs:45000});
+-   if(recoveryReady&&userId)await vaultPending.forget(userId,saveRequestId.current);
++   if(recoveryReady&&userId){try{await vaultPending.forget(userId,saveRequestId.current);}catch{/* Confirmed server save: keep the recovery reference without reporting a failed save. */}}
+    setPendingSave(false);if(!id)setSavedRecordId(result.id);setSaved(true);
+   }catch(e){
+    if(e instanceof ApiError&&e.status===409&&e.details&&typeof e.details==="object"){
+--- a/apps/mobile/src/lib/receipt-batch-core.ts
++++ b/apps/mobile/src/lib/receipt-batch-core.ts
+@@ -1,10 +1,10 @@
+ export type ReceiptFields={title:string;category:"Receipt";issued_on:string;expires_on:string;notes:string};
+-export type ReceiptBatchItem={requestId:string;name:string;status:"review"|"submitting"|"needs_file"|"saved"|"duplicate"|"blocked"|"skipped";fields:ReceiptFields;readAttempted:boolean;documentId?:string;message?:string};
++export type ReceiptBatchItem={requestId:string;name:string;status:"review"|"submitting"|"needs_file"|"saved"|"duplicate"|"blocked"|"skipped";fields:ReceiptFields;readAttempted:boolean;readState?:"reading"|"complete"|"failed";file?:{uri:string;name:string;mimeType?:string;size?:number};documentId?:string;message?:string};
+ export type ReceiptBatch={version:1;revision:number;homeId:string;homeName:string;items:ReceiptBatchItem[]};
+ type Storage={getItemAsync(k:string):Promise<string|null>;setItemAsync(k:string,v:string):Promise<void>;deleteItemAsync(k:string):Promise<void>};
+ export const validBatchId=(v:unknown):v is string=>typeof v==="string"&&/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i.test(v);
+ export function parseReceiptBatch(raw:string|null):ReceiptBatch|null{
+- if(!raw||raw.length>40000)return null;
++ if(!raw||raw.length>100000)return null;
+  try{
+   const b=JSON.parse(raw);
+   if(b.version!==1||!Number.isSafeInteger(b.revision)||b.revision<0||!validBatchId(b.homeId)||typeof b.homeName!=="string"||b.homeName.length>200||!Array.isArray(b.items)||b.items.length<1||b.items.length>5)return null;
+@@ -15,10 +15,17 @@
+    if(i.documentId!==undefined&&!validBatchId(i.documentId))return null;
+    if(["saved","duplicate"].includes(i.status)&&!i.documentId)return null;
+    if(i.message!==undefined&&(typeof i.message!=="string"||i.message.length>500))return null;
++   if(i.readState!==undefined&&!["reading","complete","failed"].includes(i.readState))return null;
++   let file:ReceiptBatchItem["file"];
++   if(i.file!==undefined){
++    const v=i.file;
++    if(!v||typeof v.uri!=="string"||!v.uri.startsWith("file://")||v.uri.length>2000||typeof v.name!=="string"||v.name.length>250||v.mimeType!==undefined&&(typeof v.mimeType!=="string"||v.mimeType.length>100)||v.size!==undefined&&(!Number.isSafeInteger(v.size)||v.size<0||v.size>4*1024*1024))return null;
++    file={uri:v.uri,name:v.name,...(v.mimeType?{mimeType:v.mimeType}:{}),...(v.size!==undefined?{size:v.size}:{})};
++   }
+    const f=i.fields;
+    if(!f||f.category!=="Receipt")return null;
+    for(const [key,max] of Object.entries({title:200,issued_on:10,expires_on:10,notes:5000}))if(typeof f[key]!=="string"||f[key].length>max)return null;
+-   items.push({requestId:i.requestId,name:i.name,status:i.status,fields:{title:f.title,category:"Receipt",issued_on:f.issued_on,expires_on:f.expires_on,notes:f.notes},readAttempted:i.readAttempted,...(i.documentId?{documentId:i.documentId}:{}),...(i.message?{message:i.message}:{})});
++   items.push({requestId:i.requestId,name:i.name,status:i.status,fields:{title:f.title,category:"Receipt",issued_on:f.issued_on,expires_on:f.expires_on,notes:f.notes},readAttempted:i.readAttempted,...(i.readState?{readState:i.readState}:{}),...(file?{file}:{}),...(i.documentId?{documentId:i.documentId}:{}),...(i.message?{message:i.message}:{})});
+   }
+   return {version:1,revision:b.revision,homeId:b.homeId,homeName:b.homeName,items};
+  }catch{return null;}
+--- a/apps/mobile/src/lib/receipt-review.ts
++++ b/apps/mobile/src/lib/receipt-review.ts
+@@ -1,3 +1,4 @@
++import type {ReceiptFields,ReceiptBatchItem} from "./receipt-batch-core";
+ const text=(v:unknown,max:number)=>typeof v==="string"?v.trim().slice(0,max):"";
+ const date=(v:unknown)=>typeof v==="string"&&/^\d{4}-\d{2}-\d{2}$/.test(v)&&Number.isFinite(Date.parse(v))&&new Date(v).toISOString().slice(0,10)===v?v:"";
+ export function receiptSuggestions(data:Record<string,unknown>) {
+@@ -24,3 +25,17 @@
+   reviewNotes:Array.isArray(data.review_notes)?data.review_notes.map(v=>text(v,200)).filter(Boolean).slice(0,3):[],
+  };
+ }
++
++/** Reading may fill blanks, but never replace details the customer already reviewed. */
++export function mergeReceiptSuggestions(current:ReceiptFields,suggested:ReceiptFields,originalName:string):ReceiptFields {
++ const filenameTitle=originalName.replace(/\.[^.]+$/,"").slice(0,200);
++ return {...current,title:!current.title.trim()||current.title===filenameTitle?suggested.title:current.title,
++  issued_on:current.issued_on||suggested.issued_on,notes:current.notes.trim()?current.notes:suggested.notes};
++}
++export function receiptReadLabel(item:ReceiptBatchItem){
++ if(item.status!=="review")return ({submitting:"Check save status",needs_file:"Original needed",saved:"Saved",duplicate:"Already in Vault",blocked:"Needs review",skipped:"Skipped"})[item.status];
++ if(item.readState==="reading")return "Reading interrupted · retry when ready";
++ if(item.readState==="failed")return "Reading needs attention";
++ if(item.readAttempted&&!item.readState)return "Review saved details";
++ return item.readState==="complete"?"Ready to review":"Waiting to read";
++}
+--- a/tests/receipt-batch.test.ts
++++ b/tests/receipt-batch.test.ts
+@@ -53,3 +53,22 @@
+  assert.equal(results.filter(r=>r.status==="fulfilled").length,1);
+  assert.ok(await f.store.read(a));
+ });
++
++test("receipt originals and interrupted reading survive reopening without persisting file bytes",async()=>{
++ const f=fixture(),value=batch();value.items[0].file={uri:"file:///cache/receipt.pdf",name:"receipt.pdf",mimeType:"application/pdf",size:123};value.items[0].readState="reading";value.items[0].readAttempted=true;
++ await f.store.write(a,value,null);const restored=await createReceiptBatchStore(f.storage).read(a);
++ assert.equal(restored?.items[0].file?.uri,value.items[0].file.uri);assert.equal(restored?.items[0].readState,"reading");
++ const malicious={...value,items:[{...value.items[0],file:{...value.items[0].file,bytes:"secret"}}]};assert.doesNotMatch(JSON.stringify(parseReceiptBatch(JSON.stringify(malicious))),/secret/);
++ for(const file of [{...value.items[0].file,uri:"https://external.invalid/a"},{...value.items[0].file,size:5*1024*1024},{...value.items[0].file,uri:3}])assert.equal(parseReceiptBatch(JSON.stringify({...value,items:[{...value.items[0],file}]})),null);
++});
++test("successful save drops the local attachment reference but keeps the server identity",async()=>{
++ const f=fixture(),value=batch();value.items[0].file={uri:"file:///cache/receipt.pdf",name:"receipt.pdf"};const first=await f.store.write(a,value,null);
++ await f.store.write(a,{...first,items:[{...first.items[0],status:"saved",documentId:a,file:undefined}]},first.revision);
++ const restored=await f.store.read(a);assert.equal(restored?.items[0].file,undefined);assert.equal(restored?.items[0].documentId,a);
++});
++
++test("five detailed receipt drafts retain file references within the bounded store",async()=>{
++ const f=fixture(),value=batch();
++ value.items=Array.from({length:5},(_,index)=>({...value.items[0],requestId:`33333333-3333-4333-8333-33333333333${index}`,name:"n".repeat(250),message:"m".repeat(500),fields:{...value.items[0].fields,title:"t".repeat(200),notes:"Detail: \"reviewed\"\n".repeat(300).slice(0,5000)},file:{uri:"file://"+"p".repeat(1993),name:"n".repeat(250),mimeType:"application/pdf",size:4*1024*1024}}));
++ const saved=await f.store.write(a,value,null);assert.deepEqual(await createReceiptBatchStore(f.storage).read(a),saved);
++});
+--- a/tests/receipt-review.test.ts
++++ b/tests/receipt-review.test.ts
+@@ -27,3 +27,14 @@
+  const response=await scanMobileUpload(new Request("http://localhost/scan",{method:"POST",body:form}),{reserve:async()=>{reserves++;return {ok:true};},extract:async kind=>{assert.equal(kind,"receipt");extracts++;return {document_kind:"receipt"};}});
+  assert.equal(response.status,200);assert.equal(reserves,1);assert.equal(extracts,1);
+ });
++
++
++test("a retry fills missing receipt fields while preserving customer corrections",async()=>{
++ const {mergeReceiptSuggestions,receiptReadLabel}=await import("../apps/mobile/src/lib/receipt-review");
++ const current={title:"Kitchen repair receipt",category:"Receipt" as const,issued_on:"2026-08-12",expires_on:"",notes:"Corrected model: AB-42"};
++ const suggested={title:"Different merchant receipt",category:"Receipt" as const,issued_on:"2026-08-15",expires_on:"",notes:"Extracted notes"};
++ assert.deepEqual(mergeReceiptSuggestions(current,suggested,"receipt.pdf"),current);
++ const empty={...current,title:"receipt",issued_on:"",notes:""};const merged=mergeReceiptSuggestions(empty,suggested,"receipt.pdf");assert.equal(merged.title,suggested.title);assert.equal(merged.issued_on,suggested.issued_on);assert.equal(merged.notes,suggested.notes);
++ const item={requestId:"11111111-1111-4111-8111-111111111111",name:"receipt.pdf",status:"review" as const,fields:current,readAttempted:true};
++ assert.match(receiptReadLabel({...item,readState:"reading"}),/interrupted/);assert.equal(receiptReadLabel({...item,readState:"failed"}),"Reading needs attention");assert.equal(receiptReadLabel({...item,readState:"complete"}),"Ready to review");assert.equal(receiptReadLabel(item),"Review saved details");
++});
+--- /dev/null
++++ b/tests/capture-originals-database.test.ts
+@@ -0,0 +1,43 @@
++import assert from "node:assert/strict";
++import test from "node:test";
++import {readFile,readdir} from "node:fs/promises";
++import {PGlite} from "@electric-sql/pglite";
++test("Gmail and uploaded receipts reuse the same saved original in both directions, within the owner household",async()=>{
++ const db=new PGlite();
++ const a="11111111-1111-4111-8111-111111111111",b="22222222-2222-4222-8222-222222222222",ha="aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",hb="bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
++ const key=(n:number)=>`dddddddd-dddd-4ddd-8ddd-${String(n).padStart(12,"0")}`;
++ const record={title:"Synthetic store receipt",category:"Receipt",issued_on:"2026-09-01",expires_on:"",notes:"Reviewed receipt"};
++ const file=(n:number)=>({name:"receipt.pdf",mime:"application/pdf",size:100,sha256:String(n).padStart(64,"0")});
++ type Result={status:string;id?:string;documentId?:string;path?:string};
++ const prep=async(n:number,f=file(n),home=ha)=>(await db.query<{r:Result}>("select public.prepare_rezlee_receipt_save($1,$2,$3::jsonb) r",[home,key(n),JSON.stringify({...record,file:f,expected_version:null})])).rows[0].r;
++ const upload=async(path:string)=>{await db.exec("reset role");await db.query("insert into storage.objects(bucket_id,name) values('rezlee-documents',$1)",[path]);await db.exec(`set role authenticated;set request.jwt.claim.sub='${a}'`);};
++ const gmail=async(n:number,f=file(n))=>{
++  await db.query("select public.begin_rezlee_email_capture($1,$2,$3,$4)",[ha,key(n),String(n).padStart(64,"0"),key(n+1000)]);
++  await db.query("select public.finish_rezlee_email_capture($1,$2,'ready',$3::jsonb)",[key(n),key(n+1000),JSON.stringify({title:record.title,category:"receipt"})]);
++  await db.exec("reset role");await db.query("update public.email_capture_jobs set source_type='gmail',source_meta=$2::jsonb where id=$1",[key(n),JSON.stringify({file:f})]);await db.exec(`set role authenticated;set request.jwt.claim.sub='${a}'`);
++ };
++ const accept=async(n:number)=>(await db.query<{r:Result}>("select public.accept_rezlee_email_capture($1,$2,$3::jsonb,null) r",[key(n),ha,JSON.stringify(record)])).rows[0].r;
++ try{
++  await db.exec(`create role anon;create role authenticated;create role service_role bypassrls;create schema auth;create schema storage;
++   create table auth.users(id uuid primary key,email text);
++   create function auth.uid() returns uuid language sql stable as $$select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid$$;
++   create table storage.buckets(id text primary key,name text,public boolean,file_size_limit bigint,allowed_mime_types text[]);
++   create table storage.objects(id uuid primary key default gen_random_uuid(),bucket_id text,name text);alter table storage.objects enable row level security;
++   create function storage.foldername(name text) returns text[] language sql immutable as $$select string_to_array(name,'/')$$;
++   grant usage on schema public,auth,storage to authenticated,service_role;`);
++  for(const file of ["supabase/schema.sql",...(await readdir("supabase/migrations")).filter(f=>f.endsWith(".sql")).sort().map(f=>"supabase/migrations/"+f)])
++   await db.exec((await readFile(file,"utf8")).replace(/create extension if not exists "pgcrypto";/g,""));
++  await db.exec(`grant select on public.homes,public.documents,public.bills to authenticated;
++   insert into auth.users values('${a}','a@example.invalid'),('${b}','b@example.invalid');
++   insert into public.homes(id,user_id,nickname) values('${ha}','${a}','A'),('${hb}','${b}','B');
++   set role authenticated;set request.jwt.claim.sub='${a}';`);
++
++ const original=await prep(20);await upload(original.path!);await db.query("select public.commit_rezlee_vault_save($1)",[key(20)]);
++ await gmail(21,file(20));const reused=await accept(21);assert.equal(reused.documentId,original.id);assert.equal((await db.query("select id from public.documents")).rows.length,1);
++ await gmail(22);const emailOriginal=await prep(22);await upload(emailOriginal.path!);const emailSaved=await accept(22);assert.equal(emailSaved.documentId,emailOriginal.id);
++ const manualDuplicate=await prep(23,{...file(22),name:"renamed-original.pdf"});assert.equal(manualDuplicate.status,"duplicate");assert.equal(manualDuplicate.id,emailSaved.documentId);assert.equal((await db.query("select id from public.documents")).rows.length,2);
++ assert.equal((await prep(24,file(24))).status,"prepared","matching merchant and amount do not prove duplicate content");
++ await db.exec(`set request.jwt.claim.sub='${b}'`);const isolated=await prep(25,file(22),hb);assert.equal(isolated.status,"prepared");assert.equal((await db.query("select id from public.documents")).rows.length,0);
++ await assert.rejects(accept(22),/Home unavailable/);
++ }finally{await db.close();}
++});

@@ -1,0 +1,29 @@
+{
+  "previousHead": "66292bdcf5afab6f11ee6a515d9310510628d1b9",
+  "changed": [
+    "apps/mobile/app/receipt-batch.tsx",
+    "apps/mobile/app/bill/batch.tsx",
+    "apps/mobile/app/vault-record.tsx",
+    "apps/mobile/src/lib/receipt-batch-core.ts",
+    "apps/mobile/src/lib/receipt-review.ts",
+    "tests/receipt-batch.test.ts",
+    "tests/receipt-review.test.ts"
+  ],
+  "new": [
+    "tests/capture-originals-database.test.ts"
+  ],
+  "afterSha256": {
+    "apps/mobile/app/receipt-batch.tsx": "0276a1d445ae4c6300ca0a012b2baf7f65c63d9febbb60cd4cda84901e2c1e7f",
+    "apps/mobile/app/bill/batch.tsx": "4d3f46bde761f3825324a82fff6fc1ed3919dde2afbd1352200286f8129a49da",
+    "apps/mobile/app/vault-record.tsx": "06f10aa90fcb1365ebf6844b9eff71f2bd0c8842f85719535c6cfbf4567bb5df",
+    "apps/mobile/src/lib/receipt-batch-core.ts": "90928a20033747e9960b03a4c91534868e4c43770a1d998e8fde810a2df16757",
+    "apps/mobile/src/lib/receipt-review.ts": "c87debfa463361416ff1dfc09b6315b5be018ee01dd9e70d8a2e51172f2e6134",
+    "tests/receipt-batch.test.ts": "daa4827b76d7e2362c260550f77133f5774c844cf67bd4c603cf8824aa6dcc13",
+    "tests/receipt-review.test.ts": "93eb06dbbba883fcdea2a56b4d8e2ad92f76670203603d8e90b0ef9c70ca8af4",
+    "tests/capture-originals-database.test.ts": "ae7af290dcc7691f89bc96b321db6ae328ef73d97711b02dccd6c9feff28a4d8"
+  },
+  "stagingRollback": "https://nestify-j30htf3jw-razakhan1195s-projects.vercel.app",
+  "productionChanged": false,
+  "databaseMigrationsApplied": false,
+  "dependenciesAdded": false
+}

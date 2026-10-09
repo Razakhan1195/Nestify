@@ -1,0 +1,89 @@
+{
+  "checks": [
+    {
+      "width": 320,
+      "scenario": "save",
+      "errors": [],
+      "overflow": false
+    },
+    {
+      "width": 320,
+      "scenario": "retry",
+      "errors": [],
+      "overflow": false
+    },
+    {
+      "width": 320,
+      "scenario": "lost-response",
+      "errors": [],
+      "overflow": false
+    },
+    {
+      "width": 320,
+      "scenario": "duplicate",
+      "errors": [],
+      "overflow": false
+    },
+    {
+      "width": 320,
+      "scenario": "offline",
+      "errors": [],
+      "overflow": false
+    },
+    {
+      "width": 320,
+      "scenario": "skip",
+      "errors": [],
+      "overflow": false
+    },
+    {
+      "width": 320,
+      "scenario": "single-cleanup",
+      "errors": [],
+      "overflow": false
+    },
+    {
+      "width": 390,
+      "scenario": "save",
+      "errors": [],
+      "overflow": false
+    },
+    {
+      "width": 390,
+      "scenario": "retry",
+      "errors": [],
+      "overflow": false
+    },
+    {
+      "width": 390,
+      "scenario": "lost-response",
+      "errors": [],
+      "overflow": false
+    },
+    {
+      "width": 390,
+      "scenario": "duplicate",
+      "errors": [],
+      "overflow": false
+    },
+    {
+      "width": 390,
+      "scenario": "offline",
+      "errors": [],
+      "overflow": false
+    },
+    {
+      "width": 390,
+      "scenario": "skip",
+      "errors": [],
+      "overflow": false
+    },
+    {
+      "width": 390,
+      "scenario": "single-cleanup",
+      "errors": [],
+      "overflow": false
+    }
+  ],
+  "method": "Actual receipt-batch/Vault components and persisted batch store via React Native Web. Network, pickers, photo processing and dialogs are controlled boundaries; synthetic fixtures only."
+}

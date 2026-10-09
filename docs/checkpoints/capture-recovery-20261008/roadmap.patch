@@ -1,0 +1,12 @@
+--- a/docs/beta-product-engineering-roadmap.md
++++ b/docs/beta-product-engineering-roadmap.md
+@@ -166,3 +166,9 @@
+ 
+ ## Core feature quality — 2026-10-08
+ First bill-usefulness slice implemented: truthful connected amount basis, comparable usage/day, selected-period charts for manual and connected history. Backend on staging; mobile development source updated; TestFlight unchanged. 61 unit tests, 24 rendered scenarios, hosted smoke/invitation readiness and both native bundle exports passed. Physical/provider acceptance remains. See docs/bill-usefulness-2026-10-08.md for exact scope, evidence, rollback and next import-to-insight milestone. Scheduled pulls remain off.
++
++
++## Capture and recovery — 2026-10-09
++The next bounded capture slice is complete: receipt originals and read state survive reopening, retries retain corrections, skipped receipts can resume, batch photos use existing local preparation, and confirmed Vault saves no longer appear failed after device-cleanup errors. Receipt duplicate protection was installed but disabled in staging; enabled it in the retained staging settings and Vercel Preview only. Hosted receipt/bill originals, exact duplicates, save replay and household isolation passed. 70 focused tests, 14 rendered interaction scenarios, 13 live staging assertions and both native bundle exports passed.
++
++Mobile UI is in the development source (Metro 8082 running); TestFlight is unchanged. Physical camera/preview/offline acceptance remains. Exact email/manual receipt originals are covered; semantic duplicates, revised bills and cross-provider duplicates are not universally certified. Next: the remaining cross-source bill/revision review plus physical capture acceptance, then expense/repair completion. See docs/capture-recovery-2026-10-09.md. Production website, customer data and utility schedules unchanged.

@@ -1,0 +1,21 @@
+{
+  "checks": [
+    "Receipt batch is enabled in staging",
+    "Receipt saved with original",
+    "Lost-response recovery returns same receipt",
+    "Original signed download available",
+    "Saved receipt bytes match uploaded PDF",
+    "Renamed identical receipt resolves to existing record",
+    "Reviewed historical statement saved",
+    "Historical save replay returns same bill",
+    "Historical duplicate does not create another bill",
+    "Bill original remains accessible",
+    "Saved bill original bytes match",
+    "History returns reviewed charges without claiming payment",
+    "Another account cannot download original"
+  ],
+  "paidCalls": 0,
+  "emailsSent": 0,
+  "realCustomerDataChanged": false
+}
+Disposable users and uploaded originals removed.
