@@ -1,0 +1,280 @@
+--- a/apps/mobile/app/care/plan.tsx
++++ b/apps/mobile/app/care/plan.tsx
+@@ -1,7 +1,8 @@
+ import { Feather } from "@expo/vector-icons";
+ import { useRouter } from "expo-router";
++import { usePreventRemove } from "expo-router/react-navigation";
+ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+-import { ActivityIndicator, Linking, Pressable, ScrollView, Text, View } from "react-native";
++import { ActivityIndicator, Alert, Linking, Pressable, ScrollView, Text, View } from "react-native";
+ import { SafeAreaView } from "react-native-safe-area-context";
+ import { NavigationButton } from "@/components/NavigationButton";
+ import { Button } from "@/components/Button";
+@@ -9,7 +10,7 @@
+ import { TextField } from "@/components/TextField";
+ import { ApiError } from "@/lib/api";
+ import { fetchCarePlanContext, generateCarePlan, saveCarePlan, formatCareDate, formatCareRecurrence, type CarePlanTask, type CarePlanPreferences, type CarePlanContext } from "@/lib/care-data";
+-import { readMaintenanceDraft, writeMaintenanceDraft, clearMaintenanceDraft } from "@/lib/maintenance-draft";
++import { readMaintenanceDraft, writeMaintenanceDraft, clearMaintenanceDraft, type MaintenanceDraft } from "@/lib/maintenance-draft";
+ import { colors, radii, spacing, typography } from "@/theme/tokens";
+ import { safeBack } from "@/lib/navigation";
+ 
+@@ -18,20 +19,27 @@
+ const card = {padding:spacing.lg,borderRadius:radii["2xl"],backgroundColor:colors.surfaceRaised,gap:spacing.md};
+ function firstDate() { const d=new Date(); d.setDate(d.getDate()+7); return [d.getFullYear(),String(d.getMonth()+1).padStart(2,"0"),String(d.getDate()).padStart(2,"0")].join("-"); }
+ export default function CarePlanScreen() {
+-  const router=useRouter(), busy=useRef(false), draftWrites=useRef(Promise.resolve());
++  const router=useRouter(), busy=useRef(false), draftWrites=useRef(Promise.resolve()), saved=useRef(false);
++  const latestDraft=useRef<{homeId:string;draft:MaintenanceDraft}|null>(null);
+   const [context,setContext]=useState<CarePlanContext|null>(null);
+   const [preferences,setPreferences]=useState<CarePlanPreferences>({responsibility:"self",areas:[],startDate:firstDate()});
+   const [tasks,setTasks]=useState<CarePlanTask[]>([]),[selected,setSelected]=useState<Record<number,boolean>>({});
+   const [review,setReview]=useState(false),[editing,setEditing]=useState<number|null>(null);
+   const [loading,setLoading]=useState(true),[generating,setGenerating]=useState(false),[saving,setSaving]=useState(false);
+   const [error,setError]=useState<string|null>(null),[draftError,setDraftError]=useState(false),[restored,setRestored]=useState(false);
+-  const [ready,setReady]=useState(false);
++  const [ready,setReady]=useState(false),[uncertain,setUncertain]=useState(false);
++  const [savedResult,setSavedResult]=useState<{count:number;requestId:string}|null>(null);
++  const blocked=generating||saving||uncertain;
++  usePreventRemove(saving,()=>Alert.alert("Saving your plan","Wait for the save result. Your choices are being kept."));
++  useEffect(()=>{
++    if(savedResult&&!saving)router.replace({pathname:"/(tabs)/care",params:{planAdded:String(savedResult.count),savedRequestId:savedResult.requestId}});
++  },[savedResult,saving,router]);
+   const load=useCallback(async()=>{
+     setLoading(true);setError(null);
+     try {
+       const ctx=await fetchCarePlanContext();setContext(ctx);
+       const draft=await readMaintenanceDraft(ctx.homeId);
+-      if(draft) {setPreferences(draft.preferences);setTasks(draft.tasks);setSelected(draft.selected);setReview(draft.review);setRestored(true);}
++      if(draft) {setPreferences(draft.preferences);setTasks(draft.tasks);setSelected(draft.selected);setReview(draft.review);setUncertain(draft.savePending===true);setRestored(true);}
+       else setPreferences(p=>({...p,responsibility:ctx.responsibility}));
+       setReady(true);
+     }catch(e){setError(e instanceof ApiError?e.message:"We couldn't load your plan. Check your connection and try again.");}
+@@ -39,18 +47,25 @@
+   },[]);
+   useEffect(()=>{const timer=setTimeout(()=>{void load();},0);return()=>clearTimeout(timer);},[load]);
+   useEffect(()=>{
+-    if(!ready||!context||saving)return;
+-    const snapshot={preferences,tasks,selected,review};
++    if(ready&&context&&!saved.current)latestDraft.current={homeId:context.homeId,draft:{preferences,tasks,selected,review,savePending:uncertain}};
++  },[preferences,tasks,selected,review,uncertain,ready,context]);
++  useEffect(()=>()=>{
++    const latest=latestDraft.current;
++    if(latest&&!saved.current)draftWrites.current=draftWrites.current.then(()=>saved.current?undefined:writeMaintenanceDraft(latest.homeId,latest.draft)).catch(()=>{});
++  },[]);
++  useEffect(()=>{
++    if(!ready||!context||saving||saved.current)return;
++    const snapshot={preferences,tasks,selected,review,savePending:uncertain};
+     const timer=setTimeout(()=>{
+-      draftWrites.current=draftWrites.current.then(()=>writeMaintenanceDraft(context.homeId,snapshot))
++      draftWrites.current=draftWrites.current.then(()=>saved.current?undefined:writeMaintenanceDraft(context.homeId,snapshot))
+         .then(()=>setDraftError(false)).catch(()=>setDraftError(true));
+     },200);
+     return()=>clearTimeout(timer);
+-  },[preferences,tasks,selected,review,ready,context,saving]);
++  },[preferences,tasks,selected,review,uncertain,ready,context,saving]);
+   const chosen=useMemo(()=>tasks.filter((t,i)=>selected[i]&&!t.alreadyAdded),[tasks,selected]);
+   const update=(index:number,patch:Partial<CarePlanTask>)=>setTasks(all=>all.map((t,i)=>i===index?{...t,...patch}:t));
+   async function prepare() {
+-    if(busy.current||!preferences.areas.length)return;
++    if(busy.current||uncertain||!preferences.areas.length)return;
+     busy.current=true;setGenerating(true);setError(null);
+     try {
+       const result=await generateCarePlan(preferences);
+@@ -63,18 +78,32 @@
+     if(!chosen.length||busy.current||!context)return;
+     if(chosen.some(t=>!t.title.trim()||!t.due_date)){setError("Give each selected task a title and date.");return;}
+     busy.current=true;setSaving(true);setError(null);
++    let attempted=false;
+     try {
+       await draftWrites.current;
+-      await writeMaintenanceDraft(context.homeId,{preferences,tasks,selected,review});
++      await writeMaintenanceDraft(context.homeId,{preferences,tasks,selected,review,savePending:true});
++      latestDraft.current={homeId:context.homeId,draft:{preferences,tasks,selected,review,savePending:true}};
++      attempted=true;
+       const result=await saveCarePlan(chosen);
++      saved.current=true;
++      await draftWrites.current;
+       await clearMaintenanceDraft(context.homeId).catch(()=>{});
+-      router.replace({pathname:"/(tabs)/care",params:{planAdded:String(result.count),savedRequestId:result.requestId}});
+-    }catch(e){setError(e instanceof ApiError?e.message:"Couldn't confirm the save. Your choices are kept; retry won't add them twice.");}
++      setSavedResult({count:result.count,requestId:result.requestId});
++    }catch(e){
++      const legacyUncertain=e instanceof ApiError&&e.status===400&&e.message.startsWith("Could not confirm this save.");
++      const rejected=e instanceof ApiError&&[400,401,403,404,409].includes(e.status)&&!legacyUncertain;
++      const pending=(uncertain||attempted)&&!rejected;
++      setUncertain(pending);
++      const snapshot={preferences,tasks,selected,review,savePending:pending};
++      latestDraft.current={homeId:context.homeId,draft:snapshot};
++      await writeMaintenanceDraft(context.homeId,snapshot).catch(()=>setDraftError(true));
++      setError(pending?null:e instanceof ApiError?e.message:"We couldn’t keep your choices on this device. Try saving again.");
++    }
+     finally{busy.current=false;setSaving(false);}
+   }
+   function toggleArea(id:string) {setPreferences(p=>({...p,areas:p.areas.includes(id)?p.areas.filter(a=>a!==id):[...p.areas,id]}));}
+   function choice(id:string,label:string,active:boolean,onPress:()=>void) {
+-    return <Pressable key={id} accessibilityRole="radio" accessibilityState={{checked:active}} onPress={onPress}
++    return <Pressable key={id} accessibilityRole="radio" accessibilityState={{checked:active,disabled:blocked}} disabled={blocked} onPress={onPress}
+       style={{minHeight:44,paddingHorizontal:14,paddingVertical:12,borderRadius:radii.lg,backgroundColor:active?colors.accent:colors.surfaceRaised,borderWidth:1,borderColor:active?colors.primary:colors.border}}>
+       <Text style={[typography.caption,{color:colors.foreground,fontWeight:"600"}]}>{label}</Text>
+     </Pressable>;
+@@ -82,13 +111,14 @@
+   return <SafeAreaView style={{flex:1,backgroundColor:colors.background}}>
+     <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{padding:spacing.xl,paddingBottom:spacing["4xl"],gap:spacing.xl}}>
+       <View style={{flexDirection:"row",alignItems:"center",gap:spacing.md}}>
+-        <NavigationButton label="Close" close onPress={()=>safeBack(router,"/(tabs)/care")}/>
++        <NavigationButton label="Close" close disabled={saving} onPress={()=>safeBack(router,"/(tabs)/care")}/>
+         <View style={{flex:1}}><Text style={[typography.title,{color:colors.foreground}]}>{review?"Your upkeep plan":"Care for your home"}</Text>
+           <Text style={[typography.meta,{color:colors.mutedForeground}]}>{context?.homeName ?? "Maintenance plan"}</Text></View>
+       </View>
+       {loading?<View style={{paddingVertical:40,gap:spacing.md,alignItems:"center"}}><ActivityIndicator color={colors.primary}/><Text style={typography.body}>Loading your home…</Text></View>:null}
+       {error?<View accessibilityRole="alert" style={{...card,backgroundColor:colors.criticalBg}}><Text style={{color:colors.criticalForeground}}>{error}</Text>{!context?<Button label="Try again" onPress={()=>void load()}/>:null}</View>:null}
+       {draftError?<Text accessibilityRole="alert" style={{color:colors.criticalForeground}}>We couldn’t keep this draft on your device. Stay here until you save, or retry after freeing device storage.</Text>:null}
++      {uncertain?<View accessibilityLiveRegion="polite" style={{...card,backgroundColor:colors.warningBg}}><Text style={[typography.body,{color:colors.warningForeground}]}>Your last save needs confirmation. We’ll check the same tasks so they aren’t added twice.</Text><Button label="Check saved plan" loading={saving} onPress={()=>void addSelected()}/></View>:null}
+       {restored?<Text style={[typography.caption,{color:colors.primary}]}>Your unfinished plan is restored.</Text>:null}
+       {!loading&&context&&!review?<View style={{gap:spacing.xl}}>
+         <View style={{...card,backgroundColor:colors.accent}}>
+@@ -102,7 +132,7 @@
+         </View>
+         <View style={{gap:spacing.sm}}><Text style={[typography.section,{color:colors.foreground}]}>What would you like to look after?</Text>
+           <Text style={[typography.caption,{color:colors.mutedForeground}]}>Only select what applies. You can add your own task in Care.</Text>
+-          {context.areas.map(area=>{const active=preferences.areas.includes(area.id);return <Pressable key={area.id} accessibilityRole="checkbox" accessibilityState={{checked:active}} onPress={()=>toggleArea(area.id)}
++          {context.areas.map(area=>{const active=preferences.areas.includes(area.id);return <Pressable key={area.id} accessibilityRole="checkbox" accessibilityState={{checked:active,disabled:blocked}} disabled={blocked} onPress={()=>toggleArea(area.id)}
+             style={{...card,flexDirection:"row",alignItems:"center",borderWidth:1,borderColor:active?colors.primary:colors.border,backgroundColor:active?colors.accent:colors.surfaceRaised}}>
+             <Feather name={area.icon as keyof typeof Feather.glyphMap} size={23} color={colors.primary}/>
+             <View style={{flex:1,gap:4}}><Text style={[typography.meta,{color:colors.foreground,fontWeight:"700"}]}>{area.label}</Text><Text style={[typography.caption,{color:colors.mutedForeground}]}>{area.detail}</Text>
+@@ -110,8 +140,8 @@
+             <Feather name={active?"check-circle":"circle"} size={22} color={active?colors.primary:colors.mutedForeground}/>
+           </Pressable>;})}
+         </View>
+-        <DateField label="When would you like to start?" value={preferences.startDate} onChange={startDate=>setPreferences(p=>({...p,startDate}))}/>
+-        <Button label="See my plan" disabled={!preferences.areas.length||!preferences.startDate} loading={generating} onPress={()=>void prepare()}/>
++        <DateField disabled={blocked} label="When would you like to start?" value={preferences.startDate} onChange={startDate=>setPreferences(p=>({...p,startDate}))}/>
++        <Button label="See my plan" disabled={blocked||!preferences.areas.length||!preferences.startDate} loading={generating} onPress={()=>void prepare()}/>
+         <Text style={[typography.caption,{color:colors.mutedForeground}]}>Nothing is added until you review and save. Your choices stay on this device.</Text>
+       </View>:null}
+       {!loading&&context&&review?<View style={{gap:spacing.lg}}>
+@@ -119,10 +149,10 @@
+           <Text style={[typography.section,{color:colors.foreground}]}>Your choices, explained</Text>
+           <Text style={[typography.body,{color:colors.mutedForeground}]}>{context.areas.filter(a=>preferences.areas.includes(a.id)).map(a=>a.label).join(" · ")}</Text>
+           <Text style={[typography.caption,{color:colors.mutedForeground}]}>Based on your selections and published guidance. Your dates are planning choices; follow your equipment’s service instructions.</Text>
+-          <Button label="Change my setup" variant="secondary" disabled={saving} onPress={()=>{setReview(false);setError(null);}}/>
++          <Button label="Change my setup" variant="secondary" disabled={blocked} onPress={()=>{setReview(false);setError(null);}}/>
+         </View>
+         {tasks.map((task,index)=><View key={task.id??index} style={{...card,borderWidth:1,borderColor:colors.border,opacity:task.alreadyAdded?0.7:1}}>
+-          <Pressable accessibilityRole="checkbox" accessibilityState={{checked:!!selected[index],disabled:!!task.alreadyAdded||saving}} disabled={task.alreadyAdded||saving} onPress={()=>setSelected(s=>({...s,[index]:!s[index]}))} style={{flexDirection:"row",gap:spacing.md,alignItems:"flex-start",minHeight:44}}>
++          <Pressable accessibilityRole="checkbox" accessibilityState={{checked:!!selected[index],disabled:!!task.alreadyAdded||blocked}} disabled={task.alreadyAdded||blocked} onPress={()=>setSelected(s=>({...s,[index]:!s[index]}))} style={{flexDirection:"row",gap:spacing.md,alignItems:"flex-start",minHeight:44}}>
+             <Feather name={selected[index]?"check-circle":"circle"} size={24} color={colors.primary}/>
+             <View style={{flex:1,gap:spacing.sm}}><Text style={[typography.section,{color:colors.foreground}]}>{task.title}</Text><Text style={[typography.caption,{color:colors.mutedForeground}]}>{task.reason}</Text></View>
+           </Pressable>
+@@ -134,21 +164,21 @@
+             <Button label="Review previous task" variant="secondary" onPress={()=>router.push(("/care/"+task.completedTask!.id) as never)}/>
+           </View>:null}
+           {task.source?<Pressable accessibilityRole="link" onPress={()=>void Linking.openURL(task.source!.url).catch(()=>setError("Couldn't open the guidance. Please try again."))} style={{minHeight:44,justifyContent:"center"}}><Text style={[typography.caption,{color:colors.primary}]}>{task.source.label} ↗</Text></Pressable>:null}
+-          {task.alreadyAdded?<Text style={[typography.meta,{color:colors.primary}]}>Already in Care</Text>:editing===index?<View style={{gap:spacing.md}}>
++          {task.alreadyAdded?<Text style={[typography.meta,{color:colors.primary}]}>Already in Care</Text>:editing===index&&!blocked?<View style={{gap:spacing.md}}>
+             <TextField label="Task name" value={task.title} maxLength={140} onChangeText={title=>update(index,{title})}/>
+             <DateField label="First date" value={task.due_date} onChange={due_date=>update(index,{due_date})}/>
+             <Text style={[typography.meta,{color:colors.foreground}]}>Repeat</Text>
+             <View style={{flexDirection:"row",flexWrap:"wrap",gap:spacing.sm}}>{intervals.map(r=>choice(r.id,r.label,task.recurrence===r.id,()=>update(index,{recurrence:r.id})))}</View>
+             <Text style={[typography.caption,{color:colors.mutedForeground}]}>Choose a repeat only when it suits the task and your equipment instructions. The next date advances when you complete it.</Text>
+             <Button label="Done editing" variant="secondary" onPress={()=>setEditing(null)}/>
+-          </View>:<Pressable accessibilityRole="button" disabled={saving} onPress={()=>setEditing(index)} style={{minHeight:48,backgroundColor:colors.surfaceSubtle,borderRadius:radii.lg,padding:spacing.md,flexDirection:"row",gap:12,alignItems:"center"}}>
++          </View>:<Pressable accessibilityRole="button" disabled={blocked} onPress={()=>setEditing(index)} style={{minHeight:48,backgroundColor:colors.surfaceSubtle,borderRadius:radii.lg,padding:spacing.md,flexDirection:"row",gap:12,alignItems:"center"}}>
+             <Feather name="calendar" size={18} color={colors.primary}/><Text style={[typography.caption,{flex:1,color:colors.foreground}]}>{formatCareDate(task.due_date)} · {formatCareRecurrence(task.recurrence)}</Text><Feather name="edit-2" size={18} color={colors.primary}/>
+           </Pressable>}
+         </View>)}
+-        {tasks.length?<Text style={[typography.caption,{color:colors.mutedForeground}]}>Uncheck anything that does not apply or is already done. Use the date control to remind yourself later. Only selected tasks are added.</Text>:null}
++        {tasks.length&&!uncertain?<Text style={[typography.caption,{color:colors.mutedForeground}]}>Uncheck anything that does not apply or is already done. Use the date control to remind yourself later. Only selected tasks are added.</Text>:null}
+         {tasks.length&&!chosen.length?<Text style={[typography.body,{color:colors.mutedForeground}]}>Select a task to add, or change your setup. Existing tasks stay in Care.</Text>:null}
+-        <Button label={chosen.length===1?"Add 1 task to Care":`Add ${chosen.length} tasks to Care`} disabled={!chosen.length} loading={saving} onPress={()=>void addSelected()}/>
+-        <Text style={[typography.caption,{color:colors.mutedForeground}]}>Your selected tasks will appear in Care, ready to track and complete.</Text>
++        {!uncertain?<Button label={chosen.length===1?"Add 1 task to Care":`Add ${chosen.length} tasks to Care`} disabled={blocked||!chosen.length} loading={saving} onPress={()=>void addSelected()}/>:null}
++        {!uncertain?<Text style={[typography.caption,{color:colors.mutedForeground}]}>Your selected tasks will appear in Care, ready to track and complete.</Text>:null}
+       </View>:null}
+     </ScrollView>
+   </SafeAreaView>;
+--- a/apps/mobile/src/lib/maintenance-draft.ts
++++ b/apps/mobile/src/lib/maintenance-draft.ts
+@@ -1,7 +1,7 @@
+ import * as SecureStore from "expo-secure-store";
+ import { supabase } from "./supabase";
+ import type { CarePlanPreferences, CarePlanTask } from "./care-data";
+-export type MaintenanceDraft = { preferences: CarePlanPreferences; tasks: CarePlanTask[]; selected: Record<number, boolean>; review: boolean };
++export type MaintenanceDraft = { preferences: CarePlanPreferences; tasks: CarePlanTask[]; selected: Record<number, boolean>; review: boolean; savePending?: boolean };
+ async function key(homeId: string) {
+   const {data} = await supabase.auth.getSession();
+   if(!data.session) throw Error("Sign in to keep your plan.");
+--- a/apps/mobile/src/components/DateField.tsx
++++ b/apps/mobile/src/components/DateField.tsx
+@@ -9,6 +9,7 @@
+   value: string;
+   onChange: (value: string) => void;
+   optional?: boolean;
++  disabled?: boolean;
+   placeholder?: string;
+ };
+ 
+@@ -66,6 +67,7 @@
+   value,
+   onChange,
+   optional = false,
++  disabled = false,
+   placeholder = "Choose a date",
+ }: DateFieldProps) {
+   const selectedDate = parseIsoDate(value);
+@@ -82,6 +84,7 @@
+   const displayValue = formatDisplayDate(value);
+ 
+   function openPicker() {
++    if (disabled) return;
+     setVisibleMonth(selectedDate ?? new Date());
+     setOpen(true);
+   }
+@@ -93,6 +96,7 @@
+   }
+ 
+   function chooseDate(date: Date) {
++    if (disabled) return;
+     onChange(toIsoDate(date));
+     setOpen(false);
+   }
+@@ -105,6 +109,8 @@
+       <Pressable
+         accessibilityRole="button"
+         accessibilityLabel={label}
++        disabled={disabled}
++        accessibilityState={{ disabled }}
+         onPress={openPicker}
+         style={({ pressed }) => ({
+           minHeight: 48,
+@@ -133,7 +139,7 @@
+       </Pressable>
+ 
+       <Modal
+-        visible={open}
++        visible={open && !disabled}
+         transparent
+         animationType="fade"
+         onRequestClose={() => setOpen(false)}
+--- a/src/lib/product/care-plan-save.ts
++++ b/src/lib/product/care-plan-save.ts
+@@ -10,6 +10,6 @@
+     target_home: input.homeId, request_key: input.requestId ?? randomUUID(), plan_tasks: input.tasks,
+     assignment_mode: input.assignment?.mode ?? "none", member_ids: input.assignment?.memberIds ?? [], plan_kind: input.kind,
+   });
+-  if (error || !data?.ok) return { ok: false as const, message: error?.code === "22023" ? "These choices changed after a previous save. Reopen Care to review your tasks." : "Could not confirm this save. Retry with the same choices; they won’t be added twice." };
++  if (error || !data?.ok) return { ok: false as const, status: error?.code === "22023" ? 400 : error?.code === "42501" ? 403 : 503, message: error?.code === "22023" ? "These choices changed after a previous save. Reopen Care to review your tasks." : "Could not confirm this save. Retry with the same choices; they won’t be added twice." };
+   return { ok: true as const, count: Number(data.count) };
+ }
+--- a/src/app/api/mobile/v1/care/plan/route.ts
++++ b/src/app/api/mobile/v1/care/plan/route.ts
+@@ -32,7 +32,7 @@
+     const parsed = maintenancePlanTasksSchema.safeParse(body.tasks);
+     if (!parsed.success) return Response.json({ error: "Choose at least one valid task." }, { status: 400 });
+     const result = await saveCarePlanOnce(auth.supabase, { homeId: home.id, requestId: body.requestId, tasks: parsed.data, kind: "maintenance" });
+-    if (!result.ok) return Response.json({ error: result.message }, { status: 400 });
++    if (!result.ok) return Response.json({ error: result.message }, { status: result.status });
+     return Response.json({ ok: true, count: result.count ?? parsed.data.length });
+   }
+   const { data: items, error: itemsError } = await auth.supabase.from("inventory_items")

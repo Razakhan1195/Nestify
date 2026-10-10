@@ -187,3 +187,7 @@ Existing multi-person ledger retained and verified for 2, 3 and 5 people. Focuse
 
 ## 2026-10-10 — Settle up completion
 Payer/recipient settlement, multi-roommate balance selection, partial preview, notification/reminder control, stale partial-payment guard and recovery completed. See docs/settle-up-2026-10-10.md. Staging alias is nestify-1e2zkzb97; migration 202610100001 applied and trigger active. 24 deployed staging assertions, 48 rendered scenarios and 6 mocked delivery cases passed. No production/TestFlight update. Physical two-device/push acceptance remains. Next product work: existing repair/maintenance completion, only when requested.
+
+
+## Shared acceptance and maintenance recovery — 2026-10-10
+Three-roommate hosted shared acceptance passed 34 assertions. Maintenance uncertain-save recovery now preserves the exact attempted selection and supports checking/reopening without duplicates; generation inputs match the returned plan. Definite rejection remains editable. 19 hosted Care checks, 48 focused unit tests, 16 rendered scenarios, types/lint and both native exports passed. Backend staged at nestify-3bc38zyjn; Expo source updated. No production/TestFlight change. See docs/care-recovery-2026-10-10.md and scoped before/after checkpoint. Physical notifications/invites and live repair-guide acceptance remain next; earlier transient Expo expense visibility was not reproduced, so no root-cause fix is claimed. Scheduled utility pulls remain off.

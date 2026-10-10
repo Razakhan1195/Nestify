@@ -1,0 +1,10 @@
+{
+  "head": "e5a7cc948ba6d93e9dc5cb9adc8dd9b2a4419357",
+  "files": {
+    "apps/mobile/app/shared/index.tsx": "45e9c0946d1f1b09a29690a0aa2611181ee526ed2313567cbaca9ceb5d07885c",
+    "apps/mobile/app/shared/edit.tsx": "2f0b81b2830753c8589fcc7ecb53c1f24ff116347e70bf299fe4d8e484b81d3d",
+    "apps/mobile/app/shared/repay.tsx": "f3ed57005e58ea3d29eb45250f1c161cb8d0f2a3442dab1d4cadffebb2468b76",
+    "apps/mobile/app/shared/[id].tsx": "f3fe131cb64e9097450c4a73ce964baf7fd171f6496351347286aafb5f2a83dd",
+    "apps/mobile/src/components/SharedExpenseUI.tsx": "f1970cfb14b62f28d278c222e8b5ba174935e818d05469f212526d2b02d60309"
+  }
+}

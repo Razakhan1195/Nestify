@@ -1,0 +1,101 @@
+{
+  "checks": [
+    {
+      "width": 320,
+      "scenario": "success",
+      "oneSavedPlan": true,
+      "errors": []
+    },
+    {
+      "width": 320,
+      "scenario": "lost",
+      "oneSavedPlan": true,
+      "errors": []
+    },
+    {
+      "width": 320,
+      "scenario": "reopen",
+      "oneSavedPlan": true,
+      "errors": []
+    },
+    {
+      "width": 320,
+      "scenario": "legacy",
+      "oneSavedPlan": true,
+      "errors": []
+    },
+    {
+      "width": 320,
+      "scenario": "rejected",
+      "oneSavedPlan": true,
+      "errors": []
+    },
+    {
+      "width": 320,
+      "scenario": "offline",
+      "oneSavedPlan": true,
+      "errors": []
+    },
+    {
+      "width": 320,
+      "scenario": "generation-failed",
+      "oneSavedPlan": true,
+      "errors": []
+    },
+    {
+      "width": 320,
+      "scenario": "storage-failed",
+      "oneSavedPlan": true,
+      "errors": []
+    },
+    {
+      "width": 390,
+      "scenario": "success",
+      "oneSavedPlan": true,
+      "errors": []
+    },
+    {
+      "width": 390,
+      "scenario": "lost",
+      "oneSavedPlan": true,
+      "errors": []
+    },
+    {
+      "width": 390,
+      "scenario": "reopen",
+      "oneSavedPlan": true,
+      "errors": []
+    },
+    {
+      "width": 390,
+      "scenario": "legacy",
+      "oneSavedPlan": true,
+      "errors": []
+    },
+    {
+      "width": 390,
+      "scenario": "rejected",
+      "oneSavedPlan": true,
+      "errors": []
+    },
+    {
+      "width": 390,
+      "scenario": "offline",
+      "oneSavedPlan": true,
+      "errors": []
+    },
+    {
+      "width": 390,
+      "scenario": "generation-failed",
+      "oneSavedPlan": true,
+      "errors": []
+    },
+    {
+      "width": 390,
+      "scenario": "storage-failed",
+      "oneSavedPlan": true,
+      "errors": []
+    }
+  ],
+  "method": "Actual maintenance screen, DateField, chunked draft and care-save code; controlled API/router/native boundaries. Browser reload restores encrypted-storage equivalent, not native process termination."
+}
