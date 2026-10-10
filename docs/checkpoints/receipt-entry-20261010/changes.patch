@@ -1,0 +1,40 @@
+--- a/apps/mobile/app/(tabs)/vault.tsx
++++ b/apps/mobile/app/(tabs)/vault.tsx
+@@ -37,8 +37,18 @@
+  const router=useRouter();
+  const {session}=useAuth(),userId=session?.user.id;
+  const emailImport=useEmailImport();
+- const [batchOwner,setBatchOwner]=useState<string|null>(null),[batchAvailable,setBatchAvailable]=useState(false);
+- useFocusEffect(useCallback(()=>{let active=true;if(userId)void Promise.all([receiptBatches.read(userId),apiGet<{receiptBatch?:boolean}>("/api/mobile/v1/vault/records?capabilities=1",{timeoutMs:10000}).catch(()=>null)]).then(([b,c])=>{if(active){setBatchOwner(b?userId:null);setBatchAvailable(c?.receiptBatch===true);}}).catch(()=>{if(active)setBatchOwner(userId);});return()=>{active=false;};},[userId]));
++ const [batchOwner,setBatchOwner]=useState<string|null>(null),[batchAvailable,setBatchAvailable]=useState<boolean|null>(null);
++ useFocusEffect(useCallback(()=>{
++  let active=true;setBatchOwner(null);setBatchAvailable(null);
++  if(userId){
++   void receiptBatches.read(userId).then(batch=>{if(active)setBatchOwner(batch?userId:null);}).catch(()=>{if(active)setBatchOwner(userId);});
++   // A failed capability check is not a disabled feature. The batch screen
++   // verifies availability again before allowing any upload or save.
++   void apiGet<{receiptBatch?:boolean}>("/api/mobile/v1/vault/records?capabilities=1",{timeoutMs:10000})
++    .then(caps=>{if(active)setBatchAvailable(caps.receiptBatch===true);}).catch(()=>{});
++  }
++  return()=>{active=false;};
++ },[userId]));
+  const [pendingOwner,setPendingOwner]=useState<string|null>(null);
+  useFocusEffect(useCallback(()=>{let active=true;if(userId)void vaultPending.read(userId).then(key=>{if(active)setPendingOwner(key?userId:null);}).catch(()=>{if(active)setPendingOwner(userId);});return()=>{active=false;};},[userId]));
+  const [payload,setPayload]=useState<VaultPayload|null>(null),[filter,setFilter]=useState<Filter>("documents");
+@@ -61,7 +71,7 @@
+  const hasEntries=Boolean(data?.documents.length||data?.items.length);
+  return <SafeAreaView edges={["left", "right"]} style={{flex:1,backgroundColor:colors.canvas}}>
+   <ScrollView contentInsetAdjustmentBehavior="never" automaticallyAdjustContentInsets={false} keyboardShouldPersistTaps="handled" refreshControl={<RefreshControl refreshing={refreshing} onRefresh={()=>void load(true)} tintColor={colors.primary}/>} contentContainerStyle={{paddingHorizontal:layout.screenHorizontal,paddingTop:layout.screenTop,paddingBottom:spacing["4xl"],gap:layout.sectionGap}}>
+-   <CollectionToolbar title="Vault" description="Records, belongings and coverage." label="Add to Vault" onAdd={hasEntries?()=>setAdding(true):undefined}/>
++   <CollectionToolbar title="Vault" description="Records, belongings and coverage." label="Add to Vault" onAdd={()=>setAdding(true)}/>
+    <EmailImportEntry destination={emailImport}/>
+    {userId&&pendingOwner===userId?<VaultRow icon="upload-cloud" title="Finish record save" detail="Check and finish an earlier save before adding another copy." onPress={()=>router.push("/vault-save-resume")}/>:null}
+    {userId&&batchOwner===userId?<VaultRow icon="layers" title="Continue receipt batch" detail="Review unfinished files and check saved receipts." onPress={()=>router.push("/receipt-batch")}/>:null}
+@@ -87,6 +97,6 @@
+     </View>;
+    }}/>:null}
+   </ScrollView>
+-  <CollectionAddSheet title="Add to Vault" visible={adding} onClose={()=>setAdding(false)} choices={[...(emailImport?[{key:"email",title:"Import from email",detail:"Review receipts, warranties and home bills.",icon:"mail" as const,onPress:()=>router.push(emailImport)}]:[]),...choices.map(c=>({key:c.kind,title:c.title,detail:c.detail,icon:c.icon,onPress:()=>add(c.kind)})),...(batchAvailable?[{key:"receipts",title:"Several receipts",detail:"Choose up to five files to review.",icon:"layers" as const,onPress:()=>router.push("/receipt-batch")}]:[])]}/>
++  <CollectionAddSheet title="Add to Vault" visible={adding} onClose={()=>setAdding(false)} choices={[...(emailImport?[{key:"email",title:"Import from email",detail:"Review receipts, warranties and home bills.",icon:"mail" as const,onPress:()=>router.push(emailImport)}]:[]),...choices.map(c=>({key:c.kind,title:c.title,detail:c.detail,icon:c.icon,onPress:()=>add(c.kind)})),...(batchAvailable!==false?[{key:"receipts",title:"Several receipts",detail:"Choose up to five files to review.",icon:"layers" as const,onPress:()=>router.push("/receipt-batch")}]:[])]}/>
+  </SafeAreaView>;
+ }

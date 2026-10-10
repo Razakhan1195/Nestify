@@ -1,0 +1,78 @@
+{
+  "checks": [
+    {
+      "width": 320,
+      "scenario": "empty",
+      "errors": [],
+      "overflow": false
+    },
+    {
+      "width": 320,
+      "scenario": "populated",
+      "errors": [],
+      "overflow": false
+    },
+    {
+      "width": 320,
+      "scenario": "cap-error",
+      "errors": [],
+      "overflow": false
+    },
+    {
+      "width": 320,
+      "scenario": "draft-error",
+      "errors": [],
+      "overflow": false
+    },
+    {
+      "width": 320,
+      "scenario": "disabled",
+      "errors": [],
+      "overflow": false
+    },
+    {
+      "width": 320,
+      "scenario": "resume",
+      "errors": [],
+      "overflow": false
+    },
+    {
+      "width": 390,
+      "scenario": "empty",
+      "errors": [],
+      "overflow": false
+    },
+    {
+      "width": 390,
+      "scenario": "populated",
+      "errors": [],
+      "overflow": false
+    },
+    {
+      "width": 390,
+      "scenario": "cap-error",
+      "errors": [],
+      "overflow": false
+    },
+    {
+      "width": 390,
+      "scenario": "draft-error",
+      "errors": [],
+      "overflow": false
+    },
+    {
+      "width": 390,
+      "scenario": "disabled",
+      "errors": [],
+      "overflow": false
+    },
+    {
+      "width": 390,
+      "scenario": "resume",
+      "errors": [],
+      "overflow": false
+    }
+  ],
+  "nativeDeviceVerified": false,
+  "boundaries": "Actual Vault, Add sheet and toolbar; synthetic API/data/router, collection pager and native boundaries."
+}
