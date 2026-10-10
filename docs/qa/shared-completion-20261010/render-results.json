@@ -1,0 +1,161 @@
+{
+  "checks": [
+    {
+      "width": 320,
+      "scenario": "two",
+      "errors": [],
+      "overflow": false
+    },
+    {
+      "width": 320,
+      "scenario": "three",
+      "errors": [],
+      "overflow": false
+    },
+    {
+      "width": 320,
+      "scenario": "five",
+      "errors": [],
+      "overflow": false
+    },
+    {
+      "width": 320,
+      "scenario": "exact",
+      "errors": [],
+      "overflow": false
+    },
+    {
+      "width": 320,
+      "scenario": "subset",
+      "errors": [],
+      "overflow": false
+    },
+    {
+      "width": 320,
+      "scenario": "lost",
+      "errors": [],
+      "overflow": false
+    },
+    {
+      "width": 320,
+      "scenario": "conflict",
+      "errors": [],
+      "overflow": false
+    },
+    {
+      "width": 320,
+      "scenario": "partial",
+      "errors": [],
+      "overflow": false
+    },
+    {
+      "width": 320,
+      "scenario": "repay-lost",
+      "errors": [],
+      "overflow": false
+    },
+    {
+      "width": 320,
+      "scenario": "repay-conflict",
+      "errors": [],
+      "overflow": false
+    },
+    {
+      "width": 320,
+      "scenario": "people-refresh",
+      "errors": [],
+      "overflow": false
+    },
+    {
+      "width": 320,
+      "scenario": "offline",
+      "errors": [],
+      "overflow": false
+    },
+    {
+      "width": 320,
+      "scenario": "pending",
+      "errors": [],
+      "overflow": false
+    },
+    {
+      "width": 390,
+      "scenario": "two",
+      "errors": [],
+      "overflow": false
+    },
+    {
+      "width": 390,
+      "scenario": "three",
+      "errors": [],
+      "overflow": false
+    },
+    {
+      "width": 390,
+      "scenario": "five",
+      "errors": [],
+      "overflow": false
+    },
+    {
+      "width": 390,
+      "scenario": "exact",
+      "errors": [],
+      "overflow": false
+    },
+    {
+      "width": 390,
+      "scenario": "subset",
+      "errors": [],
+      "overflow": false
+    },
+    {
+      "width": 390,
+      "scenario": "lost",
+      "errors": [],
+      "overflow": false
+    },
+    {
+      "width": 390,
+      "scenario": "conflict",
+      "errors": [],
+      "overflow": false
+    },
+    {
+      "width": 390,
+      "scenario": "partial",
+      "errors": [],
+      "overflow": false
+    },
+    {
+      "width": 390,
+      "scenario": "repay-lost",
+      "errors": [],
+      "overflow": false
+    },
+    {
+      "width": 390,
+      "scenario": "repay-conflict",
+      "errors": [],
+      "overflow": false
+    },
+    {
+      "width": 390,
+      "scenario": "people-refresh",
+      "errors": [],
+      "overflow": false
+    },
+    {
+      "width": 390,
+      "scenario": "offline",
+      "errors": [],
+      "overflow": false
+    },
+    {
+      "width": 390,
+      "scenario": "pending",
+      "errors": [],
+      "overflow": false
+    }
+  ],
+  "method": "Actual shared expense forms, people sheets, ledger, recovery controls and arithmetic. API/router/native boundaries controlled; synthetic data. No native-device verification."
+}

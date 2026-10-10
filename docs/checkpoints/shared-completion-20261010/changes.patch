@@ -1,0 +1,281 @@
+--- a/apps/mobile/app/shared/edit.tsx
++++ b/apps/mobile/app/shared/edit.tsx
+@@ -9,15 +9,15 @@
+ import {QuietAction} from "@/components/Brief";
+ import {Surface} from "@/components/ui/Surface";
+ import {PersonPicker,SharedFrame,SharedLoading,SharedNotice,SharedSheet,sharedStyles as s,useSharedLedger} from "@/components/SharedExpenseUI";
+-import {fetchSharedBillSource,localToday,pendingSharedSave,saveSharedExpense,type ExpenseDetails,type SharedPayload,type SharedBillSource} from "@/lib/shared-expenses";
++import {fetchSharedBillSource,localToday,pendingSharedSave,saveSharedExpense,type ExpenseDetails,type SharedPayload,type SharedBillSource,type SharedCommand} from "@/lib/shared-expenses";
+ import {centsInput,equalExpenseShares,parseCadCents,sharedMoney,sumShares} from "@/lib/shared-expense-math";
+ import {AddExpensePerson,expensePersonStatus} from "@/components/ExpensePeople";
+-import {initialExpenseParticipants,hasSharedParticipants} from "@/lib/shared-expense-participants";
++import {initialExpenseParticipants,hasSharedParticipants,expenseParticipantSummary} from "@/lib/shared-expense-participants";
+ import {ApiError} from "@/lib/api";
+ import {colors,typography} from "@/theme/tokens";
+ 
+-function ExpenseForm({data,id,source,reload,unavailable=false}:{data:SharedPayload;id?:string;source?:SharedBillSource;reload:()=>Promise<unknown>;unavailable?:boolean}){
+- const router=useRouter(),navigation=useNavigation(),lock=useRef(false);
++function ExpenseForm({data,id,source,reload,onReloadLatest,unavailable=false}:{data:SharedPayload;id?:string;source?:SharedBillSource;reload:()=>Promise<unknown>;onReloadLatest:()=>Promise<void>;unavailable?:boolean}){
++ const router=useRouter(),navigation=useNavigation(),lock=useRef(false),attempt=useRef<SharedCommand|null>(null);
+  const [splitOpen,setSplitOpen]=useState(false),[extrasOpen,setExtrasOpen]=useState(false);
+  const [original]=useState(()=>id?data.entries.find(e=>e.id===id):null);
+  const initial=original?.kind==="expense"?original.details:null;
+@@ -26,6 +26,8 @@
+  const [payer,setPayer]=useState(initial?.paidBy??data.people.find(p=>p.self)?.id??""),[selected,setSelected]=useState<string[]>(initial?.shares.map(s=>s.personId)??initialExpenseParticipants(data.people));
+  const [mode,setMode]=useState<"equal"|"exact">(initial?"exact":"equal"),[amounts,setAmounts]=useState<Record<string,string>>(Object.fromEntries(initial?.shares.map(s=>[s.personId,centsInput(s.cents)])??[]));
+  const [error,setError]=useState<string|null>(null),[saving,setSaving]=useState(false),[saved,setSaved]=useState<string|null>(null),[existing,setExisting]=useState(false);
++ const [uncertain,setUncertain]=useState(false),[conflict,setConflict]=useState(false);
++ const blocked=saving||uncertain||conflict;
+  const [defaults]=useState(()=>({payer,selected:[...selected],date}));
+  const cents=parseCadCents(amount),people=data.people.filter(p=>p.state!=="former"||initial?.paidBy===p.id||initial?.shares.some(s=>s.personId===p.id));
+  const shares=cents&&selected.length&&selected.length<=40?(mode==="equal"?equalExpenseShares(cents,selected):selected.map(personId=>({personId,cents:/^0(?:\.0{1,2})?$/.test(amounts[personId]??"")?0:parseCadCents(amounts[personId]??"")??-1}))):[];
+@@ -38,31 +40,39 @@
+  });
+  useEffect(()=>{if(saved)router.replace({pathname:"/shared/[id]",params:{id:saved,...(existing?{existing:"1"}:{saved:"1"})}});},[saved,existing,router]);
+  async function submit(){
+-  if(lock.current||!valid)return;lock.current=true;setSaving(true);setError(null);
++  if(lock.current||(!uncertain&&!valid))return;lock.current=true;setSaving(true);setError(null);
+   const details:ExpenseDetails={title:title.trim(),amountCents:cents!,paidBy:payer,shares,happenedOn:date,note:note.trim()};
+   try{
+-   const result=await saveSharedExpense(data.home.id,original?{operation:"edit",id:original.id,version:original.version,details}:{operation:"create",kind:"expense",details,...(source?{sourceBillId:source.billId}:{})});
++   const command=uncertain&&attempt.current?attempt.current:original?{operation:"edit" as const,id:original.id,version:original.version,details}:{operation:"create" as const,kind:"expense" as const,details,...(source?{sourceBillId:source.billId}:{})};
++   attempt.current=command;
++   const result=await saveSharedExpense(data.home.id,command);
+    setSaved(result.id!);
+   }catch(e){
+    const conflict=e instanceof ApiError?e.details as {existingEntryId?:unknown}|undefined:undefined;
+    if(typeof conflict?.existingEntryId==="string"){setExisting(true);setSaved(conflict.existingEntryId);return;}
+-   const pending=await pendingSharedSave().catch(()=>null);setError((e instanceof ApiError?e.message:"Could not confirm your save.")+(pending?" Your attempted details are kept. Open Shared expenses to check this save.":""));}
++   const pending=await pendingSharedSave().catch(()=>undefined);
++   const rejected=e instanceof ApiError&&[400,403,404,409].includes(e.status);
++   setUncertain(Boolean(pending)||(!rejected&&pending===undefined));
++   setConflict(e instanceof ApiError&&e.status===409&&!pending);
++   setError(pending?"We couldn’t confirm the save. Your attempted details are kept. Check the save before changing them.":e instanceof ApiError?e.message:"Could not confirm your save. Try again with these details.");}
+   finally{lock.current=false;setSaving(false);}
+  }
+  const name=(id:string)=>{const person=people.find(p=>p.id===id);return person?.self?"you":person?.name??"Former participant";};
++ if(id&&!original)return <SharedNotice message="This expense is no longer available. Return to shared expenses to check its history."/>;
+  if(original&&(!original.canEdit||original.kind!=="expense"))return <SharedNotice message="This entry can’t be edited. Open its details to see the latest state."/>;
+ 
+  return <>
+   <Text style={s.label}>{data.home.name} · CAD</Text>
+   {source?<Text style={s.label}>{source.draft.amountBasis==="recorded_payment"?"Your recorded payment is filled in.":source.draft.amountBasis==="bill_amount"?"Bill amount filled in. Confirm what you actually paid.":"Enter the amount you actually paid."} The original bill stays private.</Text>:null}
+   {error?<SharedNotice message={error}/>:null}
+-  <View pointerEvents={saving?"none":"auto"} style={{gap:20}}>
++  {conflict?<Button label="Review latest expense" variant="secondary" onPress={()=>Alert.alert("Load the latest version?","Your unsaved changes will be replaced by the saved expense.",[{text:"Keep changes",style:"cancel"},{text:"Load latest",onPress:()=>void onReloadLatest()}])}/>:null}
++  <View pointerEvents={blocked?"none":"auto"} style={{gap:20}}>
+    <Pressable accessibilityRole="button" accessibilityLabel="Choose people for this expense" accessibilityState={{expanded:peopleOpen}} onPress={()=>setPeopleOpen(true)} style={({pressed})=>({backgroundColor:pressed?colors.accent:colors.surfaceSubtle,borderRadius:16,padding:16,flexDirection:"row",alignItems:"center",gap:12})}>
+-    <Feather name="users" size={21} color={colors.primary}/><View style={{flex:1,gap:4}}><Text style={s.label}>Sharing with</Text><Text style={[s.body,{fontWeight:"600"}]}>{hasSharedParticipants(people,selected,payer)?selected.map(id=>name(id)).join(", "):"Choose who shares this expense"}</Text></View><Feather name="chevron-down" size={18} color={colors.primary}/>
++    <Feather name="users" size={21} color={colors.primary}/><View style={{flex:1,gap:4}}><Text style={s.label}>Sharing with</Text><Text style={[s.body,{fontWeight:"600"}]}>{hasSharedParticipants(people,selected,payer)?expenseParticipantSummary(people,selected):"Choose who shares this expense"}</Text></View><Feather name="chevron-down" size={18} color={colors.primary}/>
+    </Pressable>
+-   <TextField label="What was it for?" value={title} onChangeText={setTitle} maxLength={120} placeholder="Groceries, internet, a home repair…" editable={!saving}/>
+-   <TextField label="Amount paid (CAD)" value={amount} onChangeText={setAmount} keyboardType="decimal-pad" maxLength={12} placeholder="0.00" editable={!saving} style={{fontSize:30,minHeight:64,fontVariant:["tabular-nums"]}}/>
+-   <PersonPicker label="Paid by" people={people} value={payer} onChange={setPayer} disabled={saving}/>
++   <TextField label="What was it for?" value={title} onChangeText={setTitle} maxLength={120} placeholder="Groceries, internet, a home repair…" editable={!blocked}/>
++   <TextField label="Amount paid (CAD)" value={amount} onChangeText={setAmount} keyboardType="decimal-pad" maxLength={12} placeholder="0.00" editable={!blocked} style={{fontSize:30,minHeight:64,fontVariant:["tabular-nums"]}}/>
++   <PersonPicker label="Paid by" people={people} value={payer} onChange={setPayer} disabled={blocked}/>
+    <View style={{gap:12}}>
+     <Pressable accessibilityRole="button" accessibilityLabel="Change how this expense is split" accessibilityState={{expanded:splitOpen}} onPress={()=>setSplitOpen(true)} style={{minHeight:44,flexDirection:"row",gap:12,alignItems:"center"}}>
+      <Text accessibilityRole="header" style={[typography.section,{color:colors.foreground,flex:1}]}>Everyone’s share</Text><Text style={[s.label,{color:colors.primary,fontWeight:"600"}]}>{mode==="equal"?"Equally":"Exact amounts"}</Text><Feather name="chevron-down" size={17} color={colors.primary}/>
+@@ -77,21 +87,22 @@
+    {extrasOpen?<TextField label="Note (optional)" value={note} onChangeText={setNote} maxLength={500} multiline placeholder="Anything the household should know" style={{minHeight:80,textAlignVertical:"top",paddingTop:12}}/>:null}
+   </View>
+   <View style={{gap:10}}>
+-   <Button label={original?"Save changes":"Save expense"} disabled={!valid} loading={saving} onPress={()=>void submit()}/>
++   <Button label={uncertain?"Check saved expense":original?"Save changes":"Save expense"} disabled={conflict||(!uncertain&&!valid)} loading={saving} onPress={()=>void submit()}/>
+    <Text style={s.label}>Visible to joined household members. Records a payment already made; no money moves.</Text>
+   </View>
+-  <SharedSheet title="Who shares this expense?" visible={peopleOpen} disabled={saving} onClose={()=>setPeopleOpen(false)}>
++  <SharedSheet title="Who shares this expense?" visible={peopleOpen} disabled={blocked} onClose={()=>setPeopleOpen(false)}>
+    <View>{people.map(person=>{
+     const checked=selected.includes(person.id);
+     return <Pressable key={person.id} accessibilityRole="checkbox" accessibilityState={{checked}} accessibilityLabel={person.self?"Include yourself":person.name} onPress={()=>{if(!checked&&selected.length>=40){setError("Choose up to 40 people.");return;}setSelected(ids=>checked?ids.filter(id=>id!==person.id):[...ids,person.id]);}} style={{minHeight:60,paddingVertical:12,flexDirection:"row",gap:12,alignItems:"center",borderBottomWidth:1,borderColor:colors.border}}>
+      <View style={{flex:1,gap:3}}><Text style={s.body}>{person.self?"You":person.name}</Text>{!person.self?<Text style={s.label}>{expensePersonStatus(person)}</Text>:null}</View><Feather name={checked?"check-circle":"circle"} size={22} color={checked?colors.primary:colors.mutedForeground}/>
+     </Pressable>;
+    })}</View>
+-   {data.role==="owner"?<AddExpensePerson homeId={data.home.id} initialOpen={!people.some(p=>!p.self)} onAdded={async personId=>{await reload();setSelected(ids=>ids.includes(personId)?ids:[...ids,personId]);}}/>:!people.some(p=>!p.self)?<Text style={s.body}>Ask the household owner to add someone to the expense list.</Text>:null}
++   {data.role==="owner"?<AddExpensePerson homeId={data.home.id} initialOpen={!people.some(p=>!p.self)} onAdded={async personId=>{if(!await reload())throw Error("Refresh failed");setSelected(ids=>ids.includes(personId)?ids:[...ids,personId]);}}/>:!people.some(p=>!p.self)?<Text style={s.body}>Ask the household owner to add someone to the expense list.</Text>:null}
++   <Text accessibilityLiveRegion="polite" style={s.label}>{selected.length} {selected.length===1?"person":"people"} selected. Only selected people share this expense.</Text>
+    <Text style={s.label}>Someone can share a cost without joining Rezlee. Adding their name sends no invitation.</Text>
+    <Button label="Done" onPress={()=>setPeopleOpen(false)}/>
+   </SharedSheet>
+-  <SharedSheet title="How should it be split?" visible={splitOpen} disabled={saving} onClose={()=>setSplitOpen(false)}>
++  <SharedSheet title="How should it be split?" visible={splitOpen} disabled={blocked} onClose={()=>setSplitOpen(false)}>
+    <View style={{flexDirection:"row",gap:20}}>{(["equal","exact"] as const).map(value=><Pressable key={value} accessibilityRole="radio" accessibilityState={{checked:mode===value}} onPress={()=>{
+     if(value==="exact"&&mode!=="exact")setAmounts(Object.fromEntries(shares.map(share=>[share.personId,centsInput(share.cents)])));
+     setMode(value);
+@@ -106,6 +117,7 @@
+ 
+ export default function EditSharedExpense(){
+  const {id,billId}=useLocalSearchParams<{id?:string;billId?:string}>(),router=useRouter(),{data,error,busy,load}=useSharedLedger(id);
++ const [formVersion,setFormVersion]=useState(0);
+  const [source,setSource]=useState<SharedBillSource|null>(null),[sourceError,setSourceError]=useState<string|null>(null);
+  const fetchSource=useCallback(async()=>{
+   if(!billId)return;
+@@ -118,6 +130,6 @@
+   {error?<SharedNotice message={error} onRetry={()=>void load()}/>:null}
+   {sourceError?<SharedNotice message={sourceError} onRetry={()=>void fetchSource()}/>:null}
+   {(busy&&!data)||(billId&&!matchingSource&&!sourceError)?<SharedLoading/>:null}
+-  {matchingSource?.existingEntryId?<Surface tone="subtle" style={{gap:16}}><Text style={s.heading}>This bill has a shared expense</Text><Text style={s.body}>Open the saved entry to review or correct it. It won’t be added twice.</Text><Button label="View shared expense" onPress={()=>router.replace({pathname:"/shared/[id]",params:{id:matchingSource.existingEntryId!}})}/></Surface>:data&&!sourceError&&(!billId||matchingSource)?<ExpenseForm key={data.home.id+(id??billId??"new")} data={data} id={id} source={matchingSource} reload={load} unavailable={Boolean(error)}/>:null}
++  {matchingSource?.existingEntryId?<Surface tone="subtle" style={{gap:16}}><Text style={s.heading}>This bill has a shared expense</Text><Text style={s.body}>Open the saved entry to review or correct it. It won’t be added twice.</Text><Button label="View shared expense" onPress={()=>router.replace({pathname:"/shared/[id]",params:{id:matchingSource.existingEntryId!}})}/></Surface>:data&&!sourceError&&(!billId||matchingSource)?<ExpenseForm key={data.home.id+(id??billId??"new")+formVersion} data={data} id={id} source={matchingSource} reload={load} onReloadLatest={async()=>{if(await load())setFormVersion(v=>v+1);}} unavailable={Boolean(error)}/>:null}
+  </SharedFrame>;
+ }
+--- a/apps/mobile/app/shared/repay.tsx
++++ b/apps/mobile/app/shared/repay.tsx
+@@ -7,24 +7,25 @@
+ import {TextField} from "@/components/TextField";
+ import {Surface} from "@/components/ui/Surface";
+ import {SharedFrame,SharedLoading,SharedNotice,sharedStyles as s,useSharedLedger} from "@/components/SharedExpenseUI";
+-import {localToday,saveSharedExpense,sharedPersonName,type SharedPayload} from "@/lib/shared-expenses";
++import {localToday,pendingSharedSave,saveSharedExpense,sharedPersonName,type SharedPayload,type SharedCommand} from "@/lib/shared-expenses";
+ import {centsInput,parseCadCents,sharedMoney} from "@/lib/shared-expense-math";
+ import {ApiError} from "@/lib/api";
+ 
+-function Repayment({data,from,to}:{data:SharedPayload;from:string;to:string}){
+- const router=useRouter(),navigation=useNavigation(),lock=useRef(false),pair=data.balances.find(b=>b.from===from&&b.to===to);
++function Repayment({data,from,to,onReloadLatest}:{data:SharedPayload;from:string;to:string;onReloadLatest:()=>Promise<void>}){
++ const router=useRouter(),navigation=useNavigation(),lock=useRef(false),attempt=useRef<SharedCommand|null>(null),pair=data.balances.find(b=>b.from===from&&b.to===to);
+  const [amount,setAmount]=useState(pair?centsInput(pair.cents):""),[date,setDate]=useState(localToday()),[note,setNote]=useState(""),[error,setError]=useState<string|null>(null),[saving,setSaving]=useState(false),[saved,setSaved]=useState<string|null>(null);
++ const [uncertain,setUncertain]=useState(false),[conflict,setConflict]=useState(false);
+  const cents=parseCadCents(amount),canRecord=data.role==="owner"||data.people.some(p=>p.self&&(p.id===from||p.id===to));
+  const valid=Boolean(pair&&cents&&cents<=pair.cents&&date<=localToday()&&date>="2000-01-01"&&canRecord);
+  usePreventRemove(!saved&&Boolean(note||saving||date!==localToday()||amount!==(pair?centsInput(pair.cents):"")),({data:action})=>{
+   if(saving){Alert.alert("Recording repayment","Wait for the result before leaving.");return;}
+   Alert.alert("Leave this repayment?","Unsaved changes will be discarded. Any interrupted save can be checked from Shared expenses.",[{text:"Keep editing",style:"cancel"},{text:"Leave",onPress:()=>navigation.dispatch(action.action)}]);
+  });
+- useEffect(()=>{if(saved)router.replace({pathname:"/shared/[id]",params:{id:saved}});},[saved,router]);
++ useEffect(()=>{if(saved)router.replace({pathname:"/shared/[id]",params:{id:saved,saved:"1"}});},[saved,router]);
+  async function save(){
+-  if(lock.current||!valid)return;lock.current=true;setSaving(true);setError(null);
+-  try{const r=await saveSharedExpense(data.home.id,{operation:"create",kind:"repayment",details:{from,to,amountCents:cents!,happenedOn:date,note:note.trim()}});setSaved(r.id!);}
+-  catch(e){setError(e instanceof ApiError?e.message:"Could not confirm this repayment. Your attempted save is kept in Shared expenses.");}
++  if(lock.current||(!uncertain&&!valid))return;lock.current=true;setSaving(true);setError(null);
++  try{const command=uncertain&&attempt.current?attempt.current:{operation:"create" as const,kind:"repayment" as const,details:{from,to,amountCents:cents!,happenedOn:date,note:note.trim()}};attempt.current=command;const r=await saveSharedExpense(data.home.id,command);setSaved(r.id!);}
++  catch(e){const pending=await pendingSharedSave().catch(()=>undefined);const rejected=e instanceof ApiError&&[400,403,404,409].includes(e.status);setUncertain(Boolean(pending)||(!rejected&&pending===undefined));setConflict(e instanceof ApiError&&e.status===409&&!pending);setError(pending?"We couldn’t confirm the repayment. Check the saved attempt before changing it.":e instanceof ApiError?e.message:"Could not confirm this repayment. Retry with the same details.");}
+   finally{lock.current=false;setSaving(false);}
+  }
+  if(!pair||!canRecord)return <SharedNotice message={!pair?"There is no outstanding balance between these people. Return to Shared expenses to see the latest balances.":"You can record repayments you sent or received. The household owner can also record them."}/>;
+@@ -34,20 +35,22 @@
+    <Text style={s.body}>{sharedMoney(pair.cents)} outstanding</Text>
+   </Surface>
+   {error?<SharedNotice message={error}/>:null}
+-  <View pointerEvents={saving?"none":"auto"} style={{gap:20}}>
+-   <TextField label="Amount repaid (CAD)" value={amount} onChangeText={setAmount} keyboardType="decimal-pad" maxLength={12} editable={!saving}/>
++  {conflict?<Button label="Refresh outstanding balance" variant="secondary" onPress={()=>void onReloadLatest()}/>:null}
++  <View pointerEvents={saving||uncertain||conflict?"none":"auto"} style={{gap:20}}>
++   <TextField label="Amount repaid (CAD)" value={amount} onChangeText={setAmount} keyboardType="decimal-pad" maxLength={12} editable={!saving&&!uncertain&&!conflict}/>
+    {cents&&cents>pair.cents?<Text style={s.label}>Use an amount up to {sharedMoney(pair.cents)}. You can record a partial repayment.</Text>:null}
+    <DateField label="Payment date" value={date} onChange={setDate}/>
+-   <TextField label="Note (optional)" value={note} onChangeText={setNote} maxLength={500} editable={!saving} placeholder="Interac e-Transfer, cash…"/>
++   <TextField label="Note (optional)" value={note} onChangeText={setNote} maxLength={500} editable={!saving&&!uncertain&&!conflict} placeholder="Interac e-Transfer, cash…"/>
+   </View>
+-  <Button label="Record repayment" loading={saving} disabled={!valid} onPress={()=>Alert.alert("Already repaid?","Record "+sharedMoney(cents??0)+" from "+sharedPersonName(data.people,from)+" to "+sharedPersonName(data.people,to)+". Rezlee will update the ledger without moving money.",[{text:"Cancel",style:"cancel"},{text:"Record",onPress:()=>void save()}])}/>
++  <Button label={uncertain?"Check saved repayment":"Record repayment"} loading={saving} disabled={conflict||(!uncertain&&!valid)} onPress={()=>uncertain?void save():Alert.alert("Already repaid?","Record "+sharedMoney(cents??0)+" from "+sharedPersonName(data.people,from)+" to "+sharedPersonName(data.people,to)+". Rezlee will update the ledger without moving money.",[{text:"Cancel",style:"cancel"},{text:"Record",onPress:()=>void save()}])}/>
+   <Text style={s.label}>Only record money already sent or received. This is a shared record, not a payment confirmation from your bank.</Text>
+  </>;
+ }
+ export default function RecordRepayment(){
++ const [formVersion,setFormVersion]=useState(0);
+  const {from="",to=""}=useLocalSearchParams<{from:string;to:string}>(),{data,error,busy,load}=useSharedLedger();
+  return <SharedFrame title="Record repayment">
+   {error?<SharedNotice message={error} onRetry={()=>void load()}/>:null}{busy&&!data?<SharedLoading/>:null}
+-  {data&&!error?<Repayment key={data.home.id+from+to} data={data} from={from} to={to}/>:null}
++  {data&&!error?<Repayment key={data.home.id+from+to+formVersion} data={data} from={from} to={to} onReloadLatest={async()=>{if(await load())setFormVersion(v=>v+1);}}/>:null}
+  </SharedFrame>;
+ }
+--- a/apps/mobile/app/shared/index.tsx
++++ b/apps/mobile/app/shared/index.tsx
+@@ -65,7 +65,7 @@
+   {checkingPending&&data?<Text accessibilityLiveRegion="polite" style={s.label}>Checking unfinished saves…</Text>:null}
+   {pendingCheckError?<SharedNotice message={pendingCheckError} onRetry={()=>void checkPending()} busy={checkingPending}/>:null}
+   {saveError?<SharedNotice message={saveError}/>:null}
+-  {pending?<SharedNotice message="A previous save still needs confirmation. Check it before adding another entry." onRetry={()=>void recover()} busy={working}/>:null}
++  {pending?<View style={{gap:12}}><SharedNotice message={pending.command.operation==="create"&&pending.command.kind==="expense"?"Check your expense: "+pending.command.details.title+" · "+sharedMoney(pending.command.details.amountCents):pending.command.operation==="create"&&pending.command.kind==="repayment"?"Check your recorded repayment of "+sharedMoney(pending.command.details.amountCents):"A previous change still needs confirmation. Your attempted details are kept."}/><Button label="Check previous save" loading={working} disabled={!data||Boolean(error)||data.home.id!==pending.homeId} onPress={()=>void recover()}/></View>:null}
+   {data?<>
+    <View style={{flexDirection:"row",alignItems:"center",gap:16}}>
+     <View style={{flex:1,gap:3}}><Text style={s.label}>{data.home.name}</Text>{!inline?<Text style={s.heading}>Everyone’s share, clear.</Text>:null}</View>
+--- a/apps/mobile/app/shared/[id].tsx
++++ b/apps/mobile/app/shared/[id].tsx
+@@ -26,7 +26,7 @@
+   {failure?<SharedNotice message={failure}/>:null}
+   {busy&&!data?<SharedLoading/>:null}
+   {entry&&data?<>
+-   {saved==="1"&&!entry.voided?<Text accessibilityLiveRegion="polite" style={[s.label,{color:colors.successForeground,fontWeight:"600"}]}>Expense saved. Your household balances are updated.</Text>:null}
++   {saved==="1"&&!entry.voided?<Text accessibilityLiveRegion="polite" style={[s.label,{color:colors.successForeground,fontWeight:"600"}]}>{entry.kind==="repayment"?"Repayment recorded. Your household balances are updated.":"Expense saved. Your household balances are updated."}</Text>:null}
+    {existing==="1"?<Text accessibilityLiveRegion="polite" style={s.label}>This bill was already shared. You’re viewing the existing expense.</Text>:null}
+    <Surface tone="subtle" style={{gap:12}}>
+     <Text style={s.label}>{data.home.name} · {entry.voided?"Removed from balances":"Recorded in CAD"}</Text>
+--- a/apps/mobile/src/components/ExpensePeople.tsx
++++ b/apps/mobile/src/components/ExpensePeople.tsx
+@@ -49,19 +49,21 @@
+ export function AddExpensePerson({homeId,onAdded,prominent=false,initialOpen=false}:{homeId:string;onAdded:(id:string)=>Promise<unknown>;prominent?:boolean;initialOpen?:boolean}){
+  const [open,setOpen]=useState(initialOpen),[name,setName]=useState(""),[busy,setBusy]=useState(false),[error,setError]=useState<string|null>(null);
+  const lock=useRef(false);
++ const [confirmedId,setConfirmedId]=useState<string|null>(null);
+  async function add(){
+   if(lock.current||!name.trim())return;lock.current=true;setBusy(true);setError(null);
+-  try{const result=await saveSharedExpense(homeId,{operation:"add_person",name:name.trim()});if(!result.id)throw Error("Missing person");await onAdded(result.id);setName("");setOpen(false);}
+-  catch(e){setError(e instanceof ApiError?e.message:"Could not confirm this person was added. Try again with the same name to check the save.");}
++  let savedPersonId=confirmedId;
++  try{if(!savedPersonId){const result=await saveSharedExpense(homeId,{operation:"add_person",name:name.trim()});if(!result.id)throw Error("Missing person");savedPersonId=result.id;setConfirmedId(result.id);}await onAdded(savedPersonId);setConfirmedId(null);setName("");setOpen(false);}
++  catch(e){setError(savedPersonId?"This person was added. Refresh the people list to include them in your expense.":e instanceof ApiError?e.message:"Could not confirm this person was added. Try again with the same name to check the save.");}
+   finally{setBusy(false);lock.current=false;}
+  }
+  return <View style={{gap:12}}>
+   {error?<SharedNotice message={error}/>:null}
+   {open?<View style={{gap:12,padding:16,backgroundColor:colors.surfaceSubtle,borderRadius:radii.lg}}>
+    <Text style={s.body}>Include someone in the split</Text>
+-   <TextField label="Person’s name" value={name} onChangeText={setName} maxLength={80} placeholder="Alex" editable={!busy}/>
++   <TextField label="Person’s name" value={name} onChangeText={setName} maxLength={80} placeholder="Alex" editable={!busy&&!confirmedId}/>
+    <Text style={s.label}>No account needed. This adds a name to the expense list only. You can invite them after saving.</Text>
+-   <Button label="Add person" disabled={!name.trim()} loading={busy} onPress={()=>void add()}/>
++   <Button label={confirmedId?"Refresh people":"Add person"} disabled={!name.trim()} loading={busy} onPress={()=>void add()}/>
+    <QuietAction label="Cancel" onPress={()=>{if(!busy)setOpen(false);}}/>
+   </View>:prominent?<Button label="Add someone to share with" onPress={()=>setOpen(true)}/>:<QuietAction label="Add someone" onPress={()=>setOpen(true)}/>}
+  </View>;
+--- a/apps/mobile/src/lib/shared-expense-participants.ts
++++ b/apps/mobile/src/lib/shared-expense-participants.ts
+@@ -7,3 +7,9 @@
+  const involved=[...new Set([...selected,payer])];
+  return involved.length>=2&&involved.every(id=>people.some(p=>p.id===id));
+ }
++
++/** Full selections remain in the people sheet; the compact summary scales to roommates. */
++export function expenseParticipantSummary(people:(Person&{name:string})[],selected:string[]){
++ const names=selected.map(id=>{const person=people.find(p=>p.id===id);return person?.self?"You":person?.name??"Former participant";});
++ return names.length<=2?names.join(" & "):names.slice(0,2).join(", ")+" + "+(names.length-2)+" more";
++}
+--- a/apps/mobile/app/shared/people.tsx
++++ b/apps/mobile/app/shared/people.tsx
+@@ -24,7 +24,7 @@
+     {data.role==="owner"&&p.guest&&p.state==="local"&&!p.memberId?<QuietAction label={"Remove "+p.name} onPress={()=>{if(!saving&&!error)Alert.alert("Remove "+p.name+"?","Past expenses and any outstanding balance remain. They won’t appear in new expense selections.",[{text:"Keep",style:"cancel"},{text:"Remove",style:"destructive",onPress:()=>void mutate(p.id)}]);}}/>:null}
+     {data.role==="owner"?<InviteExpensePerson person={p} onChange={load}/>:null}
+    </View>)}</View>
+-   {data.role==="owner"?<AddExpensePerson homeId={data.home.id} onAdded={async()=>{await load();}}/>:null}
++   {data.role==="owner"?<AddExpensePerson homeId={data.home.id} onAdded={async()=>{if(!await load())throw Error("Refresh failed");}}/>:null}
+    <QuietAction label="Manage household access" onPress={()=>router.push("/household")}/>
+    <Text style={s.label}>Adding a name tracks their share without giving access. Invite them here to connect their account to the same expenses and balance after they accept.</Text>
+   </>:null}
+--- a/tests/shared-expense-participants.test.ts
++++ b/tests/shared-expense-participants.test.ts
+@@ -1,6 +1,6 @@
+ import test from "node:test";
+ import assert from "node:assert/strict";
+-import {initialExpenseParticipants,hasSharedParticipants} from "../apps/mobile/src/lib/shared-expense-participants";
++import {initialExpenseParticipants,hasSharedParticipants,expenseParticipantSummary} from "../apps/mobile/src/lib/shared-expense-participants";
+ const people=[{id:"me",self:true,state:"owner"},{id:"alex",self:false,state:"local"},{id:"sam",self:false,state:"member"}];
+ test("new expenses never silently select other household participants",()=>{
+  assert.deepEqual(initialExpenseParticipants(people),["me"]);
+@@ -16,3 +16,12 @@
+  assert.equal(hasSharedParticipants(people,["me","alex","alex"],"me"),false);
+  assert.equal(hasSharedParticipants(people,["me","alex"],"unknown"),false);
+ });
++
++test("roommate summaries stay compact without changing selected participants",()=>{
++ const group=Array.from({length:5},(_,i)=>({id:String(i),name:"Roommate "+i,self:i===0,state:i===0?"owner":"local"}));
++ assert.equal(expenseParticipantSummary(group,["0","1"]),"You & Roommate 1");
++ assert.equal(expenseParticipantSummary(group,["0","1","2"]),"You, Roommate 1 + 1 more");
++ assert.equal(expenseParticipantSummary(group,group.map(p=>p.id)),"You, Roommate 1 + 3 more");
++ assert.equal(hasSharedParticipants(group,["1","4"],"2"),true);
++ assert.deepEqual(initialExpenseParticipants(group),["0"]);
++});

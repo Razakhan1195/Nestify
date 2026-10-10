@@ -1,0 +1,24 @@
+✔ bill share prefills a labelled amount without claiming payment or using amount due (1.338708ms)
+✔ recorded partial payment is distinguished from charges and still reviewed (0.295334ms)
+✔ foreign currency, credits and missing amounts never invent a positive paid amount (0.529791ms)
+✔ shared ledger isolates households, reconciles exact shares, corrections, repayments and removal (1734.234333ms)
+✔ expense participants retain identity through invitation, acceptance, cancellation and removal (1745.044833ms)
+✔ CAD input rejects ambiguous, fractional-cent and unsupported amounts (1.142459ms)
+✔ equal shares preserve cents and have deterministic remainder regardless of selection order (5.695875ms)
+✔ new expenses never silently select other household participants (3.212ms)
+✔ shared expense needs another real participant and valid unique selections (0.31925ms)
+✔ roommate summaries stay compact without changing selected participants (0.184167ms)
+✔ no activity, self-only and removed shares retain an honest starting state (0.394666ms)
+✔ unloaded older entries never become an assertion that sharing has not started (0.051791ms)
+✔ balances are authoritative across pages, while known sharing with zero balances is settled (0.054083ms)
+✔ paying entirely for another person is sharing; adding a zero share is not (0.049666ms)
+✔ repayments establish recorded activity even when expenses are on earlier pages (0.100875ms)
+✔ activity names payer and allocations, including local people without implying membership (0.065917ms)
+ℹ tests 16
+ℹ suites 0
+ℹ pass 16
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 2067.044042
