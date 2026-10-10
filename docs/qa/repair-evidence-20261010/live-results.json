@@ -1,0 +1,359 @@
+{
+  "checks": [
+    "door obstruction: case saved",
+    "door obstruction: live AI produced guidance",
+    "door obstruction: relevant evidence-backed check",
+    "door obstruction: grounded explanation",
+    "door obstruction: outcome saved",
+    "door obstruction: retry does not duplicate answer",
+    "door obstruction: completed check retained",
+    "customer resolution recorded, no extra questions",
+    "recurrence preserves history and landlord route",
+    "warm fridge: case saved",
+    "warm fridge: live AI produced guidance",
+    "warm fridge: relevant evidence-backed check",
+    "warm fridge: grounded explanation",
+    "warm fridge: outcome saved",
+    "warm fridge: retry does not duplicate answer",
+    "warm fridge: completed check retained",
+    "no remaining safe check leads to professional brief",
+    "service brief remains editable"
+  ],
+  "failure": null,
+  "generationRequests": 2,
+  "maxInitialGenerationRequests": 2,
+  "observations": [
+    {
+      "elapsedMs": 3074,
+      "issue": {
+        "id": "5a242c69-4378-4cee-b329-43a852f99394",
+        "title": "Fridge door won't close",
+        "status": "next_steps_ready",
+        "version": 2,
+        "createdAt": "2026-10-10T17:59:16.033399+00:00",
+        "progress": {
+          "brief": null,
+          "intake": {
+            "title": "Fridge door won't close",
+            "hazard": "none",
+            "context": "renter",
+            "category": "appliance",
+            "equipment": "",
+            "description": "My refrigerator door does not close fully. A milk carton may be in the way. I do not know the model."
+          },
+          "blocked": false,
+          "adaptive": {
+            "step": {
+              "id": "fridge-door",
+              "why": "A blocked door allows warm air in. Correcting an obstruction is a simple first check.",
+              "kind": "try",
+              "title": "Check whether the door closes fully",
+              "detail": "Move any container that prevents the door closing normally. Look for an obvious gap; do not force the door or remove its parts. Keep perishable food safe while cooling is uncertain.",
+              "source": {
+                "url": "https://www.whirlpool.ca/en_ca/blog/kitchen/refrigerator-troubleshooting.html",
+                "label": "Whirlpool: refrigerator troubleshooting",
+                "quote": "inspect the door seal to confirm they are in full contact with the refrigerator.",
+                "checkedAt": "2026-10-10T17:45:00.000Z"
+              }
+            },
+            "sources": [
+              {
+                "url": "https://www.whirlpool.ca/en_ca/blog/kitchen/refrigerator-troubleshooting.html",
+                "label": "Whirlpool: refrigerator troubleshooting",
+                "quote": "inspect the door seal to confirm they are in full contact with the refrigerator.",
+                "checkedAt": "2026-10-10T17:45:00.000Z"
+              }
+            ],
+            "createdAt": "2026-10-10T17:59:16.142Z",
+            "disposition": "check",
+            "explanation": "Your refrigerator door needs to close fully to keep food cold. Check if anything is blocking it from closing.",
+            "uncertainty": "The refrigerator model is unknown, but this check applies to most models."
+          },
+          "attempts": [],
+          "guidance": {
+            "key": "fridge",
+            "state": "ready",
+            "method": "ai",
+            "reason": "",
+            "requestId": "5a242c69-4378-4cee-b329-43a852f99394",
+            "startedAt": "2026-10-10T17:59:15.992Z"
+          },
+          "reopened": false,
+          "guideVersion": 2,
+          "adaptiveEnabled": true
+        },
+        "outcome": {
+          "title": "What this tells us",
+          "summary": "Your refrigerator door needs to close fully to keep food cold. Check if anything is blocking it from closing.",
+          "next": "The refrigerator model is unknown, but this check applies to most models."
+        },
+        "step": {
+          "id": "fridge-door",
+          "why": "A blocked door allows warm air in. Correcting an obstruction is a simple first check.",
+          "kind": "try",
+          "title": "Check whether the door closes fully",
+          "detail": "Move any container that prevents the door closing normally. Look for an obvious gap; do not force the door or remove its parts. Keep perishable food safe while cooling is uncertain.",
+          "source": {
+            "url": "https://www.whirlpool.ca/en_ca/blog/kitchen/refrigerator-troubleshooting.html",
+            "label": "Whirlpool: refrigerator troubleshooting",
+            "quote": "inspect the door seal to confirm they are in full contact with the refrigerator.",
+            "checkedAt": "2026-10-10T17:45:00.000Z"
+          }
+        },
+        "brief": "Request to landlord\n\nFridge door won't close\n\nSymptoms reported: My refrigerator door does not close fully. A milk carton may be in the way. I do not know the model.\n\nEquipment: Exact model not identified\n\nStatus: next steps ready\n\nPlease advise the next appropriate step. Cause and warranty coverage have not been confirmed.",
+        "safetySources": []
+      }
+    },
+    {
+      "elapsedMs": 194,
+      "issue": {
+        "id": "5a242c69-4378-4cee-b329-43a852f99394",
+        "title": "Fridge door won't close",
+        "status": "resolved",
+        "version": 3,
+        "createdAt": "2026-10-10T17:59:16.033399+00:00",
+        "progress": {
+          "brief": null,
+          "intake": {
+            "title": "Fridge door won't close",
+            "hazard": "none",
+            "context": "renter",
+            "category": "appliance",
+            "equipment": "",
+            "description": "My refrigerator door does not close fully. A milk carton may be in the way. I do not know the model."
+          },
+          "blocked": false,
+          "adaptive": {
+            "step": {
+              "id": "fridge-door",
+              "why": "A blocked door allows warm air in. Correcting an obstruction is a simple first check.",
+              "kind": "try",
+              "title": "Check whether the door closes fully",
+              "detail": "Move any container that prevents the door closing normally. Look for an obvious gap; do not force the door or remove its parts. Keep perishable food safe while cooling is uncertain.",
+              "source": {
+                "url": "https://www.whirlpool.ca/en_ca/blog/kitchen/refrigerator-troubleshooting.html",
+                "label": "Whirlpool: refrigerator troubleshooting",
+                "quote": "inspect the door seal to confirm they are in full contact with the refrigerator.",
+                "checkedAt": "2026-10-10T17:45:00.000Z"
+              }
+            },
+            "sources": [
+              {
+                "url": "https://www.whirlpool.ca/en_ca/blog/kitchen/refrigerator-troubleshooting.html",
+                "label": "Whirlpool: refrigerator troubleshooting",
+                "quote": "inspect the door seal to confirm they are in full contact with the refrigerator.",
+                "checkedAt": "2026-10-10T17:45:00.000Z"
+              }
+            ],
+            "createdAt": "2026-10-10T17:59:16.142Z",
+            "disposition": "check",
+            "explanation": "Your refrigerator door needs to close fully to keep food cold. Check if anything is blocking it from closing.",
+            "uncertainty": "The refrigerator model is unknown, but this check applies to most models."
+          },
+          "attempts": [
+            {
+              "at": "2026-10-10T17:59:19.384Z",
+              "note": "I moved the carton and the door closes normally now.",
+              "title": "Check whether the door closes fully",
+              "answer": "worked",
+              "detail": "Move any container that prevents the door closing normally. Look for an obvious gap; do not force the door or remove its parts. Keep perishable food safe while cooling is uncertain.",
+              "source": {
+                "url": "https://www.whirlpool.ca/en_ca/blog/kitchen/refrigerator-troubleshooting.html",
+                "label": "Whirlpool: refrigerator troubleshooting",
+                "quote": "inspect the door seal to confirm they are in full contact with the refrigerator.",
+                "checkedAt": "2026-10-10T17:45:00.000Z"
+              },
+              "stepId": "fridge-door"
+            }
+          ],
+          "guidance": {
+            "key": "fridge",
+            "state": "ready",
+            "method": "ai",
+            "reason": "",
+            "requestId": "5a242c69-4378-4cee-b329-43a852f99394",
+            "startedAt": "2026-10-10T17:59:15.992Z"
+          },
+          "reopened": false,
+          "lastRequest": {
+            "id": "26d22cfa-29dc-4f8f-8b7e-c76901bfef56",
+            "command": {
+              "note": "I moved the carton and the door closes normally now.",
+              "action": "respond",
+              "answer": "worked",
+              "stepId": "fridge-door"
+            }
+          },
+          "guideVersion": 2,
+          "adaptiveEnabled": true
+        },
+        "outcome": {
+          "title": "You reported it resolved",
+          "summary": "Your checks and outcome are saved together.",
+          "next": "If the symptom returns, reopen this issue. A reported fix is not a safety inspection."
+        },
+        "step": null,
+        "brief": "Request to landlord\n\nFridge door won't close\n\nSymptoms reported: My refrigerator door does not close fully. A milk carton may be in the way. I do not know the model.\n\nEquipment: Exact model not identified\n\nStatus: resolved\n\n2026-10-10 — Check whether the door closes fully: worked — I moved the carton and the door closes normally now.\n\nPlease advise the next appropriate step. Cause and warranty coverage have not been confirmed.",
+        "safetySources": []
+      }
+    },
+    {
+      "elapsedMs": 2879,
+      "issue": {
+        "id": "a9afad4c-9cc4-4088-8260-bef0a12c757b",
+        "title": "Fridge is warm",
+        "status": "next_steps_ready",
+        "version": 2,
+        "createdAt": "2026-10-10T17:59:21.021467+00:00",
+        "progress": {
+          "brief": null,
+          "intake": {
+            "title": "Fridge is warm",
+            "hazard": "none",
+            "context": "owner",
+            "category": "appliance",
+            "equipment": "",
+            "description": "My refrigerator is warm but the door closes fully. Food is packed against the visible inside air vents. I do not know the model."
+          },
+          "blocked": false,
+          "adaptive": {
+            "step": {
+              "id": "fridge-vents",
+              "why": "Blocked interior vents can restrict circulation. Clearing them does not confirm that the appliance is working properly.",
+              "kind": "try",
+              "title": "Give the inside vents some space",
+              "detail": "If food is pressed against a visible interior air vent, move it away without removing covers. Keep the door closed afterwards. If cooling remains uncertain, contact service rather than waiting on this app.",
+              "source": {
+                "url": "https://www.whirlpool.ca/en_ca/blog/kitchen/refrigerator-troubleshooting.html",
+                "label": "Whirlpool: refrigerator troubleshooting",
+                "quote": "ensure no items are blocking the vents.",
+                "checkedAt": "2026-10-10T17:45:00.000Z"
+              }
+            },
+            "sources": [
+              {
+                "url": "https://www.whirlpool.ca/en_ca/blog/kitchen/refrigerator-troubleshooting.html",
+                "label": "Whirlpool: refrigerator troubleshooting",
+                "quote": "ensure no items are blocking the vents.",
+                "checkedAt": "2026-10-10T17:45:00.000Z"
+              }
+            ],
+            "createdAt": "2026-10-10T17:59:21.082Z",
+            "disposition": "check",
+            "explanation": "Food packed against inside vents can block air circulation. Moving food away from the vents may help restore cooling.",
+            "uncertainty": "This step does not guarantee the refrigerator will cool properly. If the problem continues, further service may be needed."
+          },
+          "attempts": [],
+          "guidance": {
+            "key": "fridge",
+            "state": "ready",
+            "method": "ai",
+            "reason": "",
+            "requestId": "a9afad4c-9cc4-4088-8260-bef0a12c757b",
+            "startedAt": "2026-10-10T17:59:20.978Z"
+          },
+          "reopened": false,
+          "guideVersion": 2,
+          "adaptiveEnabled": true
+        },
+        "outcome": {
+          "title": "What this tells us",
+          "summary": "Food packed against inside vents can block air circulation. Moving food away from the vents may help restore cooling.",
+          "next": "This step does not guarantee the refrigerator will cool properly. If the problem continues, further service may be needed."
+        },
+        "step": {
+          "id": "fridge-vents",
+          "why": "Blocked interior vents can restrict circulation. Clearing them does not confirm that the appliance is working properly.",
+          "kind": "try",
+          "title": "Give the inside vents some space",
+          "detail": "If food is pressed against a visible interior air vent, move it away without removing covers. Keep the door closed afterwards. If cooling remains uncertain, contact service rather than waiting on this app.",
+          "source": {
+            "url": "https://www.whirlpool.ca/en_ca/blog/kitchen/refrigerator-troubleshooting.html",
+            "label": "Whirlpool: refrigerator troubleshooting",
+            "quote": "ensure no items are blocking the vents.",
+            "checkedAt": "2026-10-10T17:45:00.000Z"
+          }
+        },
+        "brief": "Request for professional help\n\nFridge is warm\n\nSymptoms reported: My refrigerator is warm but the door closes fully. Food is packed against the visible inside air vents. I do not know the model.\n\nEquipment: Exact model not identified\n\nStatus: next steps ready\n\nPlease advise the next appropriate step. Cause and warranty coverage have not been confirmed.",
+        "safetySources": []
+      }
+    },
+    {
+      "elapsedMs": 166,
+      "issue": {
+        "id": "a9afad4c-9cc4-4088-8260-bef0a12c757b",
+        "title": "Fridge is warm",
+        "status": "waiting_on_professional",
+        "version": 4,
+        "createdAt": "2026-10-10T17:59:21.021467+00:00",
+        "progress": {
+          "brief": null,
+          "intake": {
+            "title": "Fridge is warm",
+            "hazard": "none",
+            "context": "owner",
+            "category": "appliance",
+            "equipment": "",
+            "description": "My refrigerator is warm but the door closes fully. Food is packed against the visible inside air vents. I do not know the model."
+          },
+          "blocked": false,
+          "adaptive": {
+            "step": null,
+            "sources": [],
+            "createdAt": "2026-10-10T17:59:24.154Z",
+            "disposition": "escalate",
+            "explanation": "The available checks have reached their limit for this issue. Your symptoms and attempted checks are saved in a request for a qualified service professional. Include the model if you find it, but you do not need it to ask for help.",
+            "uncertainty": "The cause and any warranty coverage remain unconfirmed. Nothing has been sent or booked."
+          },
+          "attempts": [
+            {
+              "at": "2026-10-10T17:59:24.121Z",
+              "note": "I cannot move the food safely. Please help me prepare a service request.",
+              "title": "Give the inside vents some space",
+              "answer": "cannot",
+              "detail": "If food is pressed against a visible interior air vent, move it away without removing covers. Keep the door closed afterwards. If cooling remains uncertain, contact service rather than waiting on this app.",
+              "source": {
+                "url": "https://www.whirlpool.ca/en_ca/blog/kitchen/refrigerator-troubleshooting.html",
+                "label": "Whirlpool: refrigerator troubleshooting",
+                "quote": "ensure no items are blocking the vents.",
+                "checkedAt": "2026-10-10T17:45:00.000Z"
+              },
+              "stepId": "fridge-vents"
+            }
+          ],
+          "guidance": {
+            "key": "fridge",
+            "state": "ready",
+            "method": "rules",
+            "reason": "",
+            "requestId": "2ca3182c-7790-4e89-b0be-d6b4090ead3e",
+            "startedAt": "2026-10-10T17:59:24.121Z"
+          },
+          "reopened": false,
+          "lastRequest": {
+            "id": "2ca3182c-7790-4e89-b0be-d6b4090ead3e",
+            "command": {
+              "note": "I cannot move the food safely. Please help me prepare a service request.",
+              "action": "respond",
+              "answer": "cannot",
+              "stepId": "fridge-vents"
+            }
+          },
+          "guideVersion": 2,
+          "adaptiveEnabled": true
+        },
+        "outcome": {
+          "title": "A useful next step",
+          "summary": "The available checks have reached their limit for this issue. Your symptoms and attempted checks are saved in a request for a qualified service professional. Include the model if you find it, but you do not need it to ask for help.",
+          "next": "The cause and any warranty coverage remain unconfirmed. Nothing has been sent or booked."
+        },
+        "step": null,
+        "brief": "Request for professional help\n\nFridge is warm\n\nSymptoms reported: My refrigerator is warm but the door closes fully. Food is packed against the visible inside air vents. I do not know the model.\n\nEquipment: Exact model not identified\n\nStatus: waiting on professional\n\n2026-10-10 — Give the inside vents some space: cannot — I cannot move the food safely. Please help me prepare a service request.\n\nPlease advise the next appropriate step. Cause and warranty coverage have not been confirmed.",
+        "safetySources": []
+      }
+    }
+  ],
+  "syntheticInputs": true,
+  "paidProviderCalls": 0,
+  "emailsSent": 0
+}

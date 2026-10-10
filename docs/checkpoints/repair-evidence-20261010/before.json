@@ -1,0 +1,9 @@
+{
+  "head": "0562b6d31e41189d50222552ef4ec0187cbc1c09",
+  "files": {
+    "src/lib/issues/repair-evidence.ts": "db9cef9d6a242543496c0054cc2466e7df2d68dbb1190d48a94ca21445f685aa",
+    "src/lib/issues/adaptive-guidance.ts": "b73d918ba070da3a0a02763d872884a57c4b1d37dd9c9e0553c1aa99f2bee9a7",
+    "src/lib/issues/repair-guides.ts": "e972c210d466f9e4baffc86f21628ca3c4b914982a8b120b512701cd868a5370",
+    "src/app/api/mobile/v1/repairs/route.ts": "b34357fbf4903bb9dd087c0357f4196cd956b57971d4856cae68ed5de4a004af"
+  }
+}

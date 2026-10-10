@@ -1,0 +1,12 @@
+{
+  "observed": {
+    "manufacturerRequestFromStaging": "HTTP 403",
+    "samePublicArticleFromMac": "10930 characters retrieved",
+    "AIErrorName": "GatewayInternalServerError",
+    "AIHttpStatus": 400,
+    "AIReasonClass": "structured_output"
+  },
+  "fixVerification": "After replacing empty enum members with none, two live AI journeys passed with exact manufacturer citations. No manufacturer anti-bot bypass, credentials change or source access expansion.",
+  "sources": "Fridge reviewed excerpt checked October 10; expires after 30 days. Other sources still require live acceptance.",
+  "testBilling": "Five initial AI generation requests during this investigation, including three failed diagnostic attempts and two passing acceptance cases. No paid utility retrievals or messages."
+}

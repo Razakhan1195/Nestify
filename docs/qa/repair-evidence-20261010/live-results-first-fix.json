@@ -1,0 +1,66 @@
+{
+  "checks": [
+    "door obstruction: case saved"
+  ],
+  "failure": "door obstruction: live AI produced guidance",
+  "generationRequests": 1,
+  "maxInitialGenerationRequests": 2,
+  "observations": [
+    {
+      "elapsedMs": 3090,
+      "issue": {
+        "id": "aa09456c-bcfa-4c47-b59f-55ea7fcd84e7",
+        "title": "Fridge door won't close",
+        "status": "next_steps_ready",
+        "version": 2,
+        "createdAt": "2026-10-10T17:55:30.547982+00:00",
+        "progress": {
+          "brief": null,
+          "intake": {
+            "title": "Fridge door won't close",
+            "hazard": "none",
+            "context": "renter",
+            "category": "appliance",
+            "equipment": "",
+            "description": "My refrigerator door does not close fully. A milk carton may be in the way. I do not know the model."
+          },
+          "blocked": false,
+          "attempts": [],
+          "guidance": {
+            "key": "fridge",
+            "state": "fallback",
+            "method": "rules",
+            "reason": "AI guidance is unavailable. You can use the safe checks below or prepare a help request.",
+            "requestId": "aa09456c-bcfa-4c47-b59f-55ea7fcd84e7",
+            "startedAt": "2026-10-10T17:55:30.492Z"
+          },
+          "reopened": false,
+          "guideVersion": 2,
+          "adaptiveEnabled": true
+        },
+        "outcome": {
+          "title": "Check why the fridge door won’t close",
+          "summary": "Start with anything preventing the door from closing normally. We won’t assume there is a cooling fault.",
+          "next": "If the problem persists, your service request will include the checks already completed."
+        },
+        "step": {
+          "id": "fridge-door",
+          "title": "Check whether the door closes fully",
+          "detail": "Move any container that prevents the door closing normally. Look for an obvious gap; do not force the door or remove its parts. Keep perishable food safe while cooling is uncertain.",
+          "why": "A blocked door allows warm air in. Correcting an obstruction is a simple first check.",
+          "kind": "try",
+          "source": {
+            "label": "Whirlpool Canada: refrigerator checks",
+            "url": "https://www.whirlpool.ca/en_ca/blog/kitchen/refrigerator-troubleshooting.html",
+            "checkedAt": "2026-09-30"
+          }
+        },
+        "brief": "Request to landlord\n\nFridge door won't close\n\nSymptoms reported: My refrigerator door does not close fully. A milk carton may be in the way. I do not know the model.\n\nEquipment: Exact model not identified\n\nStatus: next steps ready\n\nPlease advise the next appropriate step. Cause and warranty coverage have not been confirmed.",
+        "safetySources": []
+      }
+    }
+  ],
+  "syntheticInputs": true,
+  "paidProviderCalls": 0,
+  "emailsSent": 0
+}

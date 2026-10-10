@@ -1,0 +1,24 @@
+PASS new household starts with no repair cases
+PASS hazard saves without waiting for AI
+PASS hazard has no ordinary DIY step
+PASS create replay preserves case
+PASS different create details rejected
+PASS other household cannot see repair
+PASS signed out cannot read repairs
+PASS unknown model gets a relevant fallback check
+PASS successful check resolves issue
+PASS saved check retains instruction and outcome
+PASS response retry does not duplicate attempt
+PASS stale action rejected
+PASS resolved issue rejects guidance retry
+PASS renter recurrence returns to landlord help
+PASS recurrence retains checks and prepares useful brief
+PASS editable service brief saves
+PASS service brief survives return
+PASS reopened issue rejects restarting failed checks
+PASS other household cannot change issue
+PASS professional outcome can be recorded
+PASS saved user brief is preserved after completion
+CLEANED disposable account
+CLEANED disposable account
+PASS all disposable repair fixtures cleaned

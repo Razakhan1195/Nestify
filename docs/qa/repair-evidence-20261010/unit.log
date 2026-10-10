@@ -1,0 +1,62 @@
+✔ supported guide becomes a persisted actionable step with source date (1.839667ms)
+✔ fabricated sources and mismatched quotations are rejected (1.547791ms)
+✔ unsupported model-specific instructions and risky work are rejected (0.634208ms)
+✔ missing sources permit useful clarification but not invented checks (0.325333ms)
+✔ failed and uncertain steps preserve evidence and request adaptation (0.349167ms)
+✔ customer success resolves and new hazards interrupt the guide (0.085333ms)
+✔ previous checks and repeated clarification cannot form an endless loop (0.124875ms)
+✔ source fetching only accepts exact approved HTTPS hosts (0.086792ms)
+✔ article extraction drops executable and navigation content (0.27675ms)
+✔ selected citation contains source text, not a model-authored paraphrase (1.0445ms)
+✔ unknown and cross-source IDs fail closed (0.202792ms)
+✔ long source sentences stay bounded without inventing or truncating words (0.138625ms)
+✔ missing source evidence cannot produce a made-up citation (0.333334ms)
+[repair-evidence] retrieval {
+  sourceId: 'fridge',
+  code: 'Source HTTP 403',
+  fallback: 'reviewed_reference'
+}
+[repair-evidence] retrieval {
+  sourceId: 'tap',
+  code: 'source_fetch_failed',
+  fallback: 'unavailable'
+}
+✔ publisher refusal uses an explicitly dated reviewed reference, never a fabricated live result (0.9685ms)
+✔ reviewed references expire and unavailable categories do not borrow unrelated evidence (0.178125ms)
+✔ successful source retrieval uses its actual check time (0.76825ms)
+✔ diagnostics never log raw error content or arbitrary content-type headers (0.089208ms)
+✔ only transient server/timeout errors qualify for one service fallback (0.134666ms)
+✔ door-only problem gets one relevant check then a useful landlord outcome (1.295958ms)
+✔ genuine cooling symptoms retain the existing airflow check (0.100209ms)
+✔ a reviewed reference is still validated through exact citation IDs (1.252708ms)
+✔ source security and extraction constraints remain intact (0.301708ms)
+✔ provider schema never contains empty enum members, even without retrieved evidence (1.935333ms)
+✔ no-citation transport sentinel preserves safe escalation and existing saved-data format (0.181708ms)
+✔ one weak faucet gets relevant checks without an inventory, model or AI (1.790459ms)
+✔ multiple affected taps produce supply context instead of invented faucet repair (0.409208ms)
+✔ dripping faucet does not receive weak-flow or generic observation loop (0.240167ms)
+✔ reported outage stops unnecessary device actions (0.280417ms)
+✔ one targeted follow-up can select a useful guide without a paid call (0.251208ms)
+✔ successful safe check and recurrence retain evidence without repeating failed work (0.298958ms)
+✔ unknown equipment and model-specific faults do not get an unrelated cooling guide (0.167917ms)
+✔ AI output is restricted to catalogue IDs and cannot overwrite a concrete symptom match (1.01725ms)
+✔ invalid choice, stale step and a new hazard cannot advance (0.124458ms)
+✔ recurring problems preserve history and the renter or owner escalation path (0.798625ms)
+✔ model identifiers are constrained to supplied evidence without weakening acceptance (1.990167ms)
+✔ new household with unknown equipment receives a useful, safe first step (0.676208ms)
+✔ safety gate blocks normal steps, including dangerous symptoms despite no hazard choice (1.22875ms)
+✔ attempts survive resume, never repeat, and exhausted checks lead to landlord brief (0.629292ms)
+✔ cannot, unsure and stop provide an escalation outcome without fabricating repair (0.184208ms)
+✔ old step replay and unsupported observation outcomes cannot advance (0.282916ms)
+✔ resolution, recurrence and editable brief preserve underlying evidence (0.102083ms)
+✔ intake is bounded and safety choice cannot be omitted (2.882541ms)
+✔ a newly reported hazard stops the next step (0.192333ms)
+✔ long history still permits resolution and creates a bounded recent brief (0.338292ms)
+ℹ tests 44
+ℹ suites 0
+ℹ pass 44
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 514.749375
