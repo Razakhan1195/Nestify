@@ -1,0 +1,12 @@
+✔ supported destinations and local-date boundaries (19.383625ms)
+✔ shared notifications deduplicate, exclude handled history, resolve stale reminders and enforce user ownership (1959.157541ms)
+✔ shared ledger isolates households, reconciles exact shares, corrections, repayments and removal (2125.158375ms)
+✔ expense participants retain identity through invitation, acceptance, cancellation and removal (2104.60825ms)
+ℹ tests 4
+ℹ suites 0
+ℹ pass 4
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 2397.080792

@@ -1,0 +1,27 @@
+PASS three-person expense saved
+PASS settlement notification capability available
+PASS recipient can remind payer
+PASS repeat reminder uses existing event
+PASS unrelated roommate cannot remind
+PASS payer records partial payment
+PASS retry returns same saved payment
+PASS recipient cannot duplicate partial from stale balance
+PASS partial leaves correct balance and other roommate unchanged
+PASS one counterpart notice despite replay
+PASS recipient records remaining money received
+PASS payer is settled, other roommate remains
+PASS cannot remind settled balance
+PASS payer sees recorder and original payment details
+PASS shared notification preference exists
+PASS inbox opens repayment destination
+PASS stale reminder resolved
+PASS author can remove incorrect repayment
+PASS removal restores only its amount
+PASS counterparty gets correction notice
+PASS unjoined person added without invite
+PASS unjoined person cannot receive reminder
+PASS signed-out reminder denied
+CLEANED disposable account
+CLEANED disposable account
+CLEANED disposable account
+PASS all disposable shared-ledger fixtures cleaned

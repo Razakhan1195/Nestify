@@ -1,0 +1,137 @@
+{
+  "checks": [
+    {
+      "width": 320,
+      "scenario": "balances",
+      "errors": [],
+      "overflow": false
+    },
+    {
+      "width": 320,
+      "scenario": "single",
+      "errors": [],
+      "overflow": false
+    },
+    {
+      "width": 320,
+      "scenario": "picker",
+      "errors": [],
+      "overflow": false
+    },
+    {
+      "width": 320,
+      "scenario": "payer",
+      "errors": [],
+      "overflow": false
+    },
+    {
+      "width": 320,
+      "scenario": "recipient",
+      "errors": [],
+      "overflow": false
+    },
+    {
+      "width": 320,
+      "scenario": "partial-preview",
+      "errors": [],
+      "overflow": false
+    },
+    {
+      "width": 320,
+      "scenario": "unjoined",
+      "errors": [],
+      "overflow": false
+    },
+    {
+      "width": 320,
+      "scenario": "reminder",
+      "errors": [],
+      "overflow": false
+    },
+    {
+      "width": 320,
+      "scenario": "success",
+      "errors": [],
+      "overflow": false
+    },
+    {
+      "width": 320,
+      "scenario": "settled",
+      "errors": [],
+      "overflow": false
+    },
+    {
+      "width": 320,
+      "scenario": "empty-error",
+      "errors": [],
+      "overflow": false
+    },
+    {
+      "width": 390,
+      "scenario": "balances",
+      "errors": [],
+      "overflow": false
+    },
+    {
+      "width": 390,
+      "scenario": "single",
+      "errors": [],
+      "overflow": false
+    },
+    {
+      "width": 390,
+      "scenario": "picker",
+      "errors": [],
+      "overflow": false
+    },
+    {
+      "width": 390,
+      "scenario": "payer",
+      "errors": [],
+      "overflow": false
+    },
+    {
+      "width": 390,
+      "scenario": "recipient",
+      "errors": [],
+      "overflow": false
+    },
+    {
+      "width": 390,
+      "scenario": "partial-preview",
+      "errors": [],
+      "overflow": false
+    },
+    {
+      "width": 390,
+      "scenario": "unjoined",
+      "errors": [],
+      "overflow": false
+    },
+    {
+      "width": 390,
+      "scenario": "reminder",
+      "errors": [],
+      "overflow": false
+    },
+    {
+      "width": 390,
+      "scenario": "success",
+      "errors": [],
+      "overflow": false
+    },
+    {
+      "width": 390,
+      "scenario": "settled",
+      "errors": [],
+      "overflow": false
+    },
+    {
+      "width": 390,
+      "scenario": "empty-error",
+      "errors": [],
+      "overflow": false
+    }
+  ],
+  "method": "Actual UI; controlled network/router/native boundaries. Synthetic household."
+}
