@@ -1,0 +1,44 @@
+✔ large phone photos resize proportionally without cropping or changing the original (0.598209ms)
+✔ small photos never upscale and PDFs pass through without image encoding (0.423167ms)
+✔ invalid dimensions and persistently oversized photos fail with a useful recovery (0.44575ms)
+✔ supported guide becomes a persisted actionable step with source date (1.499084ms)
+✔ fabricated sources and mismatched quotations are rejected (0.864292ms)
+✔ unsupported model-specific instructions and risky work are rejected (0.1975ms)
+✔ missing sources permit useful clarification but not invented checks (0.089ms)
+✔ failed and uncertain steps preserve evidence and request adaptation (0.237792ms)
+✔ customer success resolves and new hazards interrupt the guide (0.07ms)
+✔ previous checks and repeated clarification cannot form an endless loop (0.110167ms)
+✔ source fetching only accepts exact approved HTTPS hosts (0.069375ms)
+✔ article extraction drops executable and navigation content (0.234416ms)
+✔ selected citation contains source text, not a model-authored paraphrase (0.581625ms)
+✔ unknown and cross-source IDs fail closed (0.341ms)
+✔ long source sentences stay bounded without inventing or truncating words (0.22125ms)
+✔ missing source evidence cannot produce a made-up citation (0.520625ms)
+✔ one weak faucet gets relevant checks without an inventory, model or AI (13.270709ms)
+✔ multiple affected taps produce supply context instead of invented faucet repair (0.20175ms)
+✔ dripping faucet does not receive weak-flow or generic observation loop (0.157625ms)
+✔ reported outage stops unnecessary device actions (0.272625ms)
+✔ one targeted follow-up can select a useful guide without a paid call (0.404ms)
+✔ successful safe check and recurrence retain evidence without repeating failed work (5.792791ms)
+✔ unknown equipment and model-specific faults do not get an unrelated cooling guide (0.572958ms)
+✔ AI output is restricted to catalogue IDs and cannot overwrite a concrete symptom match (6.696458ms)
+✔ invalid choice, stale step and a new hazard cannot advance (0.352625ms)
+✔ recurring problems preserve history and the renter or owner escalation path (4.405ms)
+✔ model identifiers are constrained to supplied evidence without weakening acceptance (4.841417ms)
+✔ new household with unknown equipment receives a useful, safe first step (1.311333ms)
+✔ safety gate blocks normal steps, including dangerous symptoms despite no hazard choice (0.338667ms)
+✔ attempts survive resume, never repeat, and exhausted checks lead to landlord brief (0.519958ms)
+✔ cannot, unsure and stop provide an escalation outcome without fabricating repair (0.15225ms)
+✔ old step replay and unsupported observation outcomes cannot advance (0.280834ms)
+✔ resolution, recurrence and editable brief preserve underlying evidence (0.256667ms)
+✔ intake is bounded and safety choice cannot be omitted (1.066167ms)
+✔ a newly reported hazard stops the next step (0.073084ms)
+✔ long history still permits resolution and creates a bounded recent brief (0.148542ms)
+ℹ tests 36
+ℹ suites 0
+ℹ pass 36
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 611.535917

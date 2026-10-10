@@ -1,0 +1,9 @@
+{
+  "baseHead": "2a0594a",
+  "files": {
+    "apps/mobile/app/repairs.tsx": "66d2195d9bb41d1d191710381dc4aa678cc0531aa1620b67b8636f9c6d18d5ea",
+    "src/lib/issues/session.ts": "4f88634accff624d393745c11ab5ae4ed450d53a8c74058127afdd7f9498041f",
+    "src/lib/issues/adaptive-guidance.ts": "b73d918ba070da3a0a02763d872884a57c4b1d37dd9c9e0553c1aa99f2bee9a7",
+    "src/app/api/mobile/v1/repairs/route.ts": "b34357fbf4903bb9dd087c0357f4196cd956b57971d4856cae68ed5de4a004af"
+  }
+}

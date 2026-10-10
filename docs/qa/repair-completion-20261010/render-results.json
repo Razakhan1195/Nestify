@@ -1,0 +1,135 @@
+{
+  "checks": [
+    {
+      "width": 320,
+      "scenario": "empty",
+      "passed": true
+    },
+    {
+      "width": 320,
+      "scenario": "photo",
+      "passed": true
+    },
+    {
+      "width": 320,
+      "scenario": "photo-failed",
+      "passed": true
+    },
+    {
+      "width": 320,
+      "scenario": "photo-cancel",
+      "passed": true
+    },
+    {
+      "width": 320,
+      "scenario": "create",
+      "passed": true
+    },
+    {
+      "width": 320,
+      "scenario": "hazard",
+      "passed": true
+    },
+    {
+      "width": 320,
+      "scenario": "resolved",
+      "passed": true
+    },
+    {
+      "width": 320,
+      "scenario": "escalate",
+      "passed": true
+    },
+    {
+      "width": 320,
+      "scenario": "resolve",
+      "passed": true
+    },
+    {
+      "width": 320,
+      "scenario": "lost",
+      "passed": true
+    },
+    {
+      "width": 320,
+      "scenario": "resume",
+      "passed": true
+    },
+    {
+      "width": 320,
+      "scenario": "race",
+      "passed": true
+    },
+    {
+      "width": 320,
+      "scenario": "offline",
+      "passed": true
+    },
+    {
+      "width": 390,
+      "scenario": "empty",
+      "passed": true
+    },
+    {
+      "width": 390,
+      "scenario": "photo",
+      "passed": true
+    },
+    {
+      "width": 390,
+      "scenario": "photo-failed",
+      "passed": true
+    },
+    {
+      "width": 390,
+      "scenario": "photo-cancel",
+      "passed": true
+    },
+    {
+      "width": 390,
+      "scenario": "create",
+      "passed": true
+    },
+    {
+      "width": 390,
+      "scenario": "hazard",
+      "passed": true
+    },
+    {
+      "width": 390,
+      "scenario": "resolved",
+      "passed": true
+    },
+    {
+      "width": 390,
+      "scenario": "escalate",
+      "passed": true
+    },
+    {
+      "width": 390,
+      "scenario": "resolve",
+      "passed": true
+    },
+    {
+      "width": 390,
+      "scenario": "lost",
+      "passed": true
+    },
+    {
+      "width": 390,
+      "scenario": "resume",
+      "passed": true
+    },
+    {
+      "width": 390,
+      "scenario": "race",
+      "passed": true
+    },
+    {
+      "width": 390,
+      "scenario": "offline",
+      "passed": true
+    }
+  ],
+  "method": "Actual repair screen and retry store; production state machine; mocked API/native image and navigation boundaries. No live AI or native push exercised."
+}

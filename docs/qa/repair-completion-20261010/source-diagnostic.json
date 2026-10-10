@@ -1,0 +1,17 @@
+{
+  "initialHostedWarning": {
+    "code": "Unsupported citation"
+  },
+  "secondHostedWarning": {
+    "code": "guidance_failed",
+    "evidenceCount": 0
+  },
+  "sameArticleFromConnectedMac": {
+    "ok": true,
+    "characters": 10930,
+    "hasDoor": true,
+    "hasFridge": true
+  },
+  "conclusion": "Hosted evidence unavailable; exact host-specific failure not established. Citation enum hardening did not resolve the live fallback. Two total generation requests only; no further AI calls.",
+  "physicalDevice": "Paired iPhone available; no native UI or two-device notification acceptance executed."
+}
