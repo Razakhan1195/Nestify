@@ -1,3 +1,7 @@
+> Current closure checklist, October 11: [Audit completion status](audit-completion-status-2026-10-11.md). [Bill-to-outcome completion](bill-outcome-finish-2026-10-11.md) adds durable telecom amount and energy-usage follow-ups; staging and rendered acceptance are complete, physical acceptance remains. Existing cleaning editing/assignments and shared expenses are built. Before I spend and public-release gates remain open.
+
+> Latest provider update, October 11: [National directory and single provider finder](provider-directory-2026-10-11.md) supersedes the earlier GTA counts. Ontario view: 54 Green Button options, 29 configured Deck testing entries and 639 coming-soon entries within the 722-entry directory. Rogers is paused. Configuration is not provider-specific live acceptance; the directory is not literally every Canadian biller.
+
 > Latest update, October 2: see [Import experience, feedback and sign-in](import-experience-2026-10-02.md). Its deployment/status and remaining limits supersede older Gmail counts below.
 
 # Rezlee product and engineering roadmap — 2026-09-24

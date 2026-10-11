@@ -1,0 +1,38 @@
+{
+  "files": {
+    "apps/mobile/src/lib/bill-outcome.ts": "1a749868c8a626166d8c31c44fd483e0c43310aca4a185e457c6a4b579a101d7",
+    "apps/mobile/app/bill/outcome.tsx": "26b947b7a05cf97c3b47e7c029f71c3df30e51d9dc79d44f0edf26685ab70f9c",
+    "src/app/api/mobile/v1/bills/[id]/outcome/route.ts": "c5a8e4274b21470e56c8b4ff2fbc893f955e1832c6f6e8215f1e4adad648cf3c",
+    "src/app/api/mobile/v1/bills/route.ts": "d6d9e7eb3123143116e6691b92b644ab899a04d2a4cd53ab34308b5f62125a14",
+    "apps/mobile/src/lib/bills-data.ts": "3016ce8e10291f8e8203667abc0ab26658bbde23aa7edc0339d610e0b57a6ef9",
+    "apps/mobile/src/lib/manual-history-insights.ts": "b54a9e6acb599209241a05314b79f87fd874c542a9b62e4b3c470c70590d7b2f",
+    "apps/mobile/src/components/SavedBillInsights.tsx": "312ab49fec1bdd5c3a7672e397fb399a7f2bd143550179fbf6e03b33d30bab27",
+    "apps/mobile/src/components/TelecomBillInsights.tsx": "fad297a273256385b91fc8dc35b98ab1895a4ce94ece0f0f0d6986ecbcec2c5d",
+    "apps/mobile/app/utility/[providerId].tsx": "d8da424675e619c26fc63c61f99f7351c06029683fb918bcef6bdd78eda9fb46",
+    "apps/mobile/app/bill/[id].tsx": "5a9abb5cdf7a8892edaa22c3d414a940741a9125d31c690916992600f6af4c83",
+    "apps/mobile/app/(tabs)/bills.tsx": "546b922b303c62c0fca1d27d84a4e06548414dd7253e2d1b61351da377abf799",
+    "scripts/qa/bill-outcome-staging.mjs": "0253a782d3da904761ffd1a64061a22cf2d8a1c7481f5b1552f0dd48d8522dd2",
+    "docs/beta-product-engineering-roadmap.md": "6eee4784502a21b613ce72773bd9de7730e892b7a19797b13a47244c2b69c5c0",
+    "tests/statement-reading-activation.test.ts": "c7f8529e3a8c83ac88667ded699a3c780c3b214c3812b062a86959b575d9acba",
+    "src/lib/product/bill-outcome.ts": "4d9043945a0732896e9d4e785a5bbd9eda85df2c4194cdedc86bcf2a7bbeab11",
+    "supabase/migrations/202610110002_bill_outcome_actions.sql": "a9879c8b76ece315b4bb5e3c43426214f57849140f2911151c373dfd36e2e70a",
+    "supabase/migrations/202610110003_bill_outcome_conflicts.sql": "4ef3f912797d2e0db0350e785b0577863ae754d5d665241f200f3b70e01f7cdd",
+    "tests/bill-outcome-energy.test.ts": "64794f6a1361ca8476eb1893b9030c5506a13e2160aff94918ba0030cea86394",
+    "tests/bill-outcome-storage-database.test.ts": "ab3c7f0b667909cf60ae765038f32f9675cf8f913600903d4670f3a3b12b2078",
+    "scripts/qa/render-bill-outcomes.cjs": "2187b90ec4735873a04e6a011d4bc4b5b07216b93b38c86f836bbfcc0fe936cf",
+    "docs/bill-outcome-finish-2026-10-11.md": "3613c8b0b74dead9b9814bb51ab4911961031c87b34166da26c533bb43c176d0",
+    "docs/audit-completion-status-2026-10-11.md": "087d708ca4b96430441bba0b009151afa94f5aa576ab7a6dc163ef178edb1bd7"
+  },
+  "newFiles": [
+    "src/lib/product/bill-outcome.ts",
+    "supabase/migrations/202610110002_bill_outcome_actions.sql",
+    "supabase/migrations/202610110003_bill_outcome_conflicts.sql",
+    "tests/bill-outcome-energy.test.ts",
+    "tests/bill-outcome-storage-database.test.ts",
+    "scripts/qa/render-bill-outcomes.cjs",
+    "docs/bill-outcome-finish-2026-10-11.md",
+    "docs/audit-completion-status-2026-10-11.md"
+  ],
+  "previousStaging": "https://nestify-mte7i2zb0-razakhan1195s-projects.vercel.app",
+  "sourceSnapshot": "/tmp/rezlee-bill-outcomes-staging-20261011"
+}

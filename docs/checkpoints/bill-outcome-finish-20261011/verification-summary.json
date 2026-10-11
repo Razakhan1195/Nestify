@@ -1,0 +1,29 @@
+{
+  "focusedTests": 53,
+  "fullTests": 858,
+  "fullFailures": 0,
+  "renderedScenarios": 60,
+  "hostedChecks": 94,
+  "hostedFailure": null,
+  "directConcurrentPairs": 3,
+  "rootTypes": "passed",
+  "mobileTypes": "passed",
+  "lint": "passed",
+  "nextBuild": "passed",
+  "nativeBundleExports": [
+    "ios",
+    "android"
+  ],
+  "nativeDeviceAcceptance": "pending",
+  "scheduledPullsEnabled": false,
+  "paidProviderCalls": 0,
+  "liveAiCalls": 0,
+  "outgoingMessages": 0,
+  "productionChanged": false,
+  "stagingMigrations": [
+    "202610110002",
+    "202610110003"
+  ],
+  "fixtureCleanup": "confirmed",
+  "initialConcurrentTimeout": "resolved with explicit PT409 business conflict; full hosted rerun passed"
+}

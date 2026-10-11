@@ -1,0 +1,20 @@
+{
+  "head": "9d2714d5628c82596cd8eebb413047c9a44024ca",
+  "files": {
+    "apps/mobile/src/lib/bill-outcome.ts": "28f3c7dabf3b873875a76c58375ac0322a6a85df8c02ee437d4c172d1d23ada2",
+    "apps/mobile/app/bill/outcome.tsx": "11c8d7a16183ed0d0bd8006727b34e0de2a51ca80261f46e105da1f7dd7c3eba",
+    "src/app/api/mobile/v1/bills/[id]/outcome/route.ts": "c77444b34add8a9f34f9599d0a65d19df98a8220e1c68355e67162169de49934",
+    "src/app/api/mobile/v1/bills/route.ts": "206cfd487bb92498f82699581b2a009581362359ebb9e88dfe87d2328786505b",
+    "apps/mobile/src/lib/bills-data.ts": "47345d872361422c48824c5c40a08ababd70925b6679b7e261f078df80741a9d",
+    "apps/mobile/src/lib/manual-history-insights.ts": "2298cf92782cbde24609ec2c0ec0e21aff7bee3084480dc6162665ed511df979",
+    "apps/mobile/src/components/SavedBillInsights.tsx": "a53ae0683def5da35ce47e490507da826bdffc8cca1aade6f2f80211645c31dc",
+    "apps/mobile/src/components/TelecomBillInsights.tsx": "d9a5fe2e4277274d2ca2ff4bea87d022ac0a68a41eabe6c6cdff09333eb0ce26",
+    "apps/mobile/src/components/BillInsights.tsx": "2e5ff4ed7298cde8f861158d694839858a06c6c4d6887f483705b0bd94db9b94",
+    "apps/mobile/app/utility/[providerId].tsx": "4553b41b19169ef7c64cff860ef754605dd1476ee85cd2735e1d5afc50d1d74d",
+    "apps/mobile/app/bill/[id].tsx": "f55767ae2f789e843eb13ca263407caed389e3416601b8465269818bcf159aaf",
+    "apps/mobile/app/(tabs)/bills.tsx": "52fe92a0d94f8684e5e186502c57fe0df266f1e5a0516f2491186361bef91ef6",
+    "scripts/qa/bill-outcome-staging.mjs": "f1eef586ed9986fa04bbece6df186b4da493cce4e9dc434e7b7698f1adc1c361",
+    "docs/beta-product-engineering-roadmap.md": "f89e9e97c90d5d0ab76b1bde415b8e1bfcbf5ea0265a415e12162fcd373d641e",
+    "tests/statement-reading-activation.test.ts": "1ba0ad7d3be286a485b8732665e6f9d3911a34ff6202c5340998dae6fd0ca220"
+  }
+}

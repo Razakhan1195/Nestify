@@ -1,0 +1,1088 @@
+--- a/apps/mobile/src/lib/bill-outcome.ts
++++ b/apps/mobile/src/lib/bill-outcome.ts
+@@ -1,7 +1,9 @@
+ import { historyDate } from "./manual-history-insights";
+ import { moneyCents } from "./statement-evidence";
+ 
++export type BillOutcomeKind = "agreed_amount" | "usage_change";
+ export type BillTarget = {
++  kind?: BillOutcomeKind;
+   id: string; title: string; expectedAmount: string; effectiveDate: string;
+   cost: string; notes: string; state: "planned" | "implemented" | "completed" | "abandoned";
+   evidenceBillId: string | null; baseline: string; savedAt: string;
+@@ -10,13 +12,18 @@
+ export type OutcomeStatement = {
+   id: string; provider: string; account: string; category: string; currency: string;
+   amount: number | null; start: string | null; end: string | null; hasOriginal: boolean;
++  source?: string; providerId?: string | null; accountKey?: string | null;
++  amountBasis?: "period_charges" | "statement_total" | "amount_due";
++  usageAmount?: number | null; usageUnit?: string | null;
++  usageQuality?: "actual" | "estimated" | "unknown" | "provider_reported"; usageEligible?: boolean;
+ };
+-export type BillTargetSummary = { state: BillTarget["state"]; title: string; savedAt: string; snoozedUntil: string | null };
++export type BillTargetSummary = { kind?: BillOutcomeKind; state: BillTarget["state"]; title: string; savedAt: string; snoozedUntil: string | null };
+ export function parseBillTarget(value: unknown): BillTarget | null {
+   if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+-  const v = value as BillTarget;
++  const v = value as BillTarget, usage = v.kind === "usage_change";
++  if (v.kind !== undefined && !["agreed_amount", "usage_change"].includes(v.kind)) return null;
+   if (typeof v.id !== "string" || typeof v.title !== "string" || !v.title.trim() || v.title.length > 120 ||
+-      typeof v.expectedAmount !== "string" || moneyCents(v.expectedAmount) === null || moneyCents(v.expectedAmount)! < 0 ||
++      typeof v.expectedAmount !== "string" || (usage ? v.expectedAmount !== "" : moneyCents(v.expectedAmount) === null || moneyCents(v.expectedAmount)! < 0) ||
+       !historyDate(v.effectiveDate) || typeof v.cost !== "string" || (v.cost !== "" && (moneyCents(v.cost) === null || moneyCents(v.cost)! < 0)) ||
+       typeof v.notes !== "string" || v.notes.length > 2000 || !["planned", "implemented", "completed", "abandoned"].includes(v.state) ||
+       !(v.evidenceBillId === null || typeof v.evidenceBillId === "string") || typeof v.baseline !== "string" ||
+@@ -26,16 +33,17 @@
+ }
+ export function billTargetSummary(raw: unknown): BillTargetSummary | null {
+   const target = parseBillTarget((raw as Record<string, unknown> | null)?.bill_target);
+-  return target ? { state: target.state, title: target.title, savedAt: target.savedAt, snoozedUntil: target.snoozedUntil } : null;
++  return target ? { ...(target.kind ? {kind: target.kind} : {}), state: target.state, title: target.title, savedAt: target.savedAt, snoozedUntil: target.snoozedUntil } : null;
+ }
+ export function targetNeedsFollowUp(summary: BillTargetSummary | null | undefined, today: string) {
+   return Boolean(summary && !["abandoned", "completed"].includes(summary.state) && (!summary.snoozedUntil || summary.snoozedUntil <= today));
+ }
+ const normalized = (value: string) => value.trim().toLowerCase();
+ export function sameOutcomeAccount(a: OutcomeStatement, b: OutcomeStatement) {
+-  return Boolean(a.provider.trim() && a.account.trim() &&
+-    normalized(a.provider) === normalized(b.provider) && normalized(a.account) === normalized(b.account) &&
+-    normalized(a.category) === normalized(b.category) && a.currency === b.currency);
++  if (a.currency !== b.currency || normalized(a.category) !== normalized(b.category)) return false;
++  if (a.source && a.source !== "manual" || b.source && b.source !== "manual")
++    return Boolean(a.source === b.source && a.providerId && a.providerId === b.providerId && a.accountKey && a.accountKey === b.accountKey);
++  return Boolean(a.provider.trim() && a.account.trim() && normalized(a.provider) === normalized(b.provider) && normalized(a.account) === normalized(b.account));
+ }
+ function days(b: OutcomeStatement) {
+   return historyDate(b.start) && historyDate(b.end) && b.start <= b.end
+@@ -48,35 +56,57 @@
+   const next = Date.UTC(start.getUTCFullYear(), start.getUTCMonth() + 1, Math.min(start.getUTCDate(), nextMonthLast));
+   return Date.parse(b.end) + 86400000 === next;
+ }
++export type UsageOutcomeComparison = { beforePerDay: number; afterPerDay: number; unit: string; percent: number | null; beforeDays: number; afterDays: number; gapDays: number };
++export const outcomeHasComparison = (state: string | undefined) => ["matched", "different", "usage_lower", "usage_higher", "usage_same"].includes(state ?? "");
+ export function evaluateBillTarget(target: BillTarget, baseline: OutcomeStatement, currentBaseline: string, evidence: OutcomeStatement | null, today: string) {
+-  const response = (state: string, title: string, detail: string, differenceCents: number | null = null) => ({ state, title, detail, differenceCents });
++  const response = (state: string, title: string, detail: string, differenceCents: number | null = null, usageComparison: UsageOutcomeComparison | null = null) => ({ state, title, detail, differenceCents, usageComparison });
++  const usage = target.kind === "usage_change";
+   if (target.state === "abandoned") return response("abandoned", "Tracking stopped", "Your saved action is kept. Reopen it when you want to check again.");
+   if (target.baseline !== currentBaseline) return response("needs_review", "Review the corrected baseline", "The original bill or its reviewed details changed. Review it before using it to check this action.");
+-  if (target.state === "planned") return response("planned", "Change planned", "Once the provider has applied the change, mark it implemented and check a later statement.");
++  if (target.state === "planned") return response("planned", "Change planned", usage ? "Once you have made the change, mark it implemented. A later full service period can show what happened to recorded daily usage." : "Once the provider has applied the change, mark it implemented and check a later statement.");
+   if (!historyDate(today) || target.effectiveDate > today) return response("awaiting_evidence", "Waiting for the change to start", "The effective date has not arrived. No result is claimed yet.");
+-  if (!evidence) return response("awaiting_evidence", "Waiting for a statement", "Upload the next relevant bill, then select it here. This manual account is not being automatically monitored.");
++  if (!evidence) return response("awaiting_evidence", "Waiting for a statement", baseline.source && baseline.source !== "manual" ? "Choose a later saved statement when it is available. Scheduled utility pulls are off; opening this check does not retrieve new bills." : "Upload the next relevant bill, then select it here. This manual account is not being automatically monitored.");
+   if (!sameOutcomeAccount(baseline, evidence) || evidence.id === baseline.id) return response("inconclusive", "Choose this account’s later bill", "The evidence must belong to the same provider, service, account and currency as the baseline.");
+   const beforeDays = days(baseline), afterDays = days(evidence);
+-  if (!beforeDays || !afterDays || !baseline.end || !evidence.start || evidence.start <= baseline.end || evidence.start < target.effectiveDate || evidence.start > today) return response("inconclusive", "This period does not establish the result", "Choose a separate service period that starts on or after the effective date. A transition or overlapping period can contain prorated charges.");
+-  if (!evidence.end || evidence.end > today) return response("inconclusive", "Wait for the full billing period", "This statement’s service period has not finished. Choose a completed period to check the agreed amount.");
++  if (!beforeDays || !afterDays || !baseline.end || !evidence.start || evidence.start <= baseline.end || evidence.start < target.effectiveDate || evidence.start > today) return response("inconclusive", "This period does not establish the result", "Choose a separate service period that starts on or after the effective date. A transition or overlapping period cannot establish the result.");
++  if (!evidence.end || evidence.end >= today) return response("inconclusive", "Wait for the full billing period", "This statement’s service period has not finished. Choose a completed period to check the change.");
++  if (usage) {
++    const before = baseline.usageAmount, after = evidence.usageAmount;
++    if (!baseline.usageEligible || !evidence.usageEligible || typeof before !== "number" || typeof after !== "number" || !Number.isFinite(before) || !Number.isFinite(after) || before < 0 || after < 0 || !baseline.usageUnit || baseline.usageUnit !== evidence.usageUnit)
++      return response("inconclusive", "Usage evidence needs review", "Both periods need usable consumption in the same unit. Missing, estimated, unreviewed or unverified-scale readings cannot establish this comparison. Review the statements or wait for a suitable later bill.");
++    const beforePerDay = before / beforeDays, afterPerDay = after / afterDays;
++    const delta = afterPerDay - beforePerDay;
++    const unchanged = Math.abs(delta) < 0.00000001;
++    const percent = beforePerDay > 0 ? Math.round(delta / beforePerDay * 1000) / 10 : null;
++    const unconfirmed = baseline.usageQuality !== "actual" || evidence.usageQuality !== "actual";
++    return response(unchanged ? "usage_same" : delta < 0 ? "usage_lower" : "usage_higher",
++      unchanged ? "Recorded daily usage is unchanged" : delta < 0 ? "Recorded daily usage is lower" : "Recorded daily usage is higher",
++      "This compares recorded usage per day before and after your change. Weather, occupancy and other changes are not controlled, so it does not prove the action helped or establish money saved." + (unconfirmed ? " The provider has not confirmed both readings as actual." : ""),
++      null, {beforePerDay, afterPerDay, unit: baseline.usageUnit, percent, beforeDays, afterDays, gapDays: Math.max(0, Math.round((Date.parse(evidence.start) - Date.parse(baseline.end)) / 86400000) - 1)});
++  }
+   const comparable = beforeDays === afterDays || (monthlyCycle(baseline) && monthlyCycle(evidence) && baseline.start!.slice(8) === evidence.start!.slice(8));
+   if (!comparable) return response("inconclusive", "Different billing periods", "These periods do not cover the same billing cycle. Review the originals for proration; the total alone cannot verify the agreed amount.");
++  if (baseline.amountBasis === "amount_due" || evidence.amountBasis === "amount_due" || baseline.amountBasis !== evidence.amountBasis)
++    return response("inconclusive", "Different amount bases", "An amount due can include an earlier balance. It cannot verify the agreed charges for this period.");
+   const amount = evidence.amount === null ? null : moneyCents(String(evidence.amount));
+   const before = baseline.amount === null ? null : moneyCents(String(baseline.amount));
+   if (amount === null || before === null || amount < 0 || before < 0) return response("inconclusive", "Review the saved charges", "Missing charges or a net credit cannot establish a recurring bill amount. Correct the saved details or choose the next ordinary statement.");
+-  const expected = moneyCents(target.expectedAmount)!;
++  const expected = moneyCents(target.expectedAmount);
++  if (expected === null) return response("inconclusive", "Review the agreed amount", "A confirmed period total is needed before checking this statement.");
++  if (baseline.amountBasis === "statement_total") return response(amount === expected ? "matched" : "different",
++    amount === expected ? "Saved statement total matches your agreed amount" : "Saved statement total differs from your agreed amount",
++    "This checks the imported statement total. Review the original for previous balances, tax and one-time adjustments before treating it as recurring period charges. It does not verify payment or continuing savings.", amount - before);
+   if (amount === expected) return response("matched", "Recorded charges match your agreed amount", "This checks the selected statement’s period charges. It does not verify payment, the provider’s agreement or continuing savings. Review the original for one-time adjustments.", amount - before);
+   return response("different", "Recorded charges differ from your agreed amount", "Check the original for taxes, proration, extra services or one-time charges before treating this as an error. No provider enquiry is generated.", amount - before);
+ }
+-
+ /** Compare the submitted fields after an uncertain write without sending it again. */
+-export function sameBillTargetDetails(target:BillTarget|null,input:Pick<BillTarget,"title"|"expectedAmount"|"effectiveDate"|"cost"|"notes"|"state"|"evidenceBillId"|"snoozedUntil">){
++export function sameBillTargetDetails(target:BillTarget|null,input:Pick<BillTarget,"title"|"expectedAmount"|"effectiveDate"|"cost"|"notes"|"state"|"evidenceBillId"|"snoozedUntil"> & {kind?:BillOutcomeKind}){
+  if(!target)return false;
+- return target.title===input.title.trim() && moneyCents(target.expectedAmount)===moneyCents(input.expectedAmount)
++ return (target.kind??"agreed_amount")===(input.kind??"agreed_amount")&&target.title===input.title.trim() && (target.kind==="usage_change"?input.expectedAmount==="":moneyCents(target.expectedAmount)===moneyCents(input.expectedAmount))
+   && target.effectiveDate===input.effectiveDate && target.cost===input.cost && target.notes===input.notes
+   && target.state===input.state && target.evidenceBillId===input.evidenceBillId && target.snoozedUntil===input.snoozedUntil;
+ }
+ /** Use the same numerical/period rules for the picker and the result. Server revalidates every save. */
+ export function comparableOutcomeStatements(target:BillTarget,baseline:OutcomeStatement,records:OutcomeStatement[],today:string){
+- return records.filter(record=>["matched","different"].includes(evaluateBillTarget({...target,state:"implemented"},baseline,target.baseline,record,today).state));
++ return records.filter(record=>outcomeHasComparison(evaluateBillTarget({...target,state:"implemented"},baseline,target.baseline,record,today).state));
+ }
+--- a/apps/mobile/app/bill/outcome.tsx
++++ b/apps/mobile/app/bill/outcome.tsx
+@@ -9,18 +9,18 @@
+ import { TextField } from "@/components/TextField";
+ import { DateField } from "@/components/DateField";
+ import { apiGet, apiPatch, ApiError } from "@/lib/api";
+-import { comparableOutcomeStatements, sameBillTargetDetails, type BillTarget, type OutcomeStatement, type evaluateBillTarget } from "@/lib/bill-outcome";
++import { comparableOutcomeStatements, sameBillTargetDetails, outcomeHasComparison, type BillOutcomeKind, type BillTarget, type OutcomeStatement, type evaluateBillTarget } from "@/lib/bill-outcome";
+ import { colors, spacing, typography } from "@/theme/tokens";
+ 
+-type Payload = { version: string; baseline: OutcomeStatement; evidence: OutcomeStatement | null; candidateCount: number; baselineChanged: boolean; target: BillTarget | null; result: ReturnType<typeof evaluateBillTarget> | null; candidates: OutcomeStatement[]; coverageComplete: boolean };
+-type Fields = Pick<BillTarget, "title" | "expectedAmount" | "effectiveDate" | "cost" | "notes" | "state" | "evidenceBillId" | "snoozedUntil">;
++type Payload = { kind?: BillOutcomeKind; baselineActive?: boolean; version: string; baseline: OutcomeStatement; evidence: OutcomeStatement | null; candidateCount: number; baselineChanged: boolean; target: BillTarget | null; result: ReturnType<typeof evaluateBillTarget> | null; candidates: OutcomeStatement[]; coverageComplete: boolean };
++type Fields = Pick<BillTarget, "kind" | "title" | "expectedAmount" | "effectiveDate" | "cost" | "notes" | "state" | "evidenceBillId" | "snoozedUntil">;
+ type SaveBody = Fields & {version:string;agreementConfirmed:boolean;confirmBaseline:boolean};
+ const defaults: Fields = { title: "Agreed bill amount", expectedAmount: "", effectiveDate: "", cost: "", notes: "", state: "planned", evidenceBillId: null, snoozedUntil: null };
+ const money = (amount: number | null) => amount === null ? "Amount unavailable" : new Intl.NumberFormat("en-CA", { style: "currency", currency: "CAD" }).format(amount);
+-function fieldsOf(target: BillTarget | null): Fields {
+-  if (!target) return { ...defaults };
++function fieldsOf(target: BillTarget | null, kind: BillOutcomeKind = "agreed_amount"): Fields {
++  if (!target) return { ...defaults, kind, title: kind === "usage_change" ? "Usage change" : defaults.title };
+   const { title, expectedAmount, effectiveDate, cost, notes, state, evidenceBillId, snoozedUntil } = target;
+-  return { title, expectedAmount, effectiveDate, cost, notes, state, evidenceBillId, snoozedUntil };
++  return { kind: target.kind ?? kind, title, expectedAmount, effectiveDate, cost, notes, state, evidenceBillId, snoozedUntil };
+ }
+ function Confirmation({label,checked,disabled,onPress}:{label:string;checked:boolean;disabled:boolean;onPress:()=>void}) {
+   return <Pressable accessibilityRole="checkbox" accessibilityState={{checked,disabled}} disabled={disabled} onPress={onPress} style={{minHeight:48,justifyContent:"center",paddingVertical:8}}><Text style={[typography.body,{color:colors.primary}]}>{checked ? "✓ " : "○ "}{label}</Text></Pressable>;
+@@ -42,7 +42,7 @@
+   const [recovery,setRecovery] = useState<"check"|"retry"|"conflict"|null>(null);
+   const endpoint = `/api/mobile/v1/bills/${encodeURIComponent(id ?? "")}/outcome`;
+   const apply = useCallback((payload: Payload) => {
+-    setData(payload); setFields(fieldsOf(payload.target)); setConfirmed(Boolean(payload.target));
++    setData(payload); setFields(fieldsOf(payload.target, payload.kind)); setConfirmed(Boolean(payload.target));
+     setConfirmBaseline(false); setDirty(false); dirtyRef.current = false;
+     setEditing(!payload.target); setChoosing(false); setError(null); pending.current=null; setRecovery(null);
+   }, []);
+@@ -96,6 +96,11 @@
+   }
+   const text = (value: string) => <Text style={[typography.body, { color: colors.mutedForeground }]}>{value}</Text>;
+   const evidence = data?.evidence;
++  const usage = (data?.kind ?? data?.target?.kind) === "usage_change";
++  const connected = Boolean(data?.baseline.source && data.baseline.source !== "manual");
++  const number = (value:number) => new Intl.NumberFormat("en-CA", {maximumFractionDigits:3}).format(value);
++  const statementValue = (bill:OutcomeStatement) => usage ? bill.usageAmount === null || bill.usageAmount === undefined ? "Usage unavailable" : number(bill.usageAmount) + " " + (bill.usageUnit ?? "") : money(bill.amount);
++  const openNext = () => connected && data?.baseline.providerId ? router.push(("/provider/" + data.baseline.providerId) as never) : router.push({pathname:"/bill/add",params:{recordKind:"historical",providerName:data?.baseline.provider,accountName:data?.baseline.account,category:data?.baseline.category}});
+   const disabled=busy||recovery!==null;
+   const today=new Date().toLocaleDateString("en-CA",{timeZone:"America/Toronto"});
+   const candidates=data?.target?comparableOutcomeStatements(data.target,data.baseline,data.candidates,today):[];
+@@ -111,38 +116,45 @@
+           <View style={{ gap: 6 }}><Text accessibilityRole="header" style={[typography.section, { color: colors.foreground }]}>{data.baseline.provider}</Text>{text(data.baseline.account + " · " + data.baseline.category)}</View>
+           <View style={{ padding: spacing.lg, borderRadius: 18, backgroundColor: colors.surfaceSubtle, gap: 8 }}>
+             <Text style={[typography.meta, { color: colors.mutedForeground }]}>Baseline statement</Text>
+-            <Text style={[typography.section, { color: colors.foreground }]}>{money(data.baseline.amount)}</Text>
++            <Text style={[typography.section, { color: colors.foreground }]}>{statementValue(data.baseline)}</Text>
++            {text(usage ? "Recorded consumption for this service period" : data.baseline.amountBasis === "statement_total" ? "Imported statement total · review the original for prior balances and adjustments" : "Charges for this service period")}
+             {text(`${data.baseline.start ?? "Start missing"} – ${data.baseline.end ?? "End missing"}`)}
+             <QuietAction label={data.baseline.hasOriginal ? "Review baseline and original" : "Review baseline statement"} disabled={disabled} onPress={() => router.push(`/bill/${id}`)} />
+           </View>
+           {data.target?.state === "completed" ? text("Tracking completed. This checks saved evidence, not future bills.") : null}
+           {data.result ? <View style={{padding:spacing.lg,borderRadius:18,backgroundColor:colors.surfaceRaised,borderWidth:1,borderColor:colors.border,gap:spacing.md}}>
+             <Text accessibilityRole="header" style={[typography.section, { color: colors.foreground }]}>{data.result.title}</Text>{text(data.result.detail)}
+-            {evidence ? <><Text style={[typography.body, { color: colors.foreground }]}>Selected statement · {money(evidence.amount)}</Text>{text(`${evidence.start} – ${evidence.end}`)}<QuietAction label={evidence.hasOriginal ? "Review evidence and original" : "Review evidence statement"} disabled={disabled} onPress={() => router.push(`/bill/${evidence.id}`)} /></> : null}
++            {evidence ? <><Text style={[typography.body, { color: colors.foreground }]}>Selected statement · {statementValue(evidence)}</Text>{text(`${evidence.start} – ${evidence.end}`)}<QuietAction label={evidence.hasOriginal ? "Review evidence and original" : "Review evidence statement"} disabled={disabled} onPress={() => router.push(`/bill/${evidence.id}`)} /></> : null}
++            {data.result.usageComparison ? <View style={{gap:6}}>
++              {text(number(data.result.usageComparison.beforePerDay) + " → " + number(data.result.usageComparison.afterPerDay) + " " + data.result.usageComparison.unit + " per day")}
++              {text(data.result.usageComparison.beforeDays + " baseline days · " + data.result.usageComparison.afterDays + " later days")}
++              {data.result.usageComparison.percent !== null ? text(Math.abs(data.result.usageComparison.percent) + "% " + (data.result.usageComparison.percent < 0 ? "lower" : data.result.usageComparison.percent > 0 ? "higher" : "change") + " in recorded daily usage.") : text("The baseline is zero, so a percentage change cannot be calculated.")}
++              {data.result.usageComparison.gapDays ? text(data.result.usageComparison.gapDays + " days between these periods. Missing days are not filled in.") : null}
++            </View> : null}
+             {data.result.differenceCents !== null ? text(`Change in recorded bill total: ${money(data.result.differenceCents / 100)}. This is not savings attributed to your action.`) : null}
+-          </View> : text("Have a confirmed new internet or mobile price? Save the agreed total, then check it against a later bill. A provider connection is optional.")}
++          </View> : text(usage ? "Record a change you plan to make, then compare a later full period’s daily usage. This checks what happened, without promising savings or assuming the change caused it." : "Have a confirmed new telecom price? Save the agreed total, then check it against a later bill. A provider connection is optional.")}
+           {data.target && !editing ? <View style={{ gap: 10 }}>
+-            {text(`Agreed total: ${money(Number(data.target.expectedAmount))} including tax · Effective ${data.target.effectiveDate}`)}
++            {text(usage ? `${data.target.title} · Effective ${data.target.effectiveDate}` : `Agreed total: ${money(Number(data.target.expectedAmount))} including tax · Effective ${data.target.effectiveDate}`)}
+             {data.target.notes ? text(data.target.notes) : null}
+             {data.target.cost !== "" ? text(`Recorded change cost: ${money(Number(data.target.cost))}. Kept separate from the bill comparison.`) : null}
+             {data.target.snoozedUntil ? text(`Hidden from follow-ups until ${data.target.snoozedUntil}. No push reminder is scheduled.`) : null}
+             {data.baselineChanged && !closed ? <QuietAction label="Review and update this action" disabled={disabled} onPress={() => setEditing(true)} /> : <>
+               {data.target.state === "planned" ? <Button label="Mark change implemented" disabled={disabled} loading={busy} onPress={() => void save({ state: "implemented" })} /> : null}
+-              {data.target.state === "implemented" && candidates.length && !["matched","different"].includes(data.result?.state??"") ? <Button label={choosing?"Hide statements":"Check a saved statement"} disabled={disabled} onPress={()=>setChoosing(v=>!v)}/> : null}
+-              {data.target.state === "implemented" && !candidates.length && !["matched","different"].includes(data.result?.state??"") ? <Button label="Add the next bill" disabled={disabled} onPress={()=>router.push({pathname:"/bill/add",params:{recordKind:"historical",providerName:data.baseline.provider,accountName:data.baseline.account,category:data.baseline.category}})}/> : null}
++              {data.target.state === "implemented" && candidates.length && !outcomeHasComparison(data.result?.state) ? <Button label={choosing?"Hide statements":"Check a saved statement"} disabled={disabled} onPress={()=>setChoosing(v=>!v)}/> : null}
++              {data.target.state === "implemented" && !candidates.length && !outcomeHasComparison(data.result?.state) ? <View style={{gap:8}}><Button label={connected ? "Check provider connection" : "Add the next bill"} disabled={disabled} onPress={openNext}/>{data.candidates.length ? <><Text style={[typography.body,{color:colors.mutedForeground}]}>Saved statements do not yet provide a completed, comparable period after this change. Dates, units or reading quality may need review.</Text><QuietAction label="Review latest saved statement" disabled={disabled} onPress={()=>router.push(("/bill/"+data.candidates[0].id) as never)}/></> : null}</View> : null}
+             </>}
+             {choosing ? <View style={{ gap: 12 }}>
+-              {text("Choose the first full billing period after the change. Transition bills may contain partial charges.")}
+-              {candidates.length ? candidates.map(b => <Pressable key={b.id} accessibilityRole="button" accessibilityLabel={`Check ${b.start} to ${b.end}, ${money(b.amount)}`} disabled={disabled} onPress={()=>void save({evidenceBillId:b.id,snoozedUntil:null})} style={{minHeight:64,padding:spacing.md,gap:4,borderRadius:12,borderWidth:1,borderColor:colors.border,backgroundColor:colors.surfaceRaised,opacity:disabled?0.5:1}}><Text style={[typography.body,{color:colors.foreground,fontWeight:"600"}]}>{money(b.amount)}</Text><Text style={[typography.meta,{color:colors.mutedForeground}]}>{b.start} – {b.end}</Text></Pressable>) : text("No completed, comparable statement is saved for this change yet.")}
++              {text(usage ? "Choose a full service period after the change. Daily usage accounts for different billing lengths; weather and occupancy are not adjusted." : "Choose the first full billing period after the change. Transition bills may contain partial charges.")}
++              {candidates.length ? candidates.map(b => <Pressable key={b.id} accessibilityRole="button" accessibilityLabel={`Check ${b.start} to ${b.end}, ${statementValue(b)}`} disabled={disabled} onPress={()=>void save({evidenceBillId:b.id,snoozedUntil:null})} style={{minHeight:64,padding:spacing.md,gap:4,borderRadius:12,borderWidth:1,borderColor:colors.border,backgroundColor:colors.surfaceRaised,opacity:disabled?0.5:1}}><Text style={[typography.body,{color:colors.foreground,fontWeight:"600"}]}>{statementValue(b)}</Text><Text style={[typography.meta,{color:colors.mutedForeground}]}>{b.start} – {b.end}</Text></Pressable>) : text("No completed, comparable statement is saved for this change yet.")}
+               {data.candidates.length>candidates.length?text("Earlier, unfinished or non-comparable periods are left out of this check. They remain in your bill history."):null}
+               {data.candidateCount > data.candidates.length ? text(`Showing the newest ${data.candidates.length} of ${data.candidateCount} matching statements.`) : null}
+               {!data.coverageComplete ? text("Some older history is outside this check’s coverage. A result will not be verified from an incomplete set.") : null}
+             </View> : null}
+             {!closed ? <>
+-              {data.result && ["matched","different"].includes(data.result.state) ? <Button label="Finish this check" disabled={disabled} loading={busy} onPress={() => void save({state:"completed",snoozedUntil:null})} /> : null}
++              {data.result && outcomeHasComparison(data.result.state) ? <Button label="Finish this check" disabled={disabled} loading={busy} onPress={() => void save({state:"completed",snoozedUntil:null})} /> : null}
+               <QuietAction label={managing?"Hide options":"Manage this change"} disabled={disabled} onPress={()=>setManaging(v=>!v)}/>
+               {managing ? <>
+-              <QuietAction label="Upload another statement" disabled={disabled} onPress={() => router.push({ pathname: "/bill/add", params: { recordKind: "historical", providerName: data.baseline.provider, accountName: data.baseline.account, category: data.baseline.category } })} />
++              <QuietAction label={connected ? "Manage provider connection" : "Upload another statement"} disabled={disabled} onPress={openNext} />
+               <QuietAction label="Choose another saved statement" disabled={disabled || !candidates.length} onPress={() => setChoosing(true)} />
+               <QuietAction label="Edit action" disabled={disabled} onPress={() => setEditing(true)} />
+               <QuietAction label={data.target.snoozedUntil ? "Show in follow-ups now" : "Snooze follow-up for 30 days"} disabled={disabled} onPress={() => { const date = new Date(); date.setDate(date.getDate() + 30); void save({ snoozedUntil: data.target?.snoozedUntil ? null : date.toISOString().slice(0, 10) }); }} />
+@@ -152,14 +164,13 @@
+           </View> : null}
+           {editing ? <View style={{ gap: spacing.md }}>
+             <TextField label="What changed?" value={fields.title} maxLength={120} editable={!disabled} onChangeText={v => edit({ title: v })} />
+-            <TextField label="Agreed period total, including tax (CAD)" value={fields.expectedAmount} keyboardType="decimal-pad" editable={!disabled} onChangeText={v => edit({ expectedAmount: v })} />
++            {!usage ? <TextField label="Agreed period total, including tax (CAD)" value={fields.expectedAmount} keyboardType="decimal-pad" editable={!disabled} onChangeText={v => edit({ expectedAmount: v })} /> : null}
+             <DateField label="Effective date" value={fields.effectiveDate} disabled={disabled} onChange={v => edit({ effectiveDate: v })} />
+-            {text("Use a confirmed price for the same service and billing cycle, including tax. This is not a market-price estimate.")}
+-            <Confirmation label="I have a confirmed price from the provider" checked={confirmed} disabled={disabled} onPress={() => {setConfirmed(v=>!v);edit({});}}/>
++            {usage ? text("Describe the change in your own words, such as a thermostat schedule or how you use an appliance. Use a baseline period that ended before the change.") : <>{text("Use a confirmed price for the same service and billing cycle, including tax. This is not a market-price estimate.")}<Confirmation label="I have a confirmed price from the provider" checked={confirmed} disabled={disabled} onPress={() => {setConfirmed(v=>!v);edit({});}}/></>}
+             <QuietAction label={details ? "Hide optional details" : "Add cost or notes (optional)"} disabled={disabled} onPress={() => setDetails(v => !v)} />
+-            {details ? <><TextField label="One-time change cost (CAD)" value={fields.cost} keyboardType="decimal-pad" editable={!disabled} onChangeText={v => edit({ cost: v })} /><TextField label="Agreement reference or notes" value={fields.notes} multiline maxLength={2000} editable={!disabled} onChangeText={v => edit({ notes: v })} /></> : null}
++            {details ? <><TextField label="One-time change cost (CAD)" value={fields.cost} keyboardType="decimal-pad" editable={!disabled} onChangeText={v => edit({ cost: v })} /><TextField label={usage ? "Change details or notes" : "Agreement reference or notes"} value={fields.notes} multiline maxLength={2000} editable={!disabled} onChangeText={v => edit({ notes: v })} /></> : null}
+             {data.baselineChanged ? <Confirmation label="I reviewed the corrected baseline" checked={confirmBaseline} disabled={disabled} onPress={() => {setConfirmBaseline(v=>!v);edit({});}}/> : null}
+-            <Button label="Save action" loading={busy} disabled={disabled || !confirmed || !fields.expectedAmount || !fields.effectiveDate || (data.baselineChanged && !confirmBaseline)} onPress={() => void save()} />
++            <Button label="Save action" loading={busy} disabled={disabled || (!usage && (!confirmed || !fields.expectedAmount)) || !fields.title.trim() || !fields.effectiveDate || (data.baselineChanged && !confirmBaseline)} onPress={() => void save()} />
+             {data.target ? <QuietAction label="Cancel edits" disabled={disabled} onPress={() => { apply(data); }} /> : null}
+           </View> : null}
+           {saved ? <Text accessibilityLiveRegion="polite" style={[typography.body, { color: colors.foreground }]}>{closed || data.target?.snoozedUntil ? "Saved. This action stays available from its baseline statement." : "Saved. Find this action in Bills → Insights → Your follow-ups."}</Text> : null}
+--- a/src/app/api/mobile/v1/bills/[id]/outcome/route.ts
++++ b/src/app/api/mobile/v1/bills/[id]/outcome/route.ts
+@@ -1,12 +1,10 @@
+-import {effectiveBillTable} from "@/lib/product/bill-records";
++import { effectiveBillTable } from "@/lib/product/bill-records";
+ import { randomUUID } from "node:crypto";
+ import { z } from "zod";
+ import { authenticateMobileRequest } from "@/lib/supabase/mobile";
+ import { readBoundedJson } from "@/lib/security/request";
+-import { loadStatementEvidence } from "@/lib/product/statement-evidence";
+-import { billReviewBaseline } from "@/lib/product/bill-review";
+-import { isTelecomCategory } from "../../../../../../../../apps/mobile/src/lib/bill-review";
+-import { evaluateBillTarget, parseBillTarget, sameOutcomeAccount, type OutcomeStatement, type BillTarget } from "../../../../../../../../apps/mobile/src/lib/bill-outcome";
++import { outcomeStatement } from "@/lib/product/bill-outcome";
++import { evaluateBillTarget, parseBillTarget, sameOutcomeAccount, outcomeHasComparison, type OutcomeStatement, type BillTarget } from "../../../../../../../../apps/mobile/src/lib/bill-outcome";
+ import { historyDate } from "../../../../../../../../apps/mobile/src/lib/manual-history-insights";
+ import { moneyCents } from "../../../../../../../../apps/mobile/src/lib/statement-evidence";
+ export const dynamic = "force-dynamic";
+@@ -14,15 +12,15 @@
+ const date = z.string().refine(historyDate);
+ const amount = z.string().refine(v => moneyCents(v) !== null && moneyCents(v)! >= 0);
+ const schema = z.object({
+-  version: z.string(), title: z.string().trim().min(1).max(120), expectedAmount: amount,
++  version: z.string(), kind: z.enum(["agreed_amount","usage_change"]).optional(),
++  title: z.string().trim().min(1).max(120), expectedAmount: z.union([z.literal(""),amount]),
+   effectiveDate: date, cost: z.union([z.literal(""), amount]), notes: z.string().max(2000),
+   state: z.enum(["planned", "implemented", "completed", "abandoned"]), evidenceBillId: z.string().uuid().nullable(),
+-  snoozedUntil: date.nullable(), agreementConfirmed: z.literal(true), confirmBaseline: z.boolean().optional(),
++  snoozedUntil: date.nullable(), agreementConfirmed: z.boolean(), confirmBaseline: z.boolean().optional(),
+ }).strict();
++const columns="id,name,provider_id,custom_provider_name,account_number_masked,currency,amount,billing_period_start,billing_period_end,original_document_id,source,status,raw_data,usage_amount,usage_unit,updated_at";
+ const literalPattern = (value: string) => value.trim().replace(/[\\%_]/g, "\\$&");
+-function statement(b: { id: string; custom_provider_name: string | null; account_number_masked: string | null; currency: string; amount: number | null; billing_period_start: string | null; billing_period_end: string | null; original_document_id: string | null }, category: string): OutcomeStatement {
+-  return { id: b.id, provider: b.custom_provider_name ?? "", account: b.account_number_masked ?? "", category, currency: b.currency, amount: b.amount, start: b.billing_period_start, end: b.billing_period_end, hasOriginal: Boolean(b.original_document_id) };
+-}
++const overlaps=(a:OutcomeStatement,b:OutcomeStatement)=>a.id!==b.id&&historyDate(a.start)&&historyDate(a.end)&&historyDate(b.start)&&historyDate(b.end)&&a.start<=b.end&&a.end>=b.start;
+ async function load(request: Request, id: string) {
+   const auth = await authenticateMobileRequest(request);
+   if (auth.error) return { response: respond({ error: auth.error.message }, auth.error.status) };
+@@ -30,62 +28,68 @@
+   const home = await auth.supabase.from("homes").select("id").eq("user_id", auth.user.id).order("created_at").limit(1).maybeSingle();
+   if (home.error || !home.data) return { response: respond({ error: "Could not verify your household." }, 409) };
+   const ctx = { supabase: auth.supabase, userId: auth.user.id, homeId: home.data.id };
+-  const loaded = await loadStatementEvidence(ctx, id);
+-  if ("error" in loaded) return { response: respond({ error: loaded.error }, loaded.status) };
+-  if (!isTelecomCategory(loaded.payload.category)) return { response: respond({ error: "Agreed-amount tracking currently supports saved internet and mobile statements. Utility usage savings need a different comparison." }, 409) };
+-  const baseline = statement(loaded.bill, loaded.payload.category);
+-  if (!baseline.provider.trim() || !baseline.account.trim()) return { response: respond({ error: "Add this statement’s provider and account nickname before tracking a change." }, 409) };
+-  const history = await auth.supabase.from(effectiveBillTable())
+-    .select("id,custom_provider_name,account_number_masked,currency,amount,billing_period_start,billing_period_end,original_document_id")
+-    .eq("user_id", ctx.userId).eq("home_id", ctx.homeId).eq("source", "manual").eq("status", "archived").eq("currency", baseline.currency)
+-    .eq("raw_data->>record_kind", "historical").eq("raw_data->>amount_basis", "period_charges").eq("raw_data->>category", baseline.category)
+-    .ilike("custom_provider_name", literalPattern(baseline.provider)).ilike("account_number_masked", literalPattern(baseline.account))
+-    .order("billing_period_end", { ascending: false }).order("id").limit(501);
+-  if (history.error) return { response: respond({ error: "Could not load the evidence. Your saved action is unchanged; try again." }, 503) };
+-  const records = history.data.map(b => statement(b, baseline.category)).filter(b => sameOutcomeAccount(baseline, b));
+-  const target = parseBillTarget(loaded.raw.bill_target);
+-  const hash = billReviewBaseline(loaded.bill);
+-  const loadedVersion = loaded.bill.updated_at;
+-  function payload(action: BillTarget | null, version = loadedVersion) {
++  const loaded=await ctx.supabase.from("bills").select(columns).eq("id",id).eq("user_id",ctx.userId).eq("home_id",ctx.homeId).maybeSingle();
++  if(loaded.error)return {response:respond({error:"Could not load this statement. Try again."},503)};
++  if(!loaded.data)return {response:respond({error:"That statement is unavailable."},404)};
++  const bill=loaded.data, adapted=outcomeStatement(bill);
++  const raw=(bill.raw_data && typeof bill.raw_data==="object" && !Array.isArray(bill.raw_data) ? bill.raw_data : {}) as Record<string,unknown>;
++  const saved=await ctx.supabase.from("bill_outcome_actions").select("revision,target,baseline_snapshot,previous_baseline").eq("bill_id",id).eq("user_id",ctx.userId).eq("home_id",ctx.homeId).maybeSingle();
++  if(saved.error)return {response:respond({error:"Follow-ups could not be loaded. Your saved bills and actions are unchanged; try again."},503)};
++  const revision=saved.data?.revision??0;
++  const target=parseBillTarget(saved.data?.target??raw.bill_target);
++  if(!adapted&&!target)return {response:respond({error:"Choose a saved CAD telecom, electricity or gas statement with an identified account. Other saved bills remain available in History."},409)};
++  const kind=target ? target.kind??"agreed_amount" : adapted!.kind;
++  const supported=!!adapted&&adapted.kind===kind;
++  const oldSnapshot=(saved.data?.baseline_snapshot??raw.bill_target_baseline_snapshot??{}) as OutcomeStatement;
++  const baseline:OutcomeStatement=adapted?.statement??{...oldSnapshot,id:bill.id,provider:bill.custom_provider_name??oldSnapshot.provider??bill.name,account:bill.account_number_masked??oldSnapshot.account??"",category:typeof raw.category==="string"?raw.category:"Other",currency:bill.currency,amount:bill.amount,start:bill.billing_period_start,end:bill.billing_period_end,hasOriginal:!!bill.original_document_id};
++  const hash=adapted?.hash??"unsupported:"+bill.updated_at;
++  let query=ctx.supabase.from(effectiveBillTable()).select(columns).eq("user_id",ctx.userId).eq("home_id",ctx.homeId).eq("source",bill.source!).eq("currency",bill.currency);
++  if(bill.source==="manual")query=query.eq("status","archived").eq("raw_data->>record_kind","historical").eq("raw_data->>amount_basis","period_charges").eq("raw_data->>category",baseline.category).ilike("custom_provider_name",literalPattern(baseline.provider)).ilike("account_number_masked",literalPattern(baseline.account));
++  else query=query.eq("provider_id",bill.provider_id!);
++  const [history,active]=await Promise.all([
++    query.order("billing_period_end",{ascending:false}).order("id").limit(501),
++    ctx.supabase.from(effectiveBillTable()).select("id").eq("id",id).eq("user_id",ctx.userId).eq("home_id",ctx.homeId).maybeSingle(),
++  ]);
++  if(history.error||active.error)return {response:respond({error:"Could not load the evidence. Your saved action is unchanged; try again."},503)};
++  const records=history.data.flatMap(row=>{const value=outcomeStatement(row);return value&&value.kind===kind&&sameOutcomeAccount(baseline,value.statement)?[value.statement]:[];});
++  const coverageComplete=history.data.length<=500, baselineActive=Boolean(active.data);
++  function payload(action: BillTarget | null, currentRevision=revision) {
+     const evidence = records.find(b => b.id === action?.evidenceBillId) ?? null;
+     let result = action ? evaluateBillTarget(action, baseline, hash, evidence, new Date().toLocaleDateString("en-CA", { timeZone: "America/Toronto" })) : null;
+-    if (result?.state === "awaiting_evidence" && action?.evidenceBillId && !evidence) result = {state:"awaiting_evidence", title:"Selected statement is no longer available", detail:"Choose another saved statement from this account, or upload the original again. No result is claimed from missing evidence.", differenceCents:null};
+-    const overlap = evidence && records.some(b => b.id !== evidence.id && historyDate(b.start) && historyDate(b.end) && historyDate(evidence.start) && historyDate(evidence.end) && b.start <= evidence.end && b.end >= evidence.start);
+-    if (result && ["matched", "different"].includes(result.state) && (records.length > 500 || overlap)) result = { state: "inconclusive", title: overlap ? "Check overlapping statements" : "History coverage is incomplete", detail: overlap ? "Another saved statement overlaps this evidence period. Check for a duplicate or revision before interpreting the result." : "The available history exceeds this check’s coverage. No result is verified.", differenceCents: null };
+-    return { version, baseline, evidence, candidateCount: records.filter(b => b.id !== id).length, baselineChanged: Boolean(action && action.baseline !== hash), target: action, result, candidates: records.filter(b => b.id !== id).slice(0, 100), coverageComplete: records.length <= 500 };
++    if (result?.state === "awaiting_evidence" && action?.evidenceBillId && !evidence) result = {...result,title:"Selected statement is no longer available",detail:"Choose another saved statement from this account. No result is claimed from missing or excluded evidence."};
++    const overlap=records.some(b=>overlaps(b,baseline)||evidence&&overlaps(b,evidence));
++    if(result&&outcomeHasComparison(result.state)&&(!coverageComplete||overlap||!baselineActive))
++      result={state:"inconclusive",title:!baselineActive?"Baseline is excluded from comparisons":overlap?"Check overlapping statements":"History coverage is incomplete",
++        detail:!baselineActive?"This statement was set aside as another copy. Review the bill records before using it as a baseline.":overlap?"Another saved statement overlaps the baseline or evidence period. Review duplicates or revisions before interpreting the result.":"The available history exceeds this check’s coverage. No result is verified.",
++        differenceCents:null,usageComparison:null};
++    if(result&&action?.state!=="abandoned"&&!supported)result={state:"needs_review",title:"This bill no longer supports the saved check",detail:"Its service, currency or account details changed. Review the baseline statement, or stop tracking this action without claiming a result.",differenceCents:null,usageComparison:null};
++    return {version:bill.updated_at+"|"+currentRevision,kind,baseline,baselineActive,evidence,candidateCount:records.filter(b=>b.id!==id).length,baselineChanged:Boolean(action&&action.baseline!==hash),target:action,result,candidates:records.filter(b=>b.id!==id).slice(0,100),coverageComplete};
+   }
+-  return { ctx, loaded, records, target, hash, baseline, payload };
++  return {ctx,bill,raw,saved:saved.data,revision,target,hash,kind,supported,baseline,baselineActive,records,payload};
+ }
+ export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
+-  const state = await load(request, (await params).id);
+-  return "response" in state ? state.response : respond(state.payload(state.target));
++  const state=await load(request,(await params).id);
++  return "response" in state?state.response:respond(state.payload(state.target));
+ }
+ export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
+-  const id = (await params).id, state = await load(request, id);
+-  if ("response" in state) return state.response;
+-  const parsed = schema.safeParse(await readBoundedJson(request, 12000).catch(() => null));
+-  if (!parsed.success) return respond({ error: "Check the agreed amount, effective date and action details." }, 400);
+-  const body = parsed.data;
+-  if (body.version !== state.loaded.bill.updated_at) return respond({ error: "This statement or action changed. Reload before saving; keep your edits until you review the saved version." }, 409);
+-  const stoppingExisting = body.state === "abandoned" && Boolean(state.target);
+-  if (!stoppingExisting && (!historyDate(state.baseline.end) || body.effectiveDate <= state.baseline.end)) return respond({ error: "Use a baseline statement that ends before the change takes effect." }, 400);
+-  if (body.evidenceBillId && !(stoppingExisting && body.evidenceBillId === state.target?.evidenceBillId) && !state.records.some(b => b.id === body.evidenceBillId && b.id !== id)) return respond({ error: "Choose a later statement from this account." }, 400);
+-  if (state.target && state.target.baseline !== state.hash && !body.confirmBaseline && body.state !== "abandoned") return respond({ error: "Review the corrected baseline and confirm it before updating this action." }, 409);
+-  const target: BillTarget = {
+-    id: state.target?.id ?? randomUUID(), title: body.title, expectedAmount: body.expectedAmount,
+-    effectiveDate: body.effectiveDate, cost: body.cost, notes: body.notes, state: body.state,
+-    evidenceBillId: body.evidenceBillId, baseline: body.confirmBaseline || !state.target ? state.hash : state.target.baseline,
+-    savedAt: new Date().toISOString(), snoozedUntil: body.snoozedUntil,
+-  };
+-  if (target.state === "completed" && !["matched", "different"].includes(state.payload(target).result?.state ?? "")) return respond({ error: "Choose a comparable statement before finishing this check, or stop tracking without claiming a result." }, 409);
+-  const raw = { ...state.loaded.raw, bill_target: target,
+-    ...(body.confirmBaseline && state.target?.baseline !== state.hash ? { bill_target_previous_baseline: { hash: state.target?.baseline, snapshot: state.loaded.raw.bill_target_baseline_snapshot } } : {}),
+-    ...(!state.target || body.confirmBaseline ? { bill_target_baseline_snapshot: state.baseline } : {}),
+-  };
+-  const saved = await state.ctx.supabase.from("bills").update({ raw_data: raw })
+-    .eq("id", id).eq("user_id", state.ctx.userId).eq("home_id", state.ctx.homeId).eq("updated_at", body.version)
+-    .eq("source", "manual").eq("status", "archived").select("updated_at").maybeSingle();
+-  if (saved.error) return respond({ error: "Could not confirm the save. Your edits remain; reload the saved action before retrying." }, 503);
+-  if (!saved.data) return respond({ error: "This action changed. Reload before saving again." }, 409);
+-  return respond(state.payload(target, saved.data.updated_at));
++  const id=(await params).id,state=await load(request,id);
++  if("response" in state)return state.response;
++  const parsed=schema.safeParse(await readBoundedJson(request,12000).catch(()=>null));
++  if(!parsed.success)return respond({error:"Check the amount, effective date and action details."},400);
++  const body=parsed.data,kind=body.kind??"agreed_amount";
++  if(kind!==state.kind||kind==="agreed_amount"&&(!body.agreementConfirmed||moneyCents(body.expectedAmount)===null)||kind==="usage_change"&&body.expectedAmount!=="")return respond({error:"Use this account’s supported comparison. Telecom needs a confirmed price; energy tracks recorded usage."},400);
++  if(body.version!==state.payload(state.target).version)return respond({error:"This statement or action changed. Reload before saving; keep your edits until you review the saved version."},409);
++  const stopping=body.state==="abandoned"&&Boolean(state.target);
++  if(!stopping&&!state.supported)return respond({error:"This bill no longer supports the saved check. Review the original bill details, or stop tracking."},409);
++  if(!stopping&&(!historyDate(state.baseline.end)||body.effectiveDate<=state.baseline.end))return respond({error:"Use a baseline statement that ends before the change takes effect."},400);
++  if(!stopping&&!state.baselineActive)return respond({error:"This baseline is excluded as another copy. Review its bill records before continuing."},409);
++  if(body.evidenceBillId&&!(stopping&&body.evidenceBillId===state.target?.evidenceBillId)&&!state.records.some(b=>b.id===body.evidenceBillId&&b.id!==id))return respond({error:"Choose a later statement from this account."},400);
++  if(state.target&&state.target.baseline!==state.hash&&!body.confirmBaseline&&!stopping)return respond({error:"Review the corrected baseline and confirm it before updating this action."},409);
++  const target:BillTarget={kind,id:state.target?.id??randomUUID(),title:body.title,expectedAmount:body.expectedAmount,effectiveDate:body.effectiveDate,cost:body.cost,notes:body.notes,state:body.state,evidenceBillId:body.evidenceBillId,baseline:body.confirmBaseline||!state.target?state.hash:state.target.baseline,savedAt:new Date().toISOString(),snoozedUntil:body.snoozedUntil};
++  if(target.state==="completed"&&!outcomeHasComparison(state.payload(target).result?.state))return respond({error:"Choose a comparable statement before finishing this check, or stop tracking without claiming a result."},409);
++  const snapshot=state.saved?.baseline_snapshot??state.raw.bill_target_baseline_snapshot??state.baseline;
++  const previous=body.confirmBaseline&&state.target?.baseline!==state.hash?{hash:state.target?.baseline,snapshot}:state.saved?.previous_baseline??state.raw.bill_target_previous_baseline??null;
++  const result=await state.ctx.supabase.rpc("save_rezlee_bill_outcome",{p_bill_id:id,p_bill_version:state.bill.updated_at,p_revision:state.revision,p_target:target,p_baseline:!state.target||body.confirmBaseline?state.baseline:snapshot,p_previous:previous});
++  if(result.error)return respond({error:["40001","PT409"].includes(result.error.code)?"This statement or action changed. Reload before saving again.":"Could not confirm the save. Your edits remain; check the saved action before retrying."},["40001","PT409"].includes(result.error.code)?409:503);
++  return respond(state.payload(target,result.data as number));
+ }
+--- a/src/app/api/mobile/v1/bills/route.ts
++++ b/src/app/api/mobile/v1/bills/route.ts
+@@ -1,3 +1,4 @@
++import { outcomeStatement } from "@/lib/product/bill-outcome";
+ import {effectiveBillTable,billRecordsEnabled} from "@/lib/product/bill-records";
+ import { readTelecomDetails, type TelecomBillDetails } from "../../../../../../apps/mobile/src/lib/telecom-bill";
+ import {currentReviewedEnergyEvidence} from "@/lib/product/statement-evidence";
+@@ -65,6 +66,7 @@
+ export type MobileBillItem = {
+   accountKey?: string | null;
+   telecomDetails?: TelecomBillDetails | null;
++  outcomeKind?: "agreed_amount" | "usage_change" | null;
+   outcomeSummary?: BillTargetSummary | null;
+   reviewSummary?: BillReviewSummary | null;
+   reviewedEvidence?: StatementEvidence | null;
+@@ -294,6 +296,15 @@
+   }
+ 
+   const billRows = (bills ?? []) as unknown as Bill[];
++  const actions=await supabase.from("bill_outcome_actions")
++    .select("bill_id,target,bills!bill_outcome_actions_bill_id_fkey(id,name,custom_provider_name,account_number_masked)")
++    .eq("user_id",user.id).eq("home_id",home.id).order("updated_at",{ascending:false}).limit(501);
++  const actionRows=(actions.data??[]) as unknown as Array<{bill_id:string;target:unknown;bills:{id:string;name:string;custom_provider_name:string|null;account_number_masked:string|null}|null}>;
++  const actionSummaries=new Map(actionRows.map(row=>[row.bill_id,billTargetSummary({bill_target:row.target})]));
++  const outcomeFollowUps=actionRows.slice(0,500).flatMap(row=>{
++    const summary=actionSummaries.get(row.bill_id),b=row.bills;
++    return summary&&b?[{id:b.id,label:b.custom_provider_name??b.name,providerName:b.custom_provider_name,accountNumber:b.account_number_masked,outcomeSummary:summary}]:[];
++  });
+ 
+   const items: MobileBillItem[] = billRows.map((bill) => {
+     const status = classifyBillStatus(bill);
+@@ -335,7 +346,8 @@
+       reviewedEvidence: currentReviewedEvidence(bill),
+       reviewedEnergyEvidence: currentReviewedEnergyEvidence(bill),
+       reviewSummary: billReviewSummary(bill),
+-      outcomeSummary: bill.source === "manual" && status === "archived" ? billTargetSummary(bill.raw_data) : null,
++      outcomeKind: outcomeStatement(bill)?.kind ?? null,
++      outcomeSummary: actionSummaries.get(bill.id) ?? (bill.source === "manual" && status === "archived" ? billTargetSummary(bill.raw_data) : null),
+       usageAmount: bill.usage_amount,
+       usageUnit: bill.usage_unit,
+       isHistoricalStatement: status === "archived",
+@@ -483,6 +495,8 @@
+ 
+   return NextResponse.json({
+     bills: items,
++    outcomeFollowUps,
++    outcomeCoverageComplete: !actions.error && actionRows.length <= 500,
+     billRecordReview: billRecordsEnabled(),
+     historyCoverage: { complete: count !== null && count === billRows.length, loadedCount: billRows.length, totalCount: count },
+     utilityInsights,
+--- a/apps/mobile/src/lib/bills-data.ts
++++ b/apps/mobile/src/lib/bills-data.ts
+@@ -29,6 +29,7 @@
+ export type BillListItem = {
+   accountKey?: string | null;
+   telecomDetails?: TelecomBillDetails | null;
++  outcomeKind?: "agreed_amount" | "usage_change" | null;
+   outcomeSummary?: BillTargetSummary | null;
+   reviewSummary?: BillReviewSummary | null;
+   reviewedEvidence?: StatementEvidence | null;
+@@ -127,6 +128,8 @@
+   | {
+       needsOnboarding?: undefined;
+       bills: BillListItem[];
++      outcomeFollowUps?: Array<Pick<BillListItem,"id"|"label"|"providerName"|"accountNumber"|"outcomeSummary">>;
++      outcomeCoverageComplete?: boolean;
+       historyCoverage?: { complete: boolean; loadedCount: number; totalCount: number | null };
+       utilityInsights: UtilityInsight[];
+       monthlyTotal: number;
+--- a/apps/mobile/src/lib/manual-history-insights.ts
++++ b/apps/mobile/src/lib/manual-history-insights.ts
+@@ -4,6 +4,7 @@
+ // Recorded statement arithmetic only. Never estimates consumption or savings.
+ export type HistoryBill = {
+   accountKey?: string | null;
++  outcomeKind?: "agreed_amount" | "usage_change" | null;
+   outcomeSummary?: BillTargetSummary | null;
+   originalDocumentId?: string | null;
+   reviewedEvidence?: StatementEvidence | null;
+--- a/apps/mobile/src/components/SavedBillInsights.tsx
++++ b/apps/mobile/src/components/SavedBillInsights.tsx
+@@ -117,7 +117,7 @@
+         {opening ? <ActivityIndicator accessibilityLabel="Opening original statement" color={colors.primary} /> : null}
+         {originalError ? <Text accessibilityRole="alert" style={[typography.meta, { color: colors.criticalForeground }]}>The original couldn’t be opened. Your saved bill is unchanged. Try again when connected.</Text> : null}
+         <QuietAction label="Review or correct bill" onPress={() => onOpen(bill.id)} />
+-        {onTrack && isTelecomCategory(account.category) && !account.bills.some(row => row.outcomeSummary) ? <QuietAction label="Track an agreed price change" onPress={() => onTrack(bill.id)} /> : null}
++
+       </View> : null}
+     </View>
+     {change ? <View style={{ gap: spacing.sm }}>
+@@ -164,7 +164,8 @@
+       <Text style={[typography.body, { color: colors.mutedForeground }]}>{next.detail}</Text>
+       {next.action && next.label ? <QuietAction label={next.label} onPress={nextAction} /> : null}
+     </View> : null}
+-    {onTrack && account.bills.some(row => row.outcomeSummary) ? <BriefRow title="Your tracked price change" detail="Check its progress against your saved bills." onPress={() => onTrack(account.bills.find(row => row.outcomeSummary)!.id)} /> : null}
++    {onTrack && !account.bills.some(row=>row.outcomeSummary) && (bill.outcomeKind || isTelecomCategory(account.category)) ? <BriefRow title={bill.outcomeKind==="usage_change"?"Track a usage change":"Track an agreed price change"} detail={bill.outcomeKind==="usage_change"?"Save what you changed and compare a later full period’s daily usage.":"Save a confirmed amount and check it against a later bill."} onPress={()=>onTrack(bill.id)}/> : null}
++    {onTrack && account.bills.some(row => row.outcomeSummary) ? <BriefRow title="Your tracked bill change" detail="Check its progress against your saved bills." onPress={() => onTrack(account.bills.find(row => row.outcomeSummary)!.id)} /> : null}
+     {account.bills.length > 1 ? <View>
+       <Disclosure title={"Saved statements · " + account.bills.length} open={historyOpen} onPress={() => setHistoryOpen(value => !value)} />
+       {historyOpen ? <>
+--- a/apps/mobile/src/components/TelecomBillInsights.tsx
++++ b/apps/mobile/src/components/TelecomBillInsights.tsx
+@@ -119,6 +119,7 @@
+     <StatementBarChart points={story.chart.map(p=>({id:p.id,label:new Intl.DateTimeFormat("en-CA",{month:"short",year:"2-digit",timeZone:"UTC"}).format(new Date(p.date+"T12:00:00Z")),period:"Issued "+formatDueDate(p.date),value:p.amount,formattedValue:money(p.amount)+" "+latest.currency,detail:latest.telecomDetails?"Statement total including tax · payment status is separate":"Recorded statement amount"}))} onOpen={onOpen}/>
+    </Surface>:<Surface tone="subtle"><Text style={[typography.body,{color:colors.mutedForeground}]}>A comparable history isn’t available yet. Your saved statements remain below.</Text></Surface>}
+   </View>
++  {latest.outcomeKind || story.rows.some(row=>row.outcomeSummary) ? <QuietAction label={story.rows.some(row=>row.outcomeSummary)?"View tracked bill change":"Track an agreed price change"} onPress={()=>router.push({pathname:"/bill/outcome",params:{billId:story.rows.find(row=>row.outcomeSummary)?.id??latest.id}})}/> : null}
+   <Button label="Ask Rezlee about this bill" onPress={()=>router.push(("/assistant?q="+encodeURIComponent(assistantPrompt)) as never)}/>
+   {latest.telecomDetails?<Surface style={{gap:spacing.md}}>
+    <Pressable accessibilityRole="button" accessibilityState={{expanded:detailsOpen}} onPress={()=>setDetailsOpen(v=>!v)} style={{minHeight:44,flexDirection:"row",alignItems:"center",gap:8}}>
+--- a/apps/mobile/app/utility/[providerId].tsx
++++ b/apps/mobile/app/utility/[providerId].tsx
+@@ -192,6 +192,8 @@
+   }
+ 
+   const isElectricity = insight.categoryId === "electricity";
++  const trackedBill = payload && !payload.needsOnboarding ? payload.bills.find(b=>b.providerId===providerId&&b.outcomeSummary) : null;
++  const outcomeBill = trackedBill ?? (payload && !payload.needsOnboarding ? payload.bills.find(b=>b.id===insight.latestBillId&&b.outcomeKind==="usage_change") : null);
+   const latestDelta = insight.latestVsPreviousPercent;
+   const comparison = insight.periodComparison;
+   const currency = insight.currency ?? "CAD";
+@@ -316,6 +318,11 @@
+           />
+         </View>
+ 
++        {outcomeBill ? <Surface tone="subtle" style={{gap:spacing.sm}}>
++          <Text style={[typography.section,{color:colors.foreground}]}>{trackedBill?"Your tracked usage change":"Did a change affect your usage?"}</Text>
++          <Text style={[typography.body,{color:colors.mutedForeground}]}>Save what you changed and compare a later full period’s daily usage. Weather and other changes can also affect the result.</Text>
++          <Button variant="secondary" label={trackedBill?"View tracked change":"Track a usage change"} onPress={()=>router.push({pathname:"/bill/outcome",params:{billId:outcomeBill.id}})}/>
++        </Surface> : null}
+         <UtilityCostChart key={providerId} insight={insight} onOpenStatement={id => router.push((`/bill/${id}`) as never)} />
+ 
+ 
+--- a/apps/mobile/app/bill/[id].tsx
++++ b/apps/mobile/app/bill/[id].tsx
+@@ -1,6 +1,5 @@
+ import {TelecomStatementBreakdown} from "@/components/TelecomBillInsights";
+ import {BillRecordNotice} from "@/components/BillRecordNotice";
+-import { isTelecomCategory } from "@/lib/bill-review";
+ import {ScreenNavigation} from "@/components/ScreenNavigation";
+ import { editorial, QuietAction, ReadNotice } from "@/components/Brief";
+ import { Feather } from "@expo/vector-icons";
+@@ -472,9 +471,10 @@
+           <QuietAction label="Am I overpaying?" onPress={() => router.push({ pathname: "/bill/review", params: { billId: bill.id } })} />
+           <QuietAction label="Understand charges and usage" onPress={() => router.push({ pathname: "/bill/statement-details", params: { billId: bill.id } })} />
+           <QuietAction label="Compare this account’s history" onPress={() => router.push({ pathname: "/bill/history-insights", params: { billId: bill.id } })} />
+-          {isTelecomCategory(bill.category) ? <QuietAction label={bill.outcomeSummary ? "View tracked bill change" : "Track an agreed bill amount"} onPress={() => router.push({pathname:"/bill/outcome",params:{billId:bill.id}})} /> : null}
++
+         </View> : null}
+ 
++        {!isEditing && (bill.outcomeKind || bill.outcomeSummary) ? <QuietAction label={bill.outcomeSummary ? "View tracked bill change" : bill.outcomeKind==="usage_change" ? "Track a usage change" : "Track an agreed bill amount"} onPress={()=>router.push({pathname:"/bill/outcome",params:{billId:bill.id}})}/> : null}
+         <BillRecordNotice billId={bill.id}/>
+         <Surface
+           style={{
+--- a/apps/mobile/app/(tabs)/bills.tsx
++++ b/apps/mobile/app/(tabs)/bills.tsx
+@@ -84,11 +84,12 @@
+   const records = collectionBillRecords(data?.bills ?? [],filter,matches);
+   const manualHistoryCount = allHistory.filter(bill => bill.source === "manual").length;
+   const today = new Date().toLocaleDateString("en-CA");
+-  const followUps = (data?.bills ?? []).flatMap(bill=>[
++  const followUpBills = [...(data?.bills ?? []), ...(data?.outcomeFollowUps ?? []).filter(row=>!data?.bills.some(b=>b.id===row.id)).map(row=>({...row,reviewSummary:null}))];
++  const followUps = followUpBills.flatMap(bill=>[
+     ...(needsBillFollowUp(bill.reviewSummary) ? [{bill, key:bill.id+"-review", detail:billFollowUpLabel(bill.reviewSummary!), savedAt:bill.reviewSummary!.savedAt, path:bill.reviewSummary?.status==="offers"?"/bill/offer-comparison" as const:"/bill/review" as const}] : []),
+     ...(targetNeedsFollowUp(bill.outcomeSummary,today) ? [{bill,key:bill.id+"-outcome",detail:bill.outcomeSummary!.title+(bill.outcomeSummary!.state==="planned"?" · Planned":" · Check a later statement"),savedAt:bill.outcomeSummary!.savedAt,path:"/bill/outcome" as const}] : []),
+   ]).sort((a,b)=>b.savedAt.localeCompare(a.savedAt)||a.key.localeCompare(b.key));
+-  const empty = data && !data.bills.length && !data.utilityInsights.length && !data.providerActivity.length;
++  const empty = data && !data.bills.length && !data.utilityInsights.length && !data.providerActivity.length && !followUps.length;
+   const renderPage=(page:"insights"|"accounts"|"shared"|"history")=>page==="shared"?(view==="shared"?<SharedExpenses inline/>:null):!data?null:empty?<View style={{gap:12}}>
+           {page==="insights"?<>
+             <ProviderConnectionChoices/>
+@@ -102,6 +103,7 @@
+           </>}
+         </View>:page==="insights"?<View style={{gap:layout.sectionGap}}>
+           <BillInsights bills={data} fresh={!error}/>
++          {data.outcomeCoverageComplete===false?<ReadNotice message="Some saved follow-ups could not be loaded. Refresh before assuming there is nothing to check." busy={busy} onRetry={()=>void load()}/>:null}
+           {!error && !data.utilityInsights.length && !data.providerActivity.length ? <ProviderConnectionChoices/> : null}
+             {followUps.length?<View>
+               <SectionHeading title="Your follow-ups" />
+--- a/scripts/qa/bill-outcome-staging.mjs
++++ b/scripts/qa/bill-outcome-staging.mjs
+@@ -61,7 +61,7 @@
+  r=await api(a,path);current=r.data;check("baseline correction invalidates old comparison",r.data.baselineChanged&&r.data.result.state==="needs_review");
+  check("baseline review requires explicit acknowledgement",(await save({notes:"Try without review"})).status===409);
+  r=await save({confirmBaseline:true,evidenceBillId:evidence});check("reviewed corrected baseline recalculates transparently",r.status===200&&!r.data.baselineChanged&&r.data.result.differenceCents===-2000);
+- const raw=await a.client.from("bills").select("raw_data").eq("id",id).single();check("old baseline reference retained on correction",Boolean(raw.data.raw_data.bill_target_previous_baseline.hash)&&raw.data.raw_data.bill_target_baseline_snapshot.amount===110);
++ const raw=await a.client.from("bill_outcome_actions").select("previous_baseline,baseline_snapshot").eq("bill_id",id).single();check("old baseline reference retained on correction",Boolean(raw.data.previous_baseline.hash)&&raw.data.baseline_snapshot.amount===110);
+  const overlap=await bill(a,{amount:70,billing_period_start:"2026-08-27",billing_period_end:"2026-09-24"});
+  r=await api(a,path);current=r.data;check("overlapping/revised periods withhold confirmation",r.data.result.state==="inconclusive");
+  await a.client.from("bills").delete().eq("id",overlap);
+@@ -71,10 +71,66 @@
+  r=await save({state:"abandoned"});check("stop tracking with deleted evidence preserves baseline and action",r.status===200&&r.data.target.id===actionId&&r.data.result.state==="abandoned");
+  const savedBill=await a.client.from("bills").select("amount,raw_data").eq("id",id).single();check("outcome saves preserve bill fields and original raw metadata",savedBill.data.amount===110&&savedBill.data.raw_data.qa_marker===true&&savedBill.data.raw_data.amount_basis==="period_charges");
+  const electricity=await bill(a,{custom_provider_name:"Synthetic electricity",raw_data:{record_kind:"historical",amount_basis:"period_charges",category:"Electricity"}});
+- check("fixed telecom target cannot masquerade as utility savings",(await api(a,`/api/mobile/v1/bills/${electricity}/outcome`)).status===409);
++ const energyEntry=await api(a,`/api/mobile/v1/bills/${electricity}/outcome`);check("energy uses a separate comparison",energyEntry.status===200&&energyEntry.data.kind==="usage_change");check("fixed telecom target cannot masquerade as utility savings",(await api(a,`/api/mobile/v1/bills/${electricity}/outcome`,{...fields,version:energyEntry.data.version})).status===400);
++ // Connected energy and Deck follow the same saved-action lifecycle without provider calls.
++ for(const kind of ["electricity","gas","deck"]){
++  const made=await a.client.from("providers").insert({user_id:a.id,home_id:a.home,name:"Synthetic "+kind,display_name:"Synthetic "+kind,connection_status:"added_manual"}).select("id").single();
++  if(made.error)throw Error("Synthetic provider failed");
++  const providerId=made.data.id,energy=kind!=="deck",category=kind==="electricity"?"Electricity":kind==="gas"?"Natural Gas":"Internet";
++  const raw=energy?{category,service_point_key:"synthetic-"+kind,quality_of_reading:"actual",utility:"Synthetic "+kind}:{category,telecom_contract:"v1",amount_basis:"statement_total",account_key:"a".repeat(64)};
++  const baseId=await bill(a,{provider_id:providerId,source:energy?"ezgb":"deck",custom_provider_name:"Synthetic "+kind,account_number_masked:"Ending 1234",billing_period_start:"2026-07-01",billing_period_end:"2026-07-31",usage_amount:energy?310:null,usage_unit:kind==="electricity"?"kWh":kind==="gas"?"m3":null,raw_data:raw});
++  const nextId=await bill(a,{provider_id:providerId,source:energy?"ezgb":"deck",custom_provider_name:"Synthetic "+kind,account_number_masked:"Ending 1234",amount:80,billing_period_start:"2026-08-01",billing_period_end:"2026-08-31",usage_amount:energy?248:null,usage_unit:kind==="electricity"?"kWh":kind==="gas"?"m3":null,raw_data:raw});
++  const connectedPath=`/api/mobile/v1/bills/${baseId}/outcome`;let live=(await api(a,connectedPath)).data;
++  check(kind+" identifies the correct comparison",live.kind===(energy?"usage_change":"agreed_amount")&&live.candidates.length===1);
++  const body={...fields,kind:live.kind,title:energy?"Changed household routine":"Confirmed telecom price",expectedAmount:energy?"":"80",effectiveDate:"2026-08-01",cost:"",agreementConfirmed:!energy,state:"planned",evidenceBillId:null};
++  const put=async(patch={})=>{const res=await api(a,connectedPath,{...body,...(live.target?{state:live.target.state,evidenceBillId:live.target.evidenceBillId}:{}),version:live.version,...patch});if(res.status===200)live=res.data;return res;};
++  check(kind+" action planned",(await put()).data.result.state==="planned");
++  check(kind+" waits for saved evidence",(await put({state:"implemented"})).data.result.state==="awaiting_evidence");
++  let selected=await put({evidenceBillId:nextId});
++  check(kind+" later evidence compared honestly",selected.status===200&&selected.data.result.state===(energy?"usage_lower":"matched"));
++  check(kind+" amount basis remains explicit",energy?live.baseline.amountBasis==="amount_due"&&live.result.differenceCents===null&&live.result.usageComparison.percent===-20:live.baseline.amountBasis==="statement_total"&&live.result.detail.includes("previous balances"));
++  const listing=(await api(a,"/api/mobile/v1/bills")).data;
++  check(kind+" action discoverable in Bills",listing.bills.find(b=>b.id===baseId)?.outcomeSummary?.state==="implemented"&&listing.outcomeFollowUps.some(b=>b.id===baseId)&&listing.outcomeCoverageComplete===true);
++  check(kind+" follow-up projection excludes private notes",!Object.hasOwn(listing.outcomeFollowUps.find(b=>b.id===baseId).outcomeSummary,"notes"));
++  const actionIdentity=live.target.id;
++  await a.client.from("bills").update({raw_data:{...raw,retrieved_again:true}}).eq("id",baseId);
++  live=(await api(a,connectedPath)).data;
++  check(kind+" provider metadata replacement preserves action",live.target.id===actionIdentity&&live.result.state===(energy?"usage_lower":"matched"));
++  const foreignWrite=await api(b,connectedPath,{...body,version:live.version});
++  check(kind+" another household denied",foreignWrite.status===404);
++  const version=live.version;
++  const concurrent=await Promise.all([put({notes:"Concurrent A"}),api(a,connectedPath,{...body,state:"implemented",evidenceBillId:nextId,version,notes:"Concurrent B"})]);
++  check(kind+" concurrent writes have one winner",concurrent.map(x=>x.status).sort().join(",")==="200,409");
++  live=(await api(a,connectedPath)).data;
++  check(kind+" check can finish",(await put({state:"completed"})).status===200);
++  if(energy){
++    await a.client.from("bills").update({raw_data:{...raw,quality_of_reading:"estimated"}}).eq("id",nextId);
++    live=(await api(a,connectedPath)).data;
++    check(kind+" estimated evidence invalidates completed result",live.result.state==="inconclusive");
++    await a.client.from("bills").update({raw_data:raw,usage_amount:372}).eq("id",nextId);
++    live=(await api(a,connectedPath)).data;
++    check(kind+" corrected evidence recalculates higher usage",live.result.state==="usage_higher"&&live.result.usageComparison.percent===20);
++    await a.client.from("bills").update({usage_amount:620}).eq("id",baseId);
++    live=(await api(a,connectedPath)).data;
++    check(kind+" corrected baseline requires review",live.result.state==="needs_review"&&live.baselineChanged);
++    check(kind+" baseline cannot be silently accepted",(await put({state:"implemented"})).status===409);
++    check(kind+" explicit corrected baseline review succeeds",(await put({state:"implemented",confirmBaseline:true})).status===200);
++    const overlapId=await bill(a,{provider_id:providerId,source:"ezgb",custom_provider_name:"Synthetic "+kind,account_number_masked:"Ending 1234",billing_period_start:"2026-07-15",billing_period_end:"2026-07-31",usage_amount:170,usage_unit:kind==="electricity"?"kWh":"m3",raw_data:raw});
++    live=(await api(a,connectedPath)).data;check(kind+" overlapping baseline withholds result",live.result.state==="inconclusive");
++    await a.client.from("bills").delete().eq("id",overlapId);
++  }
++  await a.client.from("bills").delete().eq("id",nextId);live=(await api(a,connectedPath)).data;
++  check(kind+" missing evidence removes result",live.result.state==="awaiting_evidence");
++  check(kind+" can stop with missing evidence",(await put({state:"abandoned"})).status===200);
++  await a.client.from("bills").update({currency:"USD"}).eq("id",baseId);live=(await api(a,connectedPath)).data;
++  check(kind+" changed service details do not hide saved action",live.target.id===actionIdentity&&live.result.state==="abandoned");
++  await a.client.from("bills").delete().eq("id",baseId);
++  check(kind+" baseline removal cascades only its action",(await a.client.from("bill_outcome_actions").select("bill_id").eq("bill_id",baseId)).data.length===0);
++ }
++
+ }catch(e){failure=e instanceof Error?e.message:"Check failed";console.log("FAIL",failure);}
+ finally{
+  for(const f of fixtures){const result=await admin.auth.admin.deleteUser(f.id);if(result.error){failure="Disposable cleanup failed";console.log("FAIL cleanup");}else console.log("CLEANED disposable account");}
+  const left=await admin.from("bills").select("id").in("user_id",fixtures.map(f=>f.id));if(left.error||left.data.length)failure="Fixture residue";else check("all disposable bills and actions cleaned",true);
+- writeFileSync("/tmp/rezlee-outcome-hosted-results.json",JSON.stringify({checks,failure,fixtureAccounts:fixtures.length,base,paidProviderCalls:0,aiCalls:0},null,2));
++ writeFileSync("/tmp/rezlee-outcome-finish-hosted-results.json",JSON.stringify({checks,failure,fixtureAccounts:fixtures.length,base,paidProviderCalls:0,aiCalls:0},null,2));
+ }process.exitCode=failure?1:0;
+--- a/docs/beta-product-engineering-roadmap.md
++++ b/docs/beta-product-engineering-roadmap.md
+@@ -1,4 +1,6 @@
+-> Latest provider-scope update, October 11: [GTA catalogue and Green Button routing](gta-provider-scope-2026-10-11.md). Staging now offers 30 Deck connection candidates plus 10 upload alternatives; 11 Green Button overlaps are excluded from new Deck connections. Existing connections and saved bills remain accessible. Provider-specific and physical-phone acceptance remain open.
++> Current closure checklist, October 11: [Audit completion status](audit-completion-status-2026-10-11.md). [Bill-to-outcome completion](bill-outcome-finish-2026-10-11.md) adds durable telecom amount and energy-usage follow-ups; staging and rendered acceptance are complete, physical acceptance remains. Existing cleaning editing/assignments and shared expenses are built. Before I spend and public-release gates remain open.
++
++> Latest provider update, October 11: [National directory and single provider finder](provider-directory-2026-10-11.md) supersedes the earlier GTA counts. Ontario view: 54 Green Button options, 29 configured Deck testing entries and 639 coming-soon entries within the 722-entry directory. Rogers is paused. Configuration is not provider-specific live acceptance; the directory is not literally every Canadian biller.
+ 
+ > Latest update, October 2: see [Import experience, feedback and sign-in](import-experience-2026-10-02.md). Its deployment/status and remaining limits supersede older Gmail counts below.
+ 
+--- a/tests/statement-reading-activation.test.ts
++++ b/tests/statement-reading-activation.test.ts
+@@ -11,12 +11,12 @@
+ test("statement-only activation preserves the database cap and keeps other AI tools disabled",async()=>{
+  const before={disabled:process.env.REZLEE_AI_DISABLED,statements:process.env.REZLEE_STATEMENT_READING_ENABLED};
+  let calls=0,allow=true;
+- const db={rpc:async()=>{calls++;return {data:allow,error:null};}} as unknown as SupabaseClient;
++ const db={rpc:async(name:string)=>{assert.equal(name,"reserve_rezlee_ai_request_v2");calls++;return {data:allow?"allowed":"user_limited",error:null};}} as unknown as SupabaseClient;
+  try{
+   process.env.REZLEE_AI_DISABLED="true";process.env.REZLEE_STATEMENT_READING_ENABLED="true";
+   assert.equal((await reserveAiRequest(db)).ok,false);assert.equal(calls,0);
+   assert.equal((await reserveAiRequest(db,"statement-reading")).ok,true);assert.equal(calls,1);
+-  allow=false;assert.equal((await reserveAiRequest(db,"statement-reading")).ok,false);assert.equal(calls,2);
++  allow=false;const limited=await reserveAiRequest(db,"statement-reading");assert.equal(limited.ok,false);assert.equal("status" in limited?limited.status:null,429);assert.equal(calls,2);
+   delete process.env.REZLEE_STATEMENT_READING_ENABLED;
+   assert.equal((await reserveAiRequest(db,"statement-reading")).ok,false);assert.equal(calls,2);
+  }finally{
+--- a/src/lib/product/bill-outcome.ts
++++ b/src/lib/product/bill-outcome.ts
+@@ -0,0 +1,47 @@
++import { createHash } from "node:crypto";
++import { billReviewBaseline } from "./bill-review";
++import { currentReviewedEvidence, currentReviewedEnergyEvidence } from "./statement-evidence";
++import { isTelecomCategory } from "../../../apps/mobile/src/lib/bill-review";
++import type { OutcomeStatement, BillOutcomeKind } from "../../../apps/mobile/src/lib/bill-outcome";
++
++export type OutcomeBill = Parameters<typeof currentReviewedEvidence>[0] & {
++ id:string; name?:string|null; provider_id?:string|null; original_document_id?:string|null;
++ usage_amount?:number|null; usage_unit?:string|null;
++};
++const object=(v:unknown):Record<string,unknown>=>v&&typeof v==="object"&&!Array.isArray(v)?v as Record<string,unknown>:{};
++const text=(v:unknown)=>typeof v==="string"?v.trim():"";
++const digest=(v:unknown)=>createHash("sha256").update(JSON.stringify(v)).digest("hex");
++export function outcomeStatement(b:OutcomeBill):{kind:BillOutcomeKind;statement:OutcomeStatement;hash:string;raw:Record<string,unknown>}|null{
++ const raw=object(b.raw_data),category=text(raw.category),energy=/^(electricity|gas|natural gas)$/i.test(category);
++ if(b.currency!=="CAD"||["draft","incomplete"].includes(b.status))return null;
++ const manual=b.source==="manual"&&b.status==="archived"&&raw.record_kind==="historical"&&raw.amount_basis==="period_charges";
++ const connected=b.source==="ezgb"&&!!b.provider_id&&energy;
++ const telecom=b.source==="deck"&&!!b.provider_id&&raw.telecom_contract==="v1"&&raw.amount_basis==="statement_total"&&/^[a-f0-9]{64}$/.test(text(raw.account_key));
++ if(!manual&&!connected&&!telecom||!energy&&!isTelecomCategory(category)&&!telecom)return null;
++ if(manual&&(!b.custom_provider_name?.trim()||!b.account_number_masked?.trim()))return null;
++ const kind=energy?"usage_change":"agreed_amount";
++ const reviewed=manual?currentReviewedEvidence(b):null,scope=manual?currentReviewedEnergyEvidence(b):null;
++ const rawUnit=manual?reviewed?.unit:b.usage_unit;
++ const unit=rawUnit?.trim().toLowerCase();
++ const usageUnit=unit==="kwh"?"kWh":unit==="m3"||unit==="m³"?"m³":unit==="gj"?"GJ":null;
++ const usage=manual?(reviewed?.usage?Number(reviewed.usage):null):b.usage_amount??null;
++ const quality=manual?reviewed?.reading:text(raw.quality_of_reading);
++ const estimated=/estimated|mixed/i.test(quality??"");
++ const actual=/^actual$/i.test(quality??"");
++ const compatible=/^electricity$/i.test(category)?usageUnit==="kWh":["m³","GJ"].includes(usageUnit??"");
++ const scopeSafe=!scope||scope.scope==="single_service"&&scope.service===(/^electricity$/i.test(category)?"electricity":"gas");
++ const statement:OutcomeStatement={
++  id:b.id,provider:b.custom_provider_name?.trim()||text(raw.utility)||b.name||"Connected provider",
++  account:b.account_number_masked?.trim()||"Connected account",category,currency:b.currency,
++  amount:b.amount,start:b.billing_period_start,end:b.billing_period_end,hasOriginal:!!b.original_document_id,
++  source:b.source??undefined,providerId:b.provider_id??null,
++  accountKey:telecom?text(raw.account_key):connected?digest([b.provider_id,raw.service_point_key||b.account_number_masked||""]):null,
++  amountBasis:manual?"period_charges":telecom?"statement_total":"amount_due",
++  usageAmount:typeof usage==="number"&&Number.isFinite(usage)?usage:null,usageUnit,
++  usageQuality:estimated?"estimated":actual?"actual":manual?"unknown":"provider_reported",
++  usageEligible:energy&&compatible&&scopeSafe&&typeof usage==="number"&&Number.isFinite(usage)&&usage>=0&&!(usageUnit==="kWh"&&usage>20000)&&!estimated&&(!manual||actual),
++ };
++ // Keep legacy manual price-action fingerprints stable.
++ const hash=manual&&!energy?billReviewBaseline(b):digest({...statement,hasOriginal:undefined,id:undefined});
++ return {kind,statement,hash,raw};
++}
+--- a/supabase/migrations/202610110002_bill_outcome_actions.sql
++++ b/supabase/migrations/202610110002_bill_outcome_actions.sql
+@@ -0,0 +1,39 @@
++-- Customer follow-ups must survive replacement of imported provider metadata.
++create table public.bill_outcome_actions (
++ bill_id uuid primary key references public.bills(id) on delete cascade,
++ user_id uuid not null references auth.users(id) on delete cascade,
++ home_id uuid not null references public.homes(id) on delete cascade,
++ revision integer not null default 1 check (revision > 0),
++ target jsonb not null check (jsonb_typeof(target) = 'object' and octet_length(target::text) <= 16000),
++ baseline_snapshot jsonb not null check (jsonb_typeof(baseline_snapshot)='object' and octet_length(baseline_snapshot::text)<=12000),
++ previous_baseline jsonb check (previous_baseline is null or octet_length(previous_baseline::text)<=14000),
++ updated_at timestamptz not null default now()
++);
++create index bill_outcome_actions_owner on public.bill_outcome_actions(user_id,home_id);
++alter table public.bill_outcome_actions enable row level security;
++create policy bill_outcome_owner on public.bill_outcome_actions for all to authenticated
++ using (user_id=auth.uid() and exists(select 1 from public.bills b where b.id=bill_id and b.user_id=auth.uid() and b.home_id=bill_outcome_actions.home_id))
++ with check (user_id=auth.uid() and exists(select 1 from public.bills b where b.id=bill_id and b.user_id=auth.uid() and b.home_id=bill_outcome_actions.home_id));
++grant select,insert,update,delete on public.bill_outcome_actions to authenticated;
++grant all on public.bill_outcome_actions to service_role;
++
++create function public.save_rezlee_bill_outcome(
++ p_bill_id uuid, p_bill_version timestamptz, p_revision integer,
++ p_target jsonb, p_baseline jsonb, p_previous jsonb
++) returns integer language plpgsql security invoker set search_path=public,pg_temp as $$
++declare b public.bills%rowtype; current_revision integer; next_revision integer;
++begin
++ select * into b from public.bills where id=p_bill_id and user_id=auth.uid() for update;
++ if not found then raise exception 'Statement unavailable' using errcode='42501'; end if;
++ if b.updated_at is distinct from p_bill_version then raise exception 'Statement changed' using errcode='40001'; end if;
++ select revision into current_revision from public.bill_outcome_actions where bill_id=p_bill_id;
++ if coalesce(current_revision,0) <> p_revision then raise exception 'Action changed' using errcode='40001'; end if;
++ next_revision := coalesce(current_revision,0)+1;
++ insert into public.bill_outcome_actions(bill_id,user_id,home_id,revision,target,baseline_snapshot,previous_baseline)
++ values(b.id,b.user_id,b.home_id,next_revision,p_target,p_baseline,p_previous)
++ on conflict(bill_id) do update set revision=excluded.revision,target=excluded.target,
++ baseline_snapshot=excluded.baseline_snapshot,previous_baseline=excluded.previous_baseline,updated_at=now();
++ return next_revision;
++end $$;
++revoke all on function public.save_rezlee_bill_outcome(uuid,timestamptz,integer,jsonb,jsonb,jsonb) from public,anon;
++grant execute on function public.save_rezlee_bill_outcome(uuid,timestamptz,integer,jsonb,jsonb,jsonb) to authenticated;
+--- a/supabase/migrations/202610110003_bill_outcome_conflicts.sql
++++ b/supabase/migrations/202610110003_bill_outcome_conflicts.sql
+@@ -0,0 +1,20 @@
++-- A stale bill/action is a business conflict: return HTTP 409 and require reload.
++-- Do not signal a retryable database serialization failure.
++create or replace function public.save_rezlee_bill_outcome(
++ p_bill_id uuid, p_bill_version timestamptz, p_revision integer,
++ p_target jsonb, p_baseline jsonb, p_previous jsonb
++) returns integer language plpgsql security invoker set search_path=public,pg_temp as $$
++declare b public.bills%rowtype; current_revision integer; next_revision integer;
++begin
++ select * into b from public.bills where id=p_bill_id and user_id=auth.uid() for update;
++ if not found then raise exception 'Statement unavailable' using errcode='42501'; end if;
++ if b.updated_at is distinct from p_bill_version then raise exception 'Statement changed' using errcode='PT409'; end if;
++ select revision into current_revision from public.bill_outcome_actions where bill_id=p_bill_id;
++ if coalesce(current_revision,0) <> p_revision then raise exception 'Action changed' using errcode='PT409'; end if;
++ next_revision := coalesce(current_revision,0)+1;
++ insert into public.bill_outcome_actions(bill_id,user_id,home_id,revision,target,baseline_snapshot,previous_baseline)
++ values(b.id,b.user_id,b.home_id,next_revision,p_target,p_baseline,p_previous)
++ on conflict(bill_id) do update set revision=excluded.revision,target=excluded.target,
++ baseline_snapshot=excluded.baseline_snapshot,previous_baseline=excluded.previous_baseline,updated_at=now();
++ return next_revision;
++end $$;
+--- a/tests/bill-outcome-energy.test.ts
++++ b/tests/bill-outcome-energy.test.ts
+@@ -0,0 +1,57 @@
++import assert from "node:assert/strict";
++import test from "node:test";
++import { evaluateBillTarget, parseBillTarget, sameOutcomeAccount, sameBillTargetDetails, type BillTarget, type OutcomeStatement } from "../apps/mobile/src/lib/bill-outcome";
++import { outcomeStatement, type OutcomeBill } from "../src/lib/product/bill-outcome";
++const before:OutcomeStatement={id:"base",provider:"Utility",account:"Home",category:"Natural Gas",currency:"CAD",amount:150,start:"2026-07-01",end:"2026-07-31",hasOriginal:false,source:"ezgb",providerId:"provider",accountKey:"point",amountBasis:"amount_due",usageAmount:310,usageUnit:"m³",usageQuality:"actual",usageEligible:true};
++const after:OutcomeStatement={...before,id:"later",start:"2026-08-01",end:"2026-08-30",usageAmount:240,amount:200};
++const action:BillTarget={kind:"usage_change",id:"action",title:"Changed thermostat schedule",expectedAmount:"",effectiveDate:"2026-08-01",cost:"",notes:"Customer recorded action",state:"implemented",evidenceBillId:"later",baseline:"hash",savedAt:"2026-10-11T20:00:00Z",snoozedUntil:null};
++const result=(b=before,a=after,t=action)=>evaluateBillTarget(t,b,"hash",a,"2026-10-11");
++test("gas daily comparison accounts for unequal periods, independently of amounts due",()=>{
++ const r=result();assert.equal(r.state,"usage_lower");assert.equal(r.usageComparison?.beforePerDay,10);assert.equal(r.usageComparison?.afterPerDay,8);assert.equal(r.usageComparison?.percent,-20);assert.equal(r.differenceCents,null);
++ assert.match(r.detail,/does not prove the action helped/);assert.match(r.detail,/Weather, occupancy/);
++});
++test("usage higher, unchanged and zero baseline remain honest",()=>{
++ assert.equal(result(before,{...after,usageAmount:360}).state,"usage_higher");
++ assert.equal(result(before,{...after,usageAmount:300}).state,"usage_same");
++ const zero=result({...before,usageAmount:0});assert.equal(zero.state,"usage_higher");assert.equal(zero.usageComparison?.percent,null);
++ assert.equal(result({...before,usageAmount:0},{...after,usageAmount:0}).state,"usage_same");
++});
++test("missing, estimated, mismatched-unit and unverified-scale usage withholds a conclusion",()=>{
++ for(const patch of [{usageAmount:null},{usageAmount:NaN},{usageAmount:-1},{usageUnit:"GJ"},{usageEligible:false}])assert.equal(result(before,{...after,...patch}).state,"inconclusive");
++ assert.equal(result({...before,usageEligible:false}).state,"inconclusive");
++});
++test("future, transition and ongoing periods cannot confirm a change",()=>{
++ for(const patch of [{start:"2026-07-31"},{end:"2026-10-11"},{end:"2026-11-01"}])assert.equal(result(before,{...after,...patch}).state,"inconclusive");
++ assert.equal(result(before,after,{...action,effectiveDate:"2026-08-02"}).state,"inconclusive");
++});
++test("provider-reported reading quality is explicit and no automated retrieval is implied",()=>{
++ assert.match(result(before,{...after,usageQuality:"provider_reported"}).detail,/not confirmed both readings as actual/);
++ const r=evaluateBillTarget(action,before,"hash",null,"2026-10-11");assert.match(r.detail,/Scheduled utility pulls are off/);assert.equal(r.state,"awaiting_evidence");
++});
++test("connected account identity never relies on display name or masked last four",()=>{
++ for(const patch of [{providerId:"other"},{accountKey:"other"},{source:"manual"},{currency:"USD"},{category:"Electricity"}])assert.equal(sameOutcomeAccount(before,{...after,...patch}),false);
++ assert.equal(sameOutcomeAccount(before,{...after,provider:"Renamed utility"}),true);
++});
++test("legacy actions parse unchanged and usage actions reject a fictitious price",()=>{
++ assert.deepEqual(parseBillTarget(action),action);assert.equal(parseBillTarget({...action,expectedAmount:"80"}),null);
++ assert.equal(sameBillTargetDetails(action,{...action,title:" Changed thermostat schedule "}),true);
++ assert.equal(sameBillTargetDetails(action,{...action,kind:"agreed_amount"}),false);
++});
++const bill:OutcomeBill={id:"b",name:"Utility statement",provider_id:"provider",source:"ezgb",status:"archived",currency:"CAD",amount:110,billing_period_start:"2026-07-01",billing_period_end:"2026-07-31",custom_provider_name:null,account_number_masked:"1234",usage_amount:310,usage_unit:"m3",raw_data:{category:"Natural Gas",utility:"Enbridge",service_point_key:"private-service-point",quality_of_reading:"actual"}};
++test("adapter uses saved source evidence, stable service identity and original amount basis",()=>{
++ const r=outcomeStatement(bill)!;assert.equal(r.kind,"usage_change");assert.equal(r.statement.usageUnit,"m³");assert.equal(r.statement.usageEligible,true);assert.equal(r.statement.amountBasis,"amount_due");assert.notEqual(r.statement.accountKey,"private-service-point");
++ const raw=bill.raw_data as Record<string,unknown>;
++ assert.equal(outcomeStatement({...bill,raw_data:{...raw,quality_of_reading:"estimated"}})?.statement.usageEligible,false);
++ assert.equal(outcomeStatement({...bill,usage_unit:"kWh"})?.statement.usageEligible,false);
++ assert.equal(outcomeStatement({...bill,usage_amount:21000,usage_unit:"kWh",raw_data:{...raw,category:"Electricity"}})?.statement.usageEligible,false);
++ assert.notEqual(outcomeStatement({...bill,usage_amount:320})?.hash,r.hash);
++ assert.equal(outcomeStatement({...bill,raw_data:{...raw,bill_target:action}})?.hash,r.hash);
++});
++test("Deck telecom totals are qualified and never reclassified as period charges",()=>{
++ const a=outcomeStatement({...bill,source:"deck",raw_data:{category:"Telecom bundle",telecom_contract:"v1",amount_basis:"statement_total",account_key:"a".repeat(64)}})!;
++ assert.equal(a.kind,"agreed_amount");assert.equal(a.statement.amountBasis,"statement_total");
++ const baseline={...a.statement,amount:100,start:"2026-07-01",end:"2026-07-31"},evidence={...baseline,id:"new",amount:80,start:"2026-08-01",end:"2026-08-31"};
++ const r=evaluateBillTarget({...action,kind:"agreed_amount",expectedAmount:"80"},baseline,"hash",evidence,"2026-10-11");
++ assert.equal(r.state,"matched");assert.match(r.title,/Saved statement total/);assert.match(r.detail,/previous balances/);
++ assert.equal(evaluateBillTarget({...action,kind:"agreed_amount",expectedAmount:"80"},{...baseline,amountBasis:"amount_due"},"hash",evidence,"2026-10-11").state,"inconclusive");
++});
+--- a/tests/bill-outcome-storage-database.test.ts
++++ b/tests/bill-outcome-storage-database.test.ts
+@@ -0,0 +1,38 @@
++import assert from "node:assert/strict";
++import test from "node:test";
++import {readFile,readdir} from "node:fs/promises";
++import {PGlite} from "@electric-sql/pglite";
++test("follow-ups survive provider refresh, serialize conflicting saves, enforce ownership and cascade with baseline deletion",async()=>{
++ const db=new PGlite(),a="11111111-1111-4111-8111-111111111111",b="22222222-2222-4222-8222-222222222222",ha="aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",hb="bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",id="dddddddd-dddd-4ddd-8ddd-111111111111";
++ try{
++  await db.exec(`create role anon;create role authenticated;create role service_role bypassrls;create schema auth;create schema storage;
++   create table auth.users(id uuid primary key,email text);
++   create function auth.uid() returns uuid language sql stable as $$select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid$$;
++   create table storage.buckets(id text primary key,name text,public boolean,file_size_limit bigint,allowed_mime_types text[]);
++   create table storage.objects(id uuid primary key default gen_random_uuid(),bucket_id text,name text);alter table storage.objects enable row level security;
++   create function storage.foldername(name text) returns text[] language sql immutable as $$select string_to_array(name,'/')$$;
++   grant usage on schema public,auth,storage to authenticated,service_role;`);
++  for(const file of ["supabase/schema.sql",...(await readdir("supabase/migrations")).filter(f=>f.endsWith(".sql")).sort().map(f=>"supabase/migrations/"+f)])
++   await db.exec((await readFile(file,"utf8")).replace(/create extension if not exists "pgcrypto";/g,""));
++  await db.exec(`grant select,insert,update,delete on public.homes,public.bills to authenticated; grant select on public.providers to authenticated;
++   insert into auth.users values('${a}','a@example.invalid'),('${b}','b@example.invalid');
++   insert into public.homes(id,user_id,nickname) values('${ha}','${a}','A'),('${hb}','${b}','B');
++   insert into public.bills(id,user_id,home_id,name,source,status,currency,raw_data) values('${id}','${a}','${ha}','Synthetic utility','ezgb','archived','CAD','{"category":"Natural Gas"}');
++   set role authenticated;set request.jwt.claim.sub='${a}';`);
++  const stamp=async()=>(await db.query<{v:string}>("select updated_at::text v from bills where id=$1",[id])).rows[0].v;
++  const initial=await stamp(),target={id:"one",title:"Thermostat schedule",kind:"usage_change",state:"planned"};
++  const save=(version:string,revision:number,patch=target)=>db.query<{revision:number}>("select save_rezlee_bill_outcome($1,$2,$3,$4::jsonb,$5::jsonb,null) revision",[id,version,revision,JSON.stringify(patch),'{"usageAmount":310}']);
++  assert.equal((await save(initial,0)).rows[0].revision,1);
++  await assert.rejects(save(initial,0),/Action changed/);
++  await db.query("update bills set raw_data=$1::jsonb,usage_amount=240 where id=$2",['{"category":"Natural Gas","quality_of_reading":"actual"}',id]);
++  assert.deepEqual((await db.query<{target:unknown}>("select target from bill_outcome_actions")).rows[0].target,target);
++  await assert.rejects(save(initial,1),/Statement changed/);
++  assert.equal((await save(await stamp(),1,{...target,state:"implemented"})).rows[0].revision,2);
++  await db.exec(`set request.jwt.claim.sub='${b}';`);
++  assert.equal((await db.query("select * from bill_outcome_actions")).rows.length,0);
++  await assert.rejects(save(initial,2),/Statement unavailable/);
++  await assert.rejects(db.query("insert into bill_outcome_actions(bill_id,user_id,home_id,target,baseline_snapshot) values($1,$2,$3,'{}','{}')",[id,b,hb]),/row-level security/);
++  await db.exec(`set request.jwt.claim.sub='${a}';delete from bills where id='${id}';`);
++  assert.equal((await db.query("select * from bill_outcome_actions")).rows.length,0);
++ }finally{await db.close();}
++});
+--- a/scripts/qa/render-bill-outcomes.cjs
++++ b/scripts/qa/render-bill-outcomes.cjs
+@@ -0,0 +1,95 @@
++const fs=require('node:fs'),esbuild=require('/Users/razakhan/Documents/rezlee-mobile-test/node_modules/esbuild'),{chromium}=require('/tmp/rezlee-bill-qa-tools-20261008/node_modules/playwright-core');
++const root='/Users/razakhan/Documents/rezlee-mobile-test',deps='/tmp/rezlee-bill-qa-tools-20261008/node_modules',out=root+'/docs/qa/bill-outcome-finish-20261011';
++const stubs={
++'expo-router':'import React from "react";export const useLocalSearchParams=()=>({providerId:"gas-account"});export const useRouter=()=>({push:p=>window.__actions.push(p),replace:p=>window.__actions.push(p),setParams:()=>{},canGoBack:()=>false});export const Stack={Screen:()=>null};export const useNavigation=()=>({});export const useFocusEffect=fn=>React.useEffect(fn,[fn]);',
++'expo-router/react-navigation':'export const usePreventRemove=()=>{};',
++'expo-symbols':'import React from "react";export const SymbolView=()=>React.createElement("span",null,"←");',
++'expo-haptics':'export const impactAsync=async()=>{};export const ImpactFeedbackStyle={Light:1};export const notificationAsync=async()=>{};export const NotificationFeedbackType={Success:1};',
++'react-native-safe-area-context':'import React from "react";import{View}from"react-native";export const SafeAreaView=View;export const useSafeAreaInsets=()=>({top:0,bottom:0,left:0,right:0});',
++'@expo/vector-icons':'import React from "react";export function Feather({name}){return React.createElement("span",{"aria-hidden":true,style:{fontSize:18,width:20}},name==="file-text"?"▤":"›");}',
++'@/lib/api':'export class ApiError extends Error{};export async function apiGet(p){if(p.endsWith("/original")){window.__actions.push("original");return{url:"https://example.invalid/fixture-original"}}return window.__payload;}export async function apiPost(){};export async function apiPatch(){};export async function apiDelete(){};export async function apiFormPost(){};',
++};
++
++stubs['@/lib/api']=`export class ApiError extends Error{constructor(message,status){super(message);this.status=status;}};export async function apiGet(){if(window.__getFail)throw new ApiError('Offline',503);return structuredClone(window.__payload);}export async function apiPatch(p,body){window.__writes.push(body);if(window.__patchMode==='validation')throw new ApiError('Check the effective date',400);if(window.__patchMode==='lost-unchanged')throw new ApiError('Timeout',408);if(window.__patchMode==='lost-conflict'){window.__payload={...window.__payload,version:'other',target:{...window.__payload.target,notes:'Edited elsewhere'}};throw new ApiError('Timeout',408);}window.__payload=window.__savedPayload(body);if(window.__patchMode==='lost-saved')throw new ApiError('Timeout',408);return structuredClone(window.__payload);}`;
++stubs['expo-router']='import React from "react";export const Stack={Screen:()=>null};export const useLocalSearchParams=()=>({billId:"base"});export const useRouter=()=>({push:p=>window.__actions.push(p),replace:p=>window.__actions.push(p),canGoBack:()=>false});export const useNavigation=()=>({dispatch:p=>window.__actions.push(p)});export const useFocusEffect=fn=>React.useEffect(fn,[fn]);';
++stubs['@/auth/AuthProvider']='export const useAuth=()=>({session:null});';
++stubs['@/components/AppNotifications']='export const NotificationBell=()=>null;';
++stubs['@/components/ProfileUI']='export const ProfileBadge=()=>null;';
++(async()=>{
++fs.mkdirSync(out,{recursive:true});
++const entry=`import React from 'react';import{createRoot}from'react-dom/client';import Screen from '${root}/apps/mobile/app/bill/outcome';import{evaluateBillTarget}from'${root}/apps/mobile/src/lib/bill-outcome';window.__actions=[];window.__writes=[];window.__savedPayload=body=>{const{version,agreementConfirmed,confirmBaseline,...fields}=body;const target={...fields,id:'action',baseline:'hash',savedAt:'2026-10-11T12:00:00Z'};const evidence=window.__payload.candidates.find(b=>b.id===target.evidenceBillId)||null;return{...window.__payload,version:'v'+window.__writes.length,target,evidence,baselineChanged:false,result:evaluateBillTarget(target,window.__payload.baseline,'hash',evidence,'2026-10-11')}};createRoot(document.getElementById('root')).render(<Screen/>);`;
++
++await esbuild.build({stdin:{contents:entry,loader:'tsx',resolveDir:root},outfile:out+'/preview.js',bundle:true,loader:{'.png':'dataurl'},platform:'browser',format:'iife',jsx:'automatic',alias:{react:deps+'/react','react-dom':deps+'/react-dom','react-native':deps+'/react-native-web'},define:{'process.env.NODE_ENV':'"production"'},plugins:[{name:'boundaries',setup(b){b.onResolve({filter:/.*/},a=>{if(a.path==='./api')return{path:'@/lib/api',namespace:'stub'};if(stubs[a.path])return{path:a.path,namespace:'stub'};if(a.path.startsWith('@/')){const p=root+'/apps/mobile/src/'+a.path.slice(2);for(const ext of ['.ts','.tsx','/index.ts'])if(fs.existsSync(p+ext))return{path:p+ext};}});b.onLoad({filter:/.*/,namespace:'stub'},a=>({contents:stubs[a.path],loader:'js',resolveDir:root}));}}]});
++fs.writeFileSync(out+'/preview.html','<!doctype html><meta name="viewport" content="width=device-width,initial-scale=1"><style>body{margin:0;font-family:system-ui}*{box-sizing:border-box}#root{height:100vh;display:flex;flex-direction:column}</style><div id="root"></div><script src="./preview.js"></script>');
++const telecomBase={id:'base',provider:'Rogers',account:'Home internet',category:'Internet',currency:'CAD',amount:100,start:'2026-07-26',end:'2026-08-25',hasOriginal:true};
++const telecomLater={...telecomBase,id:'later',amount:80,start:'2026-08-26',end:'2026-09-25'};
++const telecomTarget={id:'action',title:'New internet price',expectedAmount:'80.00',effectiveDate:'2026-08-26',cost:'25.00',notes:'Agreement reference',state:'implemented',evidenceBillId:null,baseline:'hash',savedAt:'2026-10-11T12:00:00Z',snoozedUntil:null};
++const server=require('node:http').createServer((req,res)=>{const f=req.url.split('?')[0]==='/preview.js'?'preview.js':'preview.html';res.setHeader('Content-Type',f.endsWith('.js')?'application/javascript':'text/html');res.end(fs.readFileSync(out+'/'+f));});await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
++const browser=await chromium.launch({headless:true,executablePath:'/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'});const checks=[];
++try{
++for(const kind of ['telecom','gas','electricity']){
++ const usage=kind!=='telecom';
++ const baseline=usage?{...telecomBase,source:'ezgb',provider:kind==='gas'?'Enbridge Gas':'Elexicon',providerId:'synthetic-provider',accountKey:'synthetic-account',category:kind==='gas'?'Natural Gas':'Electricity',usageAmount:310,usageUnit:kind==='gas'?'m³':'kWh',usageQuality:'actual',usageEligible:true,amountBasis:'amount_due'}:telecomBase;
++ const later={...baseline,id:'later',amount:80,start:'2026-08-26',end:'2026-09-25',...(usage?{usageAmount:248}:{})};
++ const target={...telecomTarget,...(usage?{kind:'usage_change',title:'Changed household routine',expectedAmount:''}:{})};
++ for(const width of [320,390])for(const scenario of ['empty','waiting','matched','corrected','stopped','lost-saved','lost-unchanged','lost-conflict','validation','failure']){
++ const page=await browser.newPage({viewport:{width,height:844}}),errors=[];page.on('pageerror',e=>errors.push(e.message));
++ const t=scenario==='empty'?null:{...target,state:scenario==='stopped'?'abandoned':scenario.startsWith('lost')||scenario==='validation'?'planned':'implemented',evidenceBillId:scenario==='matched'?'later':null};
++ const result=!t?null:{state:scenario==='matched'?'matched':scenario==='corrected'?'needs_review':scenario==='stopped'?'abandoned':t.state==='planned'?'planned':'awaiting_evidence',title:scenario==='matched'?'Recorded charges match your agreed amount':scenario==='corrected'?'Review the corrected baseline':scenario==='stopped'?'Tracking stopped':t.state==='planned'?'Change planned':'Waiting for a statement',detail:'Selected evidence is checked without claiming ongoing savings.',differenceCents:scenario==='matched'?-2000:null};
++ if(usage&&result&&scenario==='matched'){result.state='usage_lower';result.title='Recorded daily usage is lower';result.differenceCents=null;result.usageComparison={beforePerDay:10,afterPerDay:8,unit:baseline.usageUnit,percent:-20,beforeDays:31,afterDays:31,gapDays:0};}
++ await page.addInitScript(({payload,scenario})=>{window.__payload=payload;window.__getFail=scenario==='failure';window.__patchMode=scenario.startsWith('lost')?scenario:scenario==='validation'?'validation':'success';},{payload:{kind:usage?'usage_change':'agreed_amount',version:'v0',baseline,evidence:scenario==='matched'?later:null,candidates:[later],candidateCount:1,coverageComplete:true,baselineChanged:scenario==='corrected',target:t,result},scenario});
++ await page.clock.setFixedTime(new Date('2026-10-11T12:00:00Z'));
++ await page.goto('http://127.0.0.1:'+server.address().port);
++ if(scenario==='failure'){await page.getByText('Offline',{exact:true}).waitFor();await page.evaluate(()=>window.__getFail=false);await page.getByRole('button',{name:'Reload saved action',exact:true}).click();}
++ await page.getByText('Baseline statement',{exact:true}).waitFor();
++ if(scenario==='empty'){
++  if(await page.getByRole('textbox').count()!==(usage?1:2))throw Error('Optional details not collapsed');
++  if(!usage)await page.getByRole('textbox',{name:'Agreed period total, including tax (CAD)',exact:true}).fill('80');
++  await page.getByRole('button',{name:'Effective date',exact:true}).click();
++  await page.getByText('Today',{exact:true}).click();
++  if(!usage)await page.getByRole('checkbox',{name:/confirmed price/}).click();
++  await page.getByRole('button',{name:'Save action',exact:true}).click();
++  await page.getByRole('button',{name:'Mark change implemented',exact:true}).waitFor();
++ }else if(scenario==='waiting'){
++  await page.getByRole('button',{name:'Check a saved statement',exact:true}).click();
++  await page.getByRole('button',{name:/Check 2026-08-26/}).click();
++  await page.getByRole('button',{name:'Finish this check',exact:true}).waitFor();
++  await page.getByRole('button',{name:'Finish this check',exact:true}).click();
++  await page.getByRole('button',{name:'Reopen action',exact:true}).waitFor();
++ }else if(scenario==='matched'){
++  await page.getByRole('button',{name:'Manage this change',exact:true}).click();
++  await page.getByRole('button',{name:'Choose another saved statement',exact:true}).click();
++  await page.getByRole('button',{name:/Check 2026-08-26/}).waitFor();
++ }else if(scenario==='corrected'){
++  await page.getByRole('button',{name:'Review and update this action',exact:true}).click();
++  if(!await page.getByRole('button',{name:'Save action',exact:true}).isDisabled())throw Error('Unreviewed baseline writable');
++  await page.getByRole('checkbox',{name:/reviewed the corrected baseline/}).click();
++  if(await page.getByRole('button',{name:'Save action',exact:true}).isDisabled())throw Error('Confirmed baseline cannot save');
++ }else if(scenario==='stopped'){
++  await page.getByRole('button',{name:'Reopen action',exact:true}).click();
++  await page.getByRole('button',{name:'Save action',exact:true}).click();
++  await page.getByRole('button',{name:'Mark change implemented',exact:true}).waitFor();
++ }else if(scenario.startsWith('lost')){
++  await page.getByRole('button',{name:'Mark change implemented',exact:true}).click();
++  await page.getByRole('button',{name:'Check saved change',exact:true}).waitFor();
++  if(!await page.getByRole('button',{name:'Mark change implemented',exact:true}).isDisabled())throw Error('Uncertain save not locked');
++  await page.getByRole('button',{name:'Check saved change',exact:true}).click();
++  if(scenario==='lost-saved'){
++   await page.getByRole('button',{name:'Check a saved statement',exact:true}).waitFor();
++   if((await page.evaluate(()=>window.__writes)).length!==1)throw Error('Check duplicated write');
++  }else if(scenario==='lost-unchanged'){
++   await page.getByRole('button',{name:'Retry save',exact:true}).waitFor();await page.evaluate(()=>window.__patchMode='success');
++   await page.getByRole('button',{name:'Retry save',exact:true}).click();await page.getByRole('button',{name:'Check a saved statement',exact:true}).waitFor();
++   const writes=await page.evaluate(()=>window.__writes);if(writes.length!==2||JSON.stringify(writes[0])!==JSON.stringify(writes[1]))throw Error('Retry changed details');
++  }else{await page.getByRole('button',{name:'Review saved version',exact:true}).waitFor();if((await page.evaluate(()=>window.__writes)).length!==1)throw Error('Conflict overwritten');}
++ }else if(scenario==='validation'){
++  await page.getByRole('button',{name:'Mark change implemented',exact:true}).click();await page.getByText('Check the effective date',{exact:true}).waitFor();
++  if(await page.getByRole('button',{name:'Mark change implemented',exact:true}).isDisabled())throw Error('Definite rejection locked');
++ }
++ await page.screenshot({path:out+'/'+kind+'-'+scenario+'-'+width+'.png',fullPage:true,animations:'disabled'});
++ checks.push({kind,width,scenario,overflow:await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),errors,writes:(await page.evaluate(()=>window.__writes)).length});await page.close();
++}
++}
++}finally{await browser.close();server.close();}
++fs.writeFileSync(out+'/render-results.json',JSON.stringify({checks,method:'Actual React Native components through React Native Web. Explicit synthetic fixtures and API/router/native boundary mocks. Not device acceptance.'},null,2));if(checks.some(c=>c.overflow||c.errors.length))throw Error(JSON.stringify(checks));console.log('Passed '+checks.length+' rendered interaction scenarios.');
++})().catch(e=>{console.error(e);process.exitCode=1});
+--- a/docs/bill-outcome-finish-2026-10-11.md
++++ b/docs/bill-outcome-finish-2026-10-11.md
+@@ -0,0 +1,47 @@
++# Bills to actions to later evidence — October 11, 2026
++
++## Delivered
++Customers can save a planned change, mark it implemented, choose later saved evidence, finish/reopen or stop, and find active actions under Bills → Insights → Your follow-ups.
++- Uploaded telecom: existing agreed-period-charge checks preserved.
++- Deck telecom with the current import contract and identified account: compare the imported statement total with a confirmed amount. Copy explicitly distinguishes statement totals from recurring period charges, prior balances, payment and continuing savings.
++- Green Button electricity and gas, plus reviewed manual energy bills: track a usage change and compare consumption per day across completed service periods. Results say lower, higher, unchanged or inconclusive. Billing lengths are shown; weather, occupancy and other changes are not controlled. Provider-reported reading quality is qualified.
++- Missing or unsuitable readings, estimated usage, different units/accounts/services/currencies, transition or unfinished periods, overlapping baseline/evidence, excluded copies and incomplete history cannot establish a result. Electricity retains a conservative scale guard; no new meter normalization is claimed.
++- Changed evidence is recalculated, including after a check is completed. Changed baseline requires explicit review. Unsupported changed bill details retain the saved action and permit stopping.
++- Follow-ups are stored independently of imported provider metadata. Refreshing a bill cannot erase the action. Owner RLS, version checks, atomic saves and baseline-deletion cascade apply. Existing manual actions in bill metadata are read without changing them and move to the new store when next saved.
++- Actions remain discoverable even when their baseline is excluded as another copy. Follow-up load failures display a warning. Notes and agreed amounts are excluded from the list summary.
++- Existing bill originals, provider routing, Rogers pause, public admission gates and all other customer records remain.
++
++## Verification
++- 53 focused calculation, source-adapter, database and related bill-story tests passed.
++- Complete repository suite: 858/858 passed after correcting an obsolete AI-admission test fixture. The fixture now returns the current named RPC result, asserts the RPC name and verifies HTTP 429 on a user limit. AI controls and runtime behavior were not weakened.
++- 60 actual-component React Native Web scenarios across telecom, gas and electricity at 320/390 widths: create, wait/select evidence, finish/reopen, correction acknowledgement, stopped action, lost response saved/unchanged/conflict, definite rejection, load failure. No overflow or page errors. Selected rendered views inspected. Native/router/API boundaries are mocked; these are not phone screenshots.
++- 94 authenticated staging checks passed using two disposable households and synthetic bills/providers. Included precise amounts/units, source-aware list entries, corrections, overlaps, missing evidence, refresh preservation, concurrent writes, privacy and deletion cleanup. Final fixture cleanup confirmed.
++- Three additional direct concurrent RPC pairs returned one success and one HTTP 409, observed 59–109 ms per response in that small diagnostic. This is not a latency guarantee.
++- Root/mobile TypeScript, scoped ESLint, hosted Next build and iOS/Android Hermes exports passed.
++- No paid provider retrieval, live AI request, customer message, scheduled pull or public release was initiated.
++
++## Defect found and repaired during acceptance
++Initial hosted concurrency tests timed out on the losing save. Direct RPC reproduction isolated the problem to manually raising SQLSTATE 40001 for an expected version conflict. Supabase documents a PostgREST retry-loop issue for that code. A forward migration changes the business-conflict response to PT409, and the API handles it as a conflict requiring reload. The original applied migration was left immutable. Direct and full hosted checks passed afterward.
++Reference checked October 11: https://supabase.com/docs/guides/troubleshooting/high-cpu-and-infinite-transaction-retries-when-using-custom-error-codes-in-rpc-functions-77326b
++The final staging public function scan found no remaining function bodies containing 40001. Historical migration text is not a current-function inventory.
++
++## Delivery and rollback
++Staging: https://staging.rezlee.com → https://nestify-p28dodx8l-razakhan1195s-projects.vercel.app
++Previous staging: https://nestify-mte7i2zb0-razakhan1195s-projects.vercel.app
++Additive staging migrations: 202610110002_bill_outcome_actions and 202610110003_bill_outcome_conflicts. RLS confirmed enabled. Production migrations and public/native-store releases were not performed.
++Mobile: current Expo development source; reload the existing staging development app. Native exports are in /tmp/rezlee-outcome-native-export-20261011; exports are not installed or distributed binaries.
++Scoped before/after source archives, manifests, patch, rendered results and verification logs: docs/checkpoints/bill-outcome-finish-20261011.
++Rollback the application alias and scoped source only after checking hashes. Keep the additive action table and saved customer actions; do not drop the table or reset the repository. Earlier server code will not expose newly stored actions, so prefer a forward fix if customers have begun using this increment.
++
++## Finite phone acceptance
++Use a QA household in current Expo; repeat on iOS and Android.
++1. Uploaded telecom: save a confirmed agreed amount after the baseline ends, mark implemented, select a later full period, open originals, finish/reopen. Verify the follow-up list on return.
++2. Electricity: open a saved Green Button bill or utility insights → Track a usage change. Save a concrete change and date; choose eligible later evidence. Confirm daily units and periods, plus the no-causation explanation.
++3. Gas: repeat; gas must retain gas units and must not enter electricity-plan requests.
++4. Simulate a lost save response or airplane mode; check saved state before repeating. Verify one action, preserved saved notes, correct conflict guidance, back navigation, keyboard and large text. App termination and assistive technology remain unverified.
++5. Correct the selected evidence and baseline separately. A changed result or required review must appear. Remove evidence; no completed-result claim may survive it.
++No new provider pull is needed to test saved evidence. Real import/MFA/provider acceptance remains a separate bounded pilot.
++
++## Scope still open
++This completes this engineering increment, not all bill intelligence or the full audit. It does not establish causal savings, weather-normalized effects, tariff-switch savings, multi-action attribution or cross-source account equivalence. Manual/connected copies are not assumed to identify the same account. A lower amount due is not current-period savings. Water/insurance/other Deck outcome types are not added.
++Next engineering/acceptance order is recorded in audit-completion-status-2026-10-11.md.
+--- a/docs/audit-completion-status-2026-10-11.md
++++ b/docs/audit-completion-status-2026-10-11.md
+@@ -0,0 +1,29 @@
++# Current audit completion status — October 11, 2026
++
++This is the current closure checklist, reconciled against dated checkpoints. Implemented, staging verified, physical-device accepted and publicly released are separate states. Older roadmap sections are historical where they conflict with the linked checkpoints. No working feature is removed.
++
++| Audit priority | Current evidence | Still needed |
++|---|---|---|
++| Home / Bills / Vault / Care | Existing improvements, rendered scenarios and authenticated staging checks; home-outcomes-2026-10-02.md and October 8–11 checkpoints | Fresh and returning households, owner/member, empty/partial data, native navigation, accessibility and actual first useful outcome on iOS/Android |
++| Bill capture and saved records | capture-recovery-2026-10-09.md and bill-record-review-2026-10-09.md: originals, review/save, duplicate/revision handling and recovery implemented | Real camera/HEIC, permissions, OS interruption/restart and mixed-source account acceptance; retain explicit copy decisions |
++| Utility connections | provider-directory-2026-10-11.md: unified finder, 722 directory entries; Ontario view 54 Green Button, 29 configured Deck testing entries, 639 coming soon; Rogers paused | Green Button consent/reconnection/refresh acceptance; bounded credential-owning Deck customers validate MFA, first data and repeat retrieval per provider. No founder requirement to own all 29 accounts |
++| Bill intelligence | bill-usefulness-2026-10-08.md: truthful amount basis, period/usage comparisons and selected-period graphs | Real mixed-provider usefulness; actual charge breakdown where available; energy-plan/interval claims require validated data. Amount due is not period spending |
++| Did the action help? | bill-outcome-finish-2026-10-11.md: uploaded and Deck telecom amount checks; Green Button/manual energy usage follow-ups; independent action storage; 94 hosted checks and 60 rendered scenarios | Physical acceptance and customer usefulness; tariff-switch/dollar attribution and weather-normalized outcomes remain unproven, never implied by lower bills |
++| Household coordination | shared-completion, settle-up and care-recovery October 10; cleaning editing, schedules, fixed/rotating assignments implemented in feedback-acceptance-2026-09-29.md | Real invitation email/phone delivery and deep links; two phones; push delivery; native cleaning edit/assignment/recurrence. Recorded repayment does not move money |
++| Useful home AI | Repair engineering scope completed in repair-finish-2026-10-10.md with its finite phone/usefulness gate | Phone acceptance and three practical user journeys; focused Before I spend quote journey remains unfinished on the broader roadmap, including evidence-backed comparisons and supported compatibility/repair-versus-replace |
++| Capture across Rezlee | Reviewed bill/receipt intake and Gmail implemented; exact-original reuse, bounded discovery/recovery | Actual mailbox completion/attached-original and native OAuth/recovery acceptance; broader capture still requires reconciliation. Native sharing and voice remain deliberately later |
++| Beta / release readiness | Staging engineering evidence and native bundle exports exist; statement-reading regression fixture corrected, 858 tests pass in this increment | Signed production-shaped builds, auth/deep links, notifications, connected-account deletion/revocation, privacy/OAuth/store configuration, monitoring/support, explicit cost budgets, migration/backup/restore rehearsal and controlled promotion |
++| Expansion | Intentionally later | Broader benchmarks, weather/AQHI, perks and wider validated coverage follow beta evidence |
++
++## Immediate next steps
++1. Accept the bill-to-action journey on physical phones using the finite checklist in bill-outcome-finish-2026-10-11.md. Fix observed usability/data defects; do not rebuild accepted arithmetic or add speculative insights.
++2. Continue a bounded utility pilot with customers who own supported credentials. Provider readiness is recorded separately; configuration is not live reliability proof. Scheduled pulls remain off and further paid retrieval requires authorization.
++3. Close actual invitation/two-device/notification and native capture/Care/repair gates. Cleaning editing and assignment are already built. Record exact device, version, expected/actual and observed failure; never call a bundle export device acceptance.
++4. Implement the focused Before I spend journey from the existing approved proposal after the core bill milestone. Begin with a quote’s scope, recorded facts and targeted missing-detail questions. Broader compatibility/repair-versus-replace remains evidence-dependent.
++5. Prepare the release candidate and complete operational gates. Founder console/identity/privacy and spending decisions must be concrete and reviewable. Public release is a separate decision.
++
++## Delivery rules
++- Current work is mobile/Expo plus the staging backend. Do not assume the existing TestFlight binary contains new client changes.
++- No scheduled utility pulls or recurring Gmail searches are enabled by these milestones.
++- No production release, new outgoing tester messages, paid provider tests or unrelated feature expansion is implied.
++- Each new checkpoint must say what changed, its verification layer, exact remaining blocker, deployment and rollback.
