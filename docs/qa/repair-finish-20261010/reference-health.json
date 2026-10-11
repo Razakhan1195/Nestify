@@ -1,0 +1,34 @@
+{
+  "checkedAt": "2026-10-11T00:00:56.922Z",
+  "rows": [
+    {
+      "id": "fridge",
+      "url": "https://www.whirlpool.ca/en_ca/blog/kitchen/refrigerator-troubleshooting.html",
+      "checkedAt": "2026-10-10T17:45:00.000Z",
+      "expiresAt": "2026-11-09T17:45:00.000Z",
+      "daysRemaining": 29,
+      "needsReview": false,
+      "online": "excerpt_verified"
+    },
+    {
+      "id": "network",
+      "url": "https://www.rogers.com/support/internet/unable-to-access-the-internet-rogers-xfinity-gateway",
+      "checkedAt": "2026-10-10T23:58:02Z",
+      "expiresAt": "2026-11-09T23:58:02.000Z",
+      "daysRemaining": 29,
+      "needsReview": false,
+      "online": "excerpt_verified"
+    },
+    {
+      "id": "tap",
+      "url": "https://solutions.moen.com/Article_Library/Faucet_Aerator_Cleaning",
+      "checkedAt": "2026-10-10T23:58:02Z",
+      "expiresAt": "2026-11-09T23:58:02.000Z",
+      "daysRemaining": 29,
+      "needsReview": false,
+      "online": "excerpt_verified"
+    }
+  ],
+  "aiCalls": 0,
+  "customerDataAccess": false
+}

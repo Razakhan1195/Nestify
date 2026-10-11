@@ -1,0 +1,77 @@
+✔ supported guide becomes a persisted actionable step with source date (1.527833ms)
+✔ fabricated sources and mismatched quotations are rejected (1.679792ms)
+✔ unsupported model-specific instructions and risky work are rejected (0.241ms)
+✔ missing sources permit useful clarification but not invented checks (0.100458ms)
+✔ failed and uncertain steps preserve evidence and request adaptation (0.267708ms)
+✔ customer success resolves and new hazards interrupt the guide (0.074334ms)
+✔ previous checks and repeated clarification cannot form an endless loop (0.116792ms)
+✔ source fetching only accepts exact approved HTTPS hosts (0.078083ms)
+✔ article extraction drops executable and navigation content (0.257709ms)
+✔ selected citation contains source text, not a model-authored paraphrase (0.508167ms)
+✔ unknown and cross-source IDs fail closed (0.132ms)
+✔ long source sentences stay bounded without inventing or truncating words (0.098833ms)
+✔ missing source evidence cannot produce a made-up citation (0.282209ms)
+[repair-evidence] retrieval {
+  sourceId: 'fridge',
+  code: 'Source HTTP 403',
+  fallback: 'reviewed_reference'
+}
+[repair-evidence] retrieval {
+  sourceId: 'tap',
+  code: 'source_fetch_failed',
+  fallback: 'unavailable'
+}
+✔ publisher refusal uses an explicitly dated reviewed reference, never a fabricated live result (0.795083ms)
+✔ reviewed references expire and unavailable categories do not borrow unrelated evidence (0.17175ms)
+✔ successful source retrieval uses its actual check time (1.475584ms)
+✔ diagnostics never log raw error content or arbitrary content-type headers (0.101583ms)
+✔ only transient server/timeout errors qualify for one service fallback (0.1425ms)
+✔ door-only problem gets one relevant check then a useful landlord outcome (1.067667ms)
+✔ genuine cooling symptoms retain the existing airflow check (0.070875ms)
+✔ a reviewed reference is still validated through exact citation IDs (1.052958ms)
+✔ source security and extraction constraints remain intact (0.303458ms)
+✔ provider schema never contains empty enum members, even without retrieved evidence (2.154375ms)
+✔ no-citation transport sentinel preserves safe escalation and existing saved-data format (0.193541ms)
+✔ reported provider outage prevents further AI and catalogue device checks (1.181917ms)
+✔ a structured outage answer stops both guidance paths (0.513334ms)
+✔ known single-device scope avoids repeating scope and household outage questions (0.093208ms)
+✔ under-sink leak answer does not progress to an unrelated model question (0.340083ms)
+✔ unable to establish water scope leads to a useful brief rather than unrelated checks (0.508917ms)
+✔ an unavailable AI service still provides a supported safe action (0.2505ms)
+✔ missing evidence never becomes a fabricated action or source (0.183833ms)
+✔ clarification without evidence does not carry an unverified catalogue citation (0.77525ms)
+✔ citation for the wrong check is rejected even when the source URL matches (0.25625ms)
+✔ specific unsupported problem gets an honest useful outcome without repeating the symptom question (0.230542ms)
+✔ genuinely vague problems still get one clarifying step (0.055334ms)
+✔ new reviewed sources expire instead of silently becoming current forever (0.047583ms)
+✔ explicitly unknown model is not asked for again (0.051958ms)
+✔ no-source observations cannot request a sourced check from the model (3.432958ms)
+✔ plural taps with already established wider weak flow skip redundant questions (0.086ms)
+✔ one weak faucet gets relevant checks without an inventory, model or AI (1.773875ms)
+✔ multiple affected taps produce supply context instead of invented faucet repair (0.120833ms)
+✔ dripping faucet does not receive weak-flow or generic observation loop (0.157542ms)
+✔ reported outage stops unnecessary device actions (0.574583ms)
+✔ one targeted follow-up can select a useful guide without a paid call (0.18075ms)
+✔ successful safe check and recurrence retain evidence without repeating failed work (0.157ms)
+✔ unknown equipment and model-specific faults do not get an unrelated cooling guide (0.124917ms)
+✔ AI output is restricted to catalogue IDs and cannot overwrite a concrete symptom match (0.902083ms)
+✔ invalid choice, stale step and a new hazard cannot advance (0.101875ms)
+✔ recurring problems preserve history and the renter or owner escalation path (0.701958ms)
+✔ model identifiers are constrained to supplied evidence without weakening acceptance (1.882875ms)
+✔ new household with unknown equipment receives a useful, safe first step (0.582167ms)
+✔ safety gate blocks normal steps, including dangerous symptoms despite no hazard choice (0.16975ms)
+✔ attempts survive resume, never repeat, and exhausted checks lead to landlord brief (0.240583ms)
+✔ cannot, unsure and stop provide an escalation outcome without fabricating repair (0.063084ms)
+✔ old step replay and unsupported observation outcomes cannot advance (0.112208ms)
+✔ resolution, recurrence and editable brief preserve underlying evidence (0.077833ms)
+✔ intake is bounded and safety choice cannot be omitted (1.511041ms)
+✔ a newly reported hazard stops the next step (0.250834ms)
+✔ long history still permits resolution and creates a bounded recent brief (0.510542ms)
+ℹ tests 59
+ℹ suites 0
+ℹ pass 59
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 410.085292

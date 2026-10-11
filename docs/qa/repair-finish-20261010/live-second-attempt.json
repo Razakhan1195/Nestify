@@ -1,0 +1,445 @@
+{
+  "checks": [
+    "heating observation: saved",
+    "heating observation: AI ready",
+    "heating observation: relevant step",
+    "heating observation: honest source state",
+    "heating observation: response saved",
+    "heating observation: replay safe",
+    "heating observation: useful terminal outcome",
+    "heating observation: findings in saved brief",
+    "heating observation: resume preserves result",
+    "leak location: saved",
+    "leak location: AI ready",
+    "leak location: relevant step",
+    "leak location: honest source state",
+    "leak location: response saved",
+    "leak location: replay safe",
+    "leak location: useful terminal outcome",
+    "leak location: findings in saved brief",
+    "leak location: resume preserves result",
+    "known provider outage: saved",
+    "known provider outage: no needless AI/checks",
+    "known provider outage: explains useful next step",
+    "wider water supply: saved"
+  ],
+  "failure": "wider water supply: no needless AI/checks",
+  "generationRequests": 2,
+  "maxInitialGenerationRequests": 4,
+  "observations": [
+    {
+      "elapsedMs": 3054,
+      "issue": {
+        "id": "e8ee35b9-80e0-4402-9197-019f3fa517bb",
+        "title": "Heat is not responding",
+        "status": "next_steps_ready",
+        "version": 2,
+        "createdAt": "2026-10-11T00:08:26.760647+00:00",
+        "progress": {
+          "brief": null,
+          "intake": {
+            "title": "Heat is not responding",
+            "hazard": "none",
+            "context": "owner",
+            "category": "heating_cooling",
+            "equipment": "Honeywell T6 (reported, not verified)",
+            "description": "The heating does not seem to respond. I have not checked the thermostat display yet."
+          },
+          "blocked": false,
+          "adaptive": {
+            "step": {
+              "id": "heating-display",
+              "why": "The display helps distinguish a setting or control issue from a system that is not responding.",
+              "kind": "observe",
+              "title": "What does the thermostat display?",
+              "detail": "Note the mode, room temperature, target temperature and any warning or code. Do not remove the thermostat or equipment cover."
+            },
+            "sources": [],
+            "createdAt": "2026-10-11T00:08:26.835Z",
+            "disposition": "clarify",
+            "explanation": "The heating is not responding. To understand why, we need to know what the thermostat display shows. This can help determine if there's a setting, error, or a more complex problem.",
+            "uncertainty": "The exact model of the thermostat is not confirmed, and its display is unknown."
+          },
+          "attempts": [],
+          "guidance": {
+            "key": "heating",
+            "state": "ready",
+            "method": "ai",
+            "reason": "",
+            "requestId": "e8ee35b9-80e0-4402-9197-019f3fa517bb",
+            "startedAt": "2026-10-11T00:08:26.693Z"
+          },
+          "reopened": false,
+          "guideVersion": 2,
+          "adaptiveEnabled": true
+        },
+        "outcome": {
+          "title": "One detail will help",
+          "summary": "The heating is not responding. To understand why, we need to know what the thermostat display shows. This can help determine if there's a setting, error, or a more complex problem.",
+          "next": "The exact model of the thermostat is not confirmed, and its display is unknown."
+        },
+        "step": {
+          "id": "heating-display",
+          "why": "The display helps distinguish a setting or control issue from a system that is not responding.",
+          "kind": "observe",
+          "title": "What does the thermostat display?",
+          "detail": "Note the mode, room temperature, target temperature and any warning or code. Do not remove the thermostat or equipment cover."
+        },
+        "brief": "Request for professional help\n\nHeat is not responding\n\nSymptoms reported: The heating does not seem to respond. I have not checked the thermostat display yet.\n\nEquipment: Honeywell T6 (reported, not verified)\n\nStatus: next steps ready\n\nPlease advise the next appropriate step. Cause and warranty coverage have not been confirmed.",
+        "safetySources": []
+      }
+    },
+    {
+      "elapsedMs": 246,
+      "issue": {
+        "id": "e8ee35b9-80e0-4402-9197-019f3fa517bb",
+        "title": "Heat is not responding",
+        "status": "waiting_on_professional",
+        "version": 4,
+        "createdAt": "2026-10-11T00:08:26.760647+00:00",
+        "progress": {
+          "brief": null,
+          "intake": {
+            "title": "Heat is not responding",
+            "hazard": "none",
+            "context": "owner",
+            "category": "heating_cooling",
+            "equipment": "Honeywell T6 (reported, not verified)",
+            "description": "The heating does not seem to respond. I have not checked the thermostat display yet."
+          },
+          "blocked": false,
+          "adaptive": {
+            "step": null,
+            "sources": [],
+            "createdAt": "2026-10-11T00:08:30.108Z",
+            "disposition": "escalate",
+            "explanation": "The available checks have reached their limit for this issue. Your symptoms and attempted checks are saved in a request for a qualified service professional. Include the model if you find it, but you do not need it to ask for help.",
+            "uncertainty": "The cause and any warranty coverage remain unconfirmed. Nothing has been sent or booked."
+          },
+          "attempts": [
+            {
+              "at": "2026-10-11T00:08:30.062Z",
+              "note": "Display says Heat, room 18 C, target 21 C. No warning visible.",
+              "title": "What does the thermostat display?",
+              "answer": "checked",
+              "detail": "Note the mode, room temperature, target temperature and any warning or code. Do not remove the thermostat or equipment cover.",
+              "stepId": "heating-display"
+            }
+          ],
+          "guidance": {
+            "key": "heating",
+            "state": "ready",
+            "method": "rules",
+            "reason": "",
+            "requestId": "1925a424-5c9c-493a-9816-227449033ac2",
+            "startedAt": "2026-10-11T00:08:30.062Z"
+          },
+          "reopened": false,
+          "lastRequest": {
+            "id": "1925a424-5c9c-493a-9816-227449033ac2",
+            "command": {
+              "note": "Display says Heat, room 18 C, target 21 C. No warning visible.",
+              "action": "respond",
+              "answer": "checked",
+              "stepId": "heating-display"
+            }
+          },
+          "guideVersion": 2,
+          "adaptiveEnabled": true
+        },
+        "outcome": {
+          "title": "A useful next step",
+          "summary": "The available checks have reached their limit for this issue. Your symptoms and attempted checks are saved in a request for a qualified service professional. Include the model if you find it, but you do not need it to ask for help.",
+          "next": "The cause and any warranty coverage remain unconfirmed. Nothing has been sent or booked."
+        },
+        "step": null,
+        "brief": "Request for professional help\n\nHeat is not responding\n\nSymptoms reported: The heating does not seem to respond. I have not checked the thermostat display yet.\n\nEquipment: Honeywell T6 (reported, not verified)\n\nStatus: waiting on professional\n\n2026-10-11 — What does the thermostat display?: checked — Display says Heat, room 18 C, target 21 C. No warning visible.\n\nPlease advise the next appropriate step. Cause and warranty coverage have not been confirmed.",
+        "safetySources": []
+      }
+    },
+    {
+      "elapsedMs": 2897,
+      "issue": {
+        "id": "8e4f91db-dbce-401d-8ab1-33822d3e464d",
+        "title": "Kitchen faucet leak",
+        "status": "next_steps_ready",
+        "version": 2,
+        "createdAt": "2026-10-11T00:08:31.004233+00:00",
+        "progress": {
+          "brief": null,
+          "intake": {
+            "title": "Kitchen faucet leak",
+            "hazard": "none",
+            "context": "renter",
+            "category": "plumbing",
+            "equipment": "",
+            "description": "My kitchen faucet is leaking but I have not checked where the water is coming from."
+          },
+          "blocked": false,
+          "adaptive": {
+            "step": {
+              "id": "leak-location",
+              "why": "This helps the landlord or plumber bring the right information and equipment.",
+              "kind": "observe",
+              "title": "Where is the water coming from?",
+              "detail": "Look without moving pipes or removing covers. Stop if water is spreading or near electricity.",
+              "choices": [
+                {
+                  "id": "spout",
+                  "label": "Spout, even when turned off"
+                },
+                {
+                  "id": "handle",
+                  "label": "Around the handle or base"
+                },
+                {
+                  "id": "under",
+                  "label": "Under the sink"
+                },
+                {
+                  "id": "unknown",
+                  "label": "I can’t tell"
+                }
+              ]
+            },
+            "sources": [],
+            "createdAt": "2026-10-11T00:08:31.114Z",
+            "disposition": "clarify",
+            "explanation": "You mentioned your kitchen faucet is leaking. Finding out exactly where the water is coming from will help the landlord or plumber understand the problem. Please check if the leak is from the spout, around the handle, or under the sink.",
+            "uncertainty": "The exact source of the leak is not yet known."
+          },
+          "attempts": [],
+          "guidance": {
+            "key": "faucet_drip",
+            "state": "ready",
+            "method": "ai",
+            "reason": "",
+            "requestId": "8e4f91db-dbce-401d-8ab1-33822d3e464d",
+            "startedAt": "2026-10-11T00:08:30.955Z"
+          },
+          "reopened": false,
+          "guideVersion": 2,
+          "adaptiveEnabled": true
+        },
+        "outcome": {
+          "title": "One detail will help",
+          "summary": "You mentioned your kitchen faucet is leaking. Finding out exactly where the water is coming from will help the landlord or plumber understand the problem. Please check if the leak is from the spout, around the handle, or under the sink.",
+          "next": "The exact source of the leak is not yet known."
+        },
+        "step": {
+          "id": "leak-location",
+          "why": "This helps the landlord or plumber bring the right information and equipment.",
+          "kind": "observe",
+          "title": "Where is the water coming from?",
+          "detail": "Look without moving pipes or removing covers. Stop if water is spreading or near electricity.",
+          "choices": [
+            {
+              "id": "spout",
+              "label": "Spout, even when turned off"
+            },
+            {
+              "id": "handle",
+              "label": "Around the handle or base"
+            },
+            {
+              "id": "under",
+              "label": "Under the sink"
+            },
+            {
+              "id": "unknown",
+              "label": "I can’t tell"
+            }
+          ]
+        },
+        "brief": "Request to landlord\n\nKitchen faucet leak\n\nSymptoms reported: My kitchen faucet is leaking but I have not checked where the water is coming from.\n\nEquipment: Exact model not identified\n\nStatus: next steps ready\n\nPlease advise the next appropriate step. Cause and warranty coverage have not been confirmed.",
+        "safetySources": []
+      }
+    },
+    {
+      "elapsedMs": 171,
+      "issue": {
+        "id": "8e4f91db-dbce-401d-8ab1-33822d3e464d",
+        "title": "Kitchen faucet leak",
+        "status": "waiting_on_landlord",
+        "version": 4,
+        "createdAt": "2026-10-11T00:08:31.004233+00:00",
+        "progress": {
+          "brief": null,
+          "intake": {
+            "title": "Kitchen faucet leak",
+            "hazard": "none",
+            "context": "renter",
+            "category": "plumbing",
+            "equipment": "",
+            "description": "My kitchen faucet is leaking but I have not checked where the water is coming from."
+          },
+          "blocked": false,
+          "adaptive": {
+            "step": null,
+            "sources": [],
+            "createdAt": "2026-10-11T00:08:34.168Z",
+            "disposition": "escalate",
+            "explanation": "The reported leak needs attention from your landlord. Your saved request includes where you noticed water and what remains uncertain. No replacement part or cause has been identified.",
+            "uncertainty": "The cause and any warranty coverage remain unconfirmed. Nothing has been sent or booked."
+          },
+          "attempts": [
+            {
+              "at": "2026-10-11T00:08:34.133Z",
+              "note": "Water is dripping beneath the sink.",
+              "title": "Where is the water coming from?",
+              "answer": "checked",
+              "choice": "under",
+              "detail": "Look without moving pipes or removing covers. Stop if water is spreading or near electricity.",
+              "stepId": "leak-location",
+              "choiceLabel": "Under the sink"
+            }
+          ],
+          "guidance": {
+            "key": "faucet_drip",
+            "state": "ready",
+            "method": "rules",
+            "reason": "",
+            "requestId": "8a980276-b924-4840-9081-6d67ca38ba0d",
+            "startedAt": "2026-10-11T00:08:34.133Z"
+          },
+          "reopened": false,
+          "lastRequest": {
+            "id": "8a980276-b924-4840-9081-6d67ca38ba0d",
+            "command": {
+              "note": "Water is dripping beneath the sink.",
+              "action": "respond",
+              "answer": "checked",
+              "choice": "under",
+              "stepId": "leak-location"
+            }
+          },
+          "guideVersion": 2,
+          "adaptiveEnabled": true
+        },
+        "outcome": {
+          "title": "Time to ask your landlord",
+          "summary": "The reported leak needs attention from your landlord. Your saved request includes where you noticed water and what remains uncertain. No replacement part or cause has been identified.",
+          "next": "The cause and any warranty coverage remain unconfirmed. Nothing has been sent or booked."
+        },
+        "step": null,
+        "brief": "Request to landlord\n\nKitchen faucet leak\n\nSymptoms reported: My kitchen faucet is leaking but I have not checked where the water is coming from.\n\nEquipment: Exact model not identified\n\nStatus: waiting on landlord\n\n2026-10-11 — Where is the water coming from?: checked (Under the sink) — Water is dripping beneath the sink.\n\nPlease advise the next appropriate step. Cause and warranty coverage have not been confirmed.",
+        "safetySources": []
+      }
+    },
+    {
+      "elapsedMs": 179,
+      "issue": {
+        "id": "f3b4506e-f0a3-46c8-81fd-7a38fa6ae11e",
+        "title": "known provider outage",
+        "status": "waiting_on_landlord",
+        "version": 2,
+        "createdAt": "2026-10-11T00:08:34.96441+00:00",
+        "progress": {
+          "brief": null,
+          "intake": {
+            "title": "known provider outage",
+            "hazard": "none",
+            "context": "renter",
+            "category": "internet",
+            "equipment": "",
+            "description": "My provider reports an outage. All devices cannot connect to the internet."
+          },
+          "blocked": false,
+          "adaptive": {
+            "step": null,
+            "sources": [],
+            "createdAt": "2026-10-11T00:08:34.978Z",
+            "disposition": "escalate",
+            "explanation": "You reported a provider outage. Follow your provider’s restoration updates; further device checks are unlikely to help while service is down. Your observations are saved if you need to contact them.",
+            "uncertainty": "The cause and any warranty coverage remain unconfirmed. Nothing has been sent or booked."
+          },
+          "attempts": [],
+          "guidance": {
+            "key": "internet",
+            "state": "ready",
+            "method": "rules",
+            "reason": "",
+            "requestId": "f3b4506e-f0a3-46c8-81fd-7a38fa6ae11e",
+            "startedAt": "2026-10-11T00:08:34.914Z"
+          },
+          "reopened": false,
+          "guideVersion": 2,
+          "adaptiveEnabled": true
+        },
+        "outcome": {
+          "title": "Time to ask your landlord",
+          "summary": "You reported a provider outage. Follow your provider’s restoration updates; further device checks are unlikely to help while service is down. Your observations are saved if you need to contact them.",
+          "next": "The cause and any warranty coverage remain unconfirmed. Nothing has been sent or booked."
+        },
+        "step": null,
+        "brief": "Request to landlord\n\nknown provider outage\n\nSymptoms reported: My provider reports an outage. All devices cannot connect to the internet.\n\nEquipment: Exact model not identified\n\nStatus: waiting on landlord\n\nPlease advise the next appropriate step. Cause and warranty coverage have not been confirmed.",
+        "safetySources": []
+      }
+    },
+    {
+      "elapsedMs": 2883,
+      "issue": {
+        "id": "c546d12b-4d58-420e-a269-bc7965713601",
+        "title": "wider water supply",
+        "status": "next_steps_ready",
+        "version": 2,
+        "createdAt": "2026-10-11T00:08:35.369744+00:00",
+        "progress": {
+          "brief": null,
+          "intake": {
+            "title": "wider water supply",
+            "hazard": "none",
+            "context": "renter",
+            "category": "plumbing",
+            "equipment": "",
+            "description": "All taps have weak flow throughout the home."
+          },
+          "blocked": false,
+          "adaptive": {
+            "step": {
+              "id": "problem-detail",
+              "why": "One specific symptom is more useful than a list of unrelated questions.",
+              "kind": "observe",
+              "title": "What happens when you use it?",
+              "detail": "Add where the problem is, what you expected, and what actually happens. Include any visible message. Do not open or dismantle anything."
+            },
+            "sources": [],
+            "createdAt": "2026-10-11T00:08:35.414Z",
+            "disposition": "clarify",
+            "explanation": "The water flow is weak at all taps in your home. To help figure this out, please describe what you expect to happen when you turn on a tap and what you observe instead.",
+            "uncertainty": "I don't have enough information to determine the cause of the weak water flow in all taps."
+          },
+          "attempts": [],
+          "guidance": {
+            "key": "general",
+            "state": "ready",
+            "method": "ai",
+            "reason": "",
+            "requestId": "c546d12b-4d58-420e-a269-bc7965713601",
+            "startedAt": "2026-10-11T00:08:35.350Z"
+          },
+          "reopened": false,
+          "guideVersion": 2,
+          "adaptiveEnabled": true
+        },
+        "outcome": {
+          "title": "One detail will help",
+          "summary": "The water flow is weak at all taps in your home. To help figure this out, please describe what you expect to happen when you turn on a tap and what you observe instead.",
+          "next": "I don't have enough information to determine the cause of the weak water flow in all taps."
+        },
+        "step": {
+          "id": "problem-detail",
+          "why": "One specific symptom is more useful than a list of unrelated questions.",
+          "kind": "observe",
+          "title": "What happens when you use it?",
+          "detail": "Add where the problem is, what you expected, and what actually happens. Include any visible message. Do not open or dismantle anything."
+        },
+        "brief": "Request to landlord\n\nwider water supply\n\nSymptoms reported: All taps have weak flow throughout the home.\n\nEquipment: Exact model not identified\n\nStatus: next steps ready\n\nPlease advise the next appropriate step. Cause and warranty coverage have not been confirmed.",
+        "safetySources": []
+      }
+    }
+  ],
+  "syntheticInputs": true,
+  "paidProviderCalls": 0,
+  "emailsSent": 0
+}

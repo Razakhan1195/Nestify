@@ -1,0 +1,231 @@
+{
+  "checks": [
+    "known provider outage: saved",
+    "known provider outage: no needless AI/checks",
+    "known provider outage: explains useful next step",
+    "wider water supply: saved",
+    "wider water supply: no needless AI/checks",
+    "wider water supply: explains useful next step",
+    "unsupported known symptom: saved",
+    "unsupported known symptom: no needless AI/checks",
+    "unsupported known symptom: explains useful next step",
+    "hazard stop: saved",
+    "hazard stop: no needless AI/checks",
+    "hazard stop: explains useful next step"
+  ],
+  "failure": null,
+  "generationRequests": 0,
+  "maxInitialGenerationRequests": 4,
+  "observations": [
+    {
+      "elapsedMs": 315,
+      "issue": {
+        "id": "a69a8898-944d-4ac3-b343-350c85e7c0de",
+        "title": "known provider outage",
+        "status": "waiting_on_landlord",
+        "version": 2,
+        "createdAt": "2026-10-11T00:10:53.707244+00:00",
+        "progress": {
+          "brief": null,
+          "intake": {
+            "title": "known provider outage",
+            "hazard": "none",
+            "context": "renter",
+            "category": "internet",
+            "equipment": "",
+            "description": "My provider reports an outage. All devices cannot connect to the internet."
+          },
+          "blocked": false,
+          "adaptive": {
+            "step": null,
+            "sources": [],
+            "createdAt": "2026-10-11T00:10:53.740Z",
+            "disposition": "escalate",
+            "explanation": "You reported a provider outage. Follow your provider’s restoration updates; further device checks are unlikely to help while service is down. Your observations are saved if you need to contact them.",
+            "uncertainty": "The cause and any warranty coverage remain unconfirmed. Nothing has been sent or booked."
+          },
+          "attempts": [],
+          "guidance": {
+            "key": "internet",
+            "state": "ready",
+            "method": "rules",
+            "reason": "",
+            "requestId": "a69a8898-944d-4ac3-b343-350c85e7c0de",
+            "startedAt": "2026-10-11T00:10:53.653Z"
+          },
+          "reopened": false,
+          "guideVersion": 2,
+          "adaptiveEnabled": true
+        },
+        "outcome": {
+          "title": "Time to ask your landlord",
+          "summary": "You reported a provider outage. Follow your provider’s restoration updates; further device checks are unlikely to help while service is down. Your observations are saved if you need to contact them.",
+          "next": "The cause and any warranty coverage remain unconfirmed. Nothing has been sent or booked."
+        },
+        "step": null,
+        "brief": "Request to landlord\n\nknown provider outage\n\nSymptoms reported: My provider reports an outage. All devices cannot connect to the internet.\n\nEquipment: Exact model not identified\n\nStatus: waiting on landlord\n\nPlease advise the next appropriate step. Cause and warranty coverage have not been confirmed.",
+        "safetySources": []
+      }
+    },
+    {
+      "elapsedMs": 206,
+      "issue": {
+        "id": "ec91baff-192e-4363-bc13-16149ae14c04",
+        "title": "wider water supply",
+        "status": "waiting_on_landlord",
+        "version": 2,
+        "createdAt": "2026-10-11T00:10:54.423065+00:00",
+        "progress": {
+          "brief": null,
+          "intake": {
+            "title": "wider water supply",
+            "hazard": "none",
+            "context": "renter",
+            "category": "plumbing",
+            "equipment": "",
+            "description": "All taps have weak flow throughout the home."
+          },
+          "blocked": false,
+          "adaptive": {
+            "step": null,
+            "sources": [],
+            "createdAt": "2026-10-11T00:10:54.445Z",
+            "disposition": "escalate",
+            "explanation": "You reported weak flow at more than one tap. Ask your landlord or water provider about a wider supply issue; the observations do not establish a faucet fault.",
+            "uncertainty": "The cause and any warranty coverage remain unconfirmed. Nothing has been sent or booked."
+          },
+          "attempts": [],
+          "guidance": {
+            "key": "faucet_flow",
+            "state": "ready",
+            "method": "rules",
+            "reason": "",
+            "requestId": "ec91baff-192e-4363-bc13-16149ae14c04",
+            "startedAt": "2026-10-11T00:10:54.387Z"
+          },
+          "reopened": false,
+          "guideVersion": 2,
+          "adaptiveEnabled": true
+        },
+        "outcome": {
+          "title": "Time to ask your landlord",
+          "summary": "You reported weak flow at more than one tap. Ask your landlord or water provider about a wider supply issue; the observations do not establish a faucet fault.",
+          "next": "The cause and any warranty coverage remain unconfirmed. Nothing has been sent or booked."
+        },
+        "step": null,
+        "brief": "Request to landlord\n\nwider water supply\n\nSymptoms reported: All taps have weak flow throughout the home.\n\nEquipment: Exact model not identified\n\nStatus: waiting on landlord\n\nPlease advise the next appropriate step. Cause and warranty coverage have not been confirmed.",
+        "safetySources": []
+      }
+    },
+    {
+      "elapsedMs": 324,
+      "issue": {
+        "id": "58828441-92e1-4e9e-a9b1-5c405b699042",
+        "title": "unsupported known symptom",
+        "status": "waiting_on_landlord",
+        "version": 2,
+        "createdAt": "2026-10-11T00:10:54.949063+00:00",
+        "progress": {
+          "brief": null,
+          "intake": {
+            "title": "unsupported known symptom",
+            "hazard": "none",
+            "context": "renter",
+            "category": "appliance",
+            "equipment": "",
+            "description": "My microwave makes a grinding noise while running."
+          },
+          "blocked": false,
+          "adaptive": {
+            "step": null,
+            "sources": [],
+            "createdAt": "2026-10-11T00:10:54.974Z",
+            "disposition": "escalate",
+            "explanation": "Rezlee does not have a verified walkthrough for this problem. Your reported symptoms are saved in a request for your landlord. Add the model or any displayed code if you can find it safely.",
+            "uncertainty": "The cause and any warranty coverage remain unconfirmed. Nothing has been sent or booked."
+          },
+          "attempts": [],
+          "guidance": {
+            "key": "general",
+            "state": "ready",
+            "method": "rules",
+            "reason": "",
+            "requestId": "58828441-92e1-4e9e-a9b1-5c405b699042",
+            "startedAt": "2026-10-11T00:10:54.911Z"
+          },
+          "reopened": false,
+          "guideVersion": 2,
+          "adaptiveEnabled": true
+        },
+        "outcome": {
+          "title": "Time to ask your landlord",
+          "summary": "Rezlee does not have a verified walkthrough for this problem. Your reported symptoms are saved in a request for your landlord. Add the model or any displayed code if you can find it safely.",
+          "next": "The cause and any warranty coverage remain unconfirmed. Nothing has been sent or booked."
+        },
+        "step": null,
+        "brief": "Request to landlord\n\nunsupported known symptom\n\nSymptoms reported: My microwave makes a grinding noise while running.\n\nEquipment: Exact model not identified\n\nStatus: waiting on landlord\n\nPlease advise the next appropriate step. Cause and warranty coverage have not been confirmed.",
+        "safetySources": []
+      }
+    },
+    {
+      "elapsedMs": 259,
+      "issue": {
+        "id": "5d3b4af8-557b-498c-91bf-26125f11dd84",
+        "title": "hazard stop",
+        "status": "waiting_on_professional",
+        "version": 1,
+        "createdAt": "2026-10-11T00:10:55.603054+00:00",
+        "progress": {
+          "brief": null,
+          "intake": {
+            "title": "hazard stop",
+            "hazard": "gas_co_fire",
+            "context": "renter",
+            "category": "appliance",
+            "equipment": "",
+            "description": "There is a gas smell near the stove."
+          },
+          "blocked": true,
+          "attempts": [],
+          "guidance": {
+            "key": "general",
+            "state": "ready",
+            "method": "rules",
+            "requestId": "5d3b4af8-557b-498c-91bf-26125f11dd84",
+            "startedAt": "2026-10-11T00:10:55.575Z"
+          },
+          "reopened": false,
+          "guideVersion": 2,
+          "adaptiveEnabled": true
+        },
+        "outcome": {
+          "title": "Safety comes first",
+          "summary": "Stop ordinary troubleshooting and get appropriate help. Your report is saved.",
+          "next": "Use the safety guidance below. Do not wait for an AI response."
+        },
+        "step": null,
+        "brief": "Request to landlord\n\nhazard stop\n\nSymptoms reported: There is a gas smell near the stove.\n\nEquipment: Exact model not identified\n\nStatus: waiting on professional\n\nSafety concern reported or detected. Ordinary troubleshooting was stopped. This app has not confirmed the area is safe.\n\nPlease advise the next appropriate step. Cause and warranty coverage have not been confirmed.",
+        "safetySources": [
+          {
+            "label": "Enbridge Gas: gas safety",
+            "url": "https://www.enbridgegas.com/ontario/safety/smell-gas",
+            "checkedAt": "2026-09-26"
+          },
+          {
+            "label": "Enbridge Gas: carbon monoxide",
+            "url": "https://www.enbridgegas.com/ontario/safety/carbon-monoxide",
+            "checkedAt": "2026-09-26"
+          },
+          {
+            "label": "Electrical Safety Authority: flooding",
+            "url": "https://esasafe.com/safety/storm-safety/flood-safety/",
+            "checkedAt": "2026-09-26"
+          }
+        ]
+      }
+    }
+  ],
+  "syntheticInputs": true,
+  "paidProviderCalls": 0,
+  "emailsSent": 0
+}

@@ -1,0 +1,453 @@
+{
+  "checks": [
+    "single-device internet: saved",
+    "single-device internet: AI ready",
+    "single-device internet: relevant step",
+    "single-device internet: honest source state",
+    "single-device internet: response saved",
+    "single-device internet: replay safe",
+    "single-device internet: useful terminal outcome",
+    "single-device internet: findings in saved brief",
+    "single-device internet: resume preserves result",
+    "low faucet flow: saved",
+    "low faucet flow: AI ready",
+    "low faucet flow: relevant step",
+    "low faucet flow: honest source state",
+    "low faucet flow: response saved",
+    "low faucet flow: replay safe",
+    "low faucet flow: useful terminal outcome",
+    "low faucet flow: findings in saved brief",
+    "low faucet flow: resume preserves result",
+    "heating observation: saved"
+  ],
+  "failure": "heating observation: AI ready",
+  "generationRequests": 3,
+  "maxInitialGenerationRequests": 4,
+  "observations": [
+    {
+      "elapsedMs": 3114,
+      "issue": {
+        "id": "6c971f21-a4a1-4e6d-9b10-df9a21564fee",
+        "title": "Laptop Wi-Fi",
+        "status": "next_steps_ready",
+        "version": 2,
+        "createdAt": "2026-10-11T00:06:01.766248+00:00",
+        "progress": {
+          "brief": null,
+          "intake": {
+            "title": "Laptop Wi-Fi",
+            "hazard": "none",
+            "context": "renter",
+            "category": "internet",
+            "equipment": "",
+            "description": "Only my laptop cannot connect. Other devices work normally on the same Wi-Fi."
+          },
+          "blocked": false,
+          "adaptive": {
+            "step": {
+              "id": "network-reconnect",
+              "why": "This refreshes the device’s connection without changing your household network settings.",
+              "kind": "try",
+              "title": "Reconnect the affected device",
+              "detail": "Turn Wi-Fi off and back on on the affected phone or computer, then reconnect to your usual network. Do not factory-reset the router.",
+              "source": {
+                "url": "https://www.rogers.com/support/internet/unable-to-access-the-internet-rogers-xfinity-gateway",
+                "label": "Rogers: internet connection checks",
+                "quote": "You only have device Unable to compare connectivity Restart and reconnect to your Gateway (if on WiFi), then try again.",
+                "checkedAt": "2026-10-11T00:06:01.953Z"
+              }
+            },
+            "sources": [
+              {
+                "url": "https://www.rogers.com/support/internet/unable-to-access-the-internet-rogers-xfinity-gateway",
+                "label": "Rogers: internet connection checks",
+                "quote": "You only have device Unable to compare connectivity Restart and reconnect to your Gateway (if on WiFi), then try again.",
+                "checkedAt": "2026-10-11T00:06:01.953Z"
+              }
+            ],
+            "createdAt": "2026-10-11T00:06:02.164Z",
+            "disposition": "check",
+            "explanation": "Your laptop is the only device that cannot connect to Wi-Fi, while other devices can. This suggests the issue is with your laptop's connection to the network, not the network itself. Reconnecting your laptop to the Wi-Fi can resolve temporary connection glitches.",
+            "uncertainty": "The specific cause for the laptop's inability to connect is not precisely known, but it is isolated to that device."
+          },
+          "attempts": [],
+          "guidance": {
+            "key": "internet",
+            "state": "ready",
+            "method": "ai",
+            "reason": "",
+            "requestId": "6c971f21-a4a1-4e6d-9b10-df9a21564fee",
+            "startedAt": "2026-10-11T00:06:01.678Z"
+          },
+          "reopened": false,
+          "guideVersion": 2,
+          "adaptiveEnabled": true
+        },
+        "outcome": {
+          "title": "What this tells us",
+          "summary": "Your laptop is the only device that cannot connect to Wi-Fi, while other devices can. This suggests the issue is with your laptop's connection to the network, not the network itself. Reconnecting your laptop to the Wi-Fi can resolve temporary connection glitches.",
+          "next": "The specific cause for the laptop's inability to connect is not precisely known, but it is isolated to that device."
+        },
+        "step": {
+          "id": "network-reconnect",
+          "why": "This refreshes the device’s connection without changing your household network settings.",
+          "kind": "try",
+          "title": "Reconnect the affected device",
+          "detail": "Turn Wi-Fi off and back on on the affected phone or computer, then reconnect to your usual network. Do not factory-reset the router.",
+          "source": {
+            "url": "https://www.rogers.com/support/internet/unable-to-access-the-internet-rogers-xfinity-gateway",
+            "label": "Rogers: internet connection checks",
+            "quote": "You only have device Unable to compare connectivity Restart and reconnect to your Gateway (if on WiFi), then try again.",
+            "checkedAt": "2026-10-11T00:06:01.953Z"
+          }
+        },
+        "brief": "Request to landlord\n\nLaptop Wi-Fi\n\nSymptoms reported: Only my laptop cannot connect. Other devices work normally on the same Wi-Fi.\n\nEquipment: Exact model not identified\n\nStatus: next steps ready\n\nPlease advise the next appropriate step. Cause and warranty coverage have not been confirmed.",
+        "safetySources": []
+      }
+    },
+    {
+      "elapsedMs": 186,
+      "issue": {
+        "id": "6c971f21-a4a1-4e6d-9b10-df9a21564fee",
+        "title": "Laptop Wi-Fi",
+        "status": "resolved",
+        "version": 3,
+        "createdAt": "2026-10-11T00:06:01.766248+00:00",
+        "progress": {
+          "brief": null,
+          "intake": {
+            "title": "Laptop Wi-Fi",
+            "hazard": "none",
+            "context": "renter",
+            "category": "internet",
+            "equipment": "",
+            "description": "Only my laptop cannot connect. Other devices work normally on the same Wi-Fi."
+          },
+          "blocked": false,
+          "adaptive": {
+            "step": {
+              "id": "network-reconnect",
+              "why": "This refreshes the device’s connection without changing your household network settings.",
+              "kind": "try",
+              "title": "Reconnect the affected device",
+              "detail": "Turn Wi-Fi off and back on on the affected phone or computer, then reconnect to your usual network. Do not factory-reset the router.",
+              "source": {
+                "url": "https://www.rogers.com/support/internet/unable-to-access-the-internet-rogers-xfinity-gateway",
+                "label": "Rogers: internet connection checks",
+                "quote": "You only have device Unable to compare connectivity Restart and reconnect to your Gateway (if on WiFi), then try again.",
+                "checkedAt": "2026-10-11T00:06:01.953Z"
+              }
+            },
+            "sources": [
+              {
+                "url": "https://www.rogers.com/support/internet/unable-to-access-the-internet-rogers-xfinity-gateway",
+                "label": "Rogers: internet connection checks",
+                "quote": "You only have device Unable to compare connectivity Restart and reconnect to your Gateway (if on WiFi), then try again.",
+                "checkedAt": "2026-10-11T00:06:01.953Z"
+              }
+            ],
+            "createdAt": "2026-10-11T00:06:02.164Z",
+            "disposition": "check",
+            "explanation": "Your laptop is the only device that cannot connect to Wi-Fi, while other devices can. This suggests the issue is with your laptop's connection to the network, not the network itself. Reconnecting your laptop to the Wi-Fi can resolve temporary connection glitches.",
+            "uncertainty": "The specific cause for the laptop's inability to connect is not precisely known, but it is isolated to that device."
+          },
+          "attempts": [
+            {
+              "at": "2026-10-11T00:06:05.290Z",
+              "note": "Wi-Fi reconnect restored access.",
+              "title": "Reconnect the affected device",
+              "answer": "worked",
+              "detail": "Turn Wi-Fi off and back on on the affected phone or computer, then reconnect to your usual network. Do not factory-reset the router.",
+              "source": {
+                "url": "https://www.rogers.com/support/internet/unable-to-access-the-internet-rogers-xfinity-gateway",
+                "label": "Rogers: internet connection checks",
+                "quote": "You only have device Unable to compare connectivity Restart and reconnect to your Gateway (if on WiFi), then try again.",
+                "checkedAt": "2026-10-11T00:06:01.953Z"
+              },
+              "stepId": "network-reconnect"
+            }
+          ],
+          "guidance": {
+            "key": "internet",
+            "state": "ready",
+            "method": "ai",
+            "reason": "",
+            "requestId": "6c971f21-a4a1-4e6d-9b10-df9a21564fee",
+            "startedAt": "2026-10-11T00:06:01.678Z"
+          },
+          "reopened": false,
+          "lastRequest": {
+            "id": "804bba93-5000-43f0-8d8e-92e754c54542",
+            "command": {
+              "note": "Wi-Fi reconnect restored access.",
+              "action": "respond",
+              "answer": "worked",
+              "stepId": "network-reconnect"
+            }
+          },
+          "guideVersion": 2,
+          "adaptiveEnabled": true
+        },
+        "outcome": {
+          "title": "You reported it resolved",
+          "summary": "Your checks and outcome are saved together.",
+          "next": "If the symptom returns, reopen this issue. A reported fix is not a safety inspection."
+        },
+        "step": null,
+        "brief": "Request to landlord\n\nLaptop Wi-Fi\n\nSymptoms reported: Only my laptop cannot connect. Other devices work normally on the same Wi-Fi.\n\nEquipment: Exact model not identified\n\nStatus: resolved\n\n2026-10-11 — Reconnect the affected device: worked — Wi-Fi reconnect restored access.\n\nPlease advise the next appropriate step. Cause and warranty coverage have not been confirmed.",
+        "safetySources": []
+      }
+    },
+    {
+      "elapsedMs": 2905,
+      "issue": {
+        "id": "8a9c5223-ef8e-40a2-bf50-03a9a66f8656",
+        "title": "Weak kitchen tap",
+        "status": "next_steps_ready",
+        "version": 2,
+        "createdAt": "2026-10-11T00:06:06.255933+00:00",
+        "progress": {
+          "brief": null,
+          "intake": {
+            "title": "Weak kitchen tap",
+            "hazard": "none",
+            "context": "renter",
+            "category": "plumbing",
+            "equipment": "",
+            "description": "The kitchen faucet has weak flow. Other taps are normal. I do not know the model."
+          },
+          "blocked": false,
+          "adaptive": {
+            "step": {
+              "id": "tap-outlet",
+              "why": "Buildup can restrict flow, but it does not prove which part needs attention.",
+              "kind": "observe",
+              "title": "What can you see at the end of the tap?",
+              "detail": "Look without removing anything. Do you see mineral buildup, debris or an uneven spray?",
+              "source": {
+                "url": "https://solutions.moen.com/Article_Library/Faucet_Aerator_Cleaning",
+                "label": "Moen: faucet aerators",
+                "quote": "A: Over time, aerators can accumulate debris and mineral deposits, which can restrict water pressure or distort the spray pattern.",
+                "checkedAt": "2026-10-11T00:06:06.284Z"
+              },
+              "choices": [
+                {
+                  "id": "buildup",
+                  "label": "Visible buildup or uneven spray"
+                },
+                {
+                  "id": "clear",
+                  "label": "Nothing obvious"
+                },
+                {
+                  "id": "unknown",
+                  "label": "I’m unsure"
+                }
+              ]
+            },
+            "sources": [
+              {
+                "url": "https://solutions.moen.com/Article_Library/Faucet_Aerator_Cleaning",
+                "label": "Moen: faucet aerators",
+                "quote": "A: Over time, aerators can accumulate debris and mineral deposits, which can restrict water pressure or distort the spray pattern.",
+                "checkedAt": "2026-10-11T00:06:06.284Z"
+              }
+            ],
+            "createdAt": "2026-10-11T00:06:06.854Z",
+            "disposition": "check",
+            "explanation": "The kitchen tap has weak flow. The aerator, which is the part at the end of the tap, can get clogged with debris or mineral buildup, causing low flow. Checking the aerator is a good first step to see if this is the problem.",
+            "uncertainty": "The exact model of the tap is unknown, and the condition of the aerator is also unknown."
+          },
+          "attempts": [],
+          "guidance": {
+            "key": "faucet_flow",
+            "state": "ready",
+            "method": "ai",
+            "reason": "",
+            "requestId": "8a9c5223-ef8e-40a2-bf50-03a9a66f8656",
+            "startedAt": "2026-10-11T00:06:06.201Z"
+          },
+          "reopened": false,
+          "guideVersion": 2,
+          "adaptiveEnabled": true
+        },
+        "outcome": {
+          "title": "What this tells us",
+          "summary": "The kitchen tap has weak flow. The aerator, which is the part at the end of the tap, can get clogged with debris or mineral buildup, causing low flow. Checking the aerator is a good first step to see if this is the problem.",
+          "next": "The exact model of the tap is unknown, and the condition of the aerator is also unknown."
+        },
+        "step": {
+          "id": "tap-outlet",
+          "why": "Buildup can restrict flow, but it does not prove which part needs attention.",
+          "kind": "observe",
+          "title": "What can you see at the end of the tap?",
+          "detail": "Look without removing anything. Do you see mineral buildup, debris or an uneven spray?",
+          "source": {
+            "url": "https://solutions.moen.com/Article_Library/Faucet_Aerator_Cleaning",
+            "label": "Moen: faucet aerators",
+            "quote": "A: Over time, aerators can accumulate debris and mineral deposits, which can restrict water pressure or distort the spray pattern.",
+            "checkedAt": "2026-10-11T00:06:06.284Z"
+          },
+          "choices": [
+            {
+              "id": "buildup",
+              "label": "Visible buildup or uneven spray"
+            },
+            {
+              "id": "clear",
+              "label": "Nothing obvious"
+            },
+            {
+              "id": "unknown",
+              "label": "I’m unsure"
+            }
+          ]
+        },
+        "brief": "Request to landlord\n\nWeak kitchen tap\n\nSymptoms reported: The kitchen faucet has weak flow. Other taps are normal. I do not know the model.\n\nEquipment: Exact model not identified\n\nStatus: next steps ready\n\nPlease advise the next appropriate step. Cause and warranty coverage have not been confirmed.",
+        "safetySources": []
+      }
+    },
+    {
+      "elapsedMs": 173,
+      "issue": {
+        "id": "8a9c5223-ef8e-40a2-bf50-03a9a66f8656",
+        "title": "Weak kitchen tap",
+        "status": "waiting_on_landlord",
+        "version": 4,
+        "createdAt": "2026-10-11T00:06:06.255933+00:00",
+        "progress": {
+          "brief": null,
+          "intake": {
+            "title": "Weak kitchen tap",
+            "hazard": "none",
+            "context": "renter",
+            "category": "plumbing",
+            "equipment": "",
+            "description": "The kitchen faucet has weak flow. Other taps are normal. I do not know the model."
+          },
+          "blocked": false,
+          "adaptive": {
+            "step": null,
+            "sources": [],
+            "createdAt": "2026-10-11T00:06:09.465Z",
+            "disposition": "escalate",
+            "explanation": "The available checks have reached their limit for this issue. Your symptoms and attempted checks are saved in a request for your landlord. Include the model if you find it, but you do not need it to ask for help.",
+            "uncertainty": "The cause and any warranty coverage remain unconfirmed. Nothing has been sent or booked."
+          },
+          "attempts": [
+            {
+              "at": "2026-10-11T00:06:09.429Z",
+              "note": "Visible mineral buildup. The model is unknown.",
+              "title": "What can you see at the end of the tap?",
+              "answer": "checked",
+              "choice": "buildup",
+              "detail": "Look without removing anything. Do you see mineral buildup, debris or an uneven spray?",
+              "source": {
+                "url": "https://solutions.moen.com/Article_Library/Faucet_Aerator_Cleaning",
+                "label": "Moen: faucet aerators",
+                "quote": "A: Over time, aerators can accumulate debris and mineral deposits, which can restrict water pressure or distort the spray pattern.",
+                "checkedAt": "2026-10-11T00:06:06.284Z"
+              },
+              "stepId": "tap-outlet",
+              "choiceLabel": "Visible buildup or uneven spray"
+            }
+          ],
+          "guidance": {
+            "key": "faucet_flow",
+            "state": "ready",
+            "method": "rules",
+            "reason": "",
+            "requestId": "046b307c-c7ce-4ce4-b6e5-2ec8faebdced",
+            "startedAt": "2026-10-11T00:06:09.429Z"
+          },
+          "reopened": false,
+          "lastRequest": {
+            "id": "046b307c-c7ce-4ce4-b6e5-2ec8faebdced",
+            "command": {
+              "note": "Visible mineral buildup. The model is unknown.",
+              "action": "respond",
+              "answer": "checked",
+              "choice": "buildup",
+              "stepId": "tap-outlet"
+            }
+          },
+          "guideVersion": 2,
+          "adaptiveEnabled": true
+        },
+        "outcome": {
+          "title": "Time to ask your landlord",
+          "summary": "The available checks have reached their limit for this issue. Your symptoms and attempted checks are saved in a request for your landlord. Include the model if you find it, but you do not need it to ask for help.",
+          "next": "The cause and any warranty coverage remain unconfirmed. Nothing has been sent or booked."
+        },
+        "step": null,
+        "brief": "Request to landlord\n\nWeak kitchen tap\n\nSymptoms reported: The kitchen faucet has weak flow. Other taps are normal. I do not know the model.\n\nEquipment: Exact model not identified\n\nStatus: waiting on landlord\n\n2026-10-11 — What can you see at the end of the tap?: checked (Visible buildup or uneven spray) — Visible mineral buildup. The model is unknown.\n\nPlease advise the next appropriate step. Cause and warranty coverage have not been confirmed.",
+        "safetySources": []
+      }
+    },
+    {
+      "elapsedMs": 2846,
+      "issue": {
+        "id": "0c907dd0-78ec-4a87-88cc-e91eb4e12698",
+        "title": "Heat is not responding",
+        "status": "next_steps_ready",
+        "version": 2,
+        "createdAt": "2026-10-11T00:06:10.278939+00:00",
+        "progress": {
+          "brief": null,
+          "intake": {
+            "title": "Heat is not responding",
+            "hazard": "none",
+            "context": "owner",
+            "category": "heating_cooling",
+            "equipment": "Honeywell T6 (reported, not verified)",
+            "description": "The heating does not seem to respond. I have not checked the thermostat display yet."
+          },
+          "blocked": false,
+          "adaptive": {
+            "step": {
+              "id": "heating-display",
+              "why": "The display helps distinguish a setting or control issue from a system that is not responding.",
+              "kind": "observe",
+              "title": "What does the thermostat display?",
+              "detail": "Note the mode, room temperature, target temperature and any warning or code. Do not remove the thermostat or equipment cover."
+            },
+            "sources": [],
+            "createdAt": "2026-10-11T00:06:11.346Z",
+            "disposition": "clarify",
+            "explanation": "The display helps distinguish a setting or control issue from a system that is not responding.",
+            "uncertainty": "Record only what you can observe safely. You can prepare a help request at any time."
+          },
+          "attempts": [],
+          "guidance": {
+            "key": "heating",
+            "state": "fallback",
+            "method": "rules",
+            "reason": "AI guidance is unavailable. You can use the safe checks below or prepare a help request.",
+            "requestId": "0c907dd0-78ec-4a87-88cc-e91eb4e12698",
+            "startedAt": "2026-10-11T00:06:10.248Z"
+          },
+          "reopened": false,
+          "guideVersion": 2,
+          "adaptiveEnabled": true
+        },
+        "outcome": {
+          "title": "One detail will help",
+          "summary": "The display helps distinguish a setting or control issue from a system that is not responding.",
+          "next": "Record only what you can observe safely. You can prepare a help request at any time."
+        },
+        "step": {
+          "id": "heating-display",
+          "why": "The display helps distinguish a setting or control issue from a system that is not responding.",
+          "kind": "observe",
+          "title": "What does the thermostat display?",
+          "detail": "Note the mode, room temperature, target temperature and any warning or code. Do not remove the thermostat or equipment cover."
+        },
+        "brief": "Request for professional help\n\nHeat is not responding\n\nSymptoms reported: The heating does not seem to respond. I have not checked the thermostat display yet.\n\nEquipment: Honeywell T6 (reported, not verified)\n\nStatus: next steps ready\n\nPlease advise the next appropriate step. Cause and warranty coverage have not been confirmed.",
+        "safetySources": []
+      }
+    }
+  ],
+  "syntheticInputs": true,
+  "paidProviderCalls": 0,
+  "emailsSent": 0
+}

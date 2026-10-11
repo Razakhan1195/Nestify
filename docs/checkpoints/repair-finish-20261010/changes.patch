@@ -1,0 +1,234 @@
+--- a/src/lib/issues/repair-evidence.ts
++++ b/src/lib/issues/repair-evidence.ts
+@@ -1,4 +1,5 @@
+ import {unstable_cache} from "next/cache";
++import {remainingGuideSteps} from "./repair-guides";
+ import type {Progress} from "./session";
+ export type Evidence={id:string;label:string;url:string;checkedAt:string;text:string;scope:"general"|"manual";delivery?:"live"|"reviewed_reference"};
+ export const repairSources=[
+@@ -32,8 +33,10 @@
+ }
+ // Short, reviewed quotations keep existing safe checks usable when a publisher
+ // declines server-side retrieval. This is not a live fetch or an exact-model manual.
+-const reviewedReferences:Record<string,{checkedAt:string;text:string}>={
++export const reviewedReferences:Record<string,{checkedAt:string;text:string}>={
+  fridge:{checkedAt:"2026-10-10T17:45:00.000Z",text:"ensure no items are blocking the vents. inspect the door seal to confirm they are in full contact with the refrigerator."},
++ network:{checkedAt:"2026-10-10T23:58:02Z",text:"see if there is a known outage in your area. Restart and reconnect to your Gateway (if on WiFi), then try again."},
++ tap:{checkedAt:"2026-10-10T23:58:02Z",text:"Moen produces a variety of faucet aerators. debris and mineral deposits, which can restrict water pressure or distort the spray pattern."},
+ };
+ export function reviewedRepairEvidence(id:string,now=Date.now()):Evidence|null {
+  const source=repairSources.find(s=>s.id===id),review=reviewedReferences[id];
+@@ -61,10 +64,12 @@
+ }
+ // Cache bounded failures as well as successes; a blocked publisher should not delay
+ // every customer or be hammered by retries. Dates inside evidence are preserved.
+-const cachedSource=unstable_cache(async(id:string)=>loadRepairSource(id),["repair-official-evidence-v2"],{revalidate:3600});
++const cachedSource=unstable_cache(async(id:string)=>loadRepairSource(id),["repair-official-evidence-v3"],{revalidate:3600});
+ export async function retrieveRepairEvidence(p:Progress):Promise<Evidence[]>{
+- const symptom=[p.intake.title,p.intake.description,p.intake.equipment,...p.attempts.slice(-8).map(a=>a.note)].join(" ");
+- const selected=repairSources.filter(s=>s.match.test(symptom)).slice(0,2);
++ // Only retrieve evidence an eligible check can actually use. Observation-only
++ // heating/unknown-equipment cases do not need unrelated article downloads.
++ const urls=new Set(remainingGuideSteps(p).flatMap(step=>step.source?[step.source.url]:[]));
++ const selected=repairSources.filter(s=>urls.has(s.url)).slice(0,2);
+  const result=await Promise.all(selected.map(async source=>{
+   try{return await cachedSource(source.id);}
+   catch(error){
+--- a/src/lib/issues/repair-guides.ts
++++ b/src/lib/issues/repair-guides.ts
+@@ -41,8 +41,8 @@
+  if(i.category==="electrical"||/outlet|breaker|wiring/.test(text))return "electrical";
+  if(i.category==="internet"||/wi.?fi|internet|router|modem/.test(text))return "internet";
+  if(/fridge|refrigerator|freezer/.test(text)&&/warm|cool|cold|door|temperature|air.?flow/.test(text))return "fridge";
+- if(/faucet|\btap\b/.test(text)&&/low|weak|flow|pressure|spray/.test(text))return "faucet_flow";
+- if(/faucet|\btap\b|sink/.test(text)&&/drip|leak/.test(text))return "faucet_drip";
++ if(/faucet|\btaps?\b/.test(text)&&/low|weak|flow|pressure|spray/.test(text))return "faucet_flow";
++ if(/faucet|\btaps?\b|sink/.test(text)&&/drip|leak/.test(text))return "faucet_drip";
+  if(i.category==="heating_cooling"||/thermostat|furnace|heating|air condition/.test(text))return "heating";
+  return "general";
+ }
+@@ -50,6 +50,7 @@
+  const chosen=p.guidance?.key??inferGuide(p.intake);
+  return chosen==="general"?inferGuide({...p.intake,description:[p.intake.description,...p.attempts.map(a=>a.note)].join(" ")}):chosen;
+ }
++function modelAlreadyUnavailable(p:Progress){return /(?:do not|don.t|cannot|can.t) (?:know|find|identify) (?:the |its |my )?(?:exact )?model|(?:exact )?model (?:is )?unknown/i.test([p.intake.description,...p.attempts.map(a=>a.note)].join(" "));}
+ function hasCoolingSymptom(p:Progress){return /warm|cool|cold|temperature|air.?flow/i.test([p.intake.title,p.intake.description,...p.attempts.map(a=>a.note)].join(" "));}
+ function picked(p:Progress,id:string){return p.attempts.find(a=>a.stepId===id)?.choice;}
+ export function knownTapScope(p:Progress):"one"|"all"|undefined {
+@@ -60,22 +61,41 @@
+  if(/other taps?.{0,20}(?:normal|fine|unaffected)|only (?:the |my )?(?:kitchen |bathroom )?(?:tap|faucet).{0,25}(?:weak|low|affected)/.test(text))return "one";
+  return undefined;
+ }
++export function knownNetworkScope(p:Progress):"one"|"all"|undefined {
++ const explicit=picked(p,"network-scope");if(explicit==="one"||explicit==="all")return explicit;
++ const text=[p.intake.description,...p.attempts.map(a=>a.note)].join(" ");
++ if(/other devices (?:work normally|work fine|are online|are working)/i.test(text))return "one";
++ if(/(?:all|every) (?:our |my |the )?devices (?:cannot|can’t|can't|do not|don’t|don't) connect/i.test(text))return "all";
++ return undefined;
++}
++export function repairStopReason(p:Progress):"provider_outage"|"wider_water_supply"|"cannot_compare_water"|"leak_needs_help"|"unsupported_problem"|null {
++ const key=guidanceKey(p);
++ const description=[p.intake.title,p.intake.description,p.intake.equipment,...p.attempts.map(a=>a.note)].join(" ");
++ if(key==="general"&&/dishwash|washing machine|washer|dryer|microwave|oven|stove|toilet|garage door|ice maker/i.test(description)&&/won.t|doesn.t|not (?:start|drain|work|heat)|leak|noise|grind|knock|stuck|error|rattl/i.test(description))return "unsupported_problem";
++ if(key==="internet"&&(picked(p,"network-outage")==="outage"||/\b(?:provider|rogers|bell|telus) (?:reports|reported|confirmed|has confirmed) (?:an? |a known )?outage\b/i.test([p.intake.description,...p.attempts.map(a=>a.note)].join(" "))))return "provider_outage";
++ if(key==="faucet_flow"){
++  if(knownTapScope(p)==="all")return "wider_water_supply";
++  const scope=p.attempts.find(a=>a.stepId==="tap-scope");
++  if(scope&&(scope.choice==="unknown"||["cannot","unsure","stop"].includes(scope.answer)))return "cannot_compare_water";
++ }
++ if(key==="faucet_drip"&&["under","unknown"].includes(picked(p,"leak-location")??""))return "leak_needs_help";
++ return null;
++}
+ export function remainingGuideSteps(p:Progress):Step[]{
+  const key=guidanceKey(p);
+  if(p.blocked||p.reopened)return [];
+- if(key==="faucet_flow"&&knownTapScope(p)==="all")return [];
++ if(repairStopReason(p))return [];
+  return guides[key].steps.filter(s=>!p.attempts.some(a=>a.stepId===s.id||a.title===s.title)
++  &&!(s.id==="network-scope"&&knownNetworkScope(p))
++  &&!(s.id==="network-outage"&&knownNetworkScope(p)==="one")
+   &&!(s.id==="fridge-vents"&&!hasCoolingSymptom(p))
+-  &&!(s.id.endsWith("-model")&&p.intake.equipment.trim())
++  &&!(s.id.endsWith("-model")&&(p.intake.equipment.trim()||modelAlreadyUnavailable(p)))
+   &&!(s.id==="tap-scope"&&knownTapScope(p))
+   &&!(s.id==="fridge-door"&&/door (?:closes|shuts) (?:fully|properly|normally)/i.test(p.intake.description)));
+ }
+ export function guidedStep(p:Progress,status:string):Step|null{
+  if(p.blocked||p.reopened||status!=="next_steps_ready")return null;
+- const key=guidanceKey(p);
+- if(key==="internet"&&picked(p,"network-outage")==="outage")return null;
+- if(key==="faucet_flow"&&["all","unknown"].includes(picked(p,"tap-scope")??""))return null;
+- if(key==="faucet_drip"&&["under","unknown"].includes(picked(p,"leak-location")??""))return null;
++ if(repairStopReason(p))return null;
+  return remainingGuideSteps(p)[0]??null;
+ }
+ export function guideOutcome(p:Progress,status:string){
+--- a/src/lib/issues/adaptive-guidance.ts
++++ b/src/lib/issues/adaptive-guidance.ts
+@@ -1,5 +1,5 @@
+ import {repairEvidencePassages,resolveRepairCitations} from "./repair-citations";
+-import {remainingGuideSteps, knownTapScope} from "./repair-guides";
++import {remainingGuideSteps, knownTapScope, knownNetworkScope, repairStopReason, guideOutcome} from "./repair-guides";
+ import {generateText,Output} from "ai";
+ import {google} from "@ai-sdk/google";
+ import {gateway} from "@ai-sdk/gateway";
+@@ -55,10 +55,39 @@
+ export function availableGuideSelectionSchema(p:Progress,evidence:Evidence[]) {
+  const choices=remainingGuideSteps(p),passages=repairEvidencePassages(evidence);
+  return guideSelectionSchema.extend({
++  disposition:choices.some(step=>supportedPassages(step,evidence).length)
++   ? z.enum(["check","clarify","escalate","hazard"])
++   : z.enum(["clarify","escalate","hazard"]),
+   stepId:z.enum(["none",...choices.map(step=>step.id)]),
+   sourceId:z.enum(["none",...evidence.map(source=>source.id)]),
+   passageId:z.enum(["none",...passages.map(passage=>passage.passageId)]),
+  });
++}
++const supportingTerms:Record<string,RegExp>={
++ "fridge-door":/door|seal/i,"fridge-vents":/vent|airflow|air flow/i,
++ "network-outage":/outage/i,"network-reconnect":/reconnect|wi.?fi/i,
++ "tap-outlet":/debris|mineral|deposit|spray|pressure/i,"tap-model":/aerator|model|design/i,
++};
++function supportedPassages(step:Step,evidence:Evidence[]){
++ const source=evidence.find(s=>s.url===step.source?.url),terms=supportingTerms[step.id];
++ if(!source||!terms)return [];
++ return repairEvidencePassages([source]).filter(p=>terms.test(p.quote));
++}
++/** Safe catalogue fallback still needs actual supporting evidence for an action.
++ * Missing-source observations remain observations, without a fabricated citation. */
++export function fallbackGuidance(p:Progress,evidence:Evidence[],at=new Date().toISOString()):AdaptiveGuidance {
++ const exhausted=exhaustedGuidance(p,at);if(exhausted)return exhausted;
++ for(const step of remainingGuideSteps(p)){
++  const passage=supportedPassages(step,evidence)[0],source=evidence.find(s=>s.id===passage?.sourceId);
++  if(step.kind==="try"&&!source)continue;
++  const sources=source&&passage?[{label:source.label,url:source.url,checkedAt:source.checkedAt,quote:passage.quote}]:[];
++  const {source:catalogueSource,...plain}=step;void catalogueSource;
++  return {disposition:source?"check":"clarify",explanation:step.why??guideOutcome({...p,adaptive:undefined},"next_steps_ready").summary,
++   uncertainty:source?"This is general guidance, not a diagnosis or an exact-model manual.":"Record only what you can observe safely. You can prepare a help request at any time.",
++   step:{...plain,...(sources[0]?{source:sources[0]}:{})},sources,createdAt:at};
++ }
++ const contact=p.intake.context==="renter"?"your landlord":"a qualified service professional";
++ return {disposition:"escalate",explanation:`We couldn’t verify guidance for another home check. Your symptoms and previous checks are saved in a request for ${contact}.`,uncertainty:"The cause remains unconfirmed. Review the request before sharing; nothing has been sent.",step:null,sources:[],createdAt:at};
+ }
+ export function acceptGuideSelection(raw:unknown,p:Progress,evidence:Evidence[],at:string):AdaptiveGuidance {
+  const parsed=guideSelectionSchema.parse(raw), passages=repairEvidencePassages(evidence);
+@@ -76,18 +105,28 @@
+  if(selection.disposition==="check"){
+   const ref=resolveRepairCitations([{sourceId:selection.sourceId,passageId:selection.passageId}],passages)[0];
+   const source=evidence.find(s=>s.id===ref.sourceId);
+-  if(!step.source||source?.url!==step.source.url)throw Error("Unsupported citation");
++  if(!step.source||source?.url!==step.source.url||!supportedPassages(step,evidence).some(passage=>passage.passageId===selection.passageId))throw Error("Unsupported citation");
+   sources=[{label:source.label,url:source.url,checkedAt:source.checkedAt,quote:ref.quote}];
+  } else if(step.kind!=="observe"||selection.sourceId||selection.passageId)throw Error("Clarification must be an observation");
+  if(dangerous.test(selection.explanation+" "+selection.uncertainty))throw Error("Unsafe step");
++ const {source:catalogueSource,...plainStep}=step;void catalogueSource;
+  return {explanation:selection.explanation,uncertainty:selection.uncertainty,disposition:selection.disposition,
+-  step:{...step,...(sources[0]?{source:sources[0]}:{})},sources,createdAt:at};
++  step:{...plainStep,...(sources[0]?{source:sources[0]}:{})},sources,createdAt:at};
+ }
+ export function exhaustedGuidance(p:Progress,at=new Date().toISOString()):AdaptiveGuidance|null {
+  if(p.blocked||remainingGuideSteps(p).length)return null;
+  const contact=p.intake.context==="renter"?"your landlord":"a qualified service professional";
+- const explanation=knownTapScope(p)==="all"
++ const stop=repairStopReason(p);
++ const explanation=stop==="provider_outage"
++  ? "You reported a provider outage. Follow your provider’s restoration updates; further device checks are unlikely to help while service is down. Your observations are saved if you need to contact them."
++  : stop==="wider_water_supply"
+   ? "You reported weak flow at more than one tap. Ask your landlord or water provider about a wider supply issue; the observations do not establish a faucet fault."
++  : stop==="cannot_compare_water"
++  ? `We could not establish whether one tap or the wider supply is affected. Your observations are ready for ${contact}; there is no need to take anything apart to ask for help.`
++  : stop==="unsupported_problem"
++  ? `Rezlee does not have a verified walkthrough for this problem. Your reported symptoms are saved in a request for ${contact}. Add the model or any displayed code if you can find it safely.`
++  : stop==="leak_needs_help"
++  ? `The reported leak needs attention from ${contact}. Your saved request includes where you noticed water and what remains uncertain. No replacement part or cause has been identified.`
+   : `The available checks have reached their limit for this issue. Your symptoms and attempted checks are saved in a request for ${contact}. Include the model if you find it, but you do not need it to ask for help.`;
+  return {disposition:"escalate",explanation,uncertainty:"The cause and any warranty coverage remain unconfirmed. Nothing has been sent or booked.",step:null,sources:[],createdAt:at};
+ }
+@@ -106,8 +145,8 @@
+ For escalation or hazard, stepId/sourceId/passageId must be "none". Explain the reason and useful information to provide. No sending, booking or diagnosis. Hazard symptoms stop troubleshooting.
+ Never claim success; the resident confirms resolution. If only wider water supply is affected, explain contacting the landlord/water provider instead of examining a single faucet.
+ Return short, plain language. No markdown, arbitrary URLs, invented choices or citations.`,
+- prompt:JSON.stringify({reported:p.intake,attempts:p.attempts.slice(-16),knownTapScope:knownTapScope(p),
+- permittedSteps:choices,retrieved:evidence.map(s=>({sourceId:s.id,url:s.url,label:s.label,
++ prompt:JSON.stringify({reported:p.intake,attempts:p.attempts.slice(-16),knownTapScope:knownTapScope(p),knownNetworkScope:knownNetworkScope(p),
++ permittedSteps:choices.map(step=>({...step,canCiteCheck:supportedPassages(step,evidence).length>0})),retrieved:evidence.map(s=>({sourceId:s.id,url:s.url,label:s.label,
+  passages:passages.filter(p=>p.sourceId===s.id).map(p=>({passageId:p.passageId,text:p.quote}))}))})};
+  const budget=AbortSignal.timeout(22000);
+  let output:unknown;
+--- a/src/app/api/mobile/v1/repairs/route.ts
++++ b/src/app/api/mobile/v1/repairs/route.ts
+@@ -1,7 +1,7 @@
+ import {after} from "next/server";
+ import {guideOutcome,inferGuide} from "@/lib/issues/repair-guides";
+-import {generateWalkthrough,exhaustedGuidance,guidanceServiceErrorCode} from "@/lib/issues/adaptive-guidance";
+-import {retrieveRepairEvidence} from "@/lib/issues/repair-evidence";
++import {generateWalkthrough,exhaustedGuidance,fallbackGuidance,guidanceServiceErrorCode} from "@/lib/issues/adaptive-guidance";
++import {retrieveRepairEvidence,type Evidence} from "@/lib/issues/repair-evidence";
+ import {reserveAiRequest} from "@/lib/ai/reservation";
+ import { z } from "zod";
+ import { authenticateMobileRequest } from "@/lib/supabase/mobile";
+@@ -34,14 +34,14 @@
+ async function finishGuidance(ctx:Extract<Awaited<ReturnType<typeof context>>,{auth:unknown}>,row:Row){
+  const p=row.guided_progress!;
+  const key=inferGuide({...p.intake,description:[p.intake.description,...p.attempts.map(a=>a.note)].join(" ").slice(0,1500)});let blocked=p.blocked,state:"ready"|"fallback"="fallback",method:"rules"|"ai"="rules";
+- let adaptive:Progress["adaptive"];let evidenceCount=0;
++ let adaptive:Progress["adaptive"];let evidenceCount=0;let evidence:Evidence[]=[];
+  let reason="AI guidance is unavailable. You can use the safe checks below or prepare a help request.";
+  const exhausted=exhaustedGuidance(p);
+  if(exhausted){adaptive=exhausted;state="ready";reason="";}
+  else try{
++  evidence=await retrieveRepairEvidence(p);evidenceCount=evidence.length;
+   const reservation=await reserveAiRequest(ctx.auth.supabase);
+   if(reservation.ok){
+-   const evidence=await retrieveRepairEvidence(p);evidenceCount=evidence.length;
+    adaptive=await generateWalkthrough(p,evidence,new Date().toISOString(),async()=>(await reserveAiRequest(ctx.auth.supabase)).ok);
+    blocked=blocked||adaptive.disposition==="hazard";state="ready";method="ai";reason="";
+   }else reason=reservation.status===429?"AI capacity is busy. Your issue is saved; the available checks still work.":reason;
+@@ -50,6 +50,7 @@
+   const code=["Unsupported citation","Unsafe step","Repeated check","A check requires retrieved evidence"].includes(message)?message:"guidance_failed";
+   console.warn("[repair-guidance] unavailable",{code,evidenceCount,errorName:error instanceof Error?error.name:"unknown",serviceCode:guidanceServiceErrorCode(error),reasonClass:/schema|structured|json|enum/i.test(message)?"structured_output":/credit|balance|quota|limit/i.test(message)?"capacity":/auth|token|credential/i.test(message)?"authentication":/model|provider/i.test(message)?"model_provider":"unknown"}); // No raw prompts, source text or model output.
+  }
++ if(!adaptive)adaptive=fallbackGuidance(p,evidence);
+  const progress:Progress={...p,blocked,adaptive,adaptiveEnabled:true,guideVersion:2,guidance:{...p.guidance!,key,state,method,reason}};
+  const status=blocked?"waiting_on_professional":(adaptive?.disposition==="escalate"||(!adaptive&&!nextStep(progress,row.status)))?(p.intake.context==="renter"?"waiting_on_landlord":"waiting_on_professional"):row.status;
+  const result=await ctx.auth.supabase.from("repair_issues").update({guided_progress:progress,guided_version:row.guided_version+1,status,...(blocked?{urgency:"urgent"}:{})})

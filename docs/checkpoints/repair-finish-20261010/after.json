@@ -1,0 +1,11 @@
+{
+  "checkpointBase": "6a87a96eb047d95bdce240cbd4b0275ba7a78bc9",
+  "capturedAt": "2026-10-11T00:12:13.081214+00:00",
+  "files": {
+    "src/lib/issues/repair-evidence.ts": "57621beec4b3d9cd2705fbfa6368928c796dd26028d9ce5fef83a0b987cc59c4",
+    "src/lib/issues/repair-guides.ts": "895cfa43784884d477b7b52d17ca7daf37122c5bd48b576cb344c220c11d5859",
+    "src/lib/issues/adaptive-guidance.ts": "edf3600c2b3765c1ccbf6dd70ecf05ae69b2640807df3c2a5e82b67607975fec",
+    "src/app/api/mobile/v1/repairs/route.ts": "7b0362bb890677cfe02c821a0139923bc9d43e3921b0ec69718ca71b95ae8814"
+  },
+  "scope": "Four existing repair backend files only; tests/docs/scripts separately tracked."
+}
