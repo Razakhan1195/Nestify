@@ -1,3 +1,5 @@
+> Follow-up: [Live quote validation and fixes](quote-live-validation-2026-10-11.md) supersedes the pending paid-evaluation status below and records the newer staging deployment. Original engineering evidence below is historical.
+
 # Before I spend — one-quote engineering increment
 Date: 2026-10-11. Scope: first step of the approved September 25 AI/entry proposal. This is not sign-off for the entire Before I spend roadmap.
 

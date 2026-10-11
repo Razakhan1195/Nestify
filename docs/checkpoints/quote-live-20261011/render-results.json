@@ -1,0 +1,257 @@
+{
+  "checks": [
+    {
+      "width": 320,
+      "scenario": "empty",
+      "overflow": false,
+      "errors": []
+    },
+    {
+      "width": 320,
+      "scenario": "ready",
+      "overflow": false,
+      "errors": []
+    },
+    {
+      "width": 320,
+      "scenario": "reading",
+      "overflow": false,
+      "errors": []
+    },
+    {
+      "width": 320,
+      "scenario": "failed",
+      "overflow": false,
+      "errors": []
+    },
+    {
+      "width": 320,
+      "scenario": "stale",
+      "overflow": false,
+      "errors": []
+    },
+    {
+      "width": 320,
+      "scenario": "lost-saved",
+      "overflow": false,
+      "errors": []
+    },
+    {
+      "width": 320,
+      "scenario": "lost-pending",
+      "overflow": false,
+      "errors": []
+    },
+    {
+      "width": 320,
+      "scenario": "conflict",
+      "overflow": false,
+      "errors": []
+    },
+    {
+      "width": 320,
+      "scenario": "tenant",
+      "overflow": false,
+      "errors": []
+    },
+    {
+      "width": 320,
+      "scenario": "links",
+      "overflow": false,
+      "errors": []
+    },
+    {
+      "width": 320,
+      "scenario": "failure",
+      "overflow": false,
+      "errors": []
+    },
+    {
+      "width": 320,
+      "scenario": "index",
+      "overflow": false,
+      "errors": []
+    },
+    {
+      "width": 320,
+      "scenario": "uncertain",
+      "overflow": false,
+      "errors": []
+    },
+    {
+      "width": 320,
+      "scenario": "conflicting",
+      "overflow": false,
+      "errors": []
+    },
+    {
+      "width": 390,
+      "scenario": "empty",
+      "overflow": false,
+      "errors": []
+    },
+    {
+      "width": 390,
+      "scenario": "ready",
+      "overflow": false,
+      "errors": []
+    },
+    {
+      "width": 390,
+      "scenario": "reading",
+      "overflow": false,
+      "errors": []
+    },
+    {
+      "width": 390,
+      "scenario": "failed",
+      "overflow": false,
+      "errors": []
+    },
+    {
+      "width": 390,
+      "scenario": "stale",
+      "overflow": false,
+      "errors": []
+    },
+    {
+      "width": 390,
+      "scenario": "lost-saved",
+      "overflow": false,
+      "errors": []
+    },
+    {
+      "width": 390,
+      "scenario": "lost-pending",
+      "overflow": false,
+      "errors": []
+    },
+    {
+      "width": 390,
+      "scenario": "conflict",
+      "overflow": false,
+      "errors": []
+    },
+    {
+      "width": 390,
+      "scenario": "tenant",
+      "overflow": false,
+      "errors": []
+    },
+    {
+      "width": 390,
+      "scenario": "links",
+      "overflow": false,
+      "errors": []
+    },
+    {
+      "width": 390,
+      "scenario": "failure",
+      "overflow": false,
+      "errors": []
+    },
+    {
+      "width": 390,
+      "scenario": "index",
+      "overflow": false,
+      "errors": []
+    },
+    {
+      "width": 390,
+      "scenario": "uncertain",
+      "overflow": false,
+      "errors": []
+    },
+    {
+      "width": 390,
+      "scenario": "conflicting",
+      "overflow": false,
+      "errors": []
+    },
+    {
+      "width": 900,
+      "scenario": "empty",
+      "overflow": false,
+      "errors": []
+    },
+    {
+      "width": 900,
+      "scenario": "ready",
+      "overflow": false,
+      "errors": []
+    },
+    {
+      "width": 900,
+      "scenario": "reading",
+      "overflow": false,
+      "errors": []
+    },
+    {
+      "width": 900,
+      "scenario": "failed",
+      "overflow": false,
+      "errors": []
+    },
+    {
+      "width": 900,
+      "scenario": "stale",
+      "overflow": false,
+      "errors": []
+    },
+    {
+      "width": 900,
+      "scenario": "lost-saved",
+      "overflow": false,
+      "errors": []
+    },
+    {
+      "width": 900,
+      "scenario": "lost-pending",
+      "overflow": false,
+      "errors": []
+    },
+    {
+      "width": 900,
+      "scenario": "conflict",
+      "overflow": false,
+      "errors": []
+    },
+    {
+      "width": 900,
+      "scenario": "tenant",
+      "overflow": false,
+      "errors": []
+    },
+    {
+      "width": 900,
+      "scenario": "links",
+      "overflow": false,
+      "errors": []
+    },
+    {
+      "width": 900,
+      "scenario": "failure",
+      "overflow": false,
+      "errors": []
+    },
+    {
+      "width": 900,
+      "scenario": "index",
+      "overflow": false,
+      "errors": []
+    },
+    {
+      "width": 900,
+      "scenario": "uncertain",
+      "overflow": false,
+      "errors": []
+    },
+    {
+      "width": 900,
+      "scenario": "conflicting",
+      "overflow": false,
+      "errors": []
+    }
+  ],
+  "method": "Actual React Native screen through React Native Web; synthetic API/router/native mocks. Not phone acceptance or live AI evaluation."
+}

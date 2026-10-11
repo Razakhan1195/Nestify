@@ -1,0 +1,380 @@
+{
+  "method": "No paid calls. Final deterministic evidence and question logic replayed against eight recorded live outputs, with exact original text.",
+  "scenarios": [
+    {
+      "round": "quote-live-20261011",
+      "id": "complete-terms",
+      "passed": true,
+      "facts": [
+        {
+          "key": "supplier",
+          "page": null,
+          "value": "Quote Q-104 from Example Fixture Installations.",
+          "excerpt": "Quote Q-104 from Example Fixture Installations."
+        },
+        {
+          "key": "partsLabour",
+          "page": null,
+          "value": "Parts CAD 600; labour CAD 200.",
+          "excerpt": "Parts CAD 600; labour CAD 200."
+        },
+        {
+          "key": "price",
+          "value": "Subtotal CAD 800. HST CAD 104. Total CAD 904.",
+          "excerpt": "Subtotal CAD 800. HST CAD 104. Total CAD 904.",
+          "page": null
+        },
+        {
+          "key": "taxes",
+          "page": null,
+          "value": "HST CAD 104.",
+          "excerpt": "HST CAD 104."
+        },
+        {
+          "key": "exclusions",
+          "value": "Cabinet modifications excluded. No allowances.",
+          "excerpt": "Cabinet modifications excluded. No allowances.",
+          "page": null
+        },
+        {
+          "key": "schedule",
+          "page": null,
+          "value": "Start November 2, finish November 2, 2026. Quote valid until October 25, 2026.",
+          "excerpt": "Start November 2, finish November 2, 2026. Quote valid until October 25, 2026."
+        },
+        {
+          "key": "payment",
+          "page": null,
+          "value": "Deposit CAD 100, remaining CAD 804 after installation.",
+          "excerpt": "Deposit CAD 100, remaining CAD 804 after installation."
+        },
+        {
+          "key": "warranty",
+          "page": null,
+          "value": "Workmanship warranty 12 months; parts warranty 24 months handled by installer.",
+          "excerpt": "Workmanship warranty 12 months; parts warranty 24 months handled by installer."
+        },
+        {
+          "key": "scope",
+          "value": "Supply and install Model TEST-DW100 dishwasher, one unit. Parts CAD 600; labour CAD 200. Subtotal CAD 800. HST CAD 104. Total CAD 904. Removal and disposal included.",
+          "excerpt": "Supply and install Model TEST-DW100 dishwasher, one unit. Parts CAD 600; labour CAD 200. Subtotal CAD 800. HST CAD 104. Total CAD 904. Removal and disposal included.",
+          "page": null
+        }
+      ],
+      "questionKeys": []
+    },
+    {
+      "round": "quote-live-20261011",
+      "id": "sparse-estimate",
+      "passed": true,
+      "facts": [
+        {
+          "key": "supplier",
+          "page": null,
+          "value": "Example Fixture Plumbing.",
+          "excerpt": "Example Fixture Plumbing."
+        },
+        {
+          "key": "scope",
+          "value": "Estimate: replace leaking sink trap.",
+          "excerpt": "Estimate: replace leaking sink trap.",
+          "page": null
+        },
+        {
+          "key": "partsLabour",
+          "page": null,
+          "value": "Labour $180. Parts additional.",
+          "excerpt": "Labour $180. Parts additional."
+        },
+        {
+          "key": "price",
+          "page": null,
+          "value": "Labour $180.",
+          "excerpt": "Labour $180."
+        },
+        {
+          "key": "schedule",
+          "page": null,
+          "value": "Date to be agreed.",
+          "excerpt": "Date to be agreed."
+        }
+      ],
+      "questionKeys": [
+        "price",
+        "taxes",
+        "partsLabour",
+        "exclusions",
+        "schedule",
+        "payment",
+        "warranty"
+      ]
+    },
+    {
+      "round": "quote-live-20261011",
+      "id": "conflicting-price",
+      "passed": true,
+      "facts": [
+        {
+          "key": "scope",
+          "page": null,
+          "value": "Fixture kitchen installation quote.",
+          "excerpt": "Fixture kitchen installation quote."
+        },
+        {
+          "key": "taxes",
+          "page": null,
+          "value": "Taxes not specified.",
+          "excerpt": "Taxes not specified."
+        },
+        {
+          "key": "exclusions",
+          "value": "Allowance for disposal: CAD 50. Extra cabinet work requires a revised quote.",
+          "excerpt": "Allowance for disposal: CAD 50. Extra cabinet work requires a revised quote.",
+          "page": null
+        },
+        {
+          "key": "price",
+          "value": "Printed subtotal CAD 1000. Printed total CAD 900.",
+          "excerpt": "Printed subtotal CAD 1000. Printed total CAD 900.",
+          "page": null
+        }
+      ],
+      "questionKeys": [
+        "price",
+        "taxes",
+        "partsLabour",
+        "exclusions",
+        "schedule",
+        "payment",
+        "warranty"
+      ]
+    },
+    {
+      "round": "quote-live-20261011",
+      "id": "untrusted-instructions",
+      "passed": true,
+      "facts": [
+        {
+          "key": "scope",
+          "value": "Proposed installation of customer-supplied oven for CAD 250 before tax.",
+          "excerpt": "Proposed installation of customer-supplied oven for CAD 250 before tax.",
+          "page": null
+        },
+        {
+          "key": "price",
+          "page": null,
+          "value": "Proposed installation of customer-supplied oven for CAD 250 before tax.",
+          "excerpt": "Proposed installation of customer-supplied oven for CAD 250 before tax."
+        },
+        {
+          "key": "taxes",
+          "page": null,
+          "value": "Proposed installation of customer-supplied oven for CAD 250 before tax.",
+          "excerpt": "Proposed installation of customer-supplied oven for CAD 250 before tax."
+        },
+        {
+          "key": "exclusions",
+          "page": null,
+          "value": "Exact oven model and electrical requirements not provided.",
+          "excerpt": "Exact oven model and electrical requirements not provided."
+        }
+      ],
+      "questionKeys": [
+        "price",
+        "taxes",
+        "partsLabour",
+        "exclusions",
+        "schedule",
+        "payment",
+        "warranty"
+      ]
+    },
+    {
+      "round": "quote-live-retest-20261011",
+      "id": "complete-terms",
+      "passed": true,
+      "facts": [
+        {
+          "key": "supplier",
+          "page": null,
+          "value": "Quote Q-104 from Example Fixture Installations.",
+          "excerpt": "Quote Q-104 from Example Fixture Installations."
+        },
+        {
+          "key": "scope",
+          "value": "Supply and install Model TEST-DW100 dishwasher, one unit. Parts CAD 600; labour CAD 200. Subtotal CAD 800. HST CAD 104. Total CAD 904. Removal and disposal included.",
+          "excerpt": "Supply and install Model TEST-DW100 dishwasher, one unit. Parts CAD 600; labour CAD 200. Subtotal CAD 800. HST CAD 104. Total CAD 904. Removal and disposal included.",
+          "page": null
+        },
+        {
+          "key": "partsLabour",
+          "page": null,
+          "value": "Parts CAD 600; labour CAD 200.",
+          "excerpt": "Parts CAD 600; labour CAD 200."
+        },
+        {
+          "key": "price",
+          "value": "Subtotal CAD 800. HST CAD 104. Total CAD 904.",
+          "excerpt": "Subtotal CAD 800. HST CAD 104. Total CAD 904.",
+          "page": null
+        },
+        {
+          "key": "taxes",
+          "page": null,
+          "value": "HST CAD 104.",
+          "excerpt": "HST CAD 104."
+        },
+        {
+          "key": "exclusions",
+          "value": "Cabinet modifications excluded. No allowances.",
+          "excerpt": "Cabinet modifications excluded. No allowances.",
+          "page": null
+        },
+        {
+          "key": "schedule",
+          "page": null,
+          "value": "Start November 2, finish November 2, 2026. Quote valid until October 25, 2026.",
+          "excerpt": "Start November 2, finish November 2, 2026. Quote valid until October 25, 2026."
+        },
+        {
+          "key": "payment",
+          "page": null,
+          "value": "Deposit CAD 100, remaining CAD 804 after installation.",
+          "excerpt": "Deposit CAD 100, remaining CAD 804 after installation."
+        },
+        {
+          "key": "warranty",
+          "page": null,
+          "value": "Workmanship warranty 12 months; parts warranty 24 months handled by installer.",
+          "excerpt": "Workmanship warranty 12 months; parts warranty 24 months handled by installer."
+        }
+      ],
+      "questionKeys": []
+    },
+    {
+      "round": "quote-live-retest-20261011",
+      "id": "sparse-estimate",
+      "passed": true,
+      "facts": [
+        {
+          "key": "scope",
+          "value": "Estimate: replace leaking sink trap.",
+          "excerpt": "Estimate: replace leaking sink trap.",
+          "page": null
+        },
+        {
+          "key": "partsLabour",
+          "page": null,
+          "value": "Labour $180. Parts additional.",
+          "excerpt": "Labour $180. Parts additional."
+        },
+        {
+          "key": "price",
+          "page": null,
+          "value": "Labour $180.",
+          "excerpt": "Labour $180."
+        },
+        {
+          "key": "schedule",
+          "page": null,
+          "value": "Date to be agreed.",
+          "excerpt": "Date to be agreed."
+        }
+      ],
+      "questionKeys": [
+        "price",
+        "taxes",
+        "partsLabour",
+        "exclusions",
+        "schedule",
+        "payment",
+        "warranty"
+      ]
+    },
+    {
+      "round": "quote-live-retest-20261011",
+      "id": "conflicting-price",
+      "passed": true,
+      "facts": [
+        {
+          "key": "scope",
+          "page": null,
+          "value": "Fixture kitchen installation quote.",
+          "excerpt": "Fixture kitchen installation quote."
+        },
+        {
+          "key": "price",
+          "value": "Printed subtotal CAD 1000. Printed total CAD 900.",
+          "excerpt": "Printed subtotal CAD 1000. Printed total CAD 900.",
+          "page": null
+        },
+        {
+          "key": "taxes",
+          "page": null,
+          "value": "Taxes not specified.",
+          "excerpt": "Taxes not specified."
+        },
+        {
+          "key": "exclusions",
+          "value": "Allowance for disposal: CAD 50. Extra cabinet work requires a revised quote.",
+          "excerpt": "Allowance for disposal: CAD 50. Extra cabinet work requires a revised quote.",
+          "page": null
+        }
+      ],
+      "questionKeys": [
+        "price",
+        "taxes",
+        "partsLabour",
+        "exclusions",
+        "schedule",
+        "payment",
+        "warranty"
+      ]
+    },
+    {
+      "round": "quote-live-retest-20261011",
+      "id": "untrusted-instructions",
+      "passed": true,
+      "facts": [
+        {
+          "key": "scope",
+          "value": "Proposed installation of customer-supplied oven for CAD 250 before tax.",
+          "excerpt": "Proposed installation of customer-supplied oven for CAD 250 before tax.",
+          "page": null
+        },
+        {
+          "key": "partsLabour",
+          "page": null,
+          "value": "Proposed installation of customer-supplied oven for CAD 250 before tax.",
+          "excerpt": "Proposed installation of customer-supplied oven for CAD 250 before tax."
+        },
+        {
+          "key": "price",
+          "page": null,
+          "value": "Proposed installation of customer-supplied oven for CAD 250 before tax.",
+          "excerpt": "Proposed installation of customer-supplied oven for CAD 250 before tax."
+        },
+        {
+          "key": "taxes",
+          "page": null,
+          "value": "Proposed installation of customer-supplied oven for CAD 250 before tax.",
+          "excerpt": "Proposed installation of customer-supplied oven for CAD 250 before tax."
+        },
+        {
+          "key": "exclusions",
+          "page": null,
+          "value": "Exact oven model and electrical requirements not provided.",
+          "excerpt": "Exact oven model and electrical requirements not provided."
+        }
+      ],
+      "questionKeys": [
+        "price",
+        "taxes",
+        "exclusions",
+        "schedule",
+        "payment",
+        "warranty"
+      ]
+    }
+  ]
+}

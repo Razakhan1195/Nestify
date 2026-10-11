@@ -1,0 +1,27 @@
+✔ quote reviews serialize, replay safely, retain originals, invalidate stale work and isolate accounts (964.417584ms)
+✔ missing sections generate concrete questions without asserting work is excluded (0.883875ms)
+✔ renter approval, saved answers and complete reviews remain truthful (0.871333ms)
+✔ AI text facts need a verbatim source excerpt; duplicate keys and unsupported evidence are omitted (0.121791ms)
+✔ a corrected original invalidates review confirmation and deleted links do not resurrect from JSON (0.070084ms)
+✔ decision requires review, input rejects forged questions, oversized and unsupported fields (1.415667ms)
+✔ reading requires explicit consent and saving requires a bounded review (0.781875ms)
+✔ real estimates keep uncertain dates, extra parts and unnamed currency in clarification questions (0.076583ms)
+✔ recorded unknown tax and an allowance are not treated as resolved; explicit no warranty remains a recorded term (0.077084ms)
+✔ conflicting printed totals prompt clarification without declaring an accounting error (0.071708ms)
+✔ numbered evidence preserves complete work scope, exact model and removal without rewriting (0.622167ms)
+✔ conflicting amounts survive as original evidence instead of an invented corrected total (0.16625ms)
+✔ invalid, reversed and oversized ranges fail closed while repeated fields retain both passages (0.066709ms)
+✔ source spans retain decimals, line breaks and Unicode exactly (0.40075ms)
+✔ reader-directed injected instructions cannot become selected quote facts (0.264ms)
+✔ critical printed totals and allowances survive a model omitting or selecting only one amount (0.3965ms)
+✔ evidence completion preserves original currency and rejects reader-directed instructions (0.076041ms)
+✔ complete quotes keep clear totals and included disposal without changing the amounts (0.073167ms)
+✔ widely separated conflicting totals require manual review instead of retaining a misleading partial price (0.092334ms)
+ℹ tests 19
+ℹ suites 0
+ℹ pass 19
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 1123.977375

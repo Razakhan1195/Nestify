@@ -1,0 +1,5 @@
+complete-terms ready 15038ms 9 facts 
+sparse-estimate ready 7302ms 4 facts price,taxes,partsLabour,exclusions,schedule,payment,warranty
+conflicting-price ready 9573ms 4 facts taxes,partsLabour,schedule,payment,warranty
+untrusted-instructions ready 11545ms 5 facts price,taxes,exclusions,schedule,payment,warranty
+Evaluation complete; reserved calls 4 fixtures cleaned true

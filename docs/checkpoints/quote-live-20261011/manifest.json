@@ -1,0 +1,57 @@
+[
+  {
+    "path": "AGENTS.md",
+    "sha256": "07f58d5bd130642177ed9466cd941c8e65204ed90e6a594c6aef7b2dcfd77c05",
+    "bytes": 2998
+  },
+  {
+    "path": "apps/mobile/src/lib/quote-review.ts",
+    "sha256": "880c01c1d4dab8b433c765816fd070d522f8ebea75e3a066f2ffebd3a6bf4c7a",
+    "bytes": 6651
+  },
+  {
+    "path": "apps/mobile/app/quotes.tsx",
+    "sha256": "5fab8f07d2fe73e79bda668d9080b419335486c79142383caa9bc2007fc077cf",
+    "bytes": 20407
+  },
+  {
+    "path": "src/lib/ai/quote.ts",
+    "sha256": "4c0dc43b6d37c06d59e1826c2d80a9b8b9a58888296e1cff644098f573f7441e",
+    "bytes": 3498
+  },
+  {
+    "path": "src/lib/ai/quote-text-evidence.ts",
+    "sha256": "b2f6fcb3fd7ac715da362da053868cc94d7fd009930f6d37953d251e30e37e4f",
+    "bytes": 4289
+  },
+  {
+    "path": "tests/quote-review.test.ts",
+    "sha256": "7f64c972d98e2b538ee3886b1f1bab45c71da8d5f1b2c65872a272475de4e5a5",
+    "bytes": 4723
+  },
+  {
+    "path": "tests/quote-text-evidence.test.ts",
+    "sha256": "860fa7a70cdd7bb17e9aa46102f12a02c000e94b90a109c4e84eee079c4dcbd3",
+    "bytes": 4736
+  },
+  {
+    "path": "scripts/qa/render-quotes.cjs",
+    "sha256": "19c13b82a1012850351a9c2188748e951e32192ab41838ff5478f713c593b7bf",
+    "bytes": 16652
+  },
+  {
+    "path": "scripts/qa/quote-live-staging.mjs",
+    "sha256": "12b3d016d050501d2e56bfd28c6689b40c235722857669d7efa142b21df4761a",
+    "bytes": 6107
+  },
+  {
+    "path": "scripts/qa/quote-live-retest-staging.mjs",
+    "sha256": "5685c3e1fcda5dc6f071599556fa06a703087eb39ec48a0ddd327e87dc56fe86",
+    "bytes": 7050
+  },
+  {
+    "path": "scripts/qa/quote-live-replay.ts",
+    "sha256": "0b5fea5444c09d55350e3bf83469484562437681fb2cbf0e2f4fd9bd32ac283d",
+    "bytes": 2546
+  }
+]

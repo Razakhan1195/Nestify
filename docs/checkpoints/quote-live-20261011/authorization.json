@@ -1,0 +1,8 @@
+{
+  "approvedBy": "user in current chat",
+  "maximumCalls": 4,
+  "totalBudgetDollars": 1,
+  "date": "2026-10-11",
+  "automaticRetries": 0,
+  "customerData": false
+}

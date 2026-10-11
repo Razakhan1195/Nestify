@@ -1,0 +1,7 @@
+{
+  "reason": "Manual verification of defects found in the four approved customer scenarios, after code fixes. Same four cases and original $1 total budget; no new use cases or automatic retries.",
+  "additionalCallsMaximum": 4,
+  "totalCallsMaximum": 8,
+  "conservativeTotalTokenCostBoundUsd": 0.112,
+  "originalBudgetDollars": 1
+}

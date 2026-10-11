@@ -21,3 +21,6 @@ Use strict TypeScript. Keep Supabase RLS and server-side ownership checks intact
 ## Launch verification
 
 Run lint, typecheck, build and regression tests. Inspect desktop/mobile browser layouts and critical workflows when credentials are available. Report unavailable checks honestly. Do not claim live RLS, email, OAuth, provider or AI validation without actually testing them. No invented testimonials, security certifications, pricing or legal protections. Do not deploy or merge automatically without explicit authorization.
+
+## Customer-scenario validation
+Build and test around real household jobs and the useful next decision or action. Select relevant owner/renter situations, incomplete or conflicting evidence, corrections, permissions and interrupted/retried work. Test meaningful edge cases for the journey instead of treating a successful API response or happy-path screenshot as customer acceptance. Record what was actually observed and what still needs a real device or customer.

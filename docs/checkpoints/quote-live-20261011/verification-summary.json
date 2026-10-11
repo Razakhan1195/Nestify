@@ -1,0 +1,18 @@
+{
+  "fullTests": 877,
+  "failed": 0,
+  "hostedChecks": 30,
+  "renderedScenarios": 42,
+  "liveCalls": 8,
+  "sameApprovedScenarios": 4,
+  "finalLiveOutputReplays": 8,
+  "approvedTotalBudgetDollars": 1,
+  "conservativeEstimatedTokenBoundUsd": 0.112,
+  "billedCostMeasured": false,
+  "paidProviderCalls": 0,
+  "customerDataUsed": false,
+  "fixturesCleaned": true,
+  "physicalPhoneAcceptance": false,
+  "photoPdfAcceptance": false,
+  "productionReleased": false
+}
