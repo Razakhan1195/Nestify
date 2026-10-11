@@ -1,0 +1,24 @@
+{
+  "regressionTests": 865,
+  "regressionFailed": 0,
+  "quoteSuites": 7,
+  "hostedChecks": 30,
+  "renderedScenarios": 36,
+  "renderWidths": [
+    320,
+    390,
+    900
+  ],
+  "rootTypes": true,
+  "mobileTypes": true,
+  "scopedLint": true,
+  "nextBuild": true,
+  "iosAndroidExports": true,
+  "physicalAcceptance": false,
+  "liveAiEvaluation": false,
+  "paidAiCalls": 0,
+  "paidProviderCalls": 0,
+  "outgoingMessages": 0,
+  "productionRelease": false,
+  "nextGate": "Approve bounded live synthetic quote-reading evaluation; cases prepared in scripts/qa/quote-live-cases.json."
+}

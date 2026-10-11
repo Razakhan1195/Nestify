@@ -1,0 +1,31 @@
+PASS unauthenticated denied
+PASS saved quote opens with its source and empty review
+PASS foreign household cannot read quote
+PASS review required before planning to proceed
+PASS read requires consent before any model allowance
+PASS foreign source cannot be saved
+PASS wrong home rejected
+PASS foreign linked invoice rejected
+PASS review and answers saved
+PASS private retry payload omitted
+PASS same request replays without duplicate
+PASS altered retry refused
+PASS fresh request resumes saved answers
+PASS two-device edits produce one success and one conflict
+PASS invoice linked with recorded decision
+PASS quote appears in saved review list
+PASS hosted RLS hides private review
+PASS direct writes denied
+PASS original correction invalidates review
+PASS old-source save rejected
+PASS corrected source can be reviewed and saved
+PASS source freshness resets only after reviewed save
+PASS durable read claim saved
+PASS durable read replay does not claim twice
+PASS foreign account cannot complete worker
+PASS worker result persists for return visit
+PASS cancelled read returns to manual review
+PASS late worker cannot overwrite cancellation
+PASS deleted invoice is unlinked
+PASS source deletion removes review
+PASS 30 authenticated staging quote checks; disposable fixtures cleaned.

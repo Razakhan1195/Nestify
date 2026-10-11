@@ -1,0 +1,110 @@
+[
+  {
+    "path": "apps/mobile/app/vault-record.tsx",
+    "beforeSha256": "06f10aa90fcb1365ebf6844b9eff71f2bd0c8842f85719535c6cfbf4567bb5df",
+    "afterSha256": "e953debd6208290b3f2ea4e8f9a5d2639031ee760f58d0916ae7e96bf3088ee7",
+    "bytes": 24978
+  },
+  {
+    "path": "apps/mobile/app/(tabs)/vault.tsx",
+    "beforeSha256": "d7a46c74fcd32f973260746caa53d5478fda05dc32bb26654bf79236c1041c02",
+    "afterSha256": "db4aa80964e39b774005f57e7c5cba992e50f36e5a37bbc3fe313ecb0c6e1d97",
+    "bytes": 11225
+  },
+  {
+    "path": "apps/mobile/app/(tabs)/care.tsx",
+    "beforeSha256": "651aa54455e68b5533c298596f28f7d5c76f9bba6292db20c03c23dc337558ca",
+    "afterSha256": "4324944f8316c856d910f15a2db64685de8801f0f825b082160ff40a01e77fe3",
+    "bytes": 15028
+  },
+  {
+    "path": "apps/mobile/app/repairs.tsx",
+    "beforeSha256": "66d2195d9bb41d1d191710381dc4aa678cc0531aa1620b67b8636f9c6d18d5ea",
+    "afterSha256": "bd47e9a46b59091cc394f4ccf59012b75b531af384b05ebc66200c2615bb49dd",
+    "bytes": 22097
+  },
+  {
+    "path": "apps/mobile/app/inventory-item.tsx",
+    "beforeSha256": "4de02b8bc5fccb921370ea7a6c45929137d873aa0494c20937835625f04f0719",
+    "afterSha256": "d3939c966c4cb5251b7fe81df494563732f4b2a41bbe2e964155cc44bed16a31",
+    "bytes": 13572
+  },
+  {
+    "path": "apps/mobile/app/assistant.tsx",
+    "beforeSha256": "c3ddf1bc2e89cff2ac61b472b2515713f9e4ee7552dca4c8a1f4c19e7fa46fd4",
+    "afterSha256": "b1606b24fc82c8a4e86739126b8c4a5ca4d1cba2c79e3468f20549ca698fb690",
+    "bytes": 12543
+  },
+  {
+    "path": "apps/mobile/app/quotes.tsx",
+    "beforeSha256": null,
+    "afterSha256": "e9e9b1ddf1943ef8be7018fc89c9a5760f6983c15ec6c32c7ae384e46d05e8ba",
+    "bytes": 20414
+  },
+  {
+    "path": "apps/mobile/src/lib/quote-review.ts",
+    "beforeSha256": null,
+    "afterSha256": "a3d6f54edf181971247f91fb9ed4c264776c88c6d9b30bb45c630963d2fe5850",
+    "bytes": 4739
+  },
+  {
+    "path": "apps/mobile/src/lib/quote-data.ts",
+    "beforeSha256": null,
+    "afterSha256": "d21b638bc67fe0a5a435d3fb80c1e9b0156ae54e8b46bd5c5ae30c3c62f3616b",
+    "bytes": 2953
+  },
+  {
+    "path": "src/lib/product/quote-input.ts",
+    "beforeSha256": null,
+    "afterSha256": "cd9d84178eae6e0f13cb3f89d4fa74a7338411d2db7e974e360719d1cacec197",
+    "bytes": 1421
+  },
+  {
+    "path": "src/lib/ai/quote.ts",
+    "beforeSha256": null,
+    "afterSha256": "09edc3a092abc955cd609b15df855796a55fb8b441de1e35522597759a0d7857",
+    "bytes": 2079
+  },
+  {
+    "path": "src/app/api/mobile/v1/quotes/route.ts",
+    "beforeSha256": null,
+    "afterSha256": "25b89298f7e44ec3250e269eeb0e513831cfe1e1d97ecf4c4b3a0483653d049f",
+    "bytes": 8002
+  },
+  {
+    "path": "supabase/migrations/202610110004_quote_reviews.sql",
+    "beforeSha256": null,
+    "afterSha256": "fe887518f44f5fda6c32b89fb14f8b87298152788625ffd687873ffa4a089f24",
+    "bytes": 7027
+  },
+  {
+    "path": "tests/quote-review.test.ts",
+    "beforeSha256": null,
+    "afterSha256": "b6ee913bc3580771307f630a1bb93370df00743ff8b01c0b44ad56de261b2852",
+    "bytes": 3076
+  },
+  {
+    "path": "tests/quote-review-database.test.ts",
+    "beforeSha256": null,
+    "afterSha256": "896e24f8810cd018e094b06c068ffa91b7210b66f25c9add68a5fddde475eb27",
+    "bytes": 5372
+  },
+  {
+    "path": "scripts/qa/render-quotes.cjs",
+    "beforeSha256": null,
+    "afterSha256": "95a52188e251f0b44d8729856a011b3e9b9c19fac0f4d167b429b4195606fb28",
+    "bytes": 15745
+  },
+  {
+    "path": "scripts/qa/quote-review-staging.mjs",
+    "beforeSha256": null,
+    "afterSha256": "1ffd81eed0318fc2f23fcc55faa26ecbc6ff39d6e0a8004a87b1682c9431e533",
+    "bytes": 10161
+  },
+  {
+    "path": "scripts/qa/quote-live-cases.json",
+    "beforeSha256": null,
+    "afterSha256": "744b1a8cf6f9e8daa6e2eab7095d1675f28f1106c94374bad058f50695a99ba9",
+    "bytes": 2497
+  }
+]

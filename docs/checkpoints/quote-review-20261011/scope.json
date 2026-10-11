@@ -1,0 +1,20 @@
+[
+  "apps/mobile/app/vault-record.tsx",
+  "apps/mobile/app/(tabs)/vault.tsx",
+  "apps/mobile/app/(tabs)/care.tsx",
+  "apps/mobile/app/repairs.tsx",
+  "apps/mobile/app/inventory-item.tsx",
+  "apps/mobile/app/assistant.tsx",
+  "apps/mobile/app/quotes.tsx",
+  "apps/mobile/src/lib/quote-review.ts",
+  "apps/mobile/src/lib/quote-data.ts",
+  "src/lib/product/quote-input.ts",
+  "src/lib/ai/quote.ts",
+  "src/app/api/mobile/v1/quotes/route.ts",
+  "supabase/migrations/202610110004_quote_reviews.sql",
+  "tests/quote-review.test.ts",
+  "tests/quote-review-database.test.ts",
+  "scripts/qa/render-quotes.cjs",
+  "scripts/qa/quote-review-staging.mjs",
+  "scripts/qa/quote-live-cases.json"
+]

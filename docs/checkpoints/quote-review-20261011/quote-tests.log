@@ -1,0 +1,15 @@
+✔ quote reviews serialize, replay safely, retain originals, invalidate stale work and isolate accounts (1001.468084ms)
+✔ missing sections generate concrete questions without asserting work is excluded (0.38725ms)
+✔ renter approval, saved answers and complete reviews remain truthful (0.317042ms)
+✔ AI text facts need a verbatim source excerpt; duplicate keys and unsupported evidence are omitted (0.099792ms)
+✔ a corrected original invalidates review confirmation and deleted links do not resurrect from JSON (0.054875ms)
+✔ decision requires review, input rejects forged questions, oversized and unsupported fields (1.310333ms)
+✔ reading requires explicit consent and saving requires a bounded review (0.711417ms)
+ℹ tests 7
+ℹ suites 0
+ℹ pass 7
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 1157.927375

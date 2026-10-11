@@ -1,0 +1,12 @@
+{
+  "head": "02f092d12f2e3a8be0ca279dd624f9a9852ed745",
+  "files": {
+    "apps/mobile/app/vault-record.tsx": "06f10aa90fcb1365ebf6844b9eff71f2bd0c8842f85719535c6cfbf4567bb5df",
+    "apps/mobile/app/(tabs)/vault.tsx": "d7a46c74fcd32f973260746caa53d5478fda05dc32bb26654bf79236c1041c02",
+    "apps/mobile/app/(tabs)/care.tsx": "651aa54455e68b5533c298596f28f7d5c76f9bba6292db20c03c23dc337558ca",
+    "apps/mobile/app/repairs.tsx": "66d2195d9bb41d1d191710381dc4aa678cc0531aa1620b67b8636f9c6d18d5ea",
+    "apps/mobile/app/inventory-item.tsx": "4de02b8bc5fccb921370ea7a6c45929137d873aa0494c20937835625f04f0719",
+    "apps/mobile/app/assistant.tsx": "c3ddf1bc2e89cff2ac61b472b2515713f9e4ee7552dca4c8a1f4c19e7fa46fd4",
+    "src/lib/product/vault-deletion.ts": "1c9b3033d6cd1e2acfd6f5d6159284517d214740f2382f2b7d1ff0b3931dbf55"
+  }
+}
