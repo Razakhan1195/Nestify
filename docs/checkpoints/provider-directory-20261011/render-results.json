@@ -1,0 +1,165 @@
+{
+  "checks": [
+    {
+      "name": "finder-alectra-320",
+      "ok": true
+    },
+    {
+      "name": "rogers-coming-soon-320",
+      "ok": true
+    },
+    {
+      "name": "no-match-320",
+      "ok": true
+    },
+    {
+      "name": "finder-alectra-390",
+      "ok": true
+    },
+    {
+      "name": "rogers-coming-soon-390",
+      "ok": true
+    },
+    {
+      "name": "no-match-390",
+      "ok": true
+    },
+    {
+      "name": "finder-alectra-820",
+      "ok": true
+    },
+    {
+      "name": "rogers-coming-soon-820",
+      "ok": true
+    },
+    {
+      "name": "no-match-820",
+      "ok": true
+    },
+    {
+      "name": "deck-Bell",
+      "ok": true
+    },
+    {
+      "name": "hosted-Telus SmartHome Security",
+      "ok": true
+    },
+    {
+      "name": "hosted-Cogeco",
+      "ok": true
+    },
+    {
+      "name": "hosted-Koodo",
+      "ok": true
+    },
+    {
+      "name": "hosted-Square One",
+      "ok": true
+    },
+    {
+      "name": "hosted-Aviva",
+      "ok": true
+    },
+    {
+      "name": "hosted-City of Toronto Property Tax",
+      "ok": true
+    },
+    {
+      "name": "deck-City-of-Toronto-Water",
+      "ok": true
+    },
+    {
+      "name": "hosted-a.p.i. ALARM",
+      "ok": true
+    },
+    {
+      "name": "hosted-Enercare",
+      "ok": true
+    },
+    {
+      "name": "deck-Intact",
+      "ok": true
+    },
+    {
+      "name": "hosted-Sonnet",
+      "ok": true
+    },
+    {
+      "name": "hosted-Stouffville Water",
+      "ok": true
+    },
+    {
+      "name": "hosted-Fido",
+      "ok": true
+    },
+    {
+      "name": "hosted-Freedom Mobile",
+      "ok": true
+    },
+    {
+      "name": "hosted-Region of Durham Water",
+      "ok": true
+    },
+    {
+      "name": "hosted-TekSavvy",
+      "ok": true
+    },
+    {
+      "name": "hosted-Waste Connections",
+      "ok": true
+    },
+    {
+      "name": "hosted-Richmond Hill Water",
+      "ok": true
+    },
+    {
+      "name": "hosted-GFL Environmental",
+      "ok": true
+    },
+    {
+      "name": "hosted-The Co-operators",
+      "ok": true
+    },
+    {
+      "name": "hosted-East Gwillimbury Water",
+      "ok": true
+    },
+    {
+      "name": "hosted-City of Mississauga Property Tax",
+      "ok": true
+    },
+    {
+      "name": "hosted-TD Insurance",
+      "ok": true
+    },
+    {
+      "name": "hosted-Virgin Plus",
+      "ok": true
+    },
+    {
+      "name": "hosted-Reliance Home Comfort",
+      "ok": true
+    },
+    {
+      "name": "hosted-Telus",
+      "ok": true
+    },
+    {
+      "name": "hosted-Region of Peel Water",
+      "ok": true
+    },
+    {
+      "name": "hosted-Georgina Water",
+      "ok": true
+    },
+    {
+      "name": "green-button-handoff",
+      "ok": true
+    },
+    {
+      "name": "paused-deep-link",
+      "ok": true
+    }
+  ],
+  "nativeDeviceTested": false
+}

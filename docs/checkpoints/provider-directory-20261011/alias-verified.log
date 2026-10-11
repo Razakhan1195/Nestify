@@ -1,0 +1,42 @@
+Vercel CLI 63.1.2
+Fetching deployment "staging.rezlee.com" in razakhan1195s-projects
+> Fetched deployment "nestify-mte7i2zb0-razakhan1195s-projects.vercel.app" in razakhan1195s-projects [484ms]
+
+  General
+
+    id		dpl_Efs5HL8L3J4525PyqTVuzKuRGzH1
+    name	nestify
+    target	preview
+    status	● Ready
+    url		https://nestify-mte7i2zb0-razakhan1195s-projects.vercel.app
+    created	Sun Oct 11 2026 17:33:10 GMT-0400 (Eastern Daylight Time) [3m ago]
+
+
+  Build Machine
+
+    requested build machine standard
+    actual assigned cores   4 vCPU (actual assignment)
+    memory                  8192 MiB
+    selection type          elastic
+    selection source        elastic-algorithm
+
+
+  Duration
+
+    build duration	44s
+    post-build duration	36s
+    billable duration	2m
+    CPU Minutes Usage	8 minutes (2m x 4vCPU)
+
+
+  Builds
+
+    ┌ .        [0ms]
+    ├── λ _middleware (125.4KB) [iad1]
+    ├── λ index (11.38MB) [iad1]
+    ├── λ _not-found (11.38MB) [iad1]
+    ├── λ _not-found.rsc (11.38MB) [iad1]
+    ├── λ admin (11.38MB) [iad1]
+    └── 348 output items hidden
+    
+

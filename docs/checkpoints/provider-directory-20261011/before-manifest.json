@@ -1,0 +1,20 @@
+{
+  "src/lib/deck/gta-launch.ts": "40e7dbbb369ba19c4d566bc4ec262341ad695d8313feeb041c1a265be3352fa4",
+  "src/lib/deck/gta-provider-routing.json": "59258ba89606f43ff030c9dd9346dffd064f8e6cd378e1cb2ad000a89b1e0ed2",
+  "src/lib/deck/canadian-provider-catalog.json": "76a25fb06a314cb2305475cf35ba3fc726325c23fc1450cdb6a535f4712e25ec",
+  "src/lib/deck/canadian-bill-task.ts": "711fc1328917bf665e3e4d12fe320c91309cdbc34d514a8f7ca46f8e6ccea6e2",
+  "src/lib/deck/provider-config.ts": "6604c2a8249985e81cb7eff47cbf7492504e4a9e32bfb8e068db429757da476b",
+  "src/lib/deck/hosted-auth.ts": "89f4641e1d8bac8ca9e3501e4a489330338bd1790d6dc9f5907a942dde169c49",
+  "src/app/api/mobile/v1/providers/route.ts": "b032f3d20afe3451bd714ce55935dd542eb84d7a8ec1c66516dd1554670a529e",
+  "src/app/api/mobile/v1/providers/[id]/route.ts": "91f493c09f0a3cc4ed8d5b075580ee3ba6cee316af00754f9db9e855dad43637",
+  "apps/mobile/src/lib/provider-data.ts": "b90ee6a9ada9ee94b5f7d85cef91915c082000bc4c721dc00fbee3b3eb643645",
+  "apps/mobile/src/components/ProviderConnectionChoices.tsx": "ff67dfedbcbe423b322b25586a8a2c5e5bb8cb11ea59f6c63047a2db4d73b2c9",
+  "apps/mobile/app/provider/connect.tsx": "cf78528f48930c9a80b8d123dbe5c6b191be84538ecc1b4d7d9a9af19cbec141",
+  "apps/mobile/app/provider/deck.tsx": "0506ec6453bee443be0dab11e6e6b76d3217324f76aaf6429c1cdd9f12881240",
+  "apps/mobile/app/provider/ezgb.tsx": "da33336b5b06cc05ae876018edf9147410752cbb91671c7b202463bd87cb2cca",
+  "apps/mobile/app/provider/[id].tsx": "38ac7eb209868ebb7c4fcb2dc711d5fdee93aa4359dba80ffdd5638aa69b6142",
+  "tests/deck-hosted-runtime.test.ts": "57b26029c4d60ac5e71abbe22c0966ff360d1f4e58c4762c394c560fe7bbd4ab",
+  "src/lib/provider-registry.ts": "1248b41fe1c534b57cd4b70ca4ad645664136879d24edd433a0a89bb81749daa",
+  "src/components/providers/provider-registry-picker.tsx": "f5dc3adbff9b944b583c725d1df4c6e7612930bbd703ab0703bc1b7a8f4646e4",
+  "tests/gta-provider-scope.test.ts": "8ff386b5df21f1193959b929bc1c02fb931c68867df42c6c8189f5ead61d908a"
+}

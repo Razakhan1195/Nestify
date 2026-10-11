@@ -1,0 +1,40 @@
+{
+  "reviewedAt": "2026-10-11",
+  "entries": 722,
+  "OntarioGreenButtonChoices": 54,
+  "DeckTestChoices": 29,
+  "comingSoonInOntario": 639,
+  "categories": {
+    "Electricity": 101,
+    "Natural Gas": 13,
+    "Water": 91,
+    "Home Insurance": 6,
+    "Phone & internet": 414,
+    "Other Home Services": 6,
+    "Property Tax": 4,
+    "Electricity & natural gas": 2,
+    "Energy": 85
+  },
+  "coverageNote": "National energy and telecom directories plus selected municipal and home-service billers. Local municipal and private-provider coverage is still expanding. A listing does not confirm connection availability.",
+  "sources": {
+    "greenbutton": "https://button.screamingpower.ca/guest/selectUtility/a6nyja",
+    "oeb": "https://www.oeb.ca/ontarios-energy-sector/list-licensed-companies",
+    "alberta": "https://ucahelps.alberta.ca/utility-choices/retailers-and-distributors/",
+    "ccts": "https://www.ccts-cprst.ca/industry/participating-service-providers/",
+    "bc": "https://www2.gov.bc.ca/gov/content/industry/electricity-alternative-energy/electricity/residential-electricity",
+    "quebec": "https://areq.org/informations/",
+    "atlantic": "https://mmeua.ca/",
+    "canada": "https://natural-resources.canada.ca/energy-sources/canada-electric-reliability-framework",
+    "gas": "https://www.cga.ca/about-us/",
+    "cwwa": "https://cwwa.ca/wp-content/uploads/2026/01/2025Directory_website.pdf",
+    "calgary-water": "https://www.enmax.com/customer-support/for-my-home/city-of-calgary-services-on-your-enmax-bill",
+    "edmonton-water": "https://www.epcor.com/ca/en/ab/edmonton/start-services/home.html",
+    "territories": "https://www.cer-rec.gc.ca/en/data-analysis/energy-markets/province-territory-energy-profiles/northwest-territories.html"
+  },
+  "additionalPortalSources": [
+    "https://support.cogeco.ca/hc/en-ca/articles/360059891693-How-do-I-access-My-Account",
+    "https://www.intact.ca/en/personal-insurance/online-services/client-centre",
+    "https://www.aviva.ca/en/payment-broker/",
+    "https://www.wasteconnectionscanada.com/bill-pay"
+  ]
+}

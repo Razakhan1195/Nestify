@@ -1,0 +1,37 @@
+{
+  "previous": "/tmp/rezlee-gta-provider-scope-staging-20261011",
+  "target": "/tmp/rezlee-provider-directory-staging-20261011",
+  "reconciledBaseline": [
+    {
+      "file": "src/lib/deck/canadian-provider-catalog.json",
+      "id": "d19e9491-8952-4339-af75-86bd494e35ea",
+      "reason": "Previously corrected Bell Smart Home to a.p.i. ALARM portal; live registry already agrees."
+    }
+  ],
+  "overlaid": [
+    "apps/mobile/app/provider/[id].tsx",
+    "apps/mobile/app/provider/connect.tsx",
+    "apps/mobile/app/provider/deck.tsx",
+    "apps/mobile/app/provider/ezgb.tsx",
+    "apps/mobile/src/components/ProviderConnectionChoices.tsx",
+    "apps/mobile/src/components/ProviderFinder.tsx",
+    "apps/mobile/src/lib/provider-data.ts",
+    "apps/mobile/src/lib/provider-directory.ts",
+    "scripts/update-provider-directory-deck.ts",
+    "src/app/api/mobile/v1/providers/[id]/route.ts",
+    "src/app/api/mobile/v1/providers/route.ts",
+    "src/components/providers/provider-registry-picker.tsx",
+    "src/lib/deck/canadian-bill-task.ts",
+    "src/lib/deck/canadian-provider-catalog.json",
+    "src/lib/deck/gta-launch.ts",
+    "src/lib/deck/gta-provider-routing.json",
+    "src/lib/deck/hosted-auth.ts",
+    "src/lib/deck/provider-config.ts",
+    "src/lib/provider-directory/catalog.json",
+    "src/lib/provider-directory/index.ts",
+    "src/lib/provider-registry.ts",
+    "tests/deck-hosted-runtime.test.ts",
+    "tests/gta-provider-scope.test.ts",
+    "tests/provider-directory.test.ts"
+  ]
+}

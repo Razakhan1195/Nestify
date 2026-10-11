@@ -1,0 +1,24 @@
+{
+  "types": 0,
+  "mobileTypes": 0,
+  "lint": 0,
+  "targetedTests": {
+    "pass": 36,
+    "fail": 0
+  },
+  "renderedChecks": 40,
+  "stagingChecks": 55,
+  "nativeExports": [
+    "ios",
+    "android"
+  ],
+  "fullRegression": {
+    "pass": 847,
+    "fail": 1,
+    "knownFailure": "statement-reading-activation.test.ts: statement-only activation preserves the database cap and keeps other AI tools disabled"
+  },
+  "providerRunsStarted": 0,
+  "nativeDeviceAcceptance": false,
+  "testFlightPublished": false,
+  "productionChanged": false
+}

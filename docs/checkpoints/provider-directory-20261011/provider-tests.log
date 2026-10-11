@@ -1,0 +1,44 @@
+✔ public Deck admission defaults closed even for an active registry entry (0.823583ms)
+✔ only the pinned identity, portal and source/task mapping can connect (0.2555ms)
+✔ invalid or duplicated release configuration cannot silently enable a partial allowlist (1.389708ms)
+✔ staging test override is explicit, isolated and disabled for a production deployment (1.669125ms)
+✔ runtime blocks unmapped and changed provider configuration before any Deck request (12.801792ms)
+✔ legacy connection, credential and refresh entry points reject public calls before any network access (167.576583ms)
+✔ customer history bounds reject malformed choices and clip leap/month-end dates (2.521542ms)
+✔ six months of quarterly bills is complete with two verified statements, not six (0.458834ms)
+✔ a combined electricity/water statement stays one original bill with no invented payment status (0.956333ms)
+✔ new hosted providers reject old Rogers-only clients and document-only options cannot create connections (0.441542ms)
+✔ all GTA municipalities resolve to a biller or an explicit document alternative, with valid custom sign-in forms (0.901375ms)
+✔ hosted pilot fails closed outside staging, mock mode, or disabled telecom (0.958291ms)
+✔ credential references are bound to the server intent and Rogers source (0.336042ms)
+✔ native bridge rejects off-origin, malformed and oversized results; secret config stays out of URLs (2.450625ms)
+✔ database handoff is private, exactly once, journaled for deletion, and loses to disconnect (1294.487166ms)
+✔ Bell hosted sign-in requires its own flag and a provider-aware client (0.357459ms)
+✔ lost browser callback recovers by external ID; replay queues exactly once (3.841583ms)
+✔ another user's credential and a different provider never attach or queue (0.340041ms)
+✔ recovery resumes after external ID was canonicalized but before queuing (0.258084ms)
+✔ cancellation wins over a late success and a parallel worker cannot claim twice (0.292667ms)
+✔ Bell recovers a lost callback and queues its own source exactly once (0.251208ms)
+✔ Bell and Rogers credentials cannot cross provider boundaries (0.231583ms)
+✔ tampered intent source fails before credential lookup and releases its lease (0.118667ms)
+✔ Bell cannot borrow the Rogers feature flag (0.11125ms)
+✔ hosted handoff uses the server-stored customer range (0.997375ms)
+✔ paused Rogers handoffs cancel cleanly without credentials, account changes or new runs (1.029834ms)
+✔ energy overlap never appears as a new Deck connection; water remains a document route (1.393875ms)
+✔ new catalogue excludes other-region entries and retains the selected GTA providers (0.416417ms)
+✔ all 25 GTA municipalities retain a water bill route without a second energy connection (0.334125ms)
+✔ existing connections preserve their exact registry presentation and can be managed (0.466709ms)
+✔ directory covers all provinces and territories with unique identities (1.365125ms)
+✔ Ontario finder selects 54 Green Button energy entries and only the 29 authorized Deck entries (6.987083ms)
+✔ missing mappings, legacy clients and home province cannot be bypassed by a directory listing (1.382417ms)
+✔ search accepts accents, alias billers and unmatched input without inventing a connection (16.446166ms)
+✔ Rogers blocks both new sign-in and existing refresh before database or Deck calls (0.931167ms)
+✔ hosted prompts retain exact portals and handle service-specific statements honestly (0.654666ms)
+ℹ tests 36
+ℹ suites 0
+ℹ pass 36
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 1587.569917
