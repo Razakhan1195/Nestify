@@ -1,0 +1,13 @@
+{
+  "base": "/tmp/rezlee-deck-pilot-staging-20261011",
+  "target": "/tmp/rezlee-gta-provider-scope-staging-20261011",
+  "overlayFiles": [
+    "src/lib/deck/gta-provider-routing.json",
+    "src/lib/deck/gta-launch.ts",
+    "src/app/api/mobile/v1/providers/route.ts",
+    "src/lib/deck/hosted-auth.ts",
+    "src/lib/deck/provider-config.ts",
+    "src/app/api/mobile/v1/providers/hosted-auth/route.ts"
+  ],
+  "baseFilesMatchedBeforeHashes": true
+}

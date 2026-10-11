@@ -1,0 +1,169 @@
+{
+  "base": "https://nestify-nypkdvxtq-razakhan1195s-projects.vercel.app",
+  "checks": [
+    {
+      "name": "Unauthenticated catalogue denied",
+      "ok": true
+    },
+    {
+      "name": "30 online choices and 10 document alternatives",
+      "ok": true
+    },
+    {
+      "name": "No Green Button overlap offered as a new Deck connection",
+      "ok": true
+    },
+    {
+      "name": "No deferred regional provider in new catalogue",
+      "ok": true
+    },
+    {
+      "name": "All automatic choices use secure hosted sign-in",
+      "ok": true
+    },
+    {
+      "name": "Water route: Toronto",
+      "ok": true
+    },
+    {
+      "name": "Water route: Mississauga",
+      "ok": true
+    },
+    {
+      "name": "Water route: Brampton",
+      "ok": true
+    },
+    {
+      "name": "Water route: Caledon",
+      "ok": true
+    },
+    {
+      "name": "Water route: Ajax",
+      "ok": true
+    },
+    {
+      "name": "Water route: Pickering",
+      "ok": true
+    },
+    {
+      "name": "Water route: Whitby",
+      "ok": true
+    },
+    {
+      "name": "Water route: Oshawa",
+      "ok": true
+    },
+    {
+      "name": "Water route: Clarington",
+      "ok": true
+    },
+    {
+      "name": "Water route: Scugog",
+      "ok": true
+    },
+    {
+      "name": "Water route: Uxbridge",
+      "ok": true
+    },
+    {
+      "name": "Water route: Brock",
+      "ok": true
+    },
+    {
+      "name": "Water route: Burlington",
+      "ok": true
+    },
+    {
+      "name": "Water route: Oakville",
+      "ok": true
+    },
+    {
+      "name": "Water route: Milton",
+      "ok": true
+    },
+    {
+      "name": "Water route: Halton Hills",
+      "ok": true
+    },
+    {
+      "name": "Water route: Aurora",
+      "ok": true
+    },
+    {
+      "name": "Water route: East Gwillimbury",
+      "ok": true
+    },
+    {
+      "name": "Water route: Georgina",
+      "ok": true
+    },
+    {
+      "name": "Water route: King",
+      "ok": true
+    },
+    {
+      "name": "Water route: Markham",
+      "ok": true
+    },
+    {
+      "name": "Water route: Newmarket",
+      "ok": true
+    },
+    {
+      "name": "Water route: Richmond Hill",
+      "ok": true
+    },
+    {
+      "name": "Water route: Vaughan",
+      "ok": true
+    },
+    {
+      "name": "Water route: Stouffville",
+      "ok": true
+    },
+    {
+      "name": "Blocked new connection: Elexicon Energy",
+      "ok": true,
+      "status": 409
+    },
+    {
+      "name": "Blocked new connection: Enbridge Gas",
+      "ok": true,
+      "status": 409
+    },
+    {
+      "name": "Blocked new connection: Burlington Hydro",
+      "ok": true,
+      "status": 409
+    },
+    {
+      "name": "Blocked new connection: BC Hydro",
+      "ok": true,
+      "status": 409
+    },
+    {
+      "name": "Blocked attempts created no hosted intents",
+      "ok": true
+    },
+    {
+      "name": "Existing energy connection remains visible",
+      "ok": true
+    },
+    {
+      "name": "Existing energy connection retains secure reconnect metadata",
+      "ok": true
+    },
+    {
+      "name": "Existing connection detail remains accessible",
+      "ok": true,
+      "status": 200
+    },
+    {
+      "name": "Unowned provider detail unavailable",
+      "ok": true,
+      "status": 404
+    }
+  ],
+  "providerRunsStarted": 0,
+  "syntheticUserRemoved": true
+}

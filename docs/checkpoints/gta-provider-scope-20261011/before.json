@@ -1,0 +1,17 @@
+{
+  "head": "b29e6babe66ffa5b17b3ca88edf5406d7a966cd0",
+  "files": {
+    "src/lib/deck/gta-provider-routing.json": null,
+    "src/lib/deck/gta-launch.ts": null,
+    "src/app/api/mobile/v1/providers/route.ts": "717a9eef8ae025f312393e935c9ebd45b9c9161ed2ccdf59e8abadb48c509ca5",
+    "src/lib/deck/hosted-auth.ts": "a12586a3a75c0858b77e0be8931781366450daaa5affa3f5107397e8169b4851",
+    "src/lib/deck/provider-config.ts": "2710ff0ceacd4a5080213db27ef781d26756ff96c753a8c77207db1445720cff",
+    "apps/mobile/src/lib/provider-data.ts": "59b9422f54160999cab67d8d5874a8c732138d33961ba42e1b0df531734e24df",
+    "apps/mobile/app/provider/deck.tsx": "1f321bb9f056aeac43a1b7df1bf8112e761bbf16a9cb3bb86684990d6e4fd36c",
+    "scripts/provision-deck-canadian-pilot.ts": "3ab7b0cb0dc2ba0dafdd1a30c92438fca56787467622d6b590045de1d7cc5b2d",
+    "tests/gta-provider-scope.test.ts": null,
+    "src/app/api/mobile/v1/providers/hosted-auth/route.ts": "b8249b6ac2500784e6732fca9f677001909bd9c0fbb5c6c67c1eb7ac3c1f824b",
+    "tests/deck-admission.test.ts": "98c4db7cc9f506631ddfced26ebd72d4101c15062079f8123d625987b655bc5c",
+    "docs/beta-product-engineering-roadmap.md": "5ea6d05542cba6774c88be644cdb9b633890b2bb2abcf8058727a20fac7b068a"
+  }
+}

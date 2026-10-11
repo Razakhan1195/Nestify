@@ -1,0 +1,749 @@
+--- before/src/lib/deck/gta-provider-routing.json
++++ after/src/lib/deck/gta-provider-routing.json
+@@ -0,0 +1,361 @@
++{
++  "reviewedAt": "2026-10-11",
++  "greenButtonSource": "https://button.screamingpower.ca/guest/selectUtility/a6nyja",
++  "scope": "GTA household launch; existing connections remain accessible",
++  "providers": [
++    {
++      "id": "238b9f9d-12ec-4160-a9eb-e742f637b699",
++      "name": "Alectra Utilities",
++      "route": "document",
++      "greenButton": true,
++      "displayName": "Water via Alectra Utilities",
++      "category": "Water",
++      "note": "Use Green Button for electricity. Upload your water statement here to keep the original and its charges without adding a second provider connection."
++    },
++    {
++      "id": "a955470f-54ee-4b77-9356-c344614b177c",
++      "name": "ATCO",
++      "route": "later",
++      "greenButton": false
++    },
++    {
++      "id": "c5fde591-7690-4c5b-bd30-b7b157f783cb",
++      "name": "Aviva",
++      "route": "deck",
++      "greenButton": false
++    },
++    {
++      "id": "10e25817-7a48-4fd1-8570-9faebd7554e8",
++      "name": "BC Hydro",
++      "route": "later",
++      "greenButton": false
++    },
++    {
++      "id": "fc092591-8083-4e58-aaab-8f34e4435e0b",
++      "name": "Bell",
++      "route": "deck",
++      "greenButton": false
++    },
++    {
++      "id": "d19e9491-8952-4339-af75-86bd494e35ea",
++      "name": "a.p.i. ALARM",
++      "route": "deck",
++      "greenButton": false
++    },
++    {
++      "id": "48aac579-5020-42bc-9830-a728580eae11",
++      "name": "City of Mississauga Property Tax",
++      "route": "deck",
++      "greenButton": false
++    },
++    {
++      "id": "0daf98f6-aad1-44ae-bb48-2c9dc541d093",
++      "name": "City of Toronto Property Tax",
++      "route": "deck",
++      "greenButton": false
++    },
++    {
++      "id": "ec3f5013-f3ab-4fa0-86cf-c8b11795cc19",
++      "name": "City of Toronto Water",
++      "route": "deck",
++      "greenButton": false
++    },
++    {
++      "id": "f8c40350-2807-4b6c-87b9-c61b201ebe66",
++      "name": "Cogeco",
++      "route": "deck",
++      "greenButton": false
++    },
++    {
++      "id": "3f236e11-3755-41d8-9f60-48dd9d4a0f55",
++      "name": "Elexicon Energy",
++      "route": "green_button",
++      "greenButton": true
++    },
++    {
++      "id": "7b6bc836-b853-4855-9fb3-673b058356ee",
++      "name": "Enbridge Gas",
++      "route": "green_button",
++      "greenButton": true
++    },
++    {
++      "id": "887052bf-0944-4407-be64-a605547cd0f0",
++      "name": "Enercare",
++      "route": "deck",
++      "greenButton": false
++    },
++    {
++      "id": "70db3106-273f-4b93-967e-57357f78e91c",
++      "name": "Énergir",
++      "route": "later",
++      "greenButton": false
++    },
++    {
++      "id": "92a3348c-8869-4608-9c35-e63289aa8e86",
++      "name": "ENMAX",
++      "route": "later",
++      "greenButton": false
++    },
++    {
++      "id": "341fae69-7710-4241-9482-16dd0ec93bd1",
++      "name": "EPCOR",
++      "route": "green_button",
++      "greenButton": true
++    },
++    {
++      "id": "3ec39573-8629-48dc-bf5e-59989dadbe6c",
++      "name": "Fido",
++      "route": "deck",
++      "greenButton": false
++    },
++    {
++      "id": "5d77a22e-1900-45c8-8fb6-e77a20f49dd0",
++      "name": "FortisBC",
++      "route": "later",
++      "greenButton": false
++    },
++    {
++      "id": "c6c663bc-8734-4a77-a03b-efd7424a9e36",
++      "name": "Freedom Mobile",
++      "route": "deck",
++      "greenButton": false
++    },
++    {
++      "id": "21acc47d-4cdb-4050-ba0a-aa5951984529",
++      "name": "GFL Environmental",
++      "route": "deck",
++      "greenButton": false
++    },
++    {
++      "id": "27899f67-d526-4b94-9d77-ee46d254c8d4",
++      "name": "Hydro One",
++      "route": "green_button",
++      "greenButton": true
++    },
++    {
++      "id": "6215b953-135d-4ca9-a89f-cf04b991e5e0",
++      "name": "Hydro-Québec",
++      "route": "later",
++      "greenButton": false
++    },
++    {
++      "id": "9095ff86-3093-4320-ad29-46a033d21cbe",
++      "name": "Intact",
++      "route": "deck",
++      "greenButton": false
++    },
++    {
++      "id": "1ef9173c-6b2c-491e-b4ce-e9a40df13c5d",
++      "name": "Koodo",
++      "route": "deck",
++      "greenButton": false
++    },
++    {
++      "id": "bad50809-5b9e-4cf8-890c-8df9f9e76b12",
++      "name": "Manitoba Hydro",
++      "route": "later",
++      "greenButton": false
++    },
++    {
++      "id": "e5fa0d80-7f59-4e07-a963-ec3203986d1f",
++      "name": "Region of Durham Water",
++      "route": "deck",
++      "greenButton": false
++    },
++    {
++      "id": "907a48ab-b278-4319-9dd0-0d70152e114f",
++      "name": "Reliance Home Comfort",
++      "route": "deck",
++      "greenButton": false
++    },
++    {
++      "id": "11d2d635-9635-4971-bc49-809919b0b90d",
++      "name": "Rogers",
++      "route": "deck",
++      "greenButton": false
++    },
++    {
++      "id": "fcad9691-d7ef-4f8a-a9e1-32654903f0c9",
++      "name": "SaskEnergy",
++      "route": "later",
++      "greenButton": false
++    },
++    {
++      "id": "ba7797f5-a1d0-4b50-817b-eaa6eceabc20",
++      "name": "SaskPower",
++      "route": "later",
++      "greenButton": false
++    },
++    {
++      "id": "7ce0b2ec-3b4d-476c-9486-8cc4fcc7d2dc",
++      "name": "Shaw / Rogers",
++      "route": "later",
++      "greenButton": false
++    },
++    {
++      "id": "da6c6734-d7e2-4e4d-ad66-e4ff7ddb91f2",
++      "name": "Sonnet",
++      "route": "deck",
++      "greenButton": false
++    },
++    {
++      "id": "8176879f-1664-4ba7-9180-00f5cbeb636f",
++      "name": "Square One",
++      "route": "deck",
++      "greenButton": false
++    },
++    {
++      "id": "ffac23e5-9049-432b-8620-6ce0328f5d60",
++      "name": "TD Insurance",
++      "route": "deck",
++      "greenButton": false
++    },
++    {
++      "id": "a4845595-c672-4318-b691-6a002f24275d",
++      "name": "TekSavvy",
++      "route": "deck",
++      "greenButton": false
++    },
++    {
++      "id": "076a4f69-404d-40c9-85df-97fe6e973f3b",
++      "name": "Telus",
++      "route": "deck",
++      "greenButton": false
++    },
++    {
++      "id": "c402d56b-1a0e-48d9-9bc1-070f15489f21",
++      "name": "Telus SmartHome Security",
++      "route": "deck",
++      "greenButton": false
++    },
++    {
++      "id": "9ad6ac69-15fd-4e09-a34a-a58a4b9c4f46",
++      "name": "The Co-operators",
++      "route": "deck",
++      "greenButton": false
++    },
++    {
++      "id": "e9982e68-a71c-4986-8486-094c2dc20fe0",
++      "name": "Toronto Hydro",
++      "route": "green_button",
++      "greenButton": true
++    },
++    {
++      "id": "63557595-af57-4082-af51-63482bc0283a",
++      "name": "Town of Pickering Property Tax",
++      "route": "document",
++      "greenButton": false
++    },
++    {
++      "id": "1408e610-b68c-448d-8d6e-996061418d94",
++      "name": "Town of Whitby Property Tax",
++      "route": "document",
++      "greenButton": false
++    },
++    {
++      "id": "b0f5350c-fff9-4b5e-9e0d-43bfbeb9bbd1",
++      "name": "Videotron",
++      "route": "later",
++      "greenButton": false
++    },
++    {
++      "id": "cb71c2c7-af83-4598-9671-5c30059f6b92",
++      "name": "Virgin Plus",
++      "route": "deck",
++      "greenButton": false
++    },
++    {
++      "id": "8558d98d-a189-44c8-ac7b-2e90b8406d4e",
++      "name": "Waste Connections",
++      "route": "deck",
++      "greenButton": false
++    },
++    {
++      "id": "f3c26ba7-e999-5c3c-900c-efd1407b51b6",
++      "name": "Region of Peel Water",
++      "route": "deck",
++      "greenButton": false
++    },
++    {
++      "id": "ca878ba1-cb76-57af-99f8-6e8ab2635ba8",
++      "name": "Richmond Hill Water",
++      "route": "deck",
++      "greenButton": false
++    },
++    {
++      "id": "d6c3cdbd-3dfc-5803-a5df-f89e7d8904f0",
++      "name": "East Gwillimbury Water",
++      "route": "deck",
++      "greenButton": false
++    },
++    {
++      "id": "d28fa0df-2aaf-5ca1-9935-fd7066b7729a",
++      "name": "Georgina Water",
++      "route": "deck",
++      "greenButton": false
++    },
++    {
++      "id": "1f84bee2-6ea5-5c09-882e-a82da77df899",
++      "name": "Stouffville Water",
++      "route": "deck",
++      "greenButton": false
++    },
++    {
++      "id": "e7d5b887-3496-53f9-ae37-dbdec04dd6a8",
++      "name": "Burlington Hydro",
++      "route": "document",
++      "greenButton": true,
++      "displayName": "Water via Burlington Hydro",
++      "category": "Water",
++      "note": "Use Green Button for electricity. Upload your water statement here to keep the original and its charges without adding a second provider connection."
++    },
++    {
++      "id": "3acb3933-a718-575c-8e51-340a255e1ab2",
++      "name": "Halton Hills Hydro",
++      "route": "document",
++      "greenButton": true,
++      "displayName": "Water via Halton Hills Hydro",
++      "category": "Water",
++      "note": "Use Green Button for electricity. Upload your water statement here to keep the original and its charges without adding a second provider connection."
++    },
++    {
++      "id": "9a7fc17e-83cf-5ba8-8268-b7d244e8efb9",
++      "name": "Milton Hydro",
++      "route": "document",
++      "greenButton": true,
++      "displayName": "Water via Milton Hydro",
++      "category": "Water",
++      "note": "Use Green Button for electricity. Upload your water statement here to keep the original and its charges without adding a second provider connection."
++    },
++    {
++      "id": "4a0c59d2-6e3a-5ed0-b68c-0f404e237a91",
++      "name": "Oakville Hydro",
++      "route": "document",
++      "greenButton": true,
++      "displayName": "Water via Oakville Hydro",
++      "category": "Water",
++      "note": "Use Green Button for electricity. Upload your water statement here to keep the original and its charges without adding a second provider connection."
++    },
++    {
++      "id": "7f8dfe81-0b10-5b44-847e-aef7d1912464",
++      "name": "NT Power",
++      "route": "document",
++      "greenButton": true,
++      "displayName": "Water via NT Power",
++      "category": "Water",
++      "note": "Use Green Button for electricity. Upload your water statement here to keep the original and its charges without adding a second provider connection."
++    },
++    {
++      "id": "aab9f4c9-47b9-5714-9bc8-98f12d668e0e",
++      "name": "Aurora Water",
++      "route": "document",
++      "greenButton": false
++    },
++    {
++      "id": "12a14153-074d-5cec-b09f-7f29b725e086",
++      "name": "King Township Water",
++      "route": "document",
++      "greenButton": false
++    }
++  ]
++}
+--- before/src/lib/deck/gta-launch.ts
++++ after/src/lib/deck/gta-launch.ts
+@@ -0,0 +1,38 @@
++import routing from "./gta-provider-routing.json";
++
++type Route = "deck" | "document" | "green_button" | "later";
++type Choice = { id: string; name: string; route: Route; greenButton: boolean; displayName?: string; category?: string; note?: string };
++const choices = new Map(routing.providers.map(row => [row.id, row as Choice]));
++export function gtaProviderChoice(id: string | null | undefined) { return id ? choices.get(id) ?? null : null; }
++export class DeckCatalogueError extends Error {}
++export function allowsNewDeckProvider(id: string | null | undefined) { return gtaProviderChoice(id)?.route === "deck"; }
++export function excludedFromNewDeck(id: string | null | undefined) {
++  const choice = gtaProviderChoice(id);
++  return Boolean(choice && choice.route !== "deck");
++}
++export function newDeckConnectionMessage(id: string | null | undefined) {
++  const choice = gtaProviderChoice(id);
++  if (choice?.greenButton) return "Connect electricity or gas through Green Button. You can upload a water statement without adding another connection.";
++  if (choice?.route === "document") return "Upload this provider’s statement instead. An automatic connection is not offered.";
++  return "This provider is outside the current launch catalogue. You can upload a statement instead.";
++}
++export function hasExistingDeckConnection(provider: {
++  deck_credential_id?: unknown; deck_connection_id?: unknown; deck_session_id?: unknown; deck_connection_status?: unknown;
++}) {
++  return Boolean(provider.deck_credential_id || provider.deck_connection_id || provider.deck_session_id || provider.deck_connection_status);
++}
++type RegistryEntry = { id: string; name: string; utility_type: string; website_url?: string | null; metadata?: unknown };
++/** Changes discovery only. Never changes stored provider, bill or integration rows. */
++export function gtaCatalogueEntry<T extends RegistryEntry>(row: T, existingDeck: boolean) {
++  const choice = gtaProviderChoice(row.id);
++  if (existingDeck && choice?.route !== "deck") return { ...row, existingOnly: true };
++  if (!choice || choice.route === "later" || choice.route === "green_button") return null;
++  if (choice.route === "deck") return { ...row, existingOnly: false };
++  const metadata = row.metadata && typeof row.metadata === "object" ? row.metadata as Record<string, unknown> : {};
++  return {
++    ...row, existingOnly: false,
++    name: choice.displayName ?? row.name,
++    utility_type: choice.category ?? row.utility_type,
++    metadata: { ...metadata, deck_document_alternative: true, ...(choice.note ? { connection_note: choice.note } : {}) },
++  };
++}
+--- before/src/app/api/mobile/v1/providers/route.ts
++++ after/src/app/api/mobile/v1/providers/route.ts
+@@ -1,5 +1,6 @@
+ import { hostedProviderEnabled, hostedRegistryReady, hostedClientCompatible } from "@/lib/deck/hosted-auth-policy";
+ import { providerCoversProvince } from "@/lib/deck/coverage";
++import { gtaCatalogueEntry, allowsNewDeckProvider, newDeckConnectionMessage, hasExistingDeckConnection } from "@/lib/deck/gta-launch";
+ import { deckAdmission,deckAdmissionPolicy,deckUnavailableMessage } from "@/lib/deck/admission";
+ import { isIP } from "node:net";
+ 
+@@ -88,7 +89,7 @@
+   const { data: providers, error } = await auth.supabase
+     .from("providers")
+     .select(
+-      "id,name,display_name,registry_provider_id,account_number,provider_priority,connection_status,health_status,sync_status,sync_failure_reason,requires_user_action,user_action_message,last_successful_sync_at,next_scheduled_sync_at,website_url,deck_connection_status,deck_connection_metadata,created_at",
++      "id,name,display_name,registry_provider_id,account_number,provider_priority,connection_status,health_status,sync_status,sync_failure_reason,requires_user_action,user_action_message,last_successful_sync_at,next_scheduled_sync_at,website_url,deck_connection_status,deck_connection_metadata,deck_connection_id,deck_credential_id,deck_session_id,created_at",
+     )
+     .eq("user_id", auth.user.id)
+     .eq("home_id", home.id)
+@@ -127,16 +128,24 @@
+     (catalog ?? []).map((item) => [item.id, item] as const),
+   );
+ 
++  const existingDeckIds = new Set((providers ?? []).filter(hasExistingDeckConnection).map(provider => provider.registry_provider_id));
++  const launchCatalog = (catalog ?? []).flatMap(item => {
++    const entry = gtaCatalogueEntry(item, existingDeckIds.has(item.id));
++    return entry ? [entry] : [];
++  });
++
+   return NextResponse.json({
+     deckTesting: deckAdmissionPolicy().testing,
+-    catalog: (catalog ?? []).filter(item=>(deckAdmission(item).allowed || item.metadata?.deck_document_alternative === true) && providerCoversProvince(item.province_region, home.province) && hostedClientCompatible(item.id, new URL(request.url).searchParams.get("hostedAuthVersion"))).map((item) => {
++    catalog: launchCatalog.filter(item=>(deckAdmission(item).allowed || item.metadata?.deck_document_alternative === true) && (item.existingOnly || providerCoversProvince(item.province_region, home.province)) && hostedClientCompatible(item.id, new URL(request.url).searchParams.get("hostedAuthVersion"))).map((item) => {
+       const metadata =
+         item.metadata && typeof item.metadata === "object"
+           ? (item.metadata as Record<string, unknown>)
+           : {};
+       return {
++        existingOnly: item.existingOnly,
++        documentAlternative: metadata.deck_document_alternative === true,
+         connectionAvailable: metadata.deck_document_alternative !== true && hostedRegistryReady(item) && deckAdmission(item).allowed,
+-        hostedAuth: hostedRegistryReady(item),
++        hostedAuth: metadata.deck_document_alternative !== true && hostedRegistryReady(item),
+         searchAliases: Array.isArray(metadata.search_aliases) ? metadata.search_aliases : [],
+         connectionNote: typeof metadata.connection_note === "string" ? metadata.connection_note : null,
+         telecomHistory: process.env.REZLEE_DECK_TELECOM_ENABLED === "true" && (metadata.deck_telecom_contract === "ca-telecom-20261004-v1" || metadata.deck_bill_contract === "ca-bills-20261011-v1"),
+@@ -275,7 +284,7 @@
+   const accountNumber = parsed.data.accountNumber?.trim() || null;
+   const { data: candidates, error: candidatesError } = await auth.supabase
+     .from("providers")
+-    .select("id,name,registry_provider_id,account_number")
++    .select("id,name,registry_provider_id,account_number,deck_connection_id,deck_credential_id,deck_session_id,deck_connection_status")
+     .eq("user_id", auth.user.id)
+     .eq("home_id", home.id);
+ 
+@@ -309,6 +318,9 @@
+       : undefined);
+ 
+   let providerId = legacyMatch?.id ?? null;
++  if (!allowsNewDeckProvider(registryProviderId) && !(legacyMatch && hasExistingDeckConnection(legacyMatch))) {
++    return NextResponse.json({ error: newDeckConnectionMessage(registryProviderId) }, { status: 409 });
++  }
+   if (!providerId && registryProviderId && !providerCoversProvince(registryRegion, home.province)) return NextResponse.json({ error: "This provider is not listed for your household’s province. Upload a statement instead." }, { status: 400 });
+ 
+   const providerPatch = {
+--- before/src/lib/deck/hosted-auth.ts
++++ after/src/lib/deck/hosted-auth.ts
+@@ -10,6 +10,7 @@
+ import { createDeckV2Client, DeckV2ApiError } from "./v2-client";
+ import { deckAdmission } from "./admission";
+ import { providerCoversProvince } from "./coverage";
++import { allowsNewDeckProvider, DeckCatalogueError, newDeckConnectionMessage, hasExistingDeckConnection } from "./gta-launch";
+ import { DECK_AUTH_ORIGIN, ROGERS_REGISTRY_ID, hostedRegistryReady, hostedProviderEnabled, anyHostedEnabled, hostedCredentialMatches } from "./hosted-auth-policy";
+ 
+ type Intent = { history_months?: number; id: string; user_id: string; home_id: string; registry_id: string; provider_id: string; existing_provider: boolean; previous_credential_id: string | null; account_number: string | null; source_id: string; credential_id: string | null; status: string; expires_at: string; token_count: number; created_at: string };
+@@ -33,7 +34,6 @@
+     const home = await input.supabase.from("homes").select("id,province").eq("user_id", input.userId).order("created_at").limit(1).maybeSingle();
+     checked(home.error);
+     if (!home.data) throw Error("Set up your place before connecting a provider.");
+-    if (!providerCoversProvince(source.province_region, home.data.province)) throw Error("This connection is not available for your place.");
+     let provider: ProviderRow | null = null;
+     if (input.providerId) {
+       const p = await input.supabase.from("providers").select("*").eq("id", input.providerId).eq("user_id", input.userId).eq("home_id", home.data.id).eq("registry_provider_id", registryId).maybeSingle();
+@@ -46,6 +46,9 @@
+       if ((p.data?.length ?? 0) > 1) throw Error("Open the account you want to reconnect from Providers.");
+       provider = p.data?.[0] ?? null;
+     }
++    const existingDeck = Boolean(provider && hasExistingDeckConnection(provider));
++    if (!existingDeck && !allowsNewDeckProvider(registryId)) throw new DeckCatalogueError(newDeckConnectionMessage(registryId));
++    if (!existingDeck && !providerCoversProvince(source.province_region, home.data.province)) throw Error("This connection is not available for your place.");
+     if (provider) {
+       const running = await db.from("deck_telecom_imports").select("id").eq("provider_id", provider.id).eq("user_id", input.userId).in("status", pending).limit(1).maybeSingle();
+       checked(running.error);
+--- before/src/lib/deck/provider-config.ts
++++ after/src/lib/deck/provider-config.ts
+@@ -1,5 +1,6 @@
+ import { requireDeckAdmission,deckAdmissionPolicy } from "./admission";
+ import { createHash } from "node:crypto";
++import { allowsNewDeckProvider, newDeckConnectionMessage, hasExistingDeckConnection } from "./gta-launch";
+ 
+ import type { SupabaseClient } from "@supabase/supabase-js";
+ 
+@@ -156,6 +157,9 @@
+   }
+ 
+   requireDeckAdmission(registry && typeof registry.id==="string" ? {...registry,id:registry.id} : null);
++  if (!allowsNewDeckProvider(provider.registry_provider_id) && !hasExistingDeckConnection(provider)) {
++    throw new Error(newDeckConnectionMessage(provider.registry_provider_id));
++  }
+   const metadata = providerMetadata(provider);
+   const providerName =
+     provider.display_name ??
+--- before/apps/mobile/src/lib/provider-data.ts
++++ after/apps/mobile/src/lib/provider-data.ts
+@@ -64,6 +64,8 @@
+   } | null;
+ };
+ export type ProviderCatalogItem = {
++  existingOnly?: boolean;
++  documentAlternative?: boolean;
+   searchAliases?: string[];
+   connectionNote?: string | null;
+   hostedAuth?: boolean;
+--- before/apps/mobile/app/provider/deck.tsx
++++ after/apps/mobile/app/provider/deck.tsx
+@@ -20,6 +20,7 @@
+ import { SafeAreaView } from "react-native-safe-area-context";
+ 
+ import { Button } from "@/components/Button";
++import { QuietAction } from "@/components/Brief";
+ import { TextField } from "@/components/TextField";
+ import { Surface } from "@/components/ui/Surface";
+ import { ApiError } from "@/lib/api";
+@@ -118,7 +119,7 @@
+   const suggested = useMemo(() => {
+     const normalized = providerSearch.trim().toLowerCase();
+     const matches = catalog
+-      .filter((item) => Boolean(item.website_url))
++      .filter((item) => !item.existingOnly && (Boolean(item.website_url) || item.documentAlternative === true))
+       .filter((item) => {
+         if (!normalized) return categoryForCatalog(item.utility_type) === category || (category === "Water" && item.searchAliases?.some(a=>a.toLowerCase().includes("water")));
+         return [item.name, item.utility_type, item.province_region, ...(item.searchAliases ?? [])]
+@@ -136,7 +137,7 @@
+   const hosted = selectedCatalog?.hostedAuth === true;
+   const isReconnect = Boolean(reconnectProviderId);
+   const canConnect = Boolean(
+-    !loadingCatalog && !loadingExisting && (testingAllowed || selectedCatalog?.connectionAvailable===true || Boolean(reconnectProviderId && reconnectAvailable)) &&
++    !loadingCatalog && !loadingExisting && (selectedCatalog?.connectionAvailable===true || Boolean(reconnectProviderId && reconnectAvailable)) &&
+       category &&
+       providerName.trim() &&
+       websiteUrl.trim() &&
+@@ -146,6 +147,10 @@
+     const itemCategory = categoryForCatalog(item.utility_type);
+     Haptics.selectionAsync();
+ 
++    if (item.documentAlternative) {
++      router.push("/bill/batch");
++      return;
++    }
+     if (item.connectionAvailable!==true) {
+       router.push(
+         (`/bill/add?providerName=${encodeURIComponent(item.name)}&category=${encodeURIComponent(itemCategory)}`) as never,
+@@ -306,6 +311,8 @@
+               </View>
+             </View>
+           </Surface>}
++
++          {!isReconnect && !hosted ? <QuietAction label="Connect electricity or gas through Green Button" onPress={() => router.push("/provider/ezgb")} /> : null}
+ 
+           {loadingExisting ? (
+             <Surface tone="subtle" style={{ minHeight: 96, alignItems: "center", justifyContent: "center" }}>
+@@ -349,7 +356,7 @@
+                 <TextInput
+                   value={providerSearch}
+                   onChangeText={setProviderSearch}
+-                  placeholder="Search Hydro One, Bell, Enbridge..."
++                  placeholder="Search Bell, Rogers, Durham Water..."
+                   placeholderTextColor={colors.mutedForeground}
+                   autoCapitalize="words"
+                   autoCorrect={false}
+@@ -366,7 +373,7 @@
+               Or browse by bill type
+             </Text>
+             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: spacing.sm }}>
+-              {providerCategories.map((item) => {
++              {providerCategories.filter(item => item !== "Electricity" && item !== "Natural Gas").map((item) => {
+                 const active = category === item;
+                 return (
+                   <Pressable
+@@ -458,7 +465,7 @@
+               />
+             </Surface>
+           )}
+-          {testingAllowed && !hosted?<View style={{ gap: spacing.lg }}>
++          {isReconnect && !hosted?<View style={{ gap: spacing.lg }}>
+             <TextField
+               label="Provider"
+               placeholder="Hydro One, Bell, your municipality..."
+@@ -486,7 +493,7 @@
+           )}
+ 
+           {isReconnect&&!loadingCatalog&&!loadingExisting&&!testingAllowed&&!reconnectAvailable&&selectedCatalog?.connectionAvailable!==true?<Text style={[typography.body,{color:colors.mutedForeground}]}>This connection is not available right now. Your saved bills remain accessible, and you can upload a statement below.</Text>:null}
+-          {(testingAllowed||selectedCatalog?.connectionAvailable===true||Boolean(reconnectProviderId && reconnectAvailable))?<>
++          {(selectedCatalog?.connectionAvailable===true||Boolean(reconnectProviderId && reconnectAvailable))?<>
+           {telecom ? <Surface tone="subtle" style={{gap:spacing.sm}}>
+             <Text style={[typography.section,{color:colors.foreground}]}>No need to wait here</Text>
+             <Text style={[typography.meta,{color:colors.mutedForeground}]}>Your import continues in the background. Verification requests and results appear in your notification centre.</Text>
+@@ -544,7 +551,7 @@
+             </Surface>
+           ) : null}
+ 
+-          {(testingAllowed||selectedCatalog?.connectionAvailable===true||Boolean(reconnectProviderId && reconnectAvailable))?<Button
++          {(selectedCatalog?.connectionAvailable===true||Boolean(reconnectProviderId && reconnectAvailable))?<Button
+             label={hosted ? "Continue securely with Deck" : telecom ? `Link ${providerName} and get my bills` : isReconnect ? "Reconnect provider" : "Connect provider"}
+             onPress={connect}
+             loading={connecting}
+--- before/scripts/provision-deck-canadian-pilot.ts
++++ after/scripts/provision-deck-canadian-pilot.ts
+@@ -1,6 +1,7 @@
+ /** Configure customer-started imports only. This script never creates credentials or runs tasks. */
+ import {readFileSync,writeFileSync,mkdirSync,existsSync} from "node:fs";
+ import {createHash} from "node:crypto";
++import {gtaProviderChoice} from "../src/lib/deck/gta-launch";
+ import {createAdminClient} from "../src/lib/supabase/admin";
+ import {authenticationTask,canadianBillTask,canadianBillContract} from "../src/lib/deck/canadian-bill-task";
+ const apply=process.argv.includes("--apply");
+@@ -19,13 +20,17 @@
+  const only=process.argv.find(a=>a.startsWith("--only="))?.slice(7);
+  const before=await db.from("provider_registry").select("*");if(before.error)throw Error("Registry read failed");
+  mkdirSync(root,{recursive:true});
+- if(!apply){console.log(JSON.stringify({entries:catalog.length,hosted:catalog.filter(p=>!p.fallback).length,alternatives:catalog.filter(p=>p.fallback).map(p=>p.name),runs:0}));return;}
++ if(!apply){console.log(JSON.stringify({entries:catalog.length,hosted:catalog.filter(p=>gtaProviderChoice(p.id)?.route==="deck").length,alternatives:catalog.filter(p=>gtaProviderChoice(p.id)?.route==="document").map(p=>p.name),runs:0}));return;}
+  if(!process.env.DECK_API_KEY)throw Error("Deck credentials unavailable");
+  if(!readFileSync("src/lib/deck/canadian-provider-catalog.json","utf8"))throw Error();
+  if(!existsSync(root+"/registry-before.json")) writeFileSync(root+"/registry-before.json",JSON.stringify(before.data,null,2));
+  const agents=await list("/agents"),mappings=only && existsSync(root+"/provisioned.json") ? JSON.parse(readFileSync(root+"/provisioned.json","utf8")).mappings.filter((m:{registryId:string})=>m.registryId!==catalog.find(p=>p.name===only)?.id) : [];
+  for(const p of catalog){
+   if(only && p.name!==only) continue;
++  const launchChoice = gtaProviderChoice(p.id);
++  if (launchChoice?.route !== "deck" && launchChoice?.route !== "document") continue;
++  // Already-provisioned hydro entries are retained for existing connections, never re-provisioned for a second connection.
++  if (launchChoice.greenButton) continue;
+   const old=before.data.find(r=>r.id===p.id);
+   const base={id:p.id,name:p.name,utility_type:p.utility_type,website_url:p.website_url,province_region:old?.province_region??p.province_region??"Canada",metadata:{...old?.metadata,search_aliases:p.searchAliases,connection_note:p.connectionNote,portal_reviewed_at:"2026-10-11",deck_pilot_readiness:p.fallback?"document_alternative":"configured_not_live_verified"}};
+   if(p.fallback){const q=await db.from("provider_registry").upsert({...base,status:"needs_mapping",metadata:{...base.metadata,deck_document_alternative:true}},{onConflict:"id"});if(q.error)throw Error("Fallback mapping failed: "+p.name);mappings.push({name:p.name,registryId:p.id,mode:"document_alternative"});continue;}
+--- before/tests/gta-provider-scope.test.ts
++++ after/tests/gta-provider-scope.test.ts
+@@ -0,0 +1,57 @@
++import test from "node:test";
++import assert from "node:assert/strict";
++import catalogue from "../src/lib/deck/canadian-provider-catalog.json";
++import routing from "../src/lib/deck/gta-provider-routing.json";
++import { gtaCatalogueEntry, gtaProviderChoice, allowsNewDeckProvider, excludedFromNewDeck, hasExistingDeckConnection } from "../src/lib/deck/gta-launch";
++
++test("energy overlap never appears as a new Deck connection; water remains a document route", () => {
++  const overlaps = routing.providers.filter(p => p.greenButton);
++  assert.equal(overlaps.length, 11);
++  for (const item of overlaps) {
++    const source = catalogue.find(p => p.id === item.id)!;
++    const choice = gtaCatalogueEntry(source, false);
++    assert.equal(excludedFromNewDeck(item.id), true, item.name);
++    assert.equal(allowsNewDeckProvider(item.id), false, item.name);
++    if (choice) {
++      assert.equal(choice.utility_type, "Water");
++      assert.equal((choice.metadata as Record<string, unknown>).deck_document_alternative, true);
++      assert.match(choice.name, /Water via/);
++    } else assert.equal(item.route, "green_button");
++  }
++});
++
++test("new catalogue excludes other-region entries and retains the selected GTA providers", () => {
++  const choices = catalogue.flatMap(row => { const choice = gtaCatalogueEntry(row, false); return choice ? [choice] : []; });
++  assert.equal(choices.filter(p => !(p.metadata as Record<string, unknown>)?.deck_document_alternative).length, 30);
++  assert.equal(choices.filter(p => (p.metadata as Record<string, unknown>)?.deck_document_alternative).length, 10);
++  for (const name of ["BC Hydro", "ATCO", "Hydro-Québec", "Videotron", "Shaw / Rogers"]) assert.ok(!choices.some(p => p.name === name));
++  for (const name of ["Bell", "Rogers", "Region of Durham Water", "Region of Peel Water", "Enercare"]) assert.ok(choices.some(p => p.name === name));
++  assert.equal(allowsNewDeckProvider("unknown"), false);
++  assert.equal(allowsNewDeckProvider(null), false);
++  assert.equal(gtaCatalogueEntry({id:"unknown",name:"Unknown",utility_type:"Internet"}, false), null);
++});
++
++test("all 25 GTA municipalities retain a water bill route without a second energy connection", () => {
++  const choices = catalogue.flatMap(row => { const choice = gtaCatalogueEntry(row, false); return choice ? [choice] : []; });
++  const water = choices.filter(p => p.utility_type === "Water");
++  for (const city of ["Toronto","Mississauga","Brampton","Caledon","Ajax","Pickering","Whitby","Oshawa","Clarington","Scugog","Uxbridge","Brock","Burlington","Oakville","Milton","Halton Hills","Aurora","East Gwillimbury","Georgina","King","Markham","Newmarket","Richmond Hill","Vaughan","Stouffville"]) {
++    assert.ok(water.some(p => (p.name+" "+p.searchAliases.join(" ")).toLowerCase().includes(city.toLowerCase())), city);
++  }
++});
++
++test("existing connections preserve their exact registry presentation and can be managed", () => {
++  for (const name of ["Elexicon Energy", "Burlington Hydro", "BC Hydro"]) {
++    const source = catalogue.find(p => p.name === name)!;
++    const result = gtaCatalogueEntry(source, true)!;
++    assert.equal(result.existingOnly, true);
++    assert.equal(result.id, source.id);
++    assert.equal(result.name, source.name);
++    assert.equal(result.utility_type, source.utility_type);
++    assert.deepEqual(result.metadata, source.metadata);
++  }
++  assert.equal(hasExistingDeckConnection({}), false);
++  assert.equal(hasExistingDeckConnection({deck_connection_status:null}), false);
++  assert.equal(hasExistingDeckConnection({deck_connection_status:"disconnected"}), true);
++  assert.equal(hasExistingDeckConnection({deck_credential_id:"cred_saved"}), true);
++  assert.equal(gtaProviderChoice(catalogue.find(p => p.name === "Enbridge Gas")!.id)?.route, "green_button");
++});
+--- before/src/app/api/mobile/v1/providers/hosted-auth/route.ts
++++ after/src/app/api/mobile/v1/providers/hosted-auth/route.ts
+@@ -1,4 +1,5 @@
+ import { NextResponse } from "next/server";
++import { DeckCatalogueError } from "@/lib/deck/gta-launch";
+ import { z } from "zod";
+ import { authenticateMobileRequest } from "@/lib/supabase/mobile";
+ import { readBoundedJson } from "@/lib/security/request";
+@@ -21,7 +22,10 @@
+   const input = parsed.data;
+   if (input.action === "start") {
+     try { return json(await beginHostedAuth({ userId: auth.user.id, supabase: auth.supabase, registryProviderId: input.registryProviderId, providerId: input.providerId, accountNumber: input.accountNumber, historyMonths: input.historyMonths })); }
+-    catch { return json({ error: "Couldn’t open secure sign-in. Check your existing connection or try again shortly." }, 503); }
++    catch (error) {
++      if (error instanceof DeckCatalogueError) return json({ error: error.message }, 409);
++      return json({ error: "Couldn’t open secure sign-in. Check your existing connection or try again shortly." }, 503);
++    }
+   }
+   let state;
+   try { state = await hostedAuthStatus(auth.user.id, input.intentId); }
+--- before/tests/deck-admission.test.ts
++++ after/tests/deck-admission.test.ts
+@@ -1,7 +1,8 @@
+ import test from "node:test";
+ import assert from "node:assert/strict";
+ import {deckAdmissionPolicy,deckAdmission,requireDeckAdmission} from "../src/lib/deck/admission";
+-const registry={id:"11111111-1111-4111-8111-111111111111",status:"active",website_url:"https://provider.example/login",deck_source_id:"src_verified",deck_task_id:"task_verified",deck_agent_id:"agt_verified"};
++// Bell is in the GTA catalogue; these admission tests still use synthetic portal and task values.
++const registry={id:"fc092591-8083-4e58-aaab-8f34e4435e0b",status:"active",website_url:"https://provider.example/login",deck_source_id:"src_verified",deck_task_id:"task_verified",deck_agent_id:"agt_verified"};
+ const approved={registryId:registry.id,websiteUrl:registry.website_url,sourceId:registry.deck_source_id,taskId:registry.deck_task_id,agentId:registry.deck_agent_id};
+ const env={REZLEE_DECK_LAUNCH_PROVIDERS:JSON.stringify([approved])};
+ test("public Deck admission defaults closed even for an active registry entry",()=>{
+--- before/docs/beta-product-engineering-roadmap.md
++++ after/docs/beta-product-engineering-roadmap.md
+@@ -1,3 +1,5 @@
++> Latest provider-scope update, October 11: [GTA catalogue and Green Button routing](gta-provider-scope-2026-10-11.md). Staging now offers 30 Deck connection candidates plus 10 upload alternatives; 11 Green Button overlaps are excluded from new Deck connections. Existing connections and saved bills remain accessible. Provider-specific and physical-phone acceptance remain open.
++
+ > Latest update, October 2: see [Import experience, feedback and sign-in](import-experience-2026-10-02.md). Its deployment/status and remaining limits supersede older Gmail counts below.
+ 
+ # Rezlee product and engineering roadmap — 2026-09-24
