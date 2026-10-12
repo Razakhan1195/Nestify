@@ -39,4 +39,12 @@ Latest household pass: phone-invite-recovery-2026-10-12.md. Invitation retries p
 
 Latest authentication entry pass: auth-entry-recovery-2026-10-12.md fixes failed required recovery reads, retries and stale-account destinations. 34 actual-component rendered scenarios and 903 regression tests pass. Client available after reload on Expo 8081; no backend deployment. Physical password-reset/link and native OAuth acceptance remain open.
 
-Next engineering priority: notification destination/recovery, followed by connected-account deletion/revocation. Real invitation delivery and two-device access still require physical acceptance. Provider pilots and existing native capture/Care/repair gates remain open; no overall launch sign-off is implied.
+Next engineering priority (revised for the user’s October 12 findings): complete the welcome/security-email lifecycle and Apple/native auth acceptance alongside notification destination/recovery, followed by connected-account deletion/revocation. Real invitation delivery and two-device access still require physical acceptance. Provider pilots and existing native capture/Care/repair gates remain open; no overall launch sign-off is implied.
+
+
+## Customer authentication and experience pass — October 12
+See customer-auth-finish-2026-10-12.md and email-notification-inventory-2026-10-12.md. The actual Home sibling-key warning was reproduced from the archived component and fixed. Password help now accepts email recovery codes with durable verification recovery and isolated auth storage. Staging confirmation/recovery emails were updated and the missing exact mobile signup return was added. Conflicting legacy mobile environment values were corrected; default Expo launch now validates staging and stays on 8081.
+
+Evidence: 913 regression tests, 22 rendered checks and 9 real staging auth checks passed; lint, web/mobile types, Next build and iOS/Android exports passed. No customer messages or production release. Code verification does not certify inbox delivery or native handoff. A separate post-verification welcome sender and security notifications remain to build/enable and accept. Staging security-email switches are currently OFF. The confirmation email's welcome copy is not a separate delivered welcome lifecycle.
+
+Current order: (1) finish authentication/welcome/security communications and Apple configuration, (2) notification destinations/preferences/delivery, (3) connected-account deletion/revocation, (4) operational limits, monitoring/support and release candidate, while completing physical acceptance and bounded provider pilots. Preserve the earlier audit gates for bill usefulness/outcomes, household two-device behavior, capture and home AI; none is silently signed off by this pass.

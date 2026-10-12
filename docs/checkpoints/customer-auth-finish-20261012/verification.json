@@ -1,0 +1,19 @@
+{
+  "regressionTests": 913,
+  "renderedChecks": 22,
+  "hostedAuthChecks": 9,
+  "disposableAccountCleanup": {
+    "remainingFixtureAccounts": 0,
+    "verified": true
+  },
+  "lint": "pass",
+  "webTypes": "pass",
+  "mobileTypes": "pass",
+  "nextBuild": "pass",
+  "iosExport": "pass",
+  "androidExport": "pass",
+  "portGuard": "refused occupied 8081 without starting another server",
+  "noCustomerMessages": true,
+  "noProductionDeployment": true,
+  "physicalAndInboxAcceptance": "pending"
+}

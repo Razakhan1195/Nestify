@@ -1,0 +1,101 @@
+{
+  "files": [
+    {
+      "path": "apps/mobile/app/(tabs)/home.tsx",
+      "beforeSha256": "f93ad98013fc1b9c1d51425224df40720191ade11a02c80a64338b0d764ff3d2",
+      "afterSha256": "fbc533c91aaee57e69965eb1b0f83d018085c26754125874a7cda2ef9fb79718",
+      "bytes": 12887
+    },
+    {
+      "path": "apps/mobile/app/(auth)/forgot-password.tsx",
+      "beforeSha256": "df51721405b99093d38aa09856f18de967ed99fb749b201454cecdcfafdd820b",
+      "afterSha256": "45f40b77126eca2959db83813a3d0387c168e842b93afb105d0bd0df9bcd5ed3",
+      "bytes": 6742
+    },
+    {
+      "path": "apps/mobile/src/auth/password-recovery.ts",
+      "beforeSha256": "565a0e778938cdd8a114ff1bc79c594324d0428bc94039517efd6600a8104131",
+      "afterSha256": "7ec14820383e9585a669d0e4173f3bf642b99c87e06ba783c41576960dfa0c12",
+      "bytes": 13891
+    },
+    {
+      "path": "apps/mobile/src/auth/recovery-client.ts",
+      "beforeSha256": "185844520423d43e10698669b10bda62dab9293c58c85395130044bb897777f7",
+      "afterSha256": "a6e5424723074eb2c3b6b82cce69a9475343024f1c2a19105bfc03794e55dbf0",
+      "bytes": 3422
+    },
+    {
+      "path": "apps/mobile/scripts/start-staging.mjs",
+      "beforeSha256": "f41d08cda7e5a9c386fb54a229308e74673b7299d076ec0deb9a8802a17b3710",
+      "afterSha256": "bd04e4dd1c10940e81a47edf1277b23f1d21aaa096feaf4be93b39ecf2c4b44f",
+      "bytes": 2607
+    },
+    {
+      "path": "apps/mobile/package.json",
+      "beforeSha256": "b4d1c90678b0e2d2a0ae2d6fbd631eabbbb812b9da0d7239349cfe93cfc6b89f",
+      "afterSha256": "ca3abfd718f2ef0f2a726814b4048a57403c0588c2eca9c6ba54c63d92589956",
+      "bytes": 1965
+    },
+    {
+      "path": "supabase/templates/recovery.html",
+      "beforeSha256": "a63eb2b5fa042745a2f1af9f7e125b4a452331a502a3cd887d3685f604dd91ce",
+      "afterSha256": "1d67be63f1bafc92844271114126f0d89f323e3940d00f999dcfaee10485cfff",
+      "bytes": 2320
+    },
+    {
+      "path": "supabase/templates/confirmation.html",
+      "beforeSha256": "069c4a434f10f5c84b9b7b69a3d21d1d265ddbe0fd3c27edde728fa21f21b3d2",
+      "afterSha256": "ab7cc66163991460c5d352fa65af01f3b983210415db383645706de5948dc6d7",
+      "bytes": 1780
+    },
+    {
+      "path": "supabase/templates/README.md",
+      "beforeSha256": "901a871421e8f9f3df11f2cc21249d2fff5a6175ea2c46fd95df78aedf35157a",
+      "afterSha256": "823bf045a2814596f7de1f86945c5befccd2b12fe687ec20ff7d6e32e80b679d",
+      "bytes": 2676
+    },
+    {
+      "path": "tests/password-recovery.test.ts",
+      "beforeSha256": "f9a56aa618393096bdf0afccd3f2f5c519a6a54d05eeab3ca6f1d586d1fd051e",
+      "afterSha256": "e3d187c2be30a9dcf5dba1989ffc6e0698ad8fc703bc37f8db3fb2a0e1fc0e62",
+      "bytes": 14181
+    },
+    {
+      "path": "tests/password-recovery-sdk.test.ts",
+      "beforeSha256": "ce7e4aa678a9ea788c76c0c9123cbcfff129c3ce2bd13856e61c0025c7cdf8d0",
+      "afterSha256": "c8039bee48dbe7774636f5199d29c6e5254091a95c19c4dd01af64e28d33aa52",
+      "bytes": 6493
+    },
+    {
+      "path": "scripts/qa/render-customer-auth-finish.cjs",
+      "beforeSha256": null,
+      "afterSha256": "134287ff4cac12120e6def582cab1d1ea37ccdcbd49329e17a1454d4d5b9f953",
+      "bytes": 11532
+    },
+    {
+      "path": "scripts/qa/customer-auth-staging.mjs",
+      "beforeSha256": null,
+      "afterSha256": "2a377247768d22dc24a368e9e1811853e624637d6fd50a26f98f0b11ccf3a69b",
+      "bytes": 3807
+    },
+    {
+      "path": "docs/audit-completion-status-2026-10-11.md",
+      "beforeSha256": "528ab3794fc7d351b5421ebc0d27a9868b936f9c012577fc589d4bbed6e62ed2",
+      "afterSha256": "37b19a1b8ffbb281a45c548549ce50eb2569b9c25f20212cf3f3646859a7d710",
+      "bytes": 10088
+    },
+    {
+      "path": "docs/customer-auth-finish-2026-10-12.md",
+      "beforeSha256": null,
+      "afterSha256": "71b9b81f2681f87f0e8b8788dc4044fb5d0271c2b6117ef8c79b118440c879ec",
+      "bytes": 6309
+    },
+    {
+      "path": "docs/email-notification-inventory-2026-10-12.md",
+      "beforeSha256": null,
+      "afterSha256": "e224272e0b02245bc159d8736580535647f1638fb7932cb8b14f9e1b4d079ae2",
+      "bytes": 9336
+    }
+  ],
+  "excluded": "Mobile .env contains public deployment connection values and is backed up privately, never included in git archives."
+}

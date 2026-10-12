@@ -1,0 +1,782 @@
+--- before/apps/mobile/app/(tabs)/home.tsx
++++ after/apps/mobile/app/(tabs)/home.tsx
+@@ -108,7 +108,7 @@
+       {!home ? <>{busy ? <ActivityIndicator accessibilityLabel="Loading your home" color={colors.primary} /> : <ReadNotice message="Your home couldn’t be loaded." onRetry={() => void load()} />}</> : <>
+         {error || home.availability?.missing.length ? <ReadNotice message={error ? "We couldn’t check for updates. Showing the last loaded information." : "Some information is unavailable. Your household summary may be incomplete."} busy={busy} onRetry={() => void load()} /> : null}
+         <HomeBrief home={home} accounts={utilityData ? billAccountOverview(utilityData,localDay(),!insightError&&!error) : []} failed={error||taskReadError||insightError} loading={busy} providerBusy={providerActivity.some(item=>item.state==="syncing")} />
+-        {owner ? <HomeUtilityProgress key={home.home.id} hasAccounts={Boolean(utilityData?.utilityInsights.length) && !insightError} onComplete={() => void load()} /> : null}
++        {owner ? <HomeUtilityProgress key={"utility-progress:" + home.home.id} hasAccounts={Boolean(utilityData?.utilityInsights.length) && !insightError} onComplete={() => void load()} /> : null}
+         {owner && providerActivity.length ? <View>
+           {providerActivity.slice(0, 2).map(item => <BriefRow key={item.providerId} title={`${item.providerName} · ${item.state === "syncing" ? "Updating" : "Connection needs attention"}`} detail={item.message} onPress={() => router.push(item.mobileHref as never)} />)}
+           {providerActivity.length > 2 ? <BriefRow title={`Review all ${providerActivity.length} connection updates`} onPress={() => router.push("/provider")} /> : null}
+@@ -131,7 +131,7 @@
+         {owner && remaining.length && state?.showTaskTiles ? <HomeStartJourney remaining={remaining} onStart={startTask} /> : null}
+         </View>
+         {taskReadError ? <ReadNotice message="Some records or care tasks couldn’t be checked. Previously loaded items may be out of date." busy={busy} onRetry={() => void load()} /> : null}
+-        {owner && itemCount>0 ? <RecallWatchSummary key={home.home.id} itemCount={itemCount} onlyActionable/>:null}
++        {owner && itemCount>0 ? <RecallWatchSummary key={"recall-watch:" + home.home.id} itemCount={itemCount} onlyActionable/>:null}
+         {owner && recentRecords.length ? <HomeSection><SectionHeading title="Recently saved" />
+           {recentRecords.map(record => <BriefRow key={record.id} title={record.title} detail={`${record.category}${record.expires_on ? ` · Expiry ${formatVaultDate(record.expires_on)}` : ""}`} onPress={() => router.push({ pathname: "/vault-record", params: { id: record.id } })} />)}
+         </HomeSection> : null}
+--- before/apps/mobile/app/(auth)/forgot-password.tsx
++++ after/apps/mobile/app/(auth)/forgot-password.tsx
+@@ -14,6 +14,8 @@
+   const { session } = useAuth();
+   const params = useLocalSearchParams<{ email?: string }>();
+   const [email, setEmail] = useState(typeof params.email === "string" ? params.email : "");
++  const [code, setCode] = useState("");
++  const [editingEmail, setEditingEmail] = useState(false);
+   const recovery = useSyncExternalStore(passwordRecovery.subscribe, passwordRecovery.snapshot, passwordRecovery.snapshot);
+   const [now, setNow] = useState(() => Date.now());
+   useEffect(() => { void passwordRecovery.resume(); }, []);
+@@ -24,25 +26,60 @@
+   }, [recovery.retryAt]);
+   const waiting = Math.max(0, Math.ceil((recovery.retryAt - now) / 1000));
+   const busy = ["sending", "verifying", "saving"].includes(recovery.phase);
+-  const sent = recovery.phase === "sent";
++  const codeStep = !editingEmail && Boolean(recovery.email) && ["sent", "verifying"].includes(recovery.phase);
+   const resumable = ["ready", "success", "uncertain"].includes(recovery.phase);
++  const restore = recovery.phase === "unavailable";
++  async function send(address: string) {
++    setCode("");
++    await passwordRecovery.request(address);
++    setNow(Date.now());
++    if (passwordRecovery.snapshot().phase === "sent") setEditingEmail(false);
++  }
++  async function verify() {
++    await passwordRecovery.verifyCode(code);
++    if (passwordRecovery.snapshot().phase === "ready") {
++      setCode("");
++      router.replace("/reset-password");
++    }
++  }
++  const changeEmail = () => { setEmail(recovery.email); setCode(""); setEditingEmail(true); };
+   return <SafeAreaView edges={["left", "right", "bottom"]} style={{ flex: 1, backgroundColor: colors.background }}>
+     <ScreenNavigation title="Password help" fallback={session ? "/app-security" : "/(auth)/login"} />
+     <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={{ flex: 1 }}>
+       <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ padding: spacing["2xl"], gap: spacing.xl }}>
+         <View style={{ gap: spacing.sm }}>
+-          <Text accessibilityRole="header" style={[typography.heading, { color: colors.foreground }]}>{sent ? "Check your email" : "Reset your password"}</Text>
+-          <Text style={[typography.body, { color: colors.mutedForeground }]}>{sent
+-            ? `If an account exists for ${recovery.email}, a reset link is on the way. Check your junk folder too.`
+-            : "Enter the email you use for Rezlee. We’ll send a link to choose a new password."}</Text>
+-          <Text style={[typography.body, { color: colors.mutedForeground }]}>Open the latest link on this phone within 20 minutes. You can leave the app while you check your email.</Text>
++          <Text accessibilityRole="header" style={[typography.heading, { color: colors.foreground }]}>{codeStep ? "Check your email" : resumable ? "Pick up where you left off" : restore ? "Let’s reconnect" : "A fresh start"}</Text>
++          <Text style={[typography.body, { color: colors.mutedForeground }]}>{codeStep
++            ? `If an account exists for ${recovery.email}, an email with a reset code is on the way.`
++            : resumable ? "Your password recovery is saved on this phone. Continue to see your next step."
++            : restore ? "Your reset progress is saved on this phone. Restore it before trying again."
++            : "Enter the email you use for Rezlee. We’ll help you choose a new password."}</Text>
+         </View>
+         {recovery.error ? <Text accessibilityRole="alert" style={[typography.body, { color: colors.criticalForeground }]}>{recovery.error}</Text> : null}
+-        {resumable ? <Button label="Continue password recovery" onPress={() => router.push("/reset-password")} /> : <>
+-          <TextField label="Email" autoCapitalize="none" autoComplete="email" keyboardType="email-address" autoCorrect={false} value={email} editable={!busy} onChangeText={setEmail} maxLength={254} />
+-          <Button label={waiting ? `Send another link in ${waiting}s` : sent ? "Send another link" : "Send reset link"} loading={busy} disabled={!email.trim() || waiting > 0} onPress={() => void passwordRecovery.request(email)} />
+-          {sent ? <Text style={[typography.caption, { color: colors.mutedForeground }]}>Wrong email? Edit it above, then request a new link. A new request replaces the previous link.</Text> : null}
+-        </>}
++        {resumable ? <Button label="Continue password recovery" onPress={() => router.push("/reset-password")} />
++          : restore ? <Button label="Restore recovery" onPress={() => void passwordRecovery.resume()} />
++          : codeStep ? <View style={{ gap: spacing.lg }}>
++            <TextField label="Reset code" value={code} onChangeText={setCode} editable={!busy}
++              keyboardType="number-pad" autoComplete="one-time-code" textContentType="oneTimeCode"
++              autoCorrect={false} autoCapitalize="none" maxLength={20}
++              onSubmitEditing={() => void verify()} returnKeyType="done" />
++            <Button label="Continue" loading={busy} disabled={!/^\d{6,10}$/.test(code.replace(/\s/g, ""))} onPress={() => void verify()} />
++            <Text style={[typography.caption, { color: colors.mutedForeground }]}>Use the code from your latest email within 20 minutes. You can check your email on any device, then enter the code here.</Text>
++            <Button variant="secondary" label={waiting ? `Resend code in ${waiting}s` : "Resend code"} disabled={busy || waiting > 0} onPress={() => void send(recovery.email)} />
++            <Text style={[typography.caption, { color: colors.mutedForeground }]}>No email yet? Check your junk folder. A new request replaces the previous code and link.</Text>
++            <Pressable accessibilityRole="button" disabled={busy} accessibilityState={{ disabled: busy }} onPress={changeEmail} style={{ minHeight: 44, justifyContent: "center" }}>
++              <Text style={[typography.body, { color: colors.primary }]}>Use a different email</Text>
++            </Pressable>
++          </View> : <View style={{ gap: spacing.lg }}>
++            <TextField label="Email" autoCapitalize="none" autoComplete="email" keyboardType="email-address" autoCorrect={false}
++              value={email || (!editingEmail ? recovery.email : "")} editable={!busy}
++              onChangeText={value => { setEditingEmail(true); setEmail(value); }} maxLength={254} />
++            <Button label={waiting ? `Send reset email in ${waiting}s` : "Send reset email"} loading={busy}
++              disabled={!(email || (!editingEmail ? recovery.email : "")).trim() || waiting > 0}
++              onPress={() => void send(email || (!editingEmail ? recovery.email : ""))} />
++            <Text style={[typography.caption, { color: colors.mutedForeground }]}>You can leave Rezlee while you check your email. We’ll keep your place.</Text>
++            {editingEmail && recovery.phase === "sent" ? <Button variant="secondary" label="Back to code entry" onPress={() => setEditingEmail(false)} /> : null}
++          </View>}
+         <Pressable accessibilityRole="button" onPress={() => session ? router.back() : router.replace("/(auth)/login")} style={{ minHeight: 44, justifyContent: "center" }}>
+           <Text style={[typography.body, { color: colors.primary }]}>{session ? "Back to Security" : "Back to sign in"}</Text>
+         </Pressable>
+--- before/apps/mobile/src/auth/password-recovery.ts
++++ after/apps/mobile/src/auth/password-recovery.ts
+@@ -1,19 +1,20 @@
+ export const RECOVERY_REDIRECT = "rezlee://reset-password";
+ const WINDOW_MS = 20 * 60 * 1000;
+ const RESEND_MS = 60 * 1000;
+-const INVALID_LINK = "This link has expired or cannot be used on this phone. Request a new link here and open the latest email on this phone.";
++const INVALID_LINK = "This reset has expired or cannot be used here. Request a new email and use its code or open its link on this phone.";
+ 
+ type AuthError = { code?: string; status?: number } | null;
+ type User = { id: string; email?: string };
+ export type RecoveryAuth = {
+   request(email: string): Promise<{ error: AuthError }>;
++  verifyCode(email: string, token: string): Promise<{ user: User | null; error: AuthError }>;
+   exchange(code: string): Promise<{ user: User | null; error: AuthError }>;
+   user(): Promise<{ user: User | null; error: AuthError }>;
+   update(password: string): Promise<{ error: AuthError }>;
+ };
+ export type RecoveryRecord = {
+   email: string; requestedAt: number; expiresAt: number;
+-  stage: "requesting" | "requested" | "verified" | "updating" | "updated"; userId?: string;
++  stage: "requesting" | "requested" | "verifying" | "verified" | "updating" | "updated"; userId?: string;
+ };
+ export type RecoveryState = {
+   phase: "idle" | "sending" | "sent" | "verifying" | "ready" | "saving" | "success" | "invalid" | "unavailable" | "uncertain";
+@@ -77,10 +78,16 @@
+       if (!record) { publish({ phase: "idle", email: "" }); return; }
+       publish({ email: record.email, retryAt: record.requestedAt + RESEND_MS });
+       if (record.stage === "updated") { publish({ phase: "success" }); return; }
+-      if (record.stage === "updating") { publish({ phase: "uncertain", error: "The password change was interrupted. Try signing in with your new password before requesting another link." }); return; }
++      if (record.stage === "updating") { publish({ phase: "uncertain", error: "The password change was interrupted. Try signing in with your new password before requesting another email." }); return; }
+       if (record.expiresAt <= now()) { invalid(); return; }
+       if (record.stage === "requesting") { publish({ phase: "idle", error: "Could not confirm that a link was sent. Check your inbox before requesting another." }); return; }
+       if (record.stage === "requested") { publish({ phase: "sent" }); return; }
++      if (record.stage === "verifying") {
++        // A one-time code may have been consumed just before the app closed.
++        // Recover the isolated SDK session before asking for another code.
++        if (!await restoreVerification(record)) publish({ phase: "sent", error: "Verification was interrupted. Enter the code from your latest email to try again." });
++        return;
++      }
+       if (record.stage !== "verified" || !record.userId) { invalid(); return; }
+       const result = await deps.auth.user();
+       if (result.error && (!result.error.status || result.error.status >= 500)) throw new Error("unavailable");
+@@ -88,6 +95,49 @@
+       publish({ phase: "ready" });
+     } catch { publish({ phase: "unavailable", error: "Could not restore password recovery. Check your connection and try again." }); }
+     finally { release(); }
++  }
++
++  async function restoreVerification(record: RecoveryRecord) {
++    const result = await deps.auth.user();
++    if (result.error && (!result.error.status || result.error.status >= 500)) throw new Error("unavailable");
++    if (result.error || !result.user) return false;
++    if (result.user.email?.toLowerCase() !== record.email.toLowerCase()) { invalid(); return true; }
++    await deps.write({ ...record, userId: result.user.id, stage: "verified" });
++    publish({ phase: "ready", email: record.email, error: null, retryAt: record.requestedAt + RESEND_MS });
++    return true;
++  }
++
++  async function verifyCode(rawCode: string) {
++    if (busy || ["ready", "success", "uncertain"].includes(state.phase)) return;
++    const token = rawCode.replace(/\s/g, "");
++    if (!/^\d{6,10}$/.test(token)) {
++      publish({ error: "Enter the full code from your latest Rezlee email." }); return;
++    }
++    busy = true; publish({ phase: "verifying", error: null });
++    try {
++      const record = await read();
++      if (!record || record.expiresAt <= now()) { invalid(); return; }
++      if (["verified", "updating", "updated"].includes(record.stage)) {
++        busy = false; await resume(); return;
++      }
++      if (record.stage === "verifying" && await restoreVerification(record)) return;
++      if (!["requesting", "requested", "verifying"].includes(record.stage)) { invalid(); return; }
++      await deps.write({ ...record, stage: "verifying" });
++      const result = await deps.auth.verifyCode(record.email, token);
++      if (result.error) {
++        if (!result.error.status || result.error.status >= 500) throw new Error("unavailable");
++        await deps.write({ ...record, stage: "requested" });
++        publish({ phase: "sent", error: result.error.status === 429
++          ? "Too many attempts. Wait a few minutes before trying again."
++          : "That code could not be verified. Check your latest email, or request a new code." });
++        return;
++      }
++      if (!result.user || result.user.email?.toLowerCase() !== record.email.toLowerCase()) { invalid(); return; }
++      await deps.write({ ...record, userId: result.user.id, stage: "verified" });
++      publish({ phase: "ready", email: record.email, error: null, retryAt: record.requestedAt + RESEND_MS });
++    } catch {
++      publish({ phase: "unavailable", error: "Could not confirm verification. Check your connection, then try restoring recovery." });
++    } finally { release(); }
+   }
+ 
+   async function request(rawEmail: string) {
+@@ -100,7 +150,7 @@
+     try {
+       const previous = await read();
+       const retryAt = Math.max(state.retryAt, previous ? previous.requestedAt + RESEND_MS : 0);
+-      if (now() < retryAt) { publish({ retryAt, error: "Please wait a minute before requesting another link." }); return; }
++      if (now() < retryAt) { publish({ retryAt, error: "Please wait a minute before requesting another email." }); return; }
+       // Save before sending: a process interruption never loses the recovery
+       // destination; auth's verifier and session use separate secure storage.
+       await deps.clear(); lastCode = null;
+@@ -132,14 +182,20 @@
+     try {
+       const record = await read();
+       if (!record) { invalid(); return true; }
+-      if (["verified", "updating", "updated"].includes(record.stage)) {
++      if (["verifying", "verified", "updating", "updated"].includes(record.stage)) {
+         // An already consumed email link may open the app again after a restart.
+         // Restore the verified session; never exchange its single-use code twice.
+         busy = false; await resume(); return true;
+       }
+       if (!["requesting", "requested"].includes(record.stage) || record.expiresAt <= now()) { invalid(); return true; }
++      await deps.write({ ...record, stage: "verifying" });
+       const result = await deps.auth.exchange(link.code);
+-      if (result.error || !result.user || result.user.email?.toLowerCase() !== record.email.toLowerCase()) { invalid(); return true; }
++      if (result.error) {
++        if (!result.error.status || result.error.status >= 500) throw new Error("unavailable");
++        await deps.write({ ...record, stage: "requested" });
++        invalid(); return true;
++      }
++      if (!result.user || result.user.email?.toLowerCase() !== record.email.toLowerCase()) { invalid(); return true; }
+       await deps.write({ ...record, userId: result.user.id, stage: "verified" });
+       publish({ phase: "ready", email: result.user.email, retryAt: record.requestedAt + RESEND_MS });
+     } catch { publish({ phase: "unavailable", error: "Could not verify the reset link. Check your connection, then try restoring recovery. If that fails, request a new link." }); }
+@@ -175,7 +231,7 @@
+       await deps.write({ ...record, stage: "updated" });
+       publish({ phase: "success", error: null });
+     } catch { publish({ phase: updating ? "uncertain" : "unavailable", error: updating
+-      ? "The password change could not be confirmed. Try signing in with your new password before requesting another link."
++      ? "The password change could not be confirmed. Try signing in with your new password before requesting another email."
+       : "Could not check this reset session. Check your connection and try again." }); }
+     finally { release(); }
+   }
+@@ -187,5 +243,5 @@
+     catch { publish({ error: "Could not close password recovery. Please try again." }); return false; }
+     finally { release(); }
+   }
+-  return { snapshot: () => state, subscribe: (fn: () => void) => { listeners.add(fn); return () => { listeners.delete(fn); }; }, request, accept, resume, save, finish };
++  return { snapshot: () => state, subscribe: (fn: () => void) => { listeners.add(fn); return () => { listeners.delete(fn); }; }, request, verifyCode, accept, resume, save, finish };
+ }
+--- before/apps/mobile/src/auth/recovery-client.ts
++++ after/apps/mobile/src/auth/recovery-client.ts
+@@ -49,6 +49,7 @@
+       });
+       return auth().resetPasswordForEmail(email, { redirectTo: RECOVERY_REDIRECT });
+     },
++    verifyCode: async (email, token) => { const { data, error } = await auth().verifyOtp({ email, token, type: "recovery" }); return { user: data.user, error }; },
+     exchange: async code => { const { data, error } = await auth().exchangeCodeForSession(code); return { user: data.user, error }; },
+     user: async () => { const { data, error } = await auth().getUser(); return { user: data.user, error }; },
+     update: password => auth().updateUser({ password }),
+--- before/apps/mobile/scripts/start-staging.mjs
++++ after/apps/mobile/scripts/start-staging.mjs
+@@ -2,6 +2,7 @@
+ import { fileURLToPath } from "node:url";
+ import { createRequire } from "node:module";
+ import { spawn } from "node:child_process";
++import { createServer } from "node:net";
+ const mobile = fileURLToPath(new URL("../", import.meta.url));
+ const required = ["EXPO_PUBLIC_API_URL", "EXPO_PUBLIC_SUPABASE_URL", "EXPO_PUBLIC_SUPABASE_ANON_KEY"];
+ const values = Object.fromEntries(readFileSync(new URL("../../../.env.mobile-staging.local", import.meta.url), "utf8").split(/\r?\n/).filter(line => line && !line.startsWith("#")).map(line => { const i = line.indexOf("="); return [line.slice(0, i), line.slice(i + 1)]; }));
+@@ -10,11 +11,21 @@
+ if (new URL(values.EXPO_PUBLIC_API_URL).origin !== "https://staging.rezlee.com") throw new Error("Unexpected staging API.");
+ const key = values.EXPO_PUBLIC_SUPABASE_ANON_KEY;
+ if (!key.startsWith("sb_publishable_") && JSON.parse(Buffer.from(key.split(".")[1], "base64url").toString()).role !== "anon") throw new Error("Only a public Supabase key belongs in the mobile app.");
++await new Promise(resolve => {
++ const probe = createServer();
++ probe.once("error", error => {
++  console.error(error.code === "EADDRINUSE"
++   ? "Port 8081 is already in use. Reuse the running staging server or stop it before restarting. Rezlee will not switch ports automatically."
++   : "Could not open staging port 8081. Check that the port is available and try again.");
++  process.exit(1);
++ });
++ probe.listen(8081, "0.0.0.0", () => probe.close(resolve));
++});
+ const expoGo = process.argv.includes("--go");
+ const env = { ...process.env, EXPO_NO_DOTENV: "1", REZLEE_STAGING_PROFILE: "1", EXPO_PUBLIC_SOCIAL_AUTH_READY: "true" };
+ for (const name of required) env[name] = values[name];
+-console.log(`Rezlee staging: staging.rezlee.com · port 8082 · ${expoGo ? "Expo Go (use email sign-in; Google requires the Rezlee build)" : "Rezlee development build"}. Service availability follows staging settings.`);
++console.log(`Rezlee staging: staging.rezlee.com · port 8081 · ${expoGo ? "Expo Go (use email sign-in; Google requires the Rezlee build)" : "Rezlee development build"}. Service availability follows staging settings.`);
+ const require = createRequire(new URL("../package.json", import.meta.url));
+-const child = spawn(process.execPath, [require.resolve("expo/bin/cli"), "start", expoGo ? "--go" : "--dev-client", "--lan", "--port", "8082", "--clear"], { cwd: mobile, env, stdio: "inherit" });
++const child = spawn(process.execPath, [require.resolve("expo/bin/cli"), "start", expoGo ? "--go" : "--dev-client", "--lan", "--port", "8081", "--clear"], { cwd: mobile, env, stdio: "inherit" });
+ child.on("exit", code => { process.exitCode = code ?? 1; });
+ for (const signal of ["SIGINT", "SIGTERM"]) process.on(signal, () => child.kill(signal));
+--- before/apps/mobile/package.json
++++ after/apps/mobile/package.json
+@@ -4,8 +4,8 @@
+   "private": true,
+   "main": "expo-router/entry",
+   "scripts": {
+-    "start": "expo start --dev-client --lan",
+-    "start:clean": "expo start --dev-client --lan --clear",
++    "start": "node scripts/start-staging.mjs --go",
++    "start:clean": "node scripts/start-staging.mjs --go",
+     "android": "expo run:android",
+     "ios": "expo run:ios",
+     "web": "expo start --web",
+@@ -14,7 +14,8 @@
+     "build:android:beta": "node scripts/build-staging.mjs android",
+     "build:ios:beta": "node scripts/build-staging.mjs ios",
+     "submit:ios:beta": "node scripts/submit-ios-beta.mjs",
+-    "build:android:play-beta": "node scripts/build-staging.mjs android beta"
++    "build:android:play-beta": "node scripts/build-staging.mjs android beta",
++    "start:dev-client": "node scripts/start-staging.mjs"
+   },
+   "dependencies": {
+     "@expo/vector-icons": "^15.0.2",
+--- before/supabase/templates/recovery.html
++++ after/supabase/templates/recovery.html
+@@ -1,14 +1,18 @@
+ <!doctype html>
+ <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Reset your password · Rezlee</title></head>
+ <body style="margin:0;background:#F8F7F3;color:#202D28;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;">
++<div style="display:none;max-height:0;overflow:hidden;">Your reset code is inside. Let’s get you back to your home.</div>
+ <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td align="center" style="padding:32px 16px;">
+ <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;">
+ <tr><td style="padding:0 8px 28px;font-size:30px;letter-spacing:-1px;font-weight:600;color:#264D3E;">rezlee</td></tr>
+ <tr><td style="background:#FFFDF8;border:1px solid #D9DFD8;border-radius:20px;padding:32px 24px;">
+-<h1 style="margin:0 0 16px;font-size:26px;line-height:1.25;letter-spacing:-.4px;font-weight:600;">Reset your password</h1>
+-<p style="margin:0 0 24px;font-size:16px;line-height:1.6;">You requested a password reset for your Rezlee account. Use the link below to choose a new password.</p>
++<h1 style="margin:0 0 16px;font-size:26px;line-height:1.25;letter-spacing:-.4px;font-weight:600;">Let’s get you back in</h1>
++<p style="margin:0 0 20px;font-size:16px;line-height:1.6;">To choose a new password in the Rezlee app, return to Password help and enter this code:</p>
++<p style="margin:0 0 20px;padding:18px 12px;background:#EEF2EB;border-radius:12px;text-align:center;font-size:28px;line-height:1.4;letter-spacing:3px;font-weight:600;color:#264D3E;">{{ .Token }}</p>
++<p style="margin:0 0 24px;font-size:14px;line-height:1.6;color:#58665F;">Use your latest code within 20 minutes. You can read this email on any device and enter the code on the phone where you requested it.</p>
++<p style="margin:0 0 16px;font-size:14px;line-height:1.6;color:#58665F;">Prefer a link? Open this on the device where you started:</p>
+ <a href="{{ .ConfirmationURL }}" style="display:inline-block;padding:15px 24px;background:#264D3E;color:#FAF7EF;border-radius:10px;font-size:16px;font-weight:600;text-decoration:none;">Reset password</a>
+-<p style="margin:24px 0 0;font-size:14px;line-height:1.6;color:#58665F;">If you didn’t request this, you can ignore this email.</p>
++<p style="margin:24px 0 0;font-size:14px;line-height:1.6;color:#58665F;">If you didn’t request this, you can ignore this email. Your password stays the same.</p>
+ </td></tr>
+-<tr><td style="padding:20px 8px;font-size:12px;line-height:1.6;color:#58665F;">Rezlee · Account security<br>Never share a confirmation link or verification code.</td></tr>
++<tr><td style="padding:20px 8px;font-size:12px;line-height:1.6;color:#58665F;">Rezlee · Account security<br>Never share your reset code or link. Rezlee will never ask you to send either to us.</td></tr>
+ </table></td></tr></table></body></html>
+--- before/supabase/templates/confirmation.html
++++ after/supabase/templates/confirmation.html
+@@ -5,9 +5,10 @@
+ <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;">
+ <tr><td style="padding:0 8px 28px;font-size:30px;letter-spacing:-1px;font-weight:600;color:#264D3E;">rezlee</td></tr>
+ <tr><td style="background:#FFFDF8;border:1px solid #D9DFD8;border-radius:20px;padding:32px 24px;">
+-<h1 style="margin:0 0 16px;font-size:26px;line-height:1.25;letter-spacing:-.4px;font-weight:600;">Confirm your email</h1>
+-<p style="margin:0 0 24px;font-size:16px;line-height:1.6;">Confirm this email address to finish creating your Rezlee account.</p>
++<h1 style="margin:0 0 16px;font-size:26px;line-height:1.25;letter-spacing:-.4px;font-weight:600;">Welcome to Rezlee</h1>
++<p style="margin:0 0 24px;font-size:16px;line-height:1.6;">Confirm your email to finish creating your account. Then start with one thing you’d like to take care of.</p>
+ <a href="{{ .ConfirmationURL }}" style="display:inline-block;padding:15px 24px;background:#264D3E;color:#FAF7EF;border-radius:10px;font-size:16px;font-weight:600;text-decoration:none;">Confirm email</a>
++<p style="margin:24px 0 0;font-size:14px;line-height:1.6;color:#58665F;">Save a bill, keep an important record, or set a care reminder. You can add the rest when you need it.</p>
+ <p style="margin:24px 0 0;font-size:14px;line-height:1.6;color:#58665F;">If you didn’t request this, you can ignore this email.</p>
+ </td></tr>
+ <tr><td style="padding:20px 8px;font-size:12px;line-height:1.6;color:#58665F;">Rezlee · Account security<br>Never share a confirmation link or verification code.</td></tr>
+--- before/supabase/templates/README.md
++++ after/supabase/templates/README.md
+@@ -8,7 +8,7 @@
+ - No tracking pixels, externally fetched graphics, promotional content or interpolated user metadata.
+ - Sender display name: Rezlee. Use the verified Rezlee sending address in the existing Resend account; do not invent or use an unverified From address.
+ - Configure custom SMTP on the intended Supabase project using provider credentials through its protected settings. Do not put passwords in this directory, mobile code or logs.
+-- Do not change the magic-link/OTP template or enable email-code recovery gates as part of this change.
++- The ordinary magic-link/sign-in-code template and its gates are separate from password recovery. Recovery now supports `{{ .Token }}` through the isolated recovery client; keep both that token and the existing confirmation URL.
+ 
+ Acceptance before release: send to an explicitly authorized test inbox; inspect actual From and branding, SPF/DKIM/DMARC delivery results, confirmation and reset links, expired/resend behavior and native return. A template render or admin-confirmed test account is not delivery verification. Keep production separate from staging and preserve previous settings for rollback.
+ 
+@@ -16,3 +16,6 @@
+ 
+ ## Hosted staging status — 2026-09-25
+ Confirmation/recovery templates and custom Resend SMTP are now configured on staging gjwvalpxnfbvryosmcbj and verified by management API read-back. Production unchanged. SMTP credential acceptance succeeded; no messages sent and inbox/link journeys remain unverified. See docs/staging-auth-email-verification-2026-09-25.json.
++
++## Customer recovery update — 2026-10-12
++Staging reset email now includes a code for the mobile Password help screen plus the existing reset link. The code can be read on any device and entered on the requesting phone; this works around custom-scheme handoff in Expo Go. Codes use Supabase recovery verification, never ordinary sign-in. The confirmation email welcomes the customer with one confirmation action and three optional starting ideas. These templates are applied to staging only. The exact mobile signup return `https://staging.rezlee.com/auth/mobile-confirmed` is now allowed. A separate post-confirmation welcome email is not implemented or enabled. Actual mailbox delivery and OS handoff remain acceptance gates. See customer-auth-finish-2026-10-12.md.
+--- before/tests/password-recovery.test.ts
++++ after/tests/password-recovery.test.ts
+@@ -11,6 +11,7 @@
+   let requests = 0, exchanges = 0, updates = 0, clears = 0;
+   const auth: RecoveryAuth = {
+     request: async () => { requests++; return { error: null }; },
++    verifyCode: async () => ({ user, error: null }),
+     exchange: async () => { exchanges++; return { user, error: null }; },
+     user: async () => ({ user, error: null }),
+     update: async () => { updates++; return { error: null }; },
+@@ -116,3 +117,84 @@
+   const f = await ready(); const restarted = f.restart(); await restarted.accept(link);
+   assert.equal(restarted.snapshot().phase, "ready"); assert.equal(f.counts().exchanges, 1);
+ });
++
++test("email code finishes recovery without opening a native link", async () => {
++  const f = fixture(); let verified = 0;
++  f.auth.verifyCode = async (address, token) => { verified++; assert.equal(address, email); assert.equal(token, "12345678"); return { user, error: null }; };
++  await f.flow.request(email); await f.flow.verifyCode("1234 5678");
++  assert.equal(verified, 1); assert.equal(f.flow.snapshot().phase, "ready");
++  assert.equal(f.counts().exchanges, 0);
++  await f.flow.save("a new passphrase", "a new passphrase"); assert.equal(f.counts().updates, 1);
++  assert.doesNotMatch(JSON.stringify(f.record()), /12345678/);
++});
++test("wrong code can be corrected without a second email", async () => {
++  const f = fixture(); await f.flow.request(email); let attempts = 0;
++  f.auth.verifyCode = async () => ++attempts === 1 ? { user: null, error: { status: 403, code: "otp_expired" } } : { user, error: null };
++  await f.flow.verifyCode("123456"); assert.equal(f.flow.snapshot().phase, "sent");
++  assert.equal(f.record()?.stage, "requested");
++  await f.flow.verifyCode("87654321"); assert.equal(f.flow.snapshot().phase, "ready");
++  assert.equal(f.counts().requests, 1);
++});
++test("missing, expired, malformed and wrong-account codes cannot authorize a password", async () => {
++  for (const scenario of ["missing", "expired", "malformed", "wrong-account"]) {
++    const f = fixture(); let attempts = 0;
++    f.auth.verifyCode = async () => { attempts++; return { user: { id: "other", email: "other@example.invalid" }, error: null }; };
++    if (scenario !== "missing") await f.flow.request(email);
++    if (scenario === "expired") f.advance(20 * 60 * 1000 + 1);
++    await f.flow.verifyCode(scenario === "malformed" ? "12abc4" : "123456");
++    assert.equal(attempts, scenario === "wrong-account" ? 1 : 0);
++    assert.notEqual(f.flow.snapshot().phase, "ready");
++    await f.flow.save("password123", "password123"); assert.equal(f.counts().updates, 0);
++  }
++});
++test("duplicate code submits verify once and a consumed code is never submitted again", async () => {
++  const f = fixture(); let attempts = 0;
++  f.auth.verifyCode = async () => { attempts++; return { user, error: null }; };
++  await f.flow.request(email);
++  await Promise.all([f.flow.verifyCode("123456"), f.flow.verifyCode("123456")]);
++  await f.flow.verifyCode("123456"); assert.equal(attempts, 1);
++  const restarted = f.restart(); await restarted.verifyCode("123456");
++  assert.equal(attempts, 1); assert.equal(restarted.snapshot().phase, "ready");
++});
++test("interrupted verification restores the durable isolated session after restart", async () => {
++  for (const mode of ["code", "link"]) {
++    const f = fixture(); await f.flow.request(email);
++    const write = f.deps.write;
++    f.deps.write = async record => { if (record.stage === "verified") throw Error("storage interrupted"); await write(record); };
++    if (mode === "code") await f.flow.verifyCode("123456"); else await f.flow.accept(link);
++    assert.equal(f.flow.snapshot().phase, "unavailable"); assert.equal(f.record()?.stage, "verifying");
++    f.deps.write = write;
++    const restarted = f.restart(); await restarted.resume();
++    assert.equal(restarted.snapshot().phase, "ready"); assert.equal(f.record()?.stage, "verified");
++  }
++});
++test("offline verification restores to code entry when no session was created", async () => {
++  const f = fixture(); await f.flow.request(email);
++  f.auth.verifyCode = async () => { throw Error("connection interrupted"); };
++  f.auth.user = async () => ({ user: null, error: { status: 401 } });
++  await f.flow.verifyCode("123456"); assert.equal(f.flow.snapshot().phase, "unavailable");
++  await f.flow.resume(); assert.equal(f.flow.snapshot().phase, "sent");
++  f.auth.verifyCode = async () => ({ user, error: null });
++  await f.flow.verifyCode("654321"); assert.equal(f.flow.snapshot().phase, "ready");
++});
++test("recovery verification cannot proceed if the durable marker cannot be saved", async () => {
++  const f = fixture(); await f.flow.request(email); let attempts = 0;
++  f.auth.verifyCode = async () => { attempts++; return { user, error: null }; };
++  f.deps.write = async () => { throw Error("storage unavailable"); };
++  await f.flow.verifyCode("123456"); assert.equal(attempts, 0);
++  assert.equal(f.flow.snapshot().phase, "unavailable");
++});
++test("rate-limited verification stays recoverable and does not expose internal errors", async () => {
++  const f = fixture(); await f.flow.request(email);
++  f.auth.verifyCode = async () => ({ user: null, error: { status: 429 } });
++  await f.flow.verifyCode("123456"); assert.equal(f.flow.snapshot().phase, "sent");
++  assert.match(f.flow.snapshot().error!, /Wait a few minutes/);
++});
++
++test("a rejected link does not block the latest valid link", async () => {
++  const f = fixture(); await f.flow.request(email); let attempts = 0;
++  f.auth.exchange = async () => ++attempts === 1 ? { user: null, error: { status: 403 } } : { user, error: null };
++  await f.flow.accept("rezlee://reset-password?code=expired-code-123");
++  assert.equal(f.flow.snapshot().phase, "invalid"); assert.equal(f.record()?.stage, "requested");
++  await f.flow.accept(link); assert.equal(f.flow.snapshot().phase, "ready"); assert.equal(attempts, 2);
++});
+--- before/tests/password-recovery-sdk.test.ts
++++ after/tests/password-recovery-sdk.test.ts
+@@ -64,3 +64,26 @@
+     else Reflect.deleteProperty(globalThis, "crypto");
+   }
+ });
++
++test("installed SDK verifies an email recovery code into isolated storage", async () => {
++  const storage = new Map<string,string>([["normal-sign-in","unchanged"]]);
++  const events:string[] = [];
++  const user = {id:"00000000-0000-4000-8000-000000000002",email:"test@example.invalid",aud:"authenticated",created_at:"2026-10-12T00:00:00Z",app_metadata:{},user_metadata:{}};
++  const token = [Buffer.from('{"alg":"HS256","typ":"JWT"}').toString("base64url"),Buffer.from(JSON.stringify({sub:user.id,exp:Math.floor(Date.now()/1000)+3600})).toString("base64url"),Buffer.from("synthetic").toString("base64url")].join(".");
++  let calls=0;
++  const client=createClient("https://auth-fixture.invalid","synthetic-anon-key",{
++    auth:{flowType:"pkce",storageKey:"recovery-code",persistSession:true,autoRefreshToken:false,detectSessionInUrl:false,
++      storage:{getItem:key=>storage.get(key)??null,setItem:(key,value)=>{storage.set(key,value)},removeItem:key=>{storage.delete(key)}}},
++    global:{fetch:async(input,init)=>{
++      calls++;assert.equal(new URL(String(input)).pathname,"/auth/v1/verify");
++      const body=JSON.parse(String(init?.body));assert.equal(body.type,"recovery");assert.equal(body.email,user.email);assert.equal(body.token,"12345678");
++      return Response.json({access_token:token,refresh_token:"synthetic-refresh",expires_in:3600,token_type:"bearer",user});
++    }}
++  });
++  const subscription=client.auth.onAuthStateChange(event=>{events.push(event)});
++  const result=await client.auth.verifyOtp({email:user.email,token:"12345678",type:"recovery"});
++  assert.equal(result.error,null);assert.equal(result.data.user?.id,user.id);
++  assert.equal(calls,1);assert.ok(events.includes("PASSWORD_RECOVERY"));
++  assert.ok(storage.has("recovery-code"));assert.equal(storage.get("normal-sign-in"),"unchanged");
++  subscription.data.subscription.unsubscribe();
++});
+--- before/scripts/qa/render-customer-auth-finish.cjs
++++ after/scripts/qa/render-customer-auth-finish.cjs
+@@ -0,0 +1,115 @@
++const fs=require('node:fs'),path=require('node:path'),esbuild=require('esbuild'),{chromium}=require('/tmp/rezlee-bill-qa-tools-20261008/node_modules/playwright-core');
++const root=process.cwd(),deps='/tmp/rezlee-bill-qa-tools-20261008/node_modules',out=process.env.REZLEE_QA_OUTPUT||root+'/docs/qa/customer-auth-finish-20261012';
++const component=(name)=>'import React from "react";import {Text} from "react-native";export function '+name+'(){return <Text>'+name+'</Text>}';
++const stubs={
++'expo-router':'import React from"react";export const useRouter=()=>({push:d=>window.__routes.push(d),replace:d=>window.__routes.push(d),back:()=>{},setParams:()=>{}});export const useLocalSearchParams=()=>({});export const useFocusEffect=fn=>React.useEffect(fn,[fn]);export const Redirect=()=>null;',
++'react-native-safe-area-context':'export {View as SafeAreaView} from "react-native";',
++'expo-haptics':'export const ImpactFeedbackStyle={Light:"Light"};export const impactAsync=async()=>{};',
++'@expo/vector-icons':'export const Feather=()=>null;',
++'@/auth/AuthProvider':'export const useAuth=()=>({session:null});',
++'@/components/ScreenNavigation':'import React from "react";import {Text} from "react-native";export const ScreenNavigation=({title})=><Text>{title}</Text>;',
++'@/auth/recovery-client':`import {createPasswordRecovery} from "${root}/apps/mobile/src/auth/password-recovery.ts";
++let current=null;
++const saved=()=>JSON.parse(sessionStorage.getItem('qa-record')||'null');
++window.__attempts=0;window.__sends=0;
++export const passwordRecovery=createPasswordRecovery({
++now:()=>Date.now()+(window.__offset||0),
++read:async()=>saved(),write:async r=>{if(window.__writeFail&&r.stage==='verified')throw Error('Private storage');sessionStorage.setItem('qa-record',JSON.stringify(r));},
++clear:async()=>{sessionStorage.removeItem('qa-record');sessionStorage.removeItem('qa-session');},
++auth:{request:async()=>{window.__sends++;return{error:null}},
++verifyCode:async(email,token)=>{window.__attempts++;if(window.__offline)throw Error('Private connection');
++if(token!=='87654321')return{user:null,error:{status:403}};current={id:'fixture-user',email:window.__wrongAccount?'other@example.invalid':email};sessionStorage.setItem('qa-session',JSON.stringify(current));return{user:current,error:null};},
++exchange:async()=>({user:null,error:{status:403}}),
++user:async()=>({user:JSON.parse(sessionStorage.getItem('qa-session')||'null'),error:null}),
++update:async()=>({error:null})}});
++window.__flow=passwordRecovery;`,
++'@/lib/home-data':'export const fetchHome=async()=>({needsOnboarding:false,accessRole:window.__scenario==="member"?"member":"owner",home:{id:"fixture-home",nickname:"Our home"},availability:{missing:[]},attentionItems:[],dashboardState:"EMPTY"});',
++'@/lib/bills-data':'export const fetchBills=async()=>({needsOnboarding:false,providerActivity:[],utilityInsights:[]});',
++'@/lib/vault-data':'export const fetchVault=async()=>({needsOnboarding:false,items:window.__scenario==="empty"?[]:[{id:"fixture-item"}],documents:[]});export const formatVaultDate=v=>v;',
++'@/lib/care-data':'export const fetchCare=async()=>({needsOnboarding:false});',
++'@/lib/home-task-state':'export const homeTaskStates=()=>({bills:"saved",records:"saved",care:"saved"});export const remainingHomeTasks=()=>[];',
++'@/lib/home-overview':'export const homeOverviewState=()=>({showTaskTiles:false,partial:false,verifiedEmpty:false});export const homeUpcomingItems=()=>[];export const homeUpcomingHref=()=>"";',
++'@/lib/bill-account-overview':'export const billAccountOverview=()=>[];',
++'@/lib/tab-events':'export const subscribeHomeTabPress=()=>()=>{};',
++'@/components/Brief':'export const BriefRow=()=>null;export const ReadNotice=()=>null;',
++'@/components/WorkspaceUI':'import React from "react";export const HomeQuickActions=()=>null;export const SectionHeading=()=>null;export const HomeGreeting=()=><div>Our home</div>;export const HomeSection=({children})=><div>{children}</div>;',
++'@/components/BillAccountBrief':'export const HomeBillBrief=()=>null;'
++};
++for(const name of ['HomeBrief','HomeUtilityProgress','HomeSharedExpenses','RecallWatchSummary','HomeStartJourney','HomeAssistantTile'])stubs['@/components/'+name]=component(name);
++async function bundle(name,file){
++ await esbuild.build({stdin:{contents:`import React from'react';import{createRoot}from'react-dom/client';import Screen from'${file}';createRoot(document.getElementById('root')).render(<Screen/>);`,loader:'tsx',resolveDir:root},outfile:out+'/'+name+'.js',bundle:true,platform:'browser',format:'iife',jsx:'automatic',loader:{'.png':'dataurl'},alias:{react:deps+'/react','react-dom':deps+'/react-dom','react-native':deps+'/react-native-web'},define:{global:'globalThis','process.env.NODE_ENV':'"development"'},plugins:[{name:'boundaries',setup(b){b.onResolve({filter:/.*/},a=>{if(stubs[a.path])return{path:a.path,namespace:'stub'};if(a.path.startsWith('@/')){const p=root+'/apps/mobile/src/'+a.path.slice(2);for(const ext of ['.ts','.tsx','/index.ts'])if(fs.existsSync(p+ext))return{path:p+ext};}});b.onLoad({filter:/.*/,namespace:'stub'},a=>({contents:stubs[a.path],loader:'tsx',resolveDir:root}));}}]});
++}
++(async()=>{
++ fs.mkdirSync(out,{recursive:true});
++ await bundle('home',root+'/apps/mobile/app/(tabs)/home.tsx');
++ await bundle('home-before','/tmp/rezlee-home-before-20261012.tsx');
++ await bundle('recovery',root+'/apps/mobile/app/(auth)/forgot-password.tsx');
++ const template=fs.readFileSync(root+'/supabase/templates/recovery.html','utf8').replace('{{ .Token }}','87654321').replace('{{ .ConfirmationURL }}','#preview');
++ fs.writeFileSync(out+'/email.html',template);
++ const server=require('node:http').createServer((req,res)=>{
++  const name=req.url.split('?')[0].slice(1);
++  if(name.endsWith('.js')||name==='email.html'){res.setHeader('Content-Type',name.endsWith('.js')?'application/javascript':'text/html');return res.end(fs.readFileSync(out+'/'+path.basename(name)));}
++  const screen=name||'recovery';res.setHeader('Content-Type','text/html');res.end('<!doctype html><meta name="viewport" content="width=device-width,initial-scale=1"><style>body{margin:0;font-family:system-ui}*{box-sizing:border-box}#root{height:100vh;display:flex;flex-direction:column}</style><div id="root"></div><script src="/'+screen+'.js"></script>');
++ });await new Promise(r=>server.listen(0,'127.0.0.1',r));
++ const origin='http://127.0.0.1:'+server.address().port,browser=await chromium.launch({headless:true,executablePath:'/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'}),checks=[];
++ try{
++  for(const width of [320,390])for(const scenario of ['populated','empty','member','before']){
++   const page=await browser.newPage({viewport:{width,height:844}}),warnings=[],errors=[];
++   page.on('console',m=>{if(m.type()==='error')warnings.push(m.text())});page.on('pageerror',e=>errors.push(e.message));
++   await page.addInitScript(s=>{window.__scenario=s;window.__routes=[]},scenario);
++   await page.goto(origin+'/'+(scenario==='before'?'home-before':'home'));
++   await page.getByText('HomeSharedExpenses',{exact:true}).waitFor();
++   if(['populated','before'].includes(scenario))await page.getByText('RecallWatchSummary',{exact:true}).waitFor();
++   const collisions=warnings.filter(s=>s.includes('same key'));
++   if(scenario==='before'?!collisions.length:collisions.length)throw Error(scenario+' key warning regression failed');
++   if(errors.length)throw Error(errors.join(';'));
++   checks.push({width,scenario:'home-'+scenario,duplicateWarnings:collisions.length,pass:true});await page.close();
++  }
++  for(const width of [320,390])for(const scenario of ['normal','restart','offline','interrupted','expired','wrong-account']){
++   const page=await browser.newPage({viewport:{width,height:844}}),errors=[];page.setDefaultTimeout(5000);page.on('pageerror',e=>errors.push(e.message));
++   await page.addInitScript(()=>{window.__routes=[]});
++   await page.goto(origin+'/recovery');await page.getByRole('textbox',{name:'Email',exact:true}).fill('person@example.invalid');
++   await page.getByRole('button',{name:'Send reset email',exact:true}).click();
++   await page.getByRole('textbox',{name:'Reset code',exact:true}).waitFor();
++   if(scenario==='restart'){await page.reload();await page.getByRole('textbox',{name:'Reset code',exact:true}).waitFor();}
++   if(scenario==='normal'){
++    await page.getByRole('textbox',{name:'Reset code',exact:true}).fill('123456');
++    await page.getByRole('button',{name:'Continue',exact:true}).click();
++    await page.getByText('That code could not be verified.',{exact:false}).waitFor();
++    await page.screenshot({path:out+'/wrong-code-'+width+'.png'});
++   }
++   await page.evaluate(s=>{window.__offline=s==='offline';window.__writeFail=s==='interrupted';window.__wrongAccount=s==='wrong-account';if(s==='expired')window.__offset=21*60*1000;},scenario);
++   await page.getByRole('textbox',{name:'Reset code',exact:true}).fill('87654321');
++   await page.getByRole('button',{name:'Continue',exact:true}).click();
++   if(['expired','wrong-account'].includes(scenario)){
++    await page.getByText('This reset has expired or cannot be used here.',{exact:false}).waitFor();
++    if(await page.evaluate(()=>window.__routes.length))throw Error('Invalid recovery navigated to password entry');
++   }else if(['offline','interrupted'].includes(scenario)){
++    await page.getByRole('button',{name:'Restore recovery',exact:true}).waitFor();
++    if(scenario==='interrupted'){
++     await page.reload();await page.getByRole('button',{name:'Continue password recovery',exact:true}).click();
++    }else{
++     await page.evaluate(()=>{window.__offline=false});await page.getByRole('button',{name:'Restore recovery',exact:true}).click();
++     await page.getByRole('textbox',{name:'Reset code',exact:true}).fill('87654321');
++     await page.getByRole('button',{name:'Continue',exact:true}).click();
++    }
++    await page.waitForFunction(()=>window.__routes.includes('/reset-password'));
++   }else await page.waitForFunction(()=>window.__routes.includes('/reset-password'));
++   if(errors.length)throw Error(errors.join(';'));
++   if(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth))throw Error('Horizontal overflow');
++   checks.push({width,scenario:'recovery-'+scenario,pass:true});await page.close();
++  }
++  for(const width of [320,390]){
++   const page=await browser.newPage({viewport:{width,height:844}});
++   await page.goto(origin+'/recovery');await page.getByRole('textbox',{name:'Email',exact:true}).fill('person@example.invalid');
++   await page.screenshot({path:out+'/request-'+width+'.png'});
++   await page.getByRole('button',{name:'Send reset email',exact:true}).click();await page.getByRole('textbox',{name:'Reset code',exact:true}).waitFor();
++   await page.screenshot({path:out+'/code-'+width+'.png'});
++   await page.goto(origin+'/email.html');if(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth))throw Error('Email overflow');
++   await page.screenshot({path:out+'/email-'+width+'.png',fullPage:true});
++   checks.push({width,scenario:'email-layout',pass:true});await page.close();
++  }
++  fs.writeFileSync(out+'/results.json',JSON.stringify({passed:checks.length,checks,boundaries:'Actual Home parent and password-help screen/controller/components, React development warnings; mocked child panels, data/auth/secure storage/router; browser render is not physical-device acceptance.'},null,2));
++  console.log(JSON.stringify({passed:checks.length,out}));
++ }finally{await browser.close();server.close()}
++})().catch(e=>{console.error(e);process.exitCode=1});
+--- before/scripts/qa/customer-auth-staging.mjs
++++ after/scripts/qa/customer-auth-staging.mjs
+@@ -0,0 +1,47 @@
++import fs from "node:fs";
++import assert from "node:assert/strict";
++import { randomUUID } from "node:crypto";
++import { createClient } from "@supabase/supabase-js";
++const settings=JSON.parse(fs.readFileSync(process.env.REZLEE_STAGING_QA_SETTINGS,"utf8"));
++const url=settings.NEXT_PUBLIC_SUPABASE_URL;
++assert.equal(new URL(url).hostname,"gjwvalpxnfbvryosmcbj.supabase.co");
++const admin=createClient(url,settings.SUPABASE_SECRET_KEY,{auth:{persistSession:false,autoRefreshToken:false}});
++const key=settings.NEXT_PUBLIC_SUPABASE_ANON_KEY;
++const opts={auth:{persistSession:false,autoRefreshToken:false,detectSessionInUrl:false}};
++const client=createClient(url,key,opts);
++const email="rezlee-recovery-qa-"+randomUUID()+"@example.invalid";
++const original="Original-"+randomUUID()+"aA1!",replacement="Changed-"+randomUUID()+"bB2!";
++const checks=[];let id,signupId;
++const check=(name,condition)=>{assert.ok(condition,name);checks.push({name,pass:true});};
++try{
++ const created=await admin.auth.admin.createUser({email,password:original,email_confirm:true,user_metadata:{qa_fixture:"customer-auth-finish-20261012"}});
++ assert.equal(created.error,null);id=created.data.user.id;
++ const generated=await admin.auth.admin.generateLink({type:"recovery",email,options:{redirectTo:"rezlee://reset-password"}});
++ assert.equal(generated.error,null);
++ check("native reset callback accepted",generated.data.properties.redirect_to==="rezlee://reset-password");
++ const token=generated.data.properties.email_otp;check("reset code available without sending an email",/^\d{6,10}$/.test(token));
++ const wrong=await client.auth.verifyOtp({email,token:"0000000000",type:"recovery"});
++ check("incorrect recovery code rejected",Boolean(wrong.error));
++ const verified=await client.auth.verifyOtp({email,token,type:"recovery"});
++ check("actual hosted recovery code establishes isolated session",!verified.error&&verified.data.user?.id===id);
++ const replay=createClient(url,key,opts);
++ const used=await replay.auth.verifyOtp({email,token,type:"recovery"});
++ check("consumed code cannot establish another session",Boolean(used.error));
++ const changed=await client.auth.updateUser({password:replacement});
++ check("verified recovery can change disposable password",!changed.error);
++ await client.auth.signOut({scope:"local"});
++ const signIn=createClient(url,key,opts);
++ check("old disposable password no longer works",Boolean((await signIn.auth.signInWithPassword({email,password:original})).error));
++ check("new disposable password works",!(await signIn.auth.signInWithPassword({email,password:replacement})).error);
++ await signIn.auth.signOut({scope:"local"});
++ const signup=await admin.auth.admin.generateLink({type:"signup",email:"rezlee-confirm-qa-"+randomUUID()+"@example.invalid",password:original,options:{redirectTo:"https://staging.rezlee.com/auth/mobile-confirmed"}});
++ // generateLink(type signup) creates a user without sending mail; clean up its ID too.
++ signupId=signup.data?.user?.id;
++ check("mobile signup callback accepted by hosted auth",!signup.error&&signup.data.properties.redirect_to==="https://staging.rezlee.com/auth/mobile-confirmed");
++ fs.mkdirSync("docs/qa/customer-auth-finish-20261012",{recursive:true});
++ fs.writeFileSync("docs/qa/customer-auth-finish-20261012/hosted-results.json",JSON.stringify({passed:checks.length,checks,noEmailSent:true,scope:"Disposable staging-only auth users; no existing customer records. Codes/passwords/tokens kept in memory. Does not verify inbox delivery or native handoff."},null,2));
++ console.log(JSON.stringify({passed:checks.length,noEmailSent:true}));
++}finally{
++ for(const disposableId of [id,signupId].filter(Boolean)){const removed=await admin.auth.admin.deleteUser(disposableId);assert.equal(removed.error,null);}
++ console.log("Disposable authentication accounts removed.");
++}
+--- before/docs/audit-completion-status-2026-10-11.md
++++ after/docs/audit-completion-status-2026-10-11.md
+@@ -39,4 +39,12 @@
+ 
+ Latest authentication entry pass: auth-entry-recovery-2026-10-12.md fixes failed required recovery reads, retries and stale-account destinations. 34 actual-component rendered scenarios and 903 regression tests pass. Client available after reload on Expo 8081; no backend deployment. Physical password-reset/link and native OAuth acceptance remain open.
+ 
+-Next engineering priority: notification destination/recovery, followed by connected-account deletion/revocation. Real invitation delivery and two-device access still require physical acceptance. Provider pilots and existing native capture/Care/repair gates remain open; no overall launch sign-off is implied.
++Next engineering priority (revised for the user’s October 12 findings): complete the welcome/security-email lifecycle and Apple/native auth acceptance alongside notification destination/recovery, followed by connected-account deletion/revocation. Real invitation delivery and two-device access still require physical acceptance. Provider pilots and existing native capture/Care/repair gates remain open; no overall launch sign-off is implied.
++
++
++## Customer authentication and experience pass — October 12
++See customer-auth-finish-2026-10-12.md and email-notification-inventory-2026-10-12.md. The actual Home sibling-key warning was reproduced from the archived component and fixed. Password help now accepts email recovery codes with durable verification recovery and isolated auth storage. Staging confirmation/recovery emails were updated and the missing exact mobile signup return was added. Conflicting legacy mobile environment values were corrected; default Expo launch now validates staging and stays on 8081.
++
++Evidence: 913 regression tests, 22 rendered checks and 9 real staging auth checks passed; lint, web/mobile types, Next build and iOS/Android exports passed. No customer messages or production release. Code verification does not certify inbox delivery or native handoff. A separate post-verification welcome sender and security notifications remain to build/enable and accept. Staging security-email switches are currently OFF. The confirmation email's welcome copy is not a separate delivered welcome lifecycle.
++
++Current order: (1) finish authentication/welcome/security communications and Apple configuration, (2) notification destinations/preferences/delivery, (3) connected-account deletion/revocation, (4) operational limits, monitoring/support and release candidate, while completing physical acceptance and bounded provider pilots. Preserve the earlier audit gates for bill usefulness/outcomes, household two-device behavior, capture and home AI; none is silently signed off by this pass.
+--- before/docs/customer-auth-finish-2026-10-12.md
++++ after/docs/customer-auth-finish-2026-10-12.md
+@@ -0,0 +1,40 @@
++# Customer authentication finish — 2026-10-12
++
++## What changed
++The Home duplicate-key warning is reproducible when an owner has inventory: HomeUtilityProgress and RecallWatchSummary used the same household ID as sibling React keys. Their keys now include their component purpose while preserving household-specific remounting. The archived screen produces the warning; the fixed screen does not. This defect does not require an old or corrupt customer account.
++
++Password help now supports entering the reset code from the email. The customer can read the email on another device, return to the requesting phone, paste the code, and continue to the existing new-password screen. This also provides a recovery path in Expo Go, where the app's custom scheme is not a substitute for a signed native build. One primary action per step, visible email destination, resend cooldown, change-email escape, useful error messages, and preserved progress are included. A wrong code stays editable. Interrupted verification restores the isolated recovery session before attempting another one-time exchange. A rejected link does not block the latest valid link. Codes/passwords never enter the progress record, route parameters, or logs. Normal app sign-in storage stays separate.
++
++The staging recovery email now contains the code plus its original reset link. The confirmation email now welcomes the customer and suggests saving one bill, keeping one record, or setting one care reminder after confirmation. Both remain Rezlee-branded. This is not a separate post-confirmation welcome sender.
++
++## Configuration finding and correction
++The mobile .env still pointed to the older eynbuhmtxkigvqoewbwi backend and ezgb-test.rezlee.com, although the running Expo process had explicit current-staging overrides. The older backend's dashboard has Site URL https://rezlee.com/ and no native reset callback. This supports an explanation for the earlier website redirect; the exact historical email/session was not available to trace.
++
++Current staging gjwvalpxnfbvryosmcbj already had branded confirmation/recovery templates and rezlee://reset-password allowed. It lacked the exact /auth/mobile-confirmed URL requested by mobile signup. That deployed endpoint returns HTTP 200 and a Rezlee app continuation page. The exact staging callback is now allowed; the six pre-existing entries were preserved.
++
++The mobile public environment is now aligned with current staging; its original is backed up privately outside git at /Users/razakhan/Library/Application Support/Rezlee/customer-auth-finish-20261012/mobile-env.before. Only the three public mobile connection values changed. npm start and npm run start:clean now use the validated staging launcher in Expo Go on 8081. npm run start:dev-client retains the native development-build path. The staging launcher uses 8081 and refuses an occupied port instead of offering another port. The existing server remains on 8081. Reload Expo Go for client changes.
++
++## Verification
++- 913 regression tests passed (10 added recovery/controller/SDK cases).
++- 22 actual-component rendered checks passed at 320 and 390 px: original/fixed Home with populated/empty/member states; wrong-code correction, restart, offline verification, interruption after verification, expired reset, wrong account, and email layout.
++- Nine no-send hosted checks passed using disposable staging accounts: callback acceptance, actual recovery code verification, invalid/reused code rejection, password change, old/new password sign-in, and mobile signup callback acceptance. Test accounts removed.
++- Scoped lint, web/mobile TypeScript, Next production build, iOS export and Android export passed.
++- Occupied-port guard verified against the existing 8081 server; no second Metro was started.
++- Dashboard saved previews verified for confirmation/recovery templates; redirect allowlist shows seven entries. Source templates retained for rollback.
++
++Rendered checks use actual screen/controller code with mocked network, secure storage, router and Home child panels. Hosted tests use the real installed SDK/service but generate links through admin without delivering email. Neither is physical phone or inbox acceptance.
++
++## Remaining acceptance
++1. Authorized test inbox: check actual sender, deliverability, code, link, latest-email behavior, and confirmation return.
++2. iOS/Android signed builds: native link handoff, background/kill/restart, keyboard/autofill, larger text/VoiceOver/TalkBack, signed-in and signed-out recovery.
++3. Apple sign-in: finish platform/provider configuration and real-device flow, including cancel, private relay, existing-account behavior and account linking.
++4. Separate once-only welcome sender and security-email set: see email-notification-inventory-2026-10-12.md. Do not claim all emails are already finished.
++5. Full returning-account acceptance remains open. No customer data was migrated, cleared or rewritten to address the warning.
++
++No backend code deployment or database migration was required here. Only the named staging auth templates and exact signup callback changed in hosted configuration; the older backend was read only. No emails/SMS, provider pulls, scheduled Gmail work, paid AI reads, production release or customer password changes were performed.
++
++## Preservation and rollback
++Scoped before/after source, diff, SHA manifest and evidence are in docs/checkpoints/customer-auth-finish-20261012. The working tree contains substantial inherited work, so the commit intentionally contains documentation/checkpoint archives only. Restore only these task files from before.zip, not the whole repository. Restore mobile .env from its private backup only if rolling back the environment correction. Restore the prior staging templates from before.zip and remove only https://staging.rezlee.com/auth/mobile-confirmed if rolling back hosted configuration. Existing callback entries and SMTP settings were not changed.
++
++## Next engineering order
++Finish the welcome/security-email lifecycle and notification destinations, then connected-account deletion/revocation and release operations. Physical delivery/device acceptance and credential-owning provider pilots remain explicit gates alongside engineering. The broader audit in audit-completion-status-2026-10-11.md remains open.
+--- before/docs/email-notification-inventory-2026-10-12.md
++++ after/docs/email-notification-inventory-2026-10-12.md
+@@ -0,0 +1,59 @@
++# Rezlee email and notification inventory — 2026-10-12
++
++This records code paths and inspected staging configuration, not proof of delivery to customer inboxes or phones. A configured sender, an API success and actual customer receipt are separate evidence. All customer-facing messages should use Rezlee branding and one useful action. No messages or new notification subscriptions were sent/enabled during this review.
++
++## Email inventory
++
++| Message | Current implementation / trigger | Status and finish work |
++|---|---|---|
++| Confirm signup | Supabase email signup; confirmation.html | Branded staging template updated with welcome and optional starting ideas. Exact mobile confirmation return added. Real inbox and native return still need acceptance. |
++| Reset password | Supabase recovery; recovery.html | Branded staging email now offers recovery code and link. Isolated app code-entry flow and hosted verification pass. Actual delivery and OS handoff remain open. |
++| Separate welcome after verified signup | No dedicated sender found in the customer-email paths | Build one durable once-only welcome event for a newly verified account, including social signup. Existing-account sign-in must not send another welcome. One app continuation CTA and a few useful starting choices; no claim setup is complete. |
++| Household invitation | Custom Resend sender in src/lib/email/household-invite.ts | Branded invitation is implemented. Joining shares Household/Care/expenses; private Bills/Vault stay separate. Actual delivery, expiry/revocation and two-device acceptance remain open. |
++| Waitlist confirmation | Custom Resend sender in src/lib/waitlist/server.ts | Implemented, configuration-gated, with confirmation expiry and unsubscribe. Keep distinct from live app signup; reconcile the website's current acquisition flow before launch. |
++| Support/contact submission | src/app/api/contact/route.ts sends to the configured support inbox | Internal support delivery is implemented with reference/idempotency and caps. This is not a customer acknowledgment email. |
++| Support acknowledgment to customer | No automatic customer acknowledgment found | Consider a short receipt with reference and realistic response expectation. Needs a durable delivery record to prevent duplicate acknowledgments on retries. |
++| Ordinary magic link/sign-in code | Supabase template; separate mobile email-code gate | Separate from recovery codes. Do not imply this sign-in method is broadly launched. Branding and delivery need acceptance if enabled. |
++| Auth admin invitation | Supabase Invite user template | Distinct from household invitation. No reviewed customer household flow uses this as its delivery mechanism. Brand before any intended admin-invite rollout. |
++| Change-email confirmation | Supabase Change email address template | Available auth template; customer flow and branding require reconciliation before exposing email changes. |
++| Sensitive-operation reauthentication | Supabase Reauthentication template | Available auth template; configure and test only with the associated product flow. |
++| Password-changed security notice | Supabase security email | Staging switch observed OFF. Recommended launch security notice, with branded copy and account-security/support guidance. Not enabled in this pass. |
++| Email-address-changed security notice | Supabase security email | Staging OFF. Recommended when email change is supported. |
++| Phone-number-changed security notice | Supabase security email | Staging OFF. Enable with a supported auth-phone change flow; household member contact edits are a separate concept. |
++| Sign-in method linked | Supabase security email | Staging OFF. Recommended when Apple/Google linking is enabled; test intended and unexpected linking. |
++| Sign-in method removed | Supabase security email | Staging OFF. Recommended with account linking/removal; verify the customer retains a working sign-in method. |
++| MFA method added | Supabase security email | Staging OFF. Brand and enable with actual customer MFA enrollment. |
++| MFA method removed | Supabase security email | Staging OFF. Brand and enable with actual customer MFA removal. |
++| Deletion request / completion | No customer email sender found in the reviewed send paths | Reconcile with existing deletion receipt/job flow. Never say deletion is complete while provider revocation or cleanup remains pending. |
++| Optional digest / feature or marketing emails | No general customer campaign sender found in reviewed code | Later, with explicit preferences and unsubscribe. Do not turn transactional auth email into a marketing subscription. |
++
++Primary source locations: supabase/templates; apps/mobile/src/auth/email-auth.ts, email-code.ts and recovery-client.ts; src/lib/email/household-invite.ts; src/lib/waitlist/server.ts; src/app/api/contact/route.ts. Hosted staging security-email switches were inspected in Supabase. SMTP branding was previously configured; this pass did not change SMTP credentials or certify mailbox delivery. The older backend was read only.
++
++## In-app and push inventory
++
++| Category / event | Existing mechanism | Customer-facing finish work |
++|---|---|---|
++| Connection verification needed | Deck telecom verification queue and provider verification notifications | Open the current valid challenge; expired/resolved challenges should lead to useful connection status. No account credentials or codes in notifications. |
++| Connection import complete | Telecom completion and provider_sync_ready notifications | Open the saved data actually available; connected status alone is not proof bills arrived. |
++| Connection stopped, failed or action required | Telecom stopped; provider_action_required/provider_sync_failed paths | Explain the next step without implying unsupported automatic recovery. Reconnect/MFA/provider-specific acceptance remains open. |
++| Bill reminder | Saved unpaid, nonarchived, non-autopay records; notification refresh | Existing in-app/push path. Bills preference defaults OFF. Marked paid/scheduled, revised due dates, local date and quiet-time behavior need phone acceptance. |
++| Care reminder | Saved open tasks due for the responsible owner/member | Existing in-app/push path. Care preference defaults OFF. Reassignment, completion, recurrence and household switching need phone acceptance. |
++| Possible product recall | Recall matching/monitor events | Existing inbox and push path. Wording is a possible match with official details, not a confirmed recall of that customer's item. |
++| Recorded household repayment | shared_repayment event on recorded payment/removal | Existing inbox/push path for affected recipients. Does not move money. Notification must reflect latest ledger state. |
++| Shared balance reminder | Explicit household reminder event | Existing deduplication and recipient-scoped path. Sender action, recipient preferences and stale balances need acceptance. |
++| Recall test push | Explicit test-notification route | Diagnostic customer action, not a recurring campaign. Requires real device permission/delivery acceptance. |
++| Capture/import background work | Progress/recovery exists in individual journeys | Reconcile which completions need an inbox item when the user leaves; notify only when useful, and never claim an interrupted upload was saved. |
++| Action outcome follow-up | Saved action/evidence journey exists | Determine a useful opt-in follow-up event when subsequent evidence exists; no automatic “you saved money” claim. |
++| General cleaning assignment / household membership updates | Shared Care and invitation flows exist | Do not assume every edit or membership event emits push. Reconcile desired events and recipient rules before adding more notifications. |
++
++Default app preferences: push enabled, connections/recalls/shared expenses ON; bills/care OFF; timezone America/Toronto. OS permission and registration are still required. Actual sending also depends on runtime gates and workers. Saved-record bill/Care dispatch groups notices, applies local 09:00–20:00 quiet-time bounds and daily category caps; ambiguous sends are recorded instead of blindly retried. No worker schedule was enabled here.
++
++Primary source locations: src/lib/notifications/{policy,service}.ts; src/lib/deck/telecom-push.ts; src/lib/recalls/monitor.ts; src/lib/sync/{provider-sync,deck-v2-runtime}.ts; notification and shared-settlement migrations; apps/mobile/src/lib/{notification-data,push-notifications}.ts.
++
++## Implementation order and UX rules
++1. Finish the authentication email family and once-only welcome lifecycle; validate one real authorized inbox end to end.
++2. Finish notification tap/restore/account boundaries and preference handling against actual device delivery.
++3. Tie deletion notices to true lifecycle state; complete support receipt decisions and operational ownership.
++4. Add optional engagement messages only after useful transactional behavior is accepted.
++
++Each event needs a trigger, intended recipient, deduplication identity, expiry/resolution rule, preference rule, destination, fallback and delivery status. Keep private account content out of lock-screen copy. Only ask for notification permission when the customer understands its benefit. Preserve progress, explain partial completion honestly and provide one clear next step.
