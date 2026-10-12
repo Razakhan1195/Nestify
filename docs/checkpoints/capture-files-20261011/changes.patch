@@ -1,0 +1,531 @@
+--- a/apps/mobile/src/lib/upload-validation.ts
++++ b/apps/mobile/src/lib/upload-validation.ts
+@@ -2,6 +2,8 @@
+ export const MAX_UPLOAD_BYTES = 4 * 1024 * 1024;
+ export const PHOTO_TYPES = ["image/jpeg", "image/png", "image/webp", "image/heic", "image/heif"];
+ export const SCAN_FILE_TYPES = ["application/pdf", ...PHOTO_TYPES];
++// Selection allows phone formats that prepareAttachment converts before upload.
++export const RECORD_PICKER_TYPES = SCAN_FILE_TYPES;
+ export const RECORD_FILE_TYPES = ["application/pdf", "image/jpeg", "image/png", "image/webp"];
+ 
+ export function uploadMimeType(name: string, provided?: string | null): string {
+--- a/apps/mobile/src/lib/photo-preparation-core.ts
++++ b/apps/mobile/src/lib/photo-preparation-core.ts
+@@ -1,4 +1,5 @@
+ export type PhotoInput = {uri:string;name:string;type:string;size?:number;width?:number;height?:number};
++export const PHOTO_PREPARATION_ERROR="Could not prepare this photo. Try another photo or export it as a JPG or PDF. Your existing details are still here.";
+ export const PHOTO_TARGET_BYTES=3_500_000;
+ export function photoResize(width:number,height:number,maxEdge:number){
+  if(!Number.isFinite(width)||!Number.isFinite(height)||width<=0||height<=0)throw Error('Could not read this photo. Take another photo or choose a file.');
+@@ -13,5 +14,5 @@
+   const result=await transform(input,dimensions,quality);
+   if(Number.isFinite(result.size)&&result.size>0&&result.size<=PHOTO_TARGET_BYTES)return {...result,...dimensions,name,type:'image/jpeg'};
+  }
+- throw Error('This photo could not be prepared clearly. Retake it with just the receipt in view, or choose a saved file.');
++ throw Error('This photo could not be prepared clearly. Retake it with just the document in view, or choose a saved file.');
+ }
+--- a/apps/mobile/src/lib/prepare-attachment.ts
++++ b/apps/mobile/src/lib/prepare-attachment.ts
+@@ -1,15 +1,16 @@
+ import {Image} from 'react-native';
+ import {ImageManipulator,SaveFormat} from 'expo-image-manipulator';
+ import {File} from 'expo-file-system';
+-import {preparePhoto,type PhotoInput} from './photo-preparation-core';
++import {preparePhoto,PHOTO_PREPARATION_ERROR,type PhotoInput} from './photo-preparation-core';
+ /** Resize and encode locally; no document is sent until the customer requests reading/saving. */
+ export async function prepareAttachment(input:PhotoInput):Promise<PhotoInput>{
+  if(!input.type.startsWith('image/'))return input;
++ try{
+  if(!input.width||!input.height){
+   const dimensions=await new Promise<{width:number;height:number}>((resolve,reject)=>Image.getSize(input.uri,(width,height)=>resolve({width,height}),reject));
+   input={...input,...dimensions};
+  }
+- return preparePhoto(input,async(source,dimensions,compress)=>{
++ return await preparePhoto(input,async(source,dimensions,compress)=>{
+   const context=ImageManipulator.manipulate(source.uri);
+   try{
+    context.resize(dimensions);
+@@ -20,4 +21,5 @@
+    }finally{rendered.release();}
+   }finally{context.release();}
+  });
++ }catch{throw new Error(PHOTO_PREPARATION_ERROR);}
+ }
+--- a/apps/mobile/app/vault-record.tsx
++++ b/apps/mobile/app/vault-record.tsx
+@@ -17,7 +17,7 @@
+ import { DateField } from "@/components/DateField";
+ import { Button } from "@/components/Button";
+ import { apiGet,apiFormPost,apiDelete,ApiError } from "@/lib/api";
+-import { RECORD_FILE_TYPES,uploadMimeType,uploadValidationError } from "@/lib/upload-validation";
++import { RECORD_PICKER_TYPES, RECORD_FILE_TYPES,uploadMimeType,uploadValidationError } from "@/lib/upload-validation";
+ import { colors,spacing,typography,radii } from "@/theme/tokens";
+ const categories=["Receipt","Warranty","Insurance","Manual","Lease","Contract","Tax","Other"];
+ type RecordAttachment=Pick<DocumentPicker.DocumentPickerAsset,"uri"|"name"|"mimeType"|"size">;
+@@ -76,7 +76,7 @@
+   if(locked||saveLock.current||captureLock.current)return;
+   captureLock.current=true;
+   try{
+-   const result=await DocumentPicker.getDocumentAsync({type:RECORD_FILE_TYPES,copyToCacheDirectory:true});
++   const result=await DocumentPicker.getDocumentAsync({type:RECORD_PICKER_TYPES,copyToCacheDirectory:true});
+    if(result.canceled)return;setPreparing(true);const asset=result.assets[0];
+    const prepared=await prepareAttachment({uri:asset.uri,name:asset.name,type:uploadMimeType(asset.name,asset.mimeType),size:asset.size});
+    const selected={...prepared,mimeType:prepared.type};
+--- a/apps/mobile/app/receipt-batch.tsx
++++ b/apps/mobile/app/receipt-batch.tsx
+@@ -14,7 +14,7 @@
+ import {fetchOnboarding} from "@/lib/onboarding-data";
+ import {receiptSuggestions,mergeReceiptSuggestions,receiptReadLabel} from "@/lib/receipt-review";
+ import {apiGet,apiPatch,apiFormPost,ApiError} from "@/lib/api";
+-import {RECORD_FILE_TYPES,uploadMimeType,uploadValidationError} from "@/lib/upload-validation";
++import {RECORD_PICKER_TYPES,RECORD_FILE_TYPES,uploadMimeType,uploadValidationError} from "@/lib/upload-validation";
+ import {ScreenNavigation} from "@/components/ScreenNavigation";
+ import {Button} from "@/components/Button";
+ import {TextField} from "@/components/TextField";
+@@ -65,12 +65,14 @@
+   if(lock.current||!home||!available||current.current)return;
+   lock.current=true;setBusy(true);setError(null);
+   try{
+-   const result=await DocumentPicker.getDocumentAsync({type:RECORD_FILE_TYPES,multiple:true,copyToCacheDirectory:true});
++   const result=await DocumentPicker.getDocumentAsync({type:RECORD_PICKER_TYPES,multiple:true,copyToCacheDirectory:true});
+    if(result.canceled)return;
+    if(result.assets.length>5){setError("Choose up to five receipts at a time. No files were added.");return;}
+    const items:ReceiptBatchItem[]=[];const chosen:Record<string,FilePart>={};
+    for(const asset of result.assets){
+-    const prepared=await prepareAttachment({uri:asset.uri,name:asset.name,type:uploadMimeType(asset.name,asset.mimeType),size:asset.size});
++    let prepared;
++    try{prepared=await prepareAttachment({uri:asset.uri,name:asset.name,type:uploadMimeType(asset.name,asset.mimeType),size:asset.size});}
++    catch{setError(asset.name+": This photo could not be prepared. Choose another photo or a PDF. No files were added.");return;}
+     const file={...prepared,mimeType:prepared.type};
+     const invalid=uploadValidationError(file.size,uploadMimeType(file.name,file.mimeType),RECORD_FILE_TYPES);
+     if(invalid){setError(file.name+": "+invalid+" No files were added.");return;}
+@@ -88,7 +90,7 @@
+  async function selectOriginal(){
+   if(!item||lock.current)return;lock.current=true;setBusy(true);
+   try{
+-   const result=await DocumentPicker.getDocumentAsync({type:RECORD_FILE_TYPES,copyToCacheDirectory:true});
++   const result=await DocumentPicker.getDocumentAsync({type:item.status==="review"?RECORD_PICKER_TYPES:RECORD_FILE_TYPES,copyToCacheDirectory:true});
+    if(result.canceled)return;const asset=result.assets[0];
+    const original={uri:asset.uri,name:asset.name,type:uploadMimeType(asset.name,asset.mimeType),size:asset.size};
+    // An in-flight save has an immutable fingerprint. Never re-encode its original.
+--- a/apps/mobile/app/bill/import.tsx
++++ b/apps/mobile/app/bill/import.tsx
+@@ -26,7 +26,7 @@
+ import { pendingBillUpload, rememberBillUpload, forgetBillUpload } from "@/lib/bill-upload-pending";
+ import { statementSuggestions, statementReviewHints, statementDuplicate, type StatementDuplicate } from "@/lib/statement-review";
+ import { newVaultSaveRequestId } from "@/lib/vault-save-intent";
+-import { RECORD_FILE_TYPES, uploadMimeType, uploadValidationError } from "@/lib/upload-validation";
++import { RECORD_PICKER_TYPES, RECORD_FILE_TYPES, uploadMimeType, uploadValidationError } from "@/lib/upload-validation";
+ import { colors, layout, spacing, typography } from "@/theme/tokens";
+ 
+ type Original = { uri: string; name: string; type: string; size?: number };
+@@ -178,9 +178,12 @@
+     if (inFlight.current || (requestId && !needsFile)) return;
+     inFlight.current=true; setBusy("prepare"); setError(null);
+     try {
+-      const picked = await DocumentPicker.getDocumentAsync({ type: RECORD_FILE_TYPES, copyToCacheDirectory: true, multiple: false });
++      const picked = await DocumentPicker.getDocumentAsync({ type: requestId ? RECORD_FILE_TYPES : RECORD_PICKER_TYPES, copyToCacheDirectory: true, multiple: false });
+       if (picked.canceled) return;
+-      const asset = picked.assets[0]; selectFile(await prepareAttachment({ uri: asset.uri, name: asset.name, type: uploadMimeType(asset.name, asset.mimeType), size: asset.size }));
++      const asset = picked.assets[0];
++      const original = { uri: asset.uri, name: asset.name, type: uploadMimeType(asset.name, asset.mimeType), size: asset.size };
++      // Recovery must reuse the exact uploaded bytes, not encode a new photo.
++      selectFile(requestId ? original : await prepareAttachment(original));
+     } catch(e) { setError(e instanceof Error ? e.message : "Could not prepare that file. Choose it again."); } finally {inFlight.current=false;setBusy(null);}
+   }
+   async function takePhoto() {
+--- a/apps/mobile/app/bill/batch.tsx
++++ b/apps/mobile/app/bill/batch.tsx
+@@ -18,7 +18,7 @@
+ import {fetchOnboarding} from "@/lib/onboarding-data";
+ import {statementSuggestions,statementReviewHints,statementDuplicate,statementChargeReview} from "@/lib/statement-review";
+ import {apiGet,apiPatch,apiFormPost,ApiError} from "@/lib/api";
+-import {RECORD_FILE_TYPES,uploadMimeType,uploadValidationError} from "@/lib/upload-validation";
++import {RECORD_PICKER_TYPES,RECORD_FILE_TYPES,uploadMimeType,uploadValidationError} from "@/lib/upload-validation";
+ import {StatementBatchProgress,StatementBatchResults} from "@/components/StatementBatchProgress";
+ import {ScreenNavigation} from "@/components/ScreenNavigation";
+ import {CollectionAddSheet} from "@/components/CollectionUI";
+@@ -76,12 +76,14 @@
+   if(lock.current||!home||!available||!ai||current.current)return;
+   lock.current=true;setBusy(true);setError(null);
+   try{
+-   const result=await DocumentPicker.getDocumentAsync({type:RECORD_FILE_TYPES,multiple:true,copyToCacheDirectory:true});
++   const result=await DocumentPicker.getDocumentAsync({type:RECORD_PICKER_TYPES,multiple:true,copyToCacheDirectory:true});
+    if(result.canceled)return;
+    if(result.assets.length>5){setError("Choose up to five statements at a time. No files were added.");return;}
+    const items:StatementBatchItem[]=[];const chosen:Record<string,FilePart>={};
+    for(const asset of result.assets){
+-    const prepared=await prepareAttachment({uri:asset.uri,name:asset.name,type:uploadMimeType(asset.name,asset.mimeType),size:asset.size});
++    let prepared;
++    try{prepared=await prepareAttachment({uri:asset.uri,name:asset.name,type:uploadMimeType(asset.name,asset.mimeType),size:asset.size});}
++    catch{setError(asset.name+": This photo could not be prepared. Choose another photo or a PDF. No files were added.");return;}
+     const file={...prepared,mimeType:prepared.type};
+     const invalid=uploadValidationError(file.size,uploadMimeType(file.name,file.mimeType),RECORD_FILE_TYPES);
+     if(invalid){setError(file.name+": "+invalid+" No files were added.");return;}
+@@ -103,7 +105,7 @@
+  async function selectOriginal(){
+   if(!item||lock.current)return;lock.current=true;setBusy(true);
+   try{
+-   const result=await DocumentPicker.getDocumentAsync({type:RECORD_FILE_TYPES,copyToCacheDirectory:true});
++   const result=await DocumentPicker.getDocumentAsync({type:item.status==="review"?RECORD_PICKER_TYPES:RECORD_FILE_TYPES,copyToCacheDirectory:true});
+    if(result.canceled)return;const asset=result.assets[0];
+    const original={uri:asset.uri,name:asset.name,type:uploadMimeType(asset.name,asset.mimeType),size:asset.size};
+    // An in-flight save has an immutable fingerprint. Never re-encode its original.
+--- a/tests/mobile-upload.test.ts
++++ b/tests/mobile-upload.test.ts
+@@ -3,7 +3,7 @@
+ import { scanMobileUpload } from "../src/lib/ai/mobile-scan";
+ import { DOCUMENT_MIME_TYPES } from "../src/lib/documents";
+ import { MAX_MOBILE_BODY_BYTES, MAX_MOBILE_FILE_BYTES, mobileUploadFile, readMobileMultipart, SCAN_MIME_TYPES, UploadError } from "../src/lib/uploads/mobile-upload";
+-import { MAX_UPLOAD_BYTES, RECORD_FILE_TYPES, SCAN_FILE_TYPES, uploadMimeType, uploadValidationError } from "../apps/mobile/src/lib/upload-validation";
++import { MAX_UPLOAD_BYTES, RECORD_PICKER_TYPES, RECORD_FILE_TYPES, SCAN_FILE_TYPES, uploadMimeType, uploadValidationError } from "../apps/mobile/src/lib/upload-validation";
+ 
+ const pdf = () => new File(["%PDF-1.7\nfixture, not a customer document\n%%EOF"], "bill.pdf", { type: "application/pdf" });
+ function form(file: File | null = pdf()) {
+@@ -142,3 +142,13 @@
+   assert.equal(uploadValidationError(MAX_UPLOAD_BYTES, "application/pdf"), null);
+   assert.equal(uploadValidationError(undefined, "application/pdf"), null);
+ });
++
++
++test("phone photo selection allows conversion without widening the saved-original policy", () => {
++  for (const type of ["image/heic", "image/heif"]) {
++    assert(RECORD_PICKER_TYPES.includes(type));
++    assert(!RECORD_FILE_TYPES.includes(type));
++    assert.match(uploadValidationError(100, type, RECORD_FILE_TYPES)!, /not supported/);
++  }
++  assert.equal(uploadValidationError(100, "image/jpeg", RECORD_FILE_TYPES), null);
++});
+--- a/scripts/qa/render-capture-files.cjs
++++ b/scripts/qa/render-capture-files.cjs
+@@ -0,0 +1,99 @@
++const fs=require('node:fs'),esbuild=require('/Users/razakhan/Documents/rezlee-mobile-test/node_modules/esbuild'),{chromium}=require('/tmp/rezlee-bill-qa-tools-20261008/node_modules/playwright-core');
++const root='/Users/razakhan/Documents/rezlee-mobile-test',deps='/tmp/rezlee-bill-qa-tools-20261008/node_modules',out=root+'/docs/qa/capture-files-20261011';
++const stubs={
++'expo-router':'import React from "react";export const useLocalSearchParams=()=>({providerId:"gas-account"});export const useRouter=()=>({push:p=>window.__actions.push(p),replace:p=>window.__actions.push(p),setParams:()=>{},canGoBack:()=>false});export const Stack={Screen:()=>null};export const useNavigation=()=>({});export const useFocusEffect=fn=>React.useEffect(fn,[fn]);',
++'expo-router/react-navigation':'export const usePreventRemove=()=>{};',
++'expo-symbols':'import React from "react";export const SymbolView=()=>React.createElement("span",null,"←");',
++'expo-haptics':'export const impactAsync=async()=>{};export const ImpactFeedbackStyle={Light:1};export const notificationAsync=async()=>{};export const NotificationFeedbackType={Success:1};',
++'react-native-safe-area-context':'import React from "react";import{View}from"react-native";export const SafeAreaView=View;export const useSafeAreaInsets=()=>({top:0,bottom:0,left:0,right:0});',
++'@expo/vector-icons':'import React from "react";export function Feather({name}){return React.createElement("span",{"aria-hidden":true,style:{fontSize:18,width:20}},name==="file-text"?"▤":"›");}',
++'@/lib/api':'export class ApiError extends Error{};export async function apiGet(p){if(p.endsWith("/original")){window.__actions.push("original");return{url:"https://example.invalid/fixture-original"}}return window.__payload;}export async function apiPost(){};export async function apiPatch(){};export async function apiDelete(){};export async function apiFormPost(){};',
++};
++
++stubs['@/lib/api']=`export class ApiError extends Error{constructor(message,status,details){super(message);this.status=status;this.details=details;}};export async function apiGet(p){window.__requests.push(p);if(window.__fail)throw new ApiError('Offline',503);if(window.__delay)await new Promise(r=>setTimeout(r,window.__delay));if(p==='/api/mobile/v1/bills')return window.__payload;throw new ApiError('No readings',404,{code:'missing_readings'});}export async function apiPost(){};export async function apiPatch(){};export async function apiDelete(){};export async function apiFormPost(){};`;
++stubs['@/auth/AuthProvider']='export const useAuth=()=>({session:null});';
++stubs['@/components/AppNotifications']='export const NotificationBell=()=>null;';
++stubs['@/components/ProfileUI']='export const ProfileBadge=()=>null;';
++
++stubs['@/auth/AuthProvider']='export const useAuth=()=>({session:{user:{id:"11111111-1111-4111-8111-111111111111"}}});';
++stubs['@/lib/receipt-batch']=`import{createReceiptBatchStore}from"${root}/apps/mobile/src/lib/receipt-batch-core";export const receiptBatches=createReceiptBatchStore({getItemAsync:async k=>localStorage.getItem(k),setItemAsync:async(k,v)=>localStorage.setItem(k,v),deleteItemAsync:async k=>localStorage.removeItem(k)});`;
++stubs['@/lib/onboarding-data']='export async function fetchOnboarding(){return{home:{id:"aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",nickname:"Demo home"},accessRole:"owner"};}';
++stubs['@/lib/prepare-attachment']='export async function prepareAttachment(input){window.__prepared.push(input);return input;}';
++stubs['expo-document-picker']='export async function getDocumentAsync(){return{canceled:false,assets:[{uri:"file:///test/receipt.pdf",name:"receipt.pdf",mimeType:"application/pdf",size:100}]};}';
++stubs['expo-image-picker']='export async function requestCameraPermissionsAsync(){return{granted:false};}export async function launchCameraAsync(){return{canceled:true};}';
++stubs['@/lib/vault-pending']='export const vaultPending={remember:async()=>{},forget:async()=>{throw Error("Device cleanup unavailable");},replace:async()=>{}};';
++stubs['expo-router']='import React from "react";export const useLocalSearchParams=()=>({kind:"receipt"});export const useRouter=()=>({push:p=>window.__actions.push(p),replace:p=>window.__actions.push(p),setParams:()=>{},canGoBack:()=>false});export const Stack={Screen:()=>null};export const Stack={Screen:()=>null};export const useNavigation=()=>({dispatch:()=>{}});export const useFocusEffect=fn=>React.useEffect(fn,[fn]);';
++stubs['@/lib/api']=`export class ApiError extends Error{constructor(message,status,details){super(message);this.status=status;this.details=details;}};export async function apiGet(p){if(window.__offline)throw new ApiError('Offline',503);return p.includes('/ai/scan')?{receiptExtraction:true}:{receiptBatch:true,saveRecovery:true,homeId:'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',homeName:'Demo home'};}export async function apiFormPost(p,form){window.__requests.push({method:'POST',path:p,requestId:form.get('requestId')});if(p.includes('/ai/scan')){if(window.__readFail)throw new ApiError('Reading unavailable',503);return{data:{document_kind:'receipt',merchant:'Canadian Tire',purchase_date:'2026-09-21',total:42,currency:'CAD',items:[],review_notes:[]}};}if(window.__duplicate)throw new ApiError('Already in Vault',409,{duplicateId:'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb'});localStorage.setItem('server-saved','true');if(window.__lost)throw new ApiError('Response lost',504);return{id:'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb'};}export async function apiPatch(p){window.__requests.push({method:'PATCH',path:p});return{id:'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb'};}export async function apiDelete(){};export async function apiPatch(){};`;
++
++delete stubs['@/lib/prepare-attachment'];
++stubs['expo-image-manipulator']=`export const SaveFormat={JPEG:'jpeg'};export const ImageManipulator={manipulate:source=>{window.__transforms.push(source);if(window.__prepareFail)throw Error('PRIVATE native decoding detail');return{resize:()=>{},release:()=>{},renderAsync:async()=>({release:()=>{},saveAsync:async()=>({uri:'file:///test/prepared.jpg'})})};}};`;
++stubs['expo-file-system']='export class File{get size(){return window.__hugePhoto?5000000:24000;}}';
++stubs['expo-document-picker']=`export async function getDocumentAsync(options){window.__pickerOptions=options;if(window.__cancel)return{canceled:true};return{canceled:false,assets:window.__assets};}`;
++stubs['expo-router']='import React from "react";export const useLocalSearchParams=()=>({kind:"quote"});export const useRouter=()=>({push:p=>window.__actions.push(p),replace:p=>window.__actions.push(p),canGoBack:()=>false});export const Stack={Screen:()=>null};export const useNavigation=()=>({dispatch:()=>{}});export const useFocusEffect=fn=>React.useEffect(fn,[fn]);';
++stubs['@/lib/api']=`export class ApiError extends Error{constructor(message,status,details){super(message);this.status=status;this.details=details;}};export async function apiGet(){return{receiptBatch:true,receiptExtraction:false,saveRecovery:true,homeId:'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',homeName:'Demo home'};}export async function apiFormPost(p,form){window.__requests.push({path:p,requestId:form.get('requestId'),title:form.get('title')});if(p.includes('/ai/scan'))throw Error('Unexpected paid read');if(window.__lost)throw new ApiError('Save could not be confirmed',504);return{id:'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb'};}export async function apiDelete(){};export async function apiPatch(){};`;
++(async()=>{
++fs.mkdirSync(out,{recursive:true});
++const entry=`import React from'react';import{createRoot}from'react-dom/client';import{Alert,Image}from'react-native';import Receipt from'${root}/apps/mobile/app/receipt-batch';import Record from'${root}/apps/mobile/app/vault-record';window.__actions=[];window.__requests=[];window.__prepared=[];window.__transforms=[];Image.getSize=(uri,ok,fail)=>window.__dimensionFail?fail(Error('PRIVATE dimensions')):ok(4032,3024);Alert.alert=(title,message,buttons)=>{window.__dialog={title,message};window.__confirm=()=>buttons.filter(b=>b.style!=='cancel').at(-1)?.onPress?.();};createRoot(document.getElementById('root')).render(window.__single?<Record/>:<Receipt/>);`;
++await esbuild.build({stdin:{contents:entry,loader:'tsx',resolveDir:root},outfile:out+'/preview.js',bundle:true,loader:{'.png':'dataurl'},platform:'browser',format:'iife',jsx:'automatic',alias:{react:deps+'/react','react-dom':deps+'/react-dom','react-native':deps+'/react-native-web'},define:{'process.env.NODE_ENV':'"production"'},plugins:[{name:'boundaries',setup(b){b.onResolve({filter:/.*/},a=>{if(a.path==='./api')return{path:'@/lib/api',namespace:'stub'};if(stubs[a.path])return{path:a.path,namespace:'stub'};if(a.path.startsWith('@/')){const p=root+'/apps/mobile/src/'+a.path.slice(2);for(const ext of ['.ts','.tsx','/index.ts'])if(fs.existsSync(p+ext))return{path:p+ext};}});b.onLoad({filter:/.*/,namespace:'stub'},a=>({contents:stubs[a.path],loader:'js',resolveDir:root}));}}]});
++fs.writeFileSync(out+'/preview.html','<!doctype html><meta name="viewport" content="width=device-width,initial-scale=1"><style>body{margin:0;font-family:system-ui}*{box-sizing:border-box}#root{height:100vh;display:flex;flex-direction:column}</style><div id="root"></div><script src="./preview.js"></script>');
++const server=require('node:http').createServer((req,res)=>{const f=req.url.split('?')[0]==='/preview.js'?'preview.js':'preview.html';res.setHeader('Content-Type',f.endsWith('.js')?'application/javascript':'text/html');res.end(fs.readFileSync(out+'/'+f));});await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
++const browser=await chromium.launch({headless:true,executablePath:'/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'});const checks=[];
++try{
++
++for(const width of [320,390])for(const scenario of ['pdf-save','heic-save','convert-error-retry','oversized-photo','empty-pdf','oversize-pdf','cancel','permission-denied','lost-response','batch-failed-photo']){
++ const page=await browser.newPage({viewport:{width,height:844}}),errors=[];page.on('pageerror',e=>errors.push(e.message));
++ await page.addInitScript(s=>{
++  window.__single=s!=='batch-failed-photo';window.__lost=s==='lost-response';window.__cancel=s==='cancel';window.__prepareFail=['convert-error-retry','batch-failed-photo'].includes(s);window.__hugePhoto=s==='oversized-photo';
++  const pdf={uri:'file:///test/quote.pdf',name:'quote.pdf',mimeType:'application/pdf',size:s==='empty-pdf'?0:s==='oversize-pdf'?5000000:2000};
++  const heic={uri:'file:///test/quote.HEIC',name:'quote.HEIC',mimeType:'image/heic',size:9000000};
++  window.__assets=s==='batch-failed-photo'?[pdf,heic]:[['heic-save','convert-error-retry','oversized-photo'].includes(s)?heic:pdf];
++ },scenario);
++ await page.goto('http://127.0.0.1:'+server.address().port);
++ if(scenario==='batch-failed-photo'){
++  await page.getByRole('button',{name:'Choose receipts',exact:true}).click();
++  await page.getByText('quote.HEIC: This photo could not be prepared. Choose another photo or a PDF. No files were added.',{exact:true}).waitFor();
++  if((await page.evaluate(()=>window.__requests)).length)throw Error('Failed batch was submitted');
++  if(await page.evaluate(()=>localStorage.getItem('rezlee.receipt-batch.v1.11111111-1111-4111-8111-111111111111')))throw Error('Partial batch persisted');
++ }else if(scenario==='permission-denied'){
++  await page.getByRole('button',{name:'Take a photo',exact:true}).click();
++  await page.waitForFunction(()=>window.__dialog?.title==='Camera access needed');
++  await page.getByRole('button',{name:'Choose a file',exact:true}).click();
++  await page.getByRole('textbox',{name:'Title',exact:true}).waitFor();
++ }else{
++  await page.getByRole('button',{name:'Choose a file',exact:true}).click();
++  if(!(await page.evaluate(()=>window.__pickerOptions.type.includes('image/heic')&&window.__pickerOptions.type.includes('image/heif'))))throw Error('Phone formats excluded');
++  if(scenario==='cancel'){
++   if((await page.evaluate(()=>window.__requests)).length)throw Error('Cancelled selection submitted');
++  }else if(['empty-pdf','oversize-pdf','oversized-photo'].includes(scenario)){
++   await page.getByRole('alert').waitFor();
++   if(await page.getByRole('checkbox').count())throw Error('Invalid original accepted');
++   if((await page.evaluate(()=>window.__requests)).length)throw Error('Invalid original submitted');
++  }else{
++   if(scenario==='convert-error-retry'){
++    await page.getByText('Could not prepare this photo. Try another photo or export it as a JPG or PDF. Your existing details are still here.',{exact:true}).waitFor();
++    await page.getByRole('button',{name:'Add details without a file',exact:true}).click();
++    await page.getByRole('textbox',{name:'Title',exact:true}).fill('My corrected quote');
++    await page.evaluate(()=>window.__prepareFail=false);
++    await page.getByRole('button',{name:'Choose a file',exact:true}).click();
++    if(await page.getByRole('textbox',{name:'Title',exact:true}).inputValue()!=='My corrected quote')throw Error('Correction lost');
++   }
++   await page.getByRole('checkbox').click();
++   await page.getByRole('button',{name:'Save quote',exact:true}).click();
++   if(scenario==='lost-response'){
++    await page.getByRole('button',{name:'Retry save',exact:true}).waitFor();
++    const first=await page.evaluate(()=>window.__requests[0].requestId);
++    await page.evaluate(()=>window.__lost=false);
++    await page.getByRole('button',{name:'Retry save',exact:true}).click();
++    if(await page.evaluate(()=>window.__requests[1].requestId)!==first)throw Error('Retry changed identity');
++   }
++   await page.getByRole('button',{name:'Review this quote',exact:true}).waitFor();
++   if(scenario==='pdf-save'&&(await page.evaluate(()=>window.__transforms)).length)throw Error('PDF was transformed');
++   if(scenario==='heic-save'&&!(await page.evaluate(()=>window.__transforms)).length)throw Error('HEIC bypassed preparation');
++  }
++ }
++ await page.screenshot({path:out+'/'+scenario+'-'+width+'.png',animations:'disabled'});
++ checks.push({width,scenario,errors,overflow:await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth)});await page.close();
++}
++}finally{await browser.close();server.close();}
++fs.writeFileSync(out+'/render-results.json',JSON.stringify({checks,method:'Actual Vault/receipt components and actual prepareAttachment/photo-size logic through React Native Web. Native picker/decoder/filesystem, network and dialogs are controlled boundaries. Not physical HEIC decoding or live AI.'},null,2));if(checks.some(c=>c.errors.length||c.overflow))throw Error(JSON.stringify(checks));console.log('Passed '+checks.length+' capture file scenarios.');
++})().catch(e=>{console.error(e);process.exitCode=1});
+--- a/scripts/qa/capture-files-staging.mjs
++++ b/scripts/qa/capture-files-staging.mjs
+@@ -0,0 +1,37 @@
++import{createRequire}from'node:module';import{readFileSync,writeFileSync,mkdirSync}from'node:fs';import{randomUUID,createHash}from'node:crypto';
++const require=createRequire(process.cwd()+'/package.json'),{createClient}=require('@supabase/supabase-js');
++const settings=JSON.parse(readFileSync(process.env.REZLEE_STAGING_QA_SETTINGS,'utf8'));if(settings.NEXT_PUBLIC_SUPABASE_URL!=='https://gjwvalpxnfbvryosmcbj.supabase.co')throw Error('Staging only');
++const options={auth:{persistSession:false,autoRefreshToken:false}},admin=createClient(settings.NEXT_PUBLIC_SUPABASE_URL,settings.SUPABASE_SECRET_KEY,options),base='https://staging.rezlee.com';
++const ids=[],checks=[];let home,completed=false;const evidence='docs/checkpoints/capture-files-20261011';
++const assert=(v,m)=>{if(!v)throw Error(m);checks.push(m);};
++function pdf(text){const parts=['%PDF-1.4\n'],offsets=[0];const objects=['<< /Type /Catalog /Pages 2 0 R >>','<< /Type /Pages /Kids [3 0 R] /Count 1 >>','<< /Type /Page /Parent 2 0 R /MediaBox [0 0 300 200] /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >>','<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>'];const stream='BT /F1 12 Tf 20 150 Td ('+text+') Tj ET';objects.push('<< /Length '+stream.length+' >>\nstream\n'+stream+'\nendstream');for(let i=0;i<objects.length;i++){offsets.push(Buffer.byteLength(parts.join('')));parts.push((i+1)+' 0 obj\n'+objects[i]+'\nendobj\n');}const x=Buffer.byteLength(parts.join(''));parts.push('xref\n0 6\n0000000000 65535 f \n'+offsets.slice(1).map(n=>String(n).padStart(10,'0')+' 00000 n \n').join('')+'trailer\n<< /Size 6 /Root 1 0 R >>\nstartxref\n'+x+'\n%%EOF');return Buffer.from(parts.join(''));}
++async function fixture(){const email='capture-qa-'+randomUUID()+'@example.invalid',password=randomUUID()+randomUUID();const made=await admin.auth.admin.createUser({email,password,email_confirm:true,user_metadata:{qa_marker:'capture-recovery-20261008'}});if(made.error)throw Error('Fixture creation failed');ids.push(made.data.user.id);const client=createClient(settings.NEXT_PUBLIC_SUPABASE_URL,settings.NEXT_PUBLIC_SUPABASE_ANON_KEY,options);const signed=await client.auth.signInWithPassword({email,password});if(signed.error)throw Error('Fixture login failed');return{id:made.data.user.id,client,token:signed.data.session.access_token};}
++async function call(token,path,method='GET',body){const response=await fetch(base+path,{method,headers:{Authorization:'Bearer '+token},body,signal:AbortSignal.timeout(45000)});return{status:response.status,data:await response.json()};}
++const digest=b=>createHash('sha256').update(b).digest('hex');
++
++try{
++ const user=await fixture();const made=await user.client.from('homes').insert({user_id:user.id,nickname:'Disposable file QA',city:'Pickering',province:'Ontario',home_type:'house',ownership_type:'owner'}).select('id').single();if(made.error)throw Error('Fixture home failed');home=made.data.id;
++ const other=await fixture();
++ const otherHome=await other.client.from("homes").insert({user_id:other.id,nickname:"Other disposable home",city:"Pickering",province:"Ontario",home_type:"house",ownership_type:"owner"});if(otherHome.error)throw Error("Other fixture home failed");
++ for(const name of ['complete-two-page.pdf','conflicting-two-page.pdf','clear-first-page.png','unreadable-image.png']){
++  const bytes=readFileSync('scripts/qa/fixtures/quote-files/'+name),requestId=randomUUID(),type=name.endsWith('.pdf')?'application/pdf':'image/png';
++  const form=(extra={})=>{const f=new FormData();for(const[k,v]of Object.entries({requestId,expectedHomeId:home,title:'Synthetic '+name,category:'Other',issued_on:'',expires_on:'',notes:'Synthetic QA only',...extra}))f.set(k,v);f.set('file',new File([bytes],name,{type}));return f;};
++  const saved=await call(user.token,'/api/mobile/v1/vault/records','POST',form());assert(saved.status===200&&saved.data.id,name+': saved original');
++  const retry=await call(user.token,'/api/mobile/v1/vault/records','POST',form());assert(retry.status===200&&retry.data.id===saved.data.id,name+': same request replay returns same record');
++  const recovered=await call(user.token,'/api/mobile/v1/vault/records?requestId='+requestId,'PATCH');assert(recovered.status===200&&recovered.data.id===saved.data.id,name+': recover without uploading bytes');
++  const detail=await call(user.token,'/api/mobile/v1/vault/records?id='+saved.data.id);assert(detail.status===200&&detail.data.record.hasFile,name+': reopened original record');
++  const signed=await call(user.token,'/api/mobile/v1/vault/records?id='+saved.data.id+'&file=1');assert(signed.status===200&&signed.data.url,name+': private original available');
++  const response=await fetch(signed.data.url,{signal:AbortSignal.timeout(15000)});assert(response.ok&&digest(Buffer.from(await response.arrayBuffer()))===digest(bytes),name+': exact bytes retained including later PDF pages');
++  const denied=await call(other.token,'/api/mobile/v1/vault/records?id='+saved.data.id+'&file=1');assert([403,404].includes(denied.status),name+': another account cannot obtain original');
++  const quote=await call(user.token,'/api/mobile/v1/quotes?id='+saved.data.id);assert(quote.status===200&&quote.data.document.hasFile&&!quote.data.review,name+': quote opens without an automatic AI read');
++  const correction=new FormData();for(const[k,v]of Object.entries({id:saved.data.id,requestId:randomUUID(),expectedHomeId:home,expectedVersion:detail.data.record.updated_at,title:'Corrected QA title',category:'Other',issued_on:'',expires_on:'',notes:'Customer correction retained'}))correction.set(k,v);
++  const corrected=await call(user.token,'/api/mobile/v1/vault/records','POST',correction);assert(corrected.status===200&&corrected.data.id===saved.data.id,name+': metadata correction saved without reupload');
++  const reopened=await call(user.token,'/api/mobile/v1/vault/records?id='+saved.data.id);assert(reopened.status===200&&reopened.data.record.title==='Corrected QA title'&&reopened.data.record.hasFile,name+': corrected title and original coexist');
++ }
++ mkdirSync(evidence,{recursive:true});
++ writeFileSync(evidence+'/hosted-results.json',JSON.stringify({checks,paidCalls:0,realCustomerDataChanged:false,fixturesCleaned:false},null,2));
++ completed=true;console.log('Passed '+checks.length+' hosted file checks.');
++}finally{
++ for(const id of ids){const docs=await admin.from('documents').select('storage_path').eq('user_id',id);if(docs.error)throw Error('Fixture cleanup lookup failed');const paths=(docs.data??[]).map(d=>d.storage_path).filter(Boolean);if(paths.some(p=>!p.startsWith(id+'/')))throw Error('Cleanup path outside fixture');if(paths.length){const removed=await admin.storage.from('rezlee-documents').remove(paths);if(removed.error)throw Error('Fixture storage cleanup failed');}const removed=await admin.auth.admin.deleteUser(id);if(removed.error)throw Error('Fixture user cleanup failed');}
++ writeFileSync(evidence+'/hosted-results.json',JSON.stringify({checks,paidCalls:0,realCustomerDataChanged:false,fixturesCleaned:true,completed},null,2));console.log('Disposable users and uploaded originals removed.');
++}
+--- a/scripts/qa/quote-files-live-staging.mjs
++++ b/scripts/qa/quote-files-live-staging.mjs
+@@ -0,0 +1,86 @@
++import {readFileSync,writeFileSync,mkdirSync} from "node:fs";
++import {createRequire} from "node:module";
++import {randomUUID,createHash} from "node:crypto";
++const require=createRequire(process.cwd()+"/package.json");
++const {createClient}=require("@supabase/supabase-js");
++if(!process.env.REZLEE_STAGING_QA_SETTINGS)throw Error("Set REZLEE_STAGING_QA_SETTINGS to an external staging credentials file; never commit it.");
++const settings=JSON.parse(readFileSync(process.env.REZLEE_STAGING_QA_SETTINGS,"utf8"));
++if(settings.NEXT_PUBLIC_SUPABASE_URL!=="https://gjwvalpxnfbvryosmcbj.supabase.co")throw Error("Staging only");
++const base="https://staging.rezlee.com",options={auth:{persistSession:false,autoRefreshToken:false}};
++const admin=createClient(settings.NEXT_PUBLIC_SUPABASE_URL,settings.SUPABASE_SECRET_KEY,options),fixtures=[],checks=[];
++let failure=null;
++function check(name,ok){if(!ok)throw Error(name);checks.push(name);console.log("PASS",name);}
++async function account(){
++ const email=`quote-qa-${randomUUID()}@example.invalid`,password=randomUUID()+randomUUID();
++ const made=await admin.auth.admin.createUser({email,password,email_confirm:true,user_metadata:{qa_marker:true}});
++ if(made.error)throw Error("Disposable user creation failed");
++ const f={id:made.data.user.id,client:createClient(settings.NEXT_PUBLIC_SUPABASE_URL,settings.NEXT_PUBLIC_SUPABASE_ANON_KEY,options)};fixtures.push(f);
++ const login=await f.client.auth.signInWithPassword({email,password});if(login.error)throw Error("Disposable sign-in failed");f.token=login.data.session.access_token;
++ const home=await f.client.from("homes").insert({user_id:f.id,nickname:"Disposable quote QA",city:"Pickering",province:"Ontario",home_type:"house",ownership_type:"owner"}).select("id").single();if(home.error)throw Error("Disposable home failed");f.home=home.data.id;return f;
++}
++
++
++const checkpoint="docs/checkpoints/quote-files-live-20261011";
++const cases=JSON.parse(readFileSync("scripts/qa/quote-file-cases.json","utf8")).cases;
++const {emptyQuote,quoteQuestions}=await import("../../apps/mobile/src/lib/quote-review.ts");
++if(process.env.REZLEE_QUOTE_FILES_LIVE_APPROVED!=="4")throw Error("Requires this session's explicit four-call approval");
++const {existsSync}=await import("node:fs");
++if(existsSync(checkpoint+"/results.json"))throw Error("This evaluation already started. Inspect the ledger; never rerun paid calls blindly.");
++if(cases.length!==4)throw Error("Approved case count changed");
++for(const c of cases){const b=readFileSync("scripts/qa/fixtures/quote-files/"+c.file);if(b.length>50000||createHash("sha256").update(b).digest("hex")!==c.sha256)throw Error("Fixture bounds changed");}
++mkdirSync(checkpoint,{recursive:true});
++const results={startedAt:new Date().toISOString(),maxCalls:4,approvedDollars:1,reservedCalls:0,model:"google/gemini-2.5-flash",maxOutputTokensPerCall:4500,automaticRetries:0,
++ costBound:{inputTokensPerCall:100000,inputUsdPerMillion:0.30,outputUsdPerMillion:2.50,maximumEstimatedUsd:0.165,source:"https://vercel.com/ai-gateway/models/gemini-2.5-flash",note:"Conservative token-price bound for four bounded one-image/two-page fixtures including schema/system text. Not a billed usage report."},cases:[],cleaned:false};
++const persist=()=>writeFileSync(checkpoint+"/results.json",JSON.stringify(results,null,2));
++async function api(f,path,body){
++ const res=await fetch(base+path,{method:body===undefined?"GET":"POST",headers:{Authorization:"Bearer "+f.token,"Content-Type":"application/json"},...(body===undefined?{}:{body:JSON.stringify(body)}),signal:AbortSignal.timeout(20000)});
++ return {status:res.status,data:await res.json()};
++}
++persist();
++try{
++ const f=await account();
++ for(const c of cases){
++  const form=new FormData();for(const[k,v]of Object.entries({requestId:randomUUID(),expectedHomeId:f.home,title:"Synthetic file quote: "+c.id,category:"Other",notes:"Synthetic QA only",issued_on:"",expires_on:""}))form.set(k,v);
++  form.set("file",new File([readFileSync("scripts/qa/fixtures/quote-files/"+c.file)],c.file,{type:c.file.endsWith(".pdf")?"application/pdf":"image/png"}));
++  const response=await fetch(base+"/api/mobile/v1/vault/records",{method:"POST",headers:{Authorization:"Bearer "+f.token},body:form,signal:AbortSignal.timeout(45000)});
++  const saved=await response.json();if(response.status!==200||!saved.id)throw Error("Fixture original upload failed");
++  const original=await api(f,"/api/mobile/v1/quotes?id="+saved.id);if(original.status!==200)throw Error("Fixture original reload failed");
++  const d={data:{id:saved.id,updated_at:original.data.document.updated_at}};
++  const row={id:c.id,documentId:d.data.id,state:"reserved",facts:[],checks:c.checks,startedAt:new Date().toISOString()};
++  results.cases.push(row);results.reservedCalls++;persist();
++  if(results.reservedCalls>4)throw Error("Call budget exhausted");
++  const start=Date.now(),requestId=randomUUID();
++  let accepted;
++  try{accepted=await api(f,"/api/mobile/v1/quotes",{documentId:d.data.id,homeId:f.home,sourceVersion:d.data.updated_at,version:0,requestId,action:"read",consent:true});}
++  catch{row.state="response_uncertain";persist();}
++  if(accepted&&accepted.status!==200){row.state="request_rejected";row.error=accepted.data.error;row.httpStatus=accepted.status;persist();console.log(c.id,row.state);continue;}
++  for(let n=0;n<65;n++){
++   const r=await api(f,"/api/mobile/v1/quotes?id="+d.data.id);
++   if(r.status!==200)throw Error("Could not inspect live read");
++   if(r.data.review?.read_status==="ready"||r.data.review?.read_status==="failed"||r.data.readingExpired){
++    row.state=r.data.readingExpired?"expired":r.data.review.read_status;row.facts=r.data.review?.read_result??[];break;
++   }
++   await new Promise(resolve=>setTimeout(resolve,2000));
++  }
++  row.elapsedMs=Date.now()-start;
++  const draft=emptyQuote();for(const fact of row.facts)draft.fields[fact.key]=fact.value;
++  row.questions=quoteQuestions(draft).map(q=>({key:q.key,question:q.question}));
++  row.excerptsRequireVisualReview=true;
++  row.pageNumbersWithinFile=row.facts.every(fact=>fact.page===null||(fact.page>=1&&fact.page<=c.pages));
++  const reloaded=await api(f,"/api/mobile/v1/quotes?id="+d.data.id);
++  row.resultSurvivedReload=JSON.stringify(reloaded.data.review?.read_result??[])===JSON.stringify(row.facts);
++  persist();console.log(c.id,row.state,row.elapsedMs+"ms",row.facts.length+" facts",row.questions.map(q=>q.key).join(","));
++ }
++}catch(error){results.error=error instanceof Error?error.message:"Evaluation failed";console.log(results.error);}
++finally{
++ let clean=true;
++ for(const f of fixtures){
++  const docs=await admin.from("documents").select("storage_path").eq("user_id",f.id);if(docs.error){clean=false;continue;}
++  const paths=(docs.data??[]).map(d=>d.storage_path).filter(Boolean);if(paths.some(p=>!p.startsWith(f.id+"/"))){clean=false;continue;}
++  if(paths.length){const removed=await admin.storage.from("rezlee-documents").remove(paths);if(removed.error){clean=false;continue;}}
++  const deleted=await admin.auth.admin.deleteUser(f.id);if(deleted.error)clean=false;
++ }
++ if(fixtures.length){const rows=await admin.from("quote_reviews").select("document_id").in("user_id",fixtures.map(f=>f.id));if(rows.error||rows.data.length)clean=false;}
++ results.cleaned=clean;results.finishedAt=new Date().toISOString();persist();
++}
++console.log("Evaluation complete; reserved calls",results.reservedCalls,"fixtures cleaned",results.cleaned);
+--- a/scripts/qa/quote-file-cases.json
++++ b/scripts/qa/quote-file-cases.json
+@@ -0,0 +1,50 @@
++{
++  "status": "prepared_not_run",
++  "proposedMaxCalls": 4,
++  "proposedBudgetUsd": 1,
++  "cases": [
++    {
++      "id": "complete-two-page",
++      "file": "complete-two-page.pdf",
++      "pages": 2,
++      "checks": [
++        "Retain TEST-DW100 scope and CAD 800 subtotal / CAD 904 total.",
++        "Include second-page exclusion, dates, deposit and both warranty durations.",
++        "No claim of payment, completed work or verified compatibility."
++      ],
++      "sha256": "791cccb7561ba018c0382ad25fd3770df122d37d452c195c55b4eed5928b2dc7"
++    },
++    {
++      "id": "conflicting-two-page",
++      "file": "conflicting-two-page.pdf",
++      "pages": 2,
++      "checks": [
++        "Retain subtotal CAD 1000 on page 1 and total CAD 900 on page 2.",
++        "Retain CAD 50 allowance and request clarification; do not reconcile amounts.",
++        "Dates, tax and warranty remain uncertain."
++      ],
++      "sha256": "ac6270865c725c9221c3f34f3cf7399b089436c93944537a87d8dac690fc47bf"
++    },
++    {
++      "id": "clear-first-page",
++      "file": "clear-first-page.png",
++      "pages": 1,
++      "checks": [
++        "Read the visible scope and CAD amounts.",
++        "Do not invent terms from the unavailable second page.",
++        "Missing warranty, dates, deposit and exclusions need original review."
++      ],
++      "sha256": "072b59cec3f3894b359b50342c9da684f78fa691d790d32a557ca5160fb58a94"
++    },
++    {
++      "id": "unreadable-image",
++      "file": "unreadable-image.png",
++      "pages": 1,
++      "checks": [
++        "Plain gray synthetic image contains no readable quote. Return no facts or a failed read.",
++        "Keep original and manual review available. Never invent prices or warranty."
++      ],
++      "sha256": "a8a990cbb7468e2897717b50b123fd935d64bee859465197da8dde9414b3e116"
++    }
++  ]
++}
+--- a/scripts/qa/fixtures/quote-files/generate-fixtures.py
++++ b/scripts/qa/fixtures/quote-files/generate-fixtures.py
+@@ -0,0 +1,46 @@
++from pathlib import Path
++from reportlab.pdfgen import canvas
++from reportlab.lib.pagesizes import letter
++from reportlab.pdfbase import pdfmetrics
++from reportlab.pdfbase.ttfonts import TTFont
++pdfmetrics.registerFont(TTFont("QARegular", "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"))
++pdfmetrics.registerFont(TTFont("QABold", "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"))
++from pypdf import PdfReader
++
++out = Path(__file__).parent
++cases = {
++    'complete-two-page.pdf': [
++        ['SYNTHETIC QA QUOTE - NOT A REAL OFFER', 'Example Installation Co. | QA-101',
++         'Supply and install dishwasher TEST-DW100.', 'Parts CAD 600. Labour CAD 200.',
++         'Subtotal CAD 800. HST CAD 104. Total CAD 904.',
++         'Removal and disposal of the old dishwasher included.', 'Terms continue on page 2.'],
++        ['SYNTHETIC QA QUOTE - QA-101 - TERMS',
++         'Cabinet modifications excluded. No allowances.',
++         'Start and finish: November 2, 2026. Quote expires October 25, 2026.',
++         'Deposit CAD 100; balance CAD 804 after installation.',
++         'Workmanship warranty: 12 months. Parts warranty: 24 months.']
++    ],
++    'conflicting-two-page.pdf': [
++        ['SYNTHETIC QA QUOTE - NOT A REAL OFFER', 'Example Cabinet Co. | QA-202',
++         'Replace two cabinet doors. Subtotal CAD 1000.',
++         'Disposal allowance CAD 50. Taxes not specified.', 'See page 2 for total and conditions.'],
++        ['SYNTHETIC QA QUOTE - QA-202 - CONTINUED', 'Total CAD 900.',
++         'Extra cabinet work requires a revised quote.', 'Dates to be agreed.',
++         'Warranty terms not provided.']
++    ]
++}
++for name, pages in cases.items():
++    pdf = canvas.Canvas(str(out / name), pagesize=letter, invariant=1)
++    for index, lines in enumerate(pages):
++        pdf.setFont('QABold', 14)
++        pdf.drawString(48, 738, lines[0])
++        pdf.setFont('QARegular', 11)
++        for row, line in enumerate(lines[1:]):
++            pdf.drawString(48, 690 - row * 32, line)
++        pdf.drawString(48, 40, f'Page {index+1} of {len(pages)} | Synthetic test fixture')
++        pdf.showPage()
++    pdf.save()
++    reader = PdfReader(out/name)
++    assert len(reader.pages) == 2
++    assert all(page.extract_text().strip() for page in reader.pages)
++print('Two valid, two-page PDF fixtures created and text checked.')

@@ -1,0 +1,70 @@
+{
+  "apps/mobile/src/lib/upload-validation.ts": {
+    "sha256": "28662b73e14e3cf47a36b095c80d0f3d6ee192999494540f1fe9624cd82a1f7f",
+    "existed": true
+  },
+  "apps/mobile/src/lib/photo-preparation-core.ts": {
+    "sha256": "5d804d3fd673af11180b0a7b3a8c7d3e215ed447551dc8648365a800069983a6",
+    "existed": true
+  },
+  "apps/mobile/src/lib/prepare-attachment.ts": {
+    "sha256": "9d9679b81c5e1c20b4536b148f300e7bdb5b18ea7ba055f96b857997ae14f786",
+    "existed": true
+  },
+  "apps/mobile/app/vault-record.tsx": {
+    "sha256": "bcf85a80391616ca08823990433356f8932695adfc95575f5aa32c7b0dacd77f",
+    "existed": true
+  },
+  "apps/mobile/app/receipt-batch.tsx": {
+    "sha256": "b29e2f61c023914d48c296063d4fd466b4ec241dfe130ec1604943ea0f9a5337",
+    "existed": true
+  },
+  "apps/mobile/app/bill/import.tsx": {
+    "sha256": "746e781406faa7986ebcf8a4a65cc537fd711abb8871efd82d4982f299b933b7",
+    "existed": true
+  },
+  "apps/mobile/app/bill/batch.tsx": {
+    "sha256": "b518965da7deb51e763cfd4c9c416119f4443c7188d685839dd2b4c4a58915ab",
+    "existed": true
+  },
+  "tests/mobile-upload.test.ts": {
+    "sha256": "5354a07512b2b3a95db000692d64b134cec7e74f27aefd2a030e0727c84b8c82",
+    "existed": true
+  },
+  "scripts/qa/render-capture-files.cjs": {
+    "sha256": "17acd3f0eb2d857378f475f154e71cab83205216d29ee29ae5c4d0ca51d69d4d",
+    "existed": false
+  },
+  "scripts/qa/capture-files-staging.mjs": {
+    "sha256": "071f6516db187b2b06d3672159dffc3135f01c7c8bda69275c3ba90149dfca88",
+    "existed": false
+  },
+  "scripts/qa/quote-files-live-staging.mjs": {
+    "sha256": "be872403b65ec6341d48e87b5af475ba38209d7f73294342a25f333dbba3e635",
+    "existed": false
+  },
+  "scripts/qa/quote-file-cases.json": {
+    "sha256": "ee1e3a78ea96d014fa2bd719e92cc8831fe90f6451586a4c1e585c020890fa66",
+    "existed": false
+  },
+  "scripts/qa/fixtures/quote-files/generate-fixtures.py": {
+    "sha256": "ec0bd0bd8554a51c5127a76c13f452ecb9c17210e80d3994cc56ac597fa7665a",
+    "existed": false
+  },
+  "scripts/qa/fixtures/quote-files/clear-first-page.png": {
+    "sha256": "072b59cec3f3894b359b50342c9da684f78fa691d790d32a557ca5160fb58a94",
+    "existed": false
+  },
+  "scripts/qa/fixtures/quote-files/conflicting-two-page.pdf": {
+    "sha256": "ac6270865c725c9221c3f34f3cf7399b089436c93944537a87d8dac690fc47bf",
+    "existed": false
+  },
+  "scripts/qa/fixtures/quote-files/complete-two-page.pdf": {
+    "sha256": "791cccb7561ba018c0382ad25fd3770df122d37d452c195c55b4eed5928b2dc7",
+    "existed": false
+  },
+  "scripts/qa/fixtures/quote-files/unreadable-image.png": {
+    "sha256": "a8a990cbb7468e2897717b50b123fd935d64bee859465197da8dde9414b3e116",
+    "existed": false
+  }
+}

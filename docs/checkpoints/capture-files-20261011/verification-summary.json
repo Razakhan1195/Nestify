@@ -1,0 +1,17 @@
+{
+  "fullTests": 878,
+  "failed": 0,
+  "newRenderedScenarios": 20,
+  "regressionRenderedScenarios": 14,
+  "hostedFileChecks": 40,
+  "paidCalls": 0,
+  "fixturesCleaned": true,
+  "physicalDeviceAcceptance": false,
+  "liveFileAiAcceptance": false,
+  "nativeExports": [
+    "ios",
+    "android"
+  ],
+  "newBackendDeployment": false,
+  "productionReleased": false
+}

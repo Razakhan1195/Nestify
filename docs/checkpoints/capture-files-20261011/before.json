@@ -1,0 +1,11 @@
+{
+  "apps/mobile/src/lib/upload-validation.ts": "af54af848486ed8fd8ca907f41946fbc6d4431002e76f00e1c8932efd523f4fc",
+  "apps/mobile/src/lib/photo-preparation-core.ts": "877147f2c4272d4c090319a7c26d4c8b3355e36090d129216c5edb3d52e8496b",
+  "apps/mobile/src/lib/prepare-attachment.ts": "4d4851967e8645bf7db5e49fded62227393e7fb99ee48b8eebe4bc246a5479cb",
+  "apps/mobile/app/vault-record.tsx": "e953debd6208290b3f2ea4e8f9a5d2639031ee760f58d0916ae7e96bf3088ee7",
+  "apps/mobile/app/receipt-batch.tsx": "0276a1d445ae4c6300ca0a012b2baf7f65c63d9febbb60cd4cda84901e2c1e7f",
+  "apps/mobile/app/bill/import.tsx": "9ac6e8f513433c545af85c7a9d8b663b280d594fed825bd8add9d9e14b1297f3",
+  "apps/mobile/app/bill/batch.tsx": "4d3f46bde761f3825324a82fff6fc1ed3919dde2afbd1352200286f8129a49da",
+  "tests/photo-preparation.test.ts": "1f5fa0c26cc1fbc0840df5562b1d717cca5eb6b76ef325f2b93656aac4193c77",
+  "tests/mobile-upload.test.ts": "8fdbc06f594dc72173a2f0ffd15e8cde9a34cbdd5a320cba1f8b4c9ed59b73e8"
+}

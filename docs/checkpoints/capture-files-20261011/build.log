@@ -1,0 +1,190 @@
+
+> rezlee@0.1.0 build
+> next build
+
+▲ Next.js 16.3.3 (Turbopack)
+- Environments: .env.local
+✓ Running next.config.ts took 86ms
+- Experiments (use with caution):
+  · serverActions
+
+⚠ The "middleware" file convention is deprecated. Please use "proxy" instead.
+
+  To migrate automatically, run:
+  npx @next/codemod@canary middleware-to-proxy .
+
+  Learn more: https://nextjs.org/docs/messages/middleware-to-proxy
+  Creating an optimized production build ...
+✓ Compiled successfully in 3.6s
+  Running TypeScript ...
+  Finished TypeScript in 2.5s ...
+  Collecting page data using 9 workers ...
+  Generating static pages using 9 workers (0/76) ...
+⚠ metadataBase property in metadata export is not set for resolving social open graph or twitter images, using "http://localhost:3000". See https://nextjs.org/docs/app/api-reference/functions/generate-metadata#metadatabase
+⚠ metadataBase property in metadata export is not set for resolving social open graph or twitter images, using "http://localhost:3000". See https://nextjs.org/docs/app/api-reference/functions/generate-metadata#metadatabase
+⚠ metadataBase property in metadata export is not set for resolving social open graph or twitter images, using "http://localhost:3000". See https://nextjs.org/docs/app/api-reference/functions/generate-metadata#metadatabase
+  Generating static pages using 9 workers (19/76) 
+⚠ metadataBase property in metadata export is not set for resolving social open graph or twitter images, using "http://localhost:3000". See https://nextjs.org/docs/app/api-reference/functions/generate-metadata#metadatabase
+  Generating static pages using 9 workers (38/76) 
+  Generating static pages using 9 workers (57/76) 
+✓ Generating static pages using 9 workers (76/76) in 343ms
+  Finalizing page optimization ...
+
+Route (app)
+┌ ƒ /
+├ ○ /_not-found
+├ ƒ /admin
+├ ƒ /admin/access
+├ ƒ /admin/auth/callback
+├ ƒ /admin/feedback
+├ ƒ /admin/waitlist
+├ ƒ /api/account-deletion/worker
+├ ƒ /api/admin/feedback
+├ ƒ /api/admin/operations
+├ ƒ /api/admin/waitlist
+├ ƒ /api/ai/diagnose
+├ ƒ /api/ai/maintenance-plan
+├ ƒ /api/ai/scan
+├ ƒ /api/assistant
+├ ƒ /api/assistant/conversations
+├ ƒ /api/contact
+├ ƒ /api/deck/create-connection
+├ ƒ /api/deck/create-credential
+├ ƒ /api/deck/disconnect-provider
+├ ƒ /api/deck/recover-imports
+├ ƒ /api/deck/scheduled-sync
+├ ƒ /api/deck/submit-interaction
+├ ƒ /api/deck/sync-provider
+├ ƒ /api/deck/webhook
+├ ƒ /api/documents/[id]/download
+├ ƒ /api/ezgb/scheduled-sync
+├ ƒ /api/integrations/gmail/callback
+├ ƒ /api/integrations/gmail/worker
+├ ƒ /api/mobile/v1/account/deletion
+├ ƒ /api/mobile/v1/account/deletion/status
+├ ƒ /api/mobile/v1/address
+├ ƒ /api/mobile/v1/ai/scan
+├ ƒ /api/mobile/v1/assistant
+├ ƒ /api/mobile/v1/bill-payments/intents
+├ ƒ /api/mobile/v1/bill-payments/intents/[id]/confirm
+├ ƒ /api/mobile/v1/bills
+├ ƒ /api/mobile/v1/bills/[id]
+├ ƒ /api/mobile/v1/bills/[id]/evidence
+├ ƒ /api/mobile/v1/bills/[id]/evidence/read
+├ ƒ /api/mobile/v1/bills/[id]/mark-paid
+├ ƒ /api/mobile/v1/bills/[id]/original
+├ ƒ /api/mobile/v1/bills/[id]/outcome
+├ ƒ /api/mobile/v1/bills/[id]/records
+├ ƒ /api/mobile/v1/bills/[id]/review
+├ ƒ /api/mobile/v1/bills/capabilities
+├ ƒ /api/mobile/v1/bills/history
+├ ƒ /api/mobile/v1/bills/history/upload
+├ ƒ /api/mobile/v1/care
+├ ƒ /api/mobile/v1/care/[id]
+├ ƒ /api/mobile/v1/care/[id]/complete
+├ ƒ /api/mobile/v1/care/plan
+├ ƒ /api/mobile/v1/care/routine
+├ ƒ /api/mobile/v1/care/routines
+├ ƒ /api/mobile/v1/email-memory
+├ ƒ /api/mobile/v1/ezgb/authorization
+├ ƒ /api/mobile/v1/ezgb/sync
+├ ƒ /api/mobile/v1/feedback
+├ ƒ /api/mobile/v1/gmail-memory
+├ ƒ /api/mobile/v1/home
+├ ƒ /api/mobile/v1/household
+├ ƒ /api/mobile/v1/household/[id]
+├ ƒ /api/mobile/v1/household/phone
+├ ƒ /api/mobile/v1/inventory
+├ ƒ /api/mobile/v1/needs-you
+├ ƒ /api/mobile/v1/notifications
+├ ƒ /api/mobile/v1/notifications/preferences
+├ ƒ /api/mobile/v1/onboarding
+├ ƒ /api/mobile/v1/products/lookup
+├ ƒ /api/mobile/v1/providers
+├ ƒ /api/mobile/v1/providers/[id]
+├ ƒ /api/mobile/v1/providers/[id]/backfill
+├ ƒ /api/mobile/v1/providers/[id]/disconnect
+├ ƒ /api/mobile/v1/providers/[id]/interaction
+├ ƒ /api/mobile/v1/providers/[id]/sync
+├ ƒ /api/mobile/v1/providers/hosted-auth
+├ ƒ /api/mobile/v1/push-tokens
+├ ƒ /api/mobile/v1/quotes
+├ ƒ /api/mobile/v1/recalls
+├ ƒ /api/mobile/v1/recalls/preferences
+├ ƒ /api/mobile/v1/recalls/test-notification
+├ ƒ /api/mobile/v1/repairs
+├ ƒ /api/mobile/v1/repairs/photo
+├ ƒ /api/mobile/v1/shared-expenses
+├ ƒ /api/mobile/v1/shared-expenses/remind
+├ ƒ /api/mobile/v1/utilities/[providerId]/comparison
+├ ƒ /api/mobile/v1/utilities/[providerId]/connection
+├ ƒ /api/mobile/v1/utilities/[providerId]/intelligence
+├ ƒ /api/mobile/v1/vault
+├ ƒ /api/mobile/v1/vault/records
+├ ƒ /api/notifications/dispatch
+├ ƒ /api/recalls/scheduled
+├ ƒ /api/vault/cleanup
+├ ƒ /api/waitlist
+├ ƒ /app
+├ ƒ /app/appliances
+├ ƒ /app/assistant
+├ ƒ /app/attention
+├ ƒ /app/bills
+├ ƒ /app/documents
+├ ƒ /app/help
+├ ƒ /app/home
+├ ƒ /app/inventory
+├ ƒ /app/maintenance
+├ ƒ /app/onboarding
+├ ƒ /app/projects
+├ ƒ /app/providers
+├ ƒ /app/providers/[id]
+├ ƒ /app/repairs
+├ ƒ /app/settings
+├ ƒ /app/timeline
+├ ƒ /app/warranties
+├ ○ /apple-icon.png
+├ ○ /appliances
+├ ○ /assistant
+├ ƒ /auth/callback
+├ ƒ /auth/invite
+├ ƒ /auth/mobile-confirmed
+├ ○ /bills
+├ ○ /contact
+├ ○ /dashboard
+├ ○ /delete-account
+├ ○ /disclosures
+├ ○ /documents
+├ ƒ /forgot-password
+├ ○ /icon.svg
+├ ƒ /integrations/ezgb/authorize
+├ ○ /integrations/ezgb/error
+├ ○ /integrations/ezgb/success
+├ ƒ /invite/accept
+├ ƒ /invite/open
+├ ○ /join-household
+├ ƒ /login
+├ ○ /maintenance
+├ ○ /opengraph-image
+├ ƒ /preview/website
+├ ○ /privacy
+├ ○ /repairs
+├ ƒ /reset-password
+├ ○ /robots.txt
+├ ○ /settings
+├ ƒ /signup
+├ ƒ /signup/check-email
+├ ○ /sitemap.xml
+├ ○ /terms
+├ ƒ /waitlist/confirm
+├ ○ /waitlist/privacy
+├ ○ /waitlist/terms
+├ ƒ /waitlist/unsubscribe
+└ ○ /warranties
+
+
+ƒ Proxy (Middleware)
+
+○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand
+

@@ -1,0 +1,125 @@
+{
+  "checks": [
+    {
+      "width": 320,
+      "scenario": "pdf-save",
+      "errors": [],
+      "overflow": false
+    },
+    {
+      "width": 320,
+      "scenario": "heic-save",
+      "errors": [],
+      "overflow": false
+    },
+    {
+      "width": 320,
+      "scenario": "convert-error-retry",
+      "errors": [],
+      "overflow": false
+    },
+    {
+      "width": 320,
+      "scenario": "oversized-photo",
+      "errors": [],
+      "overflow": false
+    },
+    {
+      "width": 320,
+      "scenario": "empty-pdf",
+      "errors": [],
+      "overflow": false
+    },
+    {
+      "width": 320,
+      "scenario": "oversize-pdf",
+      "errors": [],
+      "overflow": false
+    },
+    {
+      "width": 320,
+      "scenario": "cancel",
+      "errors": [],
+      "overflow": false
+    },
+    {
+      "width": 320,
+      "scenario": "permission-denied",
+      "errors": [],
+      "overflow": false
+    },
+    {
+      "width": 320,
+      "scenario": "lost-response",
+      "errors": [],
+      "overflow": false
+    },
+    {
+      "width": 320,
+      "scenario": "batch-failed-photo",
+      "errors": [],
+      "overflow": false
+    },
+    {
+      "width": 390,
+      "scenario": "pdf-save",
+      "errors": [],
+      "overflow": false
+    },
+    {
+      "width": 390,
+      "scenario": "heic-save",
+      "errors": [],
+      "overflow": false
+    },
+    {
+      "width": 390,
+      "scenario": "convert-error-retry",
+      "errors": [],
+      "overflow": false
+    },
+    {
+      "width": 390,
+      "scenario": "oversized-photo",
+      "errors": [],
+      "overflow": false
+    },
+    {
+      "width": 390,
+      "scenario": "empty-pdf",
+      "errors": [],
+      "overflow": false
+    },
+    {
+      "width": 390,
+      "scenario": "oversize-pdf",
+      "errors": [],
+      "overflow": false
+    },
+    {
+      "width": 390,
+      "scenario": "cancel",
+      "errors": [],
+      "overflow": false
+    },
+    {
+      "width": 390,
+      "scenario": "permission-denied",
+      "errors": [],
+      "overflow": false
+    },
+    {
+      "width": 390,
+      "scenario": "lost-response",
+      "errors": [],
+      "overflow": false
+    },
+    {
+      "width": 390,
+      "scenario": "batch-failed-photo",
+      "errors": [],
+      "overflow": false
+    }
+  ],
+  "method": "Actual Vault/receipt components and actual prepareAttachment/photo-size logic through React Native Web. Native picker/decoder/filesystem, network and dialogs are controlled boundaries. Not physical HEIC decoding or live AI."
+}
