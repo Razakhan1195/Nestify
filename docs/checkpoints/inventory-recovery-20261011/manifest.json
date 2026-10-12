@@ -1,0 +1,82 @@
+{
+  "baseCheckpoint": "c72b12845d632ab80768a19d086cdac0c5c69add",
+  "files": [
+    {
+      "path": "apps/mobile/app/inventory-item.tsx",
+      "sha256": "89a1e5663d2fc134349dfbba0e71571048b81211432d4a6410b943765baf95c5",
+      "bytes": 20170,
+      "newInMilestone": false,
+      "changed": true
+    },
+    {
+      "path": "src/app/api/mobile/v1/inventory/route.ts",
+      "sha256": "e0817ff0045d499f8b462a79de2f01d49314610bf90af682d54820d061ced912",
+      "bytes": 3731,
+      "newInMilestone": false,
+      "changed": false
+    },
+    {
+      "path": "src/lib/product/inventory-input.ts",
+      "sha256": "f2f57f676d3617ea21bb8ff6a101e2ff8b7ef7a79c770ad5f27f6483b55c5da9",
+      "bytes": 697,
+      "newInMilestone": false,
+      "changed": false
+    },
+    {
+      "path": "apps/mobile/src/lib/inventory-create-store.ts",
+      "sha256": "af191826ca18e92cffac6dcdf1e31ac9b526edd6a8af215ae8e516adfec1fc9d",
+      "bytes": 3457,
+      "newInMilestone": true,
+      "changed": true
+    },
+    {
+      "path": "apps/mobile/src/lib/inventory-create.ts",
+      "sha256": "5280527b491c1d656ef5cf77a6afd33b85f5f4d1514fe19c672768ceaadcbf75",
+      "bytes": 194,
+      "newInMilestone": true,
+      "changed": true
+    },
+    {
+      "path": "src/app/api/mobile/v1/inventory/create/route.ts",
+      "sha256": "58e6657d9ebd30bebcd0a645b87483abe018027e7a207f90d38d44abfa4394a8",
+      "bytes": 3464,
+      "newInMilestone": true,
+      "changed": true
+    },
+    {
+      "path": "supabase/migrations/202610110005_inventory_create_recovery.sql",
+      "sha256": "9056f24e3530108e263ca010d4f4625df64028b632527f99446241eb626e33d6",
+      "bytes": 5588,
+      "newInMilestone": true,
+      "changed": true
+    },
+    {
+      "path": "tests/inventory-create-store.test.ts",
+      "sha256": "7f8b9363133e8b33d0c0ba7e2ffcb264a548614afa574b9f9429b35dec9293c7",
+      "bytes": 3189,
+      "newInMilestone": true,
+      "changed": true
+    },
+    {
+      "path": "tests/inventory-create-database.test.ts",
+      "sha256": "d4c7a7ffdd242bb85d5d5a20a01ee3b5fa920e285715a1c98835015ed7676bd1",
+      "bytes": 4490,
+      "newInMilestone": true,
+      "changed": true
+    },
+    {
+      "path": "scripts/qa/render-inventory-recovery.cjs",
+      "sha256": "0585f411389de9823b04d8ff8cdc411fff8fe4f34561003d0f1f3cfefe708c98",
+      "bytes": 15675,
+      "newInMilestone": true,
+      "changed": true
+    },
+    {
+      "path": "scripts/qa/inventory-recovery-staging.mjs",
+      "sha256": "0bd8dbf429200216203d8640fdb91c733712541c2652457e537913d1f45c76fc",
+      "bytes": 6491,
+      "newInMilestone": true,
+      "changed": true
+    }
+  ]
+}

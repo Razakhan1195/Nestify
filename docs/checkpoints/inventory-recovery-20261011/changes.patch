@@ -1,0 +1,659 @@
+--- a/apps/mobile/app/inventory-item.tsx
++++ b/apps/mobile/app/inventory-item.tsx
+@@ -1,3 +1,7 @@
++import {useAuth} from "@/auth/AuthProvider";
++import {randomUUID} from "expo-crypto";
++import {inventoryCreateStore} from "@/lib/inventory-create";
++import type {InventoryCreateIntent} from "@/lib/inventory-create-store";
+ import { prepareAttachment } from "@/lib/prepare-attachment";
+ import { applianceSuggestions } from "@/lib/capture-review";
+ import { safeBack } from "@/lib/navigation";
+@@ -18,8 +22,21 @@
+ const empty = { name: "", brand: "", model_number: "", serial_number: "", room_or_area: "", category: "", product_barcode: "", warranty_expires_on: "" };
+ type Fields = typeof empty;
+ export default function InventoryItemScreen() {
++  const {session}=useAuth();
++  const params=useLocalSearchParams<{id?:string}>();
++  return <InventoryItemForm key={(session?.user.id??"signed-out")+":"+(params.id??"new")} />;
++}
++function InventoryItemForm() {
+   const params = useLocalSearchParams<{ id?: string }>();
+   const id = typeof params.id === "string" ? params.id : undefined;
++  const {session}=useAuth();
++  const userId=session?.user.id;
++  const activeUser=useRef(userId);
++  useEffect(()=>{activeUser.current=userId;return()=>{activeUser.current=undefined;};},[userId]);
++  const [pendingCreate,setPendingCreate]=useState<InventoryCreateIntent|null>(null);
++  const [createHome,setCreateHome]=useState<string|null>(null);
++  const [createChecked,setCreateChecked]=useState(false);
++  const [legacyCreate,setLegacyCreate]=useState(false);
+   const router = useRouter();
+   const navigation = useNavigation();
+   const [fields, setFields] = useState<Fields>(empty);
+@@ -30,15 +47,69 @@
+   const [showDetails, setShowDetails] = useState(Boolean(id));
+   const [showOptional, setShowOptional] = useState(Boolean(id));
+   const [dirty, setDirty] = useState(false);
+-  const [loading, setLoading] = useState(Boolean(id));
++  const [loading, setLoading] = useState(true);
+   const [loadFailed, setLoadFailed] = useState(false);
+   const [busy, setBusy] = useState<"scan" | "save" | "delete" | null>(null);
+   const [error, setError] = useState<string | null>(null);
+   const [notice, setNotice] = useState<string | null>(null);
+   const [deleted, setDeleted] = useState(false);
+   const [savedId, setSavedId] = useState<string | null>(null);
++  const locked=Boolean(busy)||Boolean(pendingCreate)||(!id&&!createChecked);
++  const restoreCreate=useCallback(async()=>{
++    if(id)return;
++    const account=userId;
++    try{
++      const pending=await inventoryCreateStore.load(account??"");
++      if(!account||activeUser.current!==account)return;
++      setPendingCreate(pending);
++      if(pending){setFields(pending.fields);setDirty(true);setShowDetails(true);setShowCapture(false);}
++      try{
++        const caps=await apiGet<{homeId:string;createRecovery:boolean}>("/api/mobile/v1/inventory/create");
++        if(activeUser.current!==account)return;
++        if(!caps.createRecovery)throw Error("Unavailable");
++        setCreateHome(caps.homeId);
++        if(pending&&pending.homeId!==caps.homeId)throw Error("Return to the home where you started this save.");
++      }catch(e){
++        if(e instanceof ApiError&&e.status===404&&!pending){setLegacyCreate(true);}
++        else throw e;
++      }
++      setCreateChecked(true);setLoadFailed(false);setError(null);
++      if(pending)setNotice("A previous save needs checking. Your details are kept here; no new item has been submitted.");
++    }catch(e){if(activeUser.current===account){setLoadFailed(true);setError(e instanceof ApiError?e.message:e instanceof Error?e.message:"Could not restore your save.");}}
++    finally{if(activeUser.current===account)setLoading(false);}
++  },[id,userId]);
++  // Restore external SecureStore/API state once per account-scoped form; updates follow the awaited read.
++  // eslint-disable-next-line react-hooks/set-state-in-effect
++  useEffect(()=>{void restoreCreate();},[restoreCreate]);
++  async function completeCreate(account:string,intent:InventoryCreateIntent,itemId:string){
++    await inventoryCreateStore.forget(account,intent.requestId).catch(()=>{});
++    if(activeUser.current===account){setPendingCreate(null);setSavedId(itemId);}
++  }
++  async function recoverCreate(action:"check"|"retry"|"cancel"){
++    const intent=pendingCreate,account=userId;
++    if(!intent||!account||busy||saveInFlight.current)return;
++    saveInFlight.current=true;setBusy("save");setError(null);
++    try{
++      if(activeUser.current!==account)throw Error("Account changed. Reopen your save.");
++      if(action==="retry"){
++        const result=await apiPost<{itemId:string}>("/api/mobile/v1/inventory/create",{...intent,action:"create"});
++        await completeCreate(account,intent,result.itemId);
++      }else{
++        const result=action==="check"
++          ?await apiGet<{state:string;itemId:string|null}>("/api/mobile/v1/inventory/create?requestId="+intent.requestId)
++          :await apiPost<{state:string;itemId:string|null}>("/api/mobile/v1/inventory/create",{requestId:intent.requestId,homeId:intent.homeId,action:"cancel"});
++        if(result.state==="saved"&&result.itemId){await completeCreate(account,intent,result.itemId);}
++        else if(result.state==="cancelled"||result.state==="deleted"){
++          await inventoryCreateStore.forget(account,intent.requestId);
++          if(activeUser.current===account){setPendingCreate(null);setNotice(result.state==="deleted"?"The previously saved item was deleted. Nothing was recreated. Your details are here if you deliberately want to add a new item.":"Save cancelled. Your details are kept here for editing.");}
++        }else if(activeUser.current===account)setNotice("No completed save was found yet. Retry the same save, or cancel it before editing. A delayed request may still be finishing.");
++      }
++    }catch(e){if(activeUser.current===account)setError(e instanceof ApiError?e.message:e instanceof Error?e.message:"Could not check the save. Try again.");}
++    finally{saveInFlight.current=false;if(activeUser.current===account)setBusy(null);}
++  }
+   usePreventRemove((dirty || Boolean(busy)) && !savedId && !deleted, ({ data }) => {
+     if (busy) { Alert.alert("Please wait", busy === "delete" ? "Your item is being deleted." : busy === "save" ? "Your item is being saved." : "Your label is being read."); return; }
++    if(pendingCreate){Alert.alert("Leave this save?","Your save reference is kept on this device. Return to Add home item to check it before adding another copy.",[{text:"Stay here",style:"cancel"},{text:"Leave",onPress:()=>navigation.dispatch(data.action)}]);return;}
+     Alert.alert("Discard unsaved changes?", "Your changes have not been saved.", [
+       { text: "Keep editing", style: "cancel" },
+       { text: "Discard", style: "destructive", onPress: () => navigation.dispatch(data.action) },
+@@ -46,20 +117,22 @@
+   });
+   const load = useCallback(async () => {
+     if (!id) return;
++    const account=userId;
+     try {
+       const result = await apiGet<{ item: Partial<Fields> }>("/api/mobile/v1/inventory?id=" + encodeURIComponent(id));
++      if(activeUser.current!==account)return;
+       setLoadFailed(false); setError(null);
+       setFields(Object.fromEntries(Object.keys(empty).map((key) => [key, result.item[key as keyof Fields] ?? ""])) as Fields);
+-    } catch (e) { setLoadFailed(true); setError(e instanceof ApiError ? e.message : "Could not load your item."); }
+-    finally { setLoading(false); }
+-  }, [id]);
++    } catch (e) { if(activeUser.current===account){setLoadFailed(true); setError(e instanceof ApiError ? e.message : "Could not load your item.");} }
++    finally { if(activeUser.current===account)setLoading(false); }
++  }, [id,userId]);
+   useFocusEffect(useCallback(() => { if (!dirty) void load(); }, [load, dirty]));
+   useEffect(() => {
+     if (deleted) safeBack(router, "/(tabs)/vault");
+     else if (savedId) router.replace({ pathname: "/recalls", params: { itemId: savedId, saved: "1" } });
+   }, [savedId, deleted, router]);
+   async function scan(camera: boolean) {
+-    if (scanInFlight.current) return;
++    if (scanInFlight.current||locked) return;
+     scanInFlight.current = true;
+     setBusy("scan"); setError(null); setNotice(null);
+     try {
+@@ -123,47 +196,63 @@
+     ]);
+   }
+   async function save() {
+-    if (saveInFlight.current || busy || !fields.name.trim()) return;
++    if (saveInFlight.current || locked || !fields.name.trim()) return;
++    const account=userId;
+     saveInFlight.current = true;
+     setBusy("save"); setError(null);
+     try {
+-      const result = await apiPost<{ itemId: string }>("/api/mobile/v1/inventory", { ...fields, ...(id ? { id } : {}) });
+-      setSavedId(result.itemId);
+-    } catch (e) { setError(e instanceof ApiError ? e.message : "Could not save. Your details are still here."); }
+-    finally { saveInFlight.current = false; setBusy(null); }
++      if(!id&&!legacyCreate){
++        if(!account||!createHome)throw Error("Check your home before saving.");
++        const intent={requestId:randomUUID(),homeId:createHome,fields:{...fields}};
++        await inventoryCreateStore.remember(account,intent);
++        if(activeUser.current!==account)throw Error("Account changed. Return to this account to check its save.");
++        setPendingCreate(intent);
++        const result=await apiPost<{itemId:string}>("/api/mobile/v1/inventory/create",{...intent,action:"create"});
++        await completeCreate(account,intent,result.itemId);
++      }else{
++        const result = await apiPost<{ itemId: string }>("/api/mobile/v1/inventory", { ...fields, ...(id ? { id } : {}) });
++        if(activeUser.current===account)setSavedId(result.itemId);
++      }
++    } catch (e) { if(activeUser.current===account)setError(e instanceof ApiError ? e.message : "Could not save. Your details are still here."); }
++    finally { saveInFlight.current = false; if(activeUser.current===account)setBusy(null); }
+   }
+   return <SafeAreaView edges={["left", "right", "bottom"]} style={{ flex: 1, backgroundColor: colors.background }}>
+     <ScreenNavigation title={id ? "Edit home item" : "Add home item"} fallback="/(tabs)/vault" />
+     <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : undefined}>
+       <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ padding: spacing.xl, gap: spacing.lg }}>
+         {error ? <Text accessibilityRole="alert" style={{ color: colors.criticalForeground }}>{error}</Text> : null}
+-        {loading ? <ActivityIndicator color={colors.primary} /> : loadFailed ? <Button label="Try again" onPress={() => { setLoading(true); void load(); }} /> : <>
++        {loading ? <ActivityIndicator color={colors.primary} /> : loadFailed ? <Button label="Try again" onPress={() => { setLoading(true); void (id?load():restoreCreate()); }} /> : <>
++          {pendingCreate?<View style={{gap:12}}><Text style={[typography.body,{color:colors.mutedForeground}]}>Check the previous save before changing these details. Retrying uses the same request.</Text>
++          <Button label="Check saved item" disabled={Boolean(busy)} onPress={()=>void recoverCreate("check")}/>
++          <Button label="Retry same save" variant="secondary" disabled={Boolean(busy)} onPress={()=>void recoverCreate("retry")}/>
++          <Button label="Cancel pending save" variant="secondary" disabled={Boolean(busy)} onPress={()=>Alert.alert("Cancel this save?","If it already finished, we will open the saved item instead. Otherwise cancellation prevents a delayed request from creating it. Your details stay here.",[{text:"Keep checking",style:"cancel"},{text:"Check and cancel",onPress:()=>void recoverCreate("cancel")}])}/>
++          </View>:null}
+           {showCapture ? <>
+           <Text style={[typography.body, { color: colors.mutedForeground }]}>Photograph the model label. Rezlee fills in the details for you to check, then uses the saved item for recall matching and home questions.</Text>
+-          <Button label={busy === "scan" ? "Reading label…" : "Scan product label"} disabled={Boolean(busy)} onPress={() => Alert.alert("Scan a product label", "Your selected photo is uploaded for AI extraction. Review the results before saving.", [
++          <Button label={busy === "scan" ? "Reading label…" : "Scan product label"} disabled={locked} onPress={() => Alert.alert("Scan a product label", "Your selected photo is uploaded for AI extraction. Review the results before saving.", [
+             { text: "Take photo", onPress: () => void scan(true) },
+             { text: "Choose photo", onPress: () => void scan(false) },
+             { text: "Cancel", style: "cancel" },
+           ])} />
+-          <Button label="Find product by barcode" variant="secondary" disabled={Boolean(busy)} onPress={() => setBarcodeOpen(true)} />
++          <Button label="Find product by barcode" variant="secondary" disabled={locked} onPress={() => setBarcodeOpen(true)} />
+           {barcodeOpen ? <BarcodeLookup onApply={applyProduct} onClose={() => setBarcodeOpen(false)} /> : null}
+-          </> : <Button label="Use another label or barcode" variant="secondary" disabled={Boolean(busy)} onPress={() => setShowCapture(true)} />}
++          </> : <Button label="Use another label or barcode" variant="secondary" disabled={locked} onPress={() => setShowCapture(true)} />}
+           {notice ? <Text style={[typography.body, { color: colors.mutedForeground }]}>{notice}</Text> : null}
+-          {!showDetails ? <Button label="Enter details myself" variant="secondary" disabled={Boolean(busy)} onPress={() => { setShowDetails(true); setShowCapture(false); }} /> : null}
++          {!showDetails ? <Button label="Enter details myself" variant="secondary" disabled={locked} onPress={() => { setShowDetails(true); setShowCapture(false); }} /> : null}
+           {showDetails ? <>
+           <Text style={[typography.section, { color: colors.foreground }]}>{id ? "Your saved details" : "Check your item"}</Text>
+           <View style={{ gap: spacing.md }}>
+             {([["name", "Item name"], ["brand", "Brand"], ["model_number", "Model number"], ["serial_number", "Serial number (optional)"], ["room_or_area", "Room or area (optional)"], ["category", "Category (optional)"], ["product_barcode", "Product barcode (optional)"]] as const).filter(([key]) => showOptional || ["name", "brand", "model_number"].includes(key) || Boolean(fields[key])).map(([key, label]) =>
+-              <TextField key={key} label={label} value={fields[key]} editable={!busy} maxLength={200} autoCorrect={false}
++              <TextField key={key} label={label} value={fields[key]} editable={!locked} maxLength={200} autoCorrect={false}
+                 onChangeText={(value) => { setFields((current) => ({ ...current, [key]: value })); setDirty(true); }} />)}
+           </View>
+-          {!showOptional ? <Button label="More details (optional)" variant="secondary" disabled={Boolean(busy)} onPress={() => setShowOptional(true)} /> : null}
+-          {showOptional || fields.warranty_expires_on ? <DateField label="Warranty expires (optional)" value={fields.warranty_expires_on} optional onChange={value => { if (!busy) { setFields(current => ({...current,warranty_expires_on:value})); setDirty(true); } }} /> : null}
++          {!showOptional ? <Button label="More details (optional)" variant="secondary" disabled={locked} onPress={() => setShowOptional(true)} /> : null}
++          {showOptional || fields.warranty_expires_on ? <DateField label="Warranty expires (optional)" value={fields.warranty_expires_on} optional onChange={value => { if (!locked) { setFields(current => ({...current,warranty_expires_on:value})); setDirty(true); } }} /> : null}
+           <Text style={[typography.caption, { color: colors.mutedForeground }]}>You can save incomplete details. Recall matching needs a brand and a model or descriptive item name.</Text>
+-          <Button label={busy === "save" ? "Saving…" : id ? "Save and check recalls" : "Confirm and check recalls"} disabled={Boolean(busy) || !fields.name.trim()} onPress={() => void save()} />
++          <Button label={busy === "save" ? "Saving…" : id ? "Save and check recalls" : "Confirm and check recalls"} disabled={locked || !fields.name.trim()} onPress={() => void save()} />
+           </> : null}
+           {id ? <Button label="Review a quote for this item" variant="secondary" disabled={Boolean(busy)||dirty} onPress={()=>router.push({pathname:"/quotes",params:{itemId:id}})}/> : null}
+-          {id ? <Pressable accessibilityRole="button" accessibilityState={{ disabled: Boolean(busy), busy: busy === "delete" }} disabled={Boolean(busy)} onPress={confirmDelete} style={{ minHeight: 44, justifyContent: "center", alignItems: "center" }}><Text style={{ color: colors.criticalForeground }}>{busy === "delete" ? "Deleting…" : "Delete home item"}</Text></Pressable> : null}
++          {id ? <Pressable accessibilityRole="button" accessibilityState={{ disabled: Boolean(busy), busy: busy === "delete" }} disabled={locked} onPress={confirmDelete} style={{ minHeight: 44, justifyContent: "center", alignItems: "center" }}><Text style={{ color: colors.criticalForeground }}>{busy === "delete" ? "Deleting…" : "Delete home item"}</Text></Pressable> : null}
+         </>}
+       </ScrollView>
+     </KeyboardAvoidingView>
+--- /dev/null
++++ b/apps/mobile/src/lib/inventory-create-store.ts
+@@ -0,0 +1,43 @@
++export type InventoryFields={name:string;brand:string;model_number:string;serial_number:string;room_or_area:string;category:string;product_barcode:string;warranty_expires_on:string};
++export type InventoryCreateIntent={requestId:string;homeId:string;fields:InventoryFields};
++type Storage={getItemAsync:(key:string)=>Promise<string|null>;setItemAsync:(key:string,value:string)=>Promise<unknown>;deleteItemAsync:(key:string)=>Promise<unknown>};
++const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
++const fieldNames=["name","brand","model_number","serial_number","room_or_area","category","product_barcode","warranty_expires_on"];
++function validFields(value:unknown):value is InventoryFields{
++ if(!value||typeof value!=="object"||Array.isArray(value))return false;
++ const fields=value as Record<string,unknown>;
++ return Object.keys(fields).length===fieldNames.length&&fieldNames.every(k=>typeof fields[k]==="string"&&(fields[k] as string).length<=200)&&typeof fields.name==="string"&&fields.name.trim().length>0;
++}
++export function createInventoryIntentStore(storage:Storage){
++ let queue:Promise<unknown>=Promise.resolve();
++ const key=(user:string)=>{if(!uuid.test(user))throw Error("Sign in to restore your save.");return "inventory-create-"+user;};
++ function exclusive<T>(fn:()=>Promise<T>):Promise<T>{const next=queue.then(fn,fn);queue=next.catch(()=>{});return next;}
++ async function load(user:string):Promise<InventoryCreateIntent|null>{
++  const k=key(user),pointer=await storage.getItemAsync(k);if(!pointer)return null;
++  const p=JSON.parse(pointer);
++  if(!uuid.test(p.requestId)||!Number.isInteger(p.count)||p.count<1||p.count>30)throw Error("Could not restore the previous save. Check Vault before adding another copy.");
++  let raw="";for(let i=0;i<p.count;i++){const part=await storage.getItemAsync(k+"-"+p.requestId+"-"+i);if(part===null)throw Error("Could not restore the previous save. Check Vault before adding another copy.");raw+=part;}
++  const value=JSON.parse(raw) as InventoryCreateIntent;
++  if(value.requestId!==p.requestId||!uuid.test(value.homeId)||!validFields(value.fields))throw Error("Could not restore the previous save.");
++  return value;
++ }
++ return {
++  load:(user:string)=>exclusive(()=>load(user)),
++  remember:(user:string,intent:InventoryCreateIntent)=>exclusive(async()=>{
++   const old=await load(user);if(old){if(JSON.stringify(old)!==JSON.stringify(intent))throw Error("Finish checking the previous save first.");return;}
++   if(!uuid.test(intent.requestId)||!uuid.test(intent.homeId)||!validFields(intent.fields))throw Error("Could not prepare this save.");
++   const points=Array.from(JSON.stringify(intent)),parts:string[]=[];
++   for(let i=0;i<points.length;i+=300)parts.push(points.slice(i,i+300).join(""));
++   if(parts.length>30)throw Error("These item details are too long.");
++   const k=key(user);
++   for(let i=0;i<parts.length;i++)await storage.setItemAsync(k+"-"+intent.requestId+"-"+i,parts[i]);
++   await storage.setItemAsync(k,JSON.stringify({requestId:intent.requestId,count:parts.length}));
++  }),
++  forget:(user:string,requestId:string)=>exclusive(async()=>{
++   const k=key(user),raw=await storage.getItemAsync(k);if(!raw)return;
++   const pointer=JSON.parse(raw);if(pointer.requestId!==requestId)throw Error("A different save is waiting.");
++   await storage.deleteItemAsync(k);
++   for(let i=0;i<pointer.count;i++)await storage.deleteItemAsync(k+"-"+requestId+"-"+i).catch(()=>{});
++  }),
++ };
++}
+--- /dev/null
++++ b/apps/mobile/src/lib/inventory-create.ts
+@@ -0,0 +1,3 @@
++import * as SecureStore from "expo-secure-store";
++import {createInventoryIntentStore} from "./inventory-create-store";
++export const inventoryCreateStore=createInventoryIntentStore(SecureStore);
+--- /dev/null
++++ b/src/app/api/mobile/v1/inventory/create/route.ts
+@@ -0,0 +1,41 @@
++import {z} from "zod";
++import {authenticateMobileRequest} from "@/lib/supabase/mobile";
++import {readBoundedJson} from "@/lib/security/request";
++import {inventoryInput} from "@/lib/product/inventory-input";
++export const dynamic="force-dynamic";
++const reply=(value:unknown,status=200)=>Response.json(value,{status,headers:{"Cache-Control":"private, no-store"}});
++const input=z.object({requestId:z.string().uuid(),homeId:z.string().uuid(),action:z.enum(["create","cancel"]),fields:inventoryInput.omit({id:true}).strict().optional()}).strict().refine(v=>v.action!=="create"||!!v.fields,"Check the item details.");
++async function context(request:Request){
++ const auth=await authenticateMobileRequest(request);if(auth.error)return {response:reply({error:auth.error.message},auth.error.status)} as const;
++ const home=await auth.supabase.from("homes").select("id,nickname").eq("user_id",auth.user.id).order("created_at").limit(1).maybeSingle();
++ if(home.error)return {response:reply({error:"Could not check your home. Try again."},503)} as const;
++ if(!home.data)return {response:reply({error:"Set up your own home first."},409)} as const;
++ return {...auth,home:home.data} as const;
++}
++export async function GET(request:Request){
++ const ctx=await context(request);if("response" in ctx)return ctx.response;
++ const requestId=new URL(request.url).searchParams.get("requestId");
++ if(requestId&&!z.string().uuid().safeParse(requestId).success)return reply({error:"Choose a valid save."},400);
++ const query=ctx.supabase.from("inventory_create_requests").select("request_id,home_id,item_id,state").eq("user_id",ctx.user.id);
++ const result=requestId?await query.eq("request_id",requestId).maybeSingle():await query.limit(0);
++ if(result.error)return reply({error:"Save recovery is unavailable. Your details stay here; try again shortly."},503);
++ if(!requestId)return reply({homeId:ctx.home.id,homeName:ctx.home.nickname,createRecovery:true});
++ const row=result.data as {home_id:string;item_id:string|null;state:string}|null;
++ if(row&&row.home_id!==ctx.home.id)return reply({error:"Return to the home where you started this save."},409);
++ return reply({homeId:ctx.home.id,state:row?row.state==="saved"&&!row.item_id?"deleted":row.state:"unknown",itemId:row?.item_id??null});
++}
++export async function POST(request:Request){
++ const ctx=await context(request);if("response" in ctx)return ctx.response;
++ const body=input.safeParse(await readBoundedJson(request,8192).catch(()=>null));
++ if(!body.success)return reply({error:body.error.issues[0]?.message??"Check the item details."},400);
++ const value=body.data;
++ if(value.homeId!==ctx.home.id)return reply({error:"Return to the home where you started this save."},409);
++ const result=value.action==="cancel"
++  ?await ctx.supabase.rpc("cancel_rezlee_home_item_create",{p_home:value.homeId,p_request:value.requestId})
++  :await ctx.supabase.rpc("create_rezlee_home_item",{p_home:value.homeId,p_request:value.requestId,p_values:value.fields});
++ if(result.error){
++  const status=result.error.code==="PT400"?400:result.error.code==="PT409"?409:result.error.code==="PT410"?410:503;
++  return reply({error:status===410?"This save was cancelled or its item was deleted. It will not be recreated.":status===409?"This save changed or belongs to another home. Check its saved state before continuing.":status===400?"Check the item details.":"Could not confirm the save. Check its saved state before retrying."},status);
++ }
++ return reply(result.data);
++}
+--- /dev/null
++++ b/supabase/migrations/202610110005_inventory_create_recovery.sql
+@@ -0,0 +1,72 @@
++-- Durable create receipts; item deletion leaves a content-free replay tombstone.
++create table public.inventory_create_requests (
++ user_id uuid not null references auth.users(id) on delete cascade,
++ request_id uuid not null,
++ home_id uuid not null references public.homes(id) on delete cascade,
++ item_id uuid references public.inventory_items(id) on delete set null,
++ input_hash text,
++ state text not null check(state in ('saved','cancelled')),
++ created_at timestamptz not null default now(),
++ primary key(user_id,request_id)
++);
++alter table public.inventory_create_requests enable row level security;
++create policy inventory_create_requests_owner on public.inventory_create_requests for select to authenticated using(user_id=auth.uid());
++revoke all on public.inventory_create_requests from anon,authenticated;
++grant select on public.inventory_create_requests to authenticated;
++grant all on public.inventory_create_requests to service_role;
++create index inventory_create_requests_home on public.inventory_create_requests(home_id);
++create index inventory_create_requests_item on public.inventory_create_requests(item_id) where item_id is not null;
++
++create function public.create_rezlee_home_item(p_home uuid,p_request uuid,p_values jsonb) returns jsonb
++language plpgsql security definer set search_path=public,pg_temp as $$
++declare receipt public.inventory_create_requests; new_id uuid; fingerprint text; k text; v jsonb;
++begin
++ if auth.uid() is null or p_request is null then raise sqlstate 'PT400' using message='Invalid request';end if;
++ -- Serializes create/cancel/replay for this owned home, including concurrent first calls.
++ perform 1 from public.homes where id=p_home and user_id=auth.uid() for update;
++ if not found then raise sqlstate 'PT409' using message='Home unavailable';end if;
++ if p_values is null or jsonb_typeof(p_values)<>'object' or octet_length(p_values::text)>8192 then raise sqlstate 'PT400' using message='Invalid item';end if;
++ for k,v in select * from jsonb_each(p_values) loop
++  if k not in ('name','brand','model_number','serial_number','category','room_or_area','product_barcode','warranty_expires_on')
++   or (jsonb_typeof(v) not in ('string','null')) or length(coalesce(v#>>'{}',''))>200 then
++   raise sqlstate 'PT400' using message='Invalid item';
++  end if;
++ end loop;
++ if coalesce(length(btrim(p_values->>'name')),0)=0 then raise sqlstate 'PT400' using message='Item name required';end if;
++ if coalesce(p_values->>'warranty_expires_on','')<>'' then
++  begin
++   if p_values->>'warranty_expires_on' !~ '^\d{4}-\d{2}-\d{2}$' or to_char((p_values->>'warranty_expires_on')::date,'YYYY-MM-DD')<>p_values->>'warranty_expires_on' then raise exception 'Invalid date';end if;
++  exception when others then raise sqlstate 'PT400' using message='Invalid warranty date';end;
++ end if;
++ fingerprint=encode(sha256(convert_to(p_values::text,'UTF8')),'hex');
++ select * into receipt from public.inventory_create_requests where user_id=auth.uid() and request_id=p_request;
++ if found then
++  if receipt.home_id<>p_home then raise sqlstate 'PT409' using message='Request belongs to another home';end if;
++  if receipt.state='cancelled' or receipt.item_id is null then raise sqlstate 'PT410' using message='Save cancelled or item deleted';end if;
++  if receipt.input_hash<>fingerprint then raise sqlstate 'PT409' using message='Retry changed';end if;
++  return jsonb_build_object('itemId',receipt.item_id,'replayed',true);
++ end if;
++ insert into public.inventory_items(user_id,home_id,name,brand,model_number,serial_number,category,room_or_area,product_barcode,warranty_expires_on)
++ values(auth.uid(),p_home,btrim(p_values->>'name'),nullif(p_values->>'brand',''),nullif(p_values->>'model_number',''),nullif(p_values->>'serial_number',''),nullif(p_values->>'category',''),nullif(p_values->>'room_or_area',''),nullif(p_values->>'product_barcode',''),nullif(p_values->>'warranty_expires_on','')::date) returning id into new_id;
++ insert into public.inventory_create_requests(user_id,request_id,home_id,item_id,input_hash,state) values(auth.uid(),p_request,p_home,new_id,fingerprint,'saved');
++ return jsonb_build_object('itemId',new_id,'replayed',false);
++end $$;
++
++create function public.cancel_rezlee_home_item_create(p_home uuid,p_request uuid) returns jsonb
++language plpgsql security definer set search_path=public,pg_temp as $$
++declare receipt public.inventory_create_requests;
++begin
++ if auth.uid() is null or p_request is null then raise sqlstate 'PT400' using message='Invalid request';end if;
++ perform 1 from public.homes where id=p_home and user_id=auth.uid() for update;
++ if not found then raise sqlstate 'PT409' using message='Home unavailable';end if;
++ select * into receipt from public.inventory_create_requests where user_id=auth.uid() and request_id=p_request;
++ if found then
++  if receipt.home_id<>p_home then raise sqlstate 'PT409' using message='Request belongs to another home';end if;
++  return jsonb_build_object('state',case when receipt.state='saved' and receipt.item_id is null then 'deleted' else receipt.state end,'itemId',receipt.item_id);
++ end if;
++ insert into public.inventory_create_requests(user_id,request_id,home_id,state) values(auth.uid(),p_request,p_home,'cancelled');
++ return jsonb_build_object('state','cancelled','itemId',null);
++end $$;
++revoke all on function public.create_rezlee_home_item(uuid,uuid,jsonb) from public,anon;
++revoke all on function public.cancel_rezlee_home_item_create(uuid,uuid) from public,anon;
++grant execute on function public.create_rezlee_home_item(uuid,uuid,jsonb),public.cancel_rezlee_home_item_create(uuid,uuid) to authenticated;
+--- /dev/null
++++ b/tests/inventory-create-store.test.ts
+@@ -0,0 +1,39 @@
++import test from "node:test";import assert from "node:assert/strict";import {randomUUID} from "node:crypto";
++import {createInventoryIntentStore,type InventoryCreateIntent} from "../apps/mobile/src/lib/inventory-create-store";
++function fixture(){const values=new Map<string,string>();let fail=false;return{values,setFail:(v:boolean)=>fail=v,storage:{getItemAsync:async(k:string)=>values.get(k)??null,setItemAsync:async(k:string,v:string)=>{if(fail)throw Error("Device storage full");values.set(k,v);},deleteItemAsync:async(k:string)=>{values.delete(k);}}};}
++const intent=():InventoryCreateIntent=>({requestId:randomUUID(),homeId:randomUUID(),fields:{name:"Kitchen dishwasher",brand:"Test",model_number:"DW100",serial_number:"",room_or_area:"",category:"",product_barcode:"",warranty_expires_on:""}});
++test("private item intent survives restart and isolates accounts",async()=>{
++ const f=fixture(),a=randomUUID(),b=randomUUID(),value=intent();await createInventoryIntentStore(f.storage).remember(a,value);
++ assert.deepEqual(await createInventoryIntentStore(f.storage).load(a),value);assert.equal(await createInventoryIntentStore(f.storage).load(b),null);
++ assert(!JSON.stringify([...f.values.keys()]).includes(value.fields.name));
++});
++test("repeat tap keeps one intent; a new item cannot replace an unresolved save",async()=>{
++ const f=fixture(),store=createInventoryIntentStore(f.storage),a=randomUUID(),value=intent();
++ await Promise.all([store.remember(a,value),store.remember(a,value)]);
++ await assert.rejects(store.remember(a,intent()),/previous save/);
++ assert.deepEqual(await store.load(a),value);
++ await assert.rejects(store.forget(a,randomUUID()),/different save/);
++ await store.forget(a,value.requestId);assert.equal(await store.load(a),null);
++});
++test("failed persistence sends no usable intent; damaged pending storage fails closed",async()=>{
++ const f=fixture(),store=createInventoryIntentStore(f.storage),a=randomUUID(),value=intent();f.setFail(true);
++ await assert.rejects(store.remember(a,value),/storage full/);assert.equal(await store.load(a),null);
++ f.setFail(false);await store.remember(a,value);
++ f.values.delete([...f.values.keys()].find(k=>k.endsWith("-0"))!);
++ await assert.rejects(store.load(a),/restore/);
++ await assert.rejects(store.remember(a,intent()),/restore/);
++});
++test("Unicode details are chunked without splitting characters or exposing fields in the pointer",async()=>{
++ const f=fixture(),store=createInventoryIntentStore(f.storage),a=randomUUID(),value=intent();value.fields.name="🏠".repeat(90);
++ await store.remember(a,value);assert.deepEqual(await store.load(a),value);
++ for(const raw of f.values.values())assert(Buffer.byteLength(raw,"utf8")<2000);
++});
++
++test("corrupt or incomplete stored fields cannot become a new request",async()=>{
++ const f=fixture(),store=createInventoryIntentStore(f.storage),a=randomUUID(),value=intent();
++ await store.remember(a,value);
++ const chunk=[...f.values.keys()].find(k=>k.endsWith("-0"))!;
++ const damaged=JSON.parse(f.values.get(chunk)!);damaged.fields={};f.values.set(chunk,JSON.stringify(damaged));
++ await assert.rejects(store.load(a),/restore/);
++ await assert.rejects(store.remember(a,intent()),/restore/);
++});
+--- /dev/null
++++ b/tests/inventory-create-database.test.ts
+@@ -0,0 +1,44 @@
++import assert from "node:assert/strict";import test from "node:test";import {readFile,readdir} from "node:fs/promises";import {PGlite} from "@electric-sql/pglite";import {randomUUID} from "node:crypto";
++test("home-item create receipts replay, cancel, isolate accounts and never resurrect deleted items",async()=>{
++ const db=new PGlite(),a=randomUUID(),b=randomUUID(),ha=randomUUID(),hb=randomUUID();
++ try{
++  await db.exec(`create role anon;create role authenticated;create role service_role bypassrls;create schema auth;create schema storage;
++   create table auth.users(id uuid primary key,email text);
++   create function auth.uid() returns uuid language sql stable as $$select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid$$;
++   create table storage.buckets(id text primary key,name text,public boolean,file_size_limit bigint,allowed_mime_types text[]);
++   create table storage.objects(id uuid primary key default gen_random_uuid(),bucket_id text,name text);alter table storage.objects enable row level security;
++   create function storage.foldername(name text) returns text[] language sql immutable as $$select string_to_array(name,'/')$$;
++   grant usage on schema public,auth,storage to authenticated,service_role;`);
++  for(const file of ["supabase/schema.sql",...(await readdir("supabase/migrations")).filter(f=>f.endsWith(".sql")).sort().map(f=>"supabase/migrations/"+f)])
++   await db.exec((await readFile(file,"utf8")).replace(/create extension if not exists "pgcrypto";/g,""));
++  await db.exec(`grant select,insert,update,delete on homes,inventory_items to authenticated;grant select on documents to authenticated;
++   insert into auth.users values('${a}','a@example.invalid'),('${b}','b@example.invalid');
++   insert into homes(id,user_id,nickname) values('${ha}','${a}','A'),('${hb}','${b}','B');
++   set role authenticated;set request.jwt.claim.sub='${a}';`);
++  const fields={name:"Kitchen dishwasher",brand:"Test",model_number:"DW100",serial_number:"",category:"Appliance",room_or_area:"Kitchen",product_barcode:"",warranty_expires_on:"2027-10-11"};
++  const create=async(request:string,values:unknown=fields,home=ha)=>(await db.query<{v:{itemId:string;replayed:boolean}}>("select create_rezlee_home_item($1,$2,$3::jsonb) v",[home,request,JSON.stringify(values)])).rows[0].v;
++  const cancel=async(request:string)=>(await db.query<{v:{state:string;itemId:string|null}}>("select cancel_rezlee_home_item_create($1,$2) v",[ha,request])).rows[0].v;
++  const request=randomUUID(),first=await create(request);assert.equal(first.replayed,false);
++  assert.deepEqual(await create(request),{...first,replayed:true});
++  assert.equal((await db.query("select * from inventory_items")).rows.length,1);
++  await assert.rejects(create(request,{...fields,name:"Changed after timeout"}),/Retry changed/);
++  await db.query("update inventory_items set name='Customer corrected name' where id=$1",[first.itemId]);
++  await create(request);assert.equal((await db.query<{name:string}>("select name from inventory_items where id=$1",[first.itemId])).rows[0].name,"Customer corrected name");
++  assert.equal((await cancel(request)).itemId,first.itemId);
++  const identical=await create(randomUUID());assert.notEqual(identical.itemId,first.itemId);
++  const cancelled=randomUUID();assert.equal((await cancel(cancelled)).state,"cancelled");
++  await assert.rejects(create(cancelled),/cancelled or item deleted/);
++  await db.query("delete from inventory_items where id=$1",[first.itemId]);
++  await assert.rejects(create(request),/cancelled or item deleted/);assert.equal((await cancel(request)).state,"deleted");
++  assert.equal((await db.query("select * from inventory_items")).rows.length,1);
++  await assert.rejects(db.exec("delete from inventory_create_requests"),/permission denied/);
++  await assert.rejects(create(randomUUID(),{...fields,warranty_expires_on:"2027-02-30"}),/Invalid warranty date/);
++  await assert.rejects(create(randomUUID(),{...fields,user_id:b}),/Invalid item/);
++  await db.exec(`set request.jwt.claim.sub='${b}';`);
++  assert.equal((await db.query("select * from inventory_create_requests")).rows.length,0);
++  await assert.rejects(create(randomUUID()),/Home unavailable/);
++  const other=await create(request,fields,hb);assert.notEqual(other.itemId,first.itemId);
++  await db.exec(`reset role;delete from auth.users where id='${a}';`);
++  assert.equal((await db.query("select * from inventory_create_requests where user_id=$1",[a])).rows.length,0);
++ }finally{await db.close();}
++});
+--- /dev/null
++++ b/scripts/qa/render-inventory-recovery.cjs
+@@ -0,0 +1,114 @@
++const fs=require('node:fs'),esbuild=require('/Users/razakhan/Documents/rezlee-mobile-test/node_modules/esbuild'),{chromium}=require('/tmp/rezlee-bill-qa-tools-20261008/node_modules/playwright-core');
++const root='/Users/razakhan/Documents/rezlee-mobile-test',deps='/tmp/rezlee-bill-qa-tools-20261008/node_modules',out=root+'/docs/qa/inventory-recovery-20261011';
++const stubs={
++'expo-router':'import React from "react";export const useLocalSearchParams=()=>({providerId:"gas-account"});export const useRouter=()=>({push:p=>window.__actions.push(p),replace:p=>window.__actions.push(p),setParams:()=>{},canGoBack:()=>false});export const Stack={Screen:()=>null};export const useNavigation=()=>({});export const useFocusEffect=fn=>React.useEffect(fn,[fn]);',
++'expo-router/react-navigation':'export const usePreventRemove=()=>{};',
++'expo-symbols':'import React from "react";export const SymbolView=()=>React.createElement("span",null,"←");',
++'expo-haptics':'export const impactAsync=async()=>{};export const ImpactFeedbackStyle={Light:1};export const notificationAsync=async()=>{};export const NotificationFeedbackType={Success:1};',
++'react-native-safe-area-context':'import React from "react";import{View}from"react-native";export const SafeAreaView=View;export const useSafeAreaInsets=()=>({top:0,bottom:0,left:0,right:0});',
++'@expo/vector-icons':'import React from "react";export function Feather({name}){return React.createElement("span",{"aria-hidden":true,style:{fontSize:18,width:20}},name==="file-text"?"▤":"›");}',
++'@/lib/api':'export class ApiError extends Error{};export async function apiGet(p){if(p.endsWith("/original")){window.__actions.push("original");return{url:"https://example.invalid/fixture-original"}}return window.__payload;}export async function apiPost(){};export async function apiPatch(){};export async function apiDelete(){};export async function apiFormPost(){};',
++};
++
++stubs['@/lib/api']=`export class ApiError extends Error{constructor(message,status,details){super(message);this.status=status;this.details=details;}};export async function apiGet(p){window.__requests.push(p);if(window.__fail)throw new ApiError('Offline',503);if(window.__delay)await new Promise(r=>setTimeout(r,window.__delay));if(p==='/api/mobile/v1/bills')return window.__payload;throw new ApiError('No readings',404,{code:'missing_readings'});}export async function apiPost(){};export async function apiPatch(){};export async function apiDelete(){};export async function apiFormPost(){};`;
++stubs['@/auth/AuthProvider']='export const useAuth=()=>({session:null});';
++stubs['@/components/AppNotifications']='export const NotificationBell=()=>null;';
++stubs['@/components/ProfileUI']='export const ProfileBadge=()=>null;';
++
++stubs['@/auth/AuthProvider']='export const useAuth=()=>({session:{user:{id:"11111111-1111-4111-8111-111111111111"}}});';
++stubs['@/lib/receipt-batch']=`import{createReceiptBatchStore}from"${root}/apps/mobile/src/lib/receipt-batch-core";export const receiptBatches=createReceiptBatchStore({getItemAsync:async k=>localStorage.getItem(k),setItemAsync:async(k,v)=>localStorage.setItem(k,v),deleteItemAsync:async k=>localStorage.removeItem(k)});`;
++stubs['@/lib/onboarding-data']='export async function fetchOnboarding(){return{home:{id:"aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",nickname:"Demo home"},accessRole:"owner"};}';
++stubs['@/lib/prepare-attachment']='export async function prepareAttachment(input){window.__prepared.push(input);return input;}';
++stubs['expo-document-picker']='export async function getDocumentAsync(){return{canceled:false,assets:[{uri:"file:///test/receipt.pdf",name:"receipt.pdf",mimeType:"application/pdf",size:100}]};}';
++stubs['expo-image-picker']='export async function requestCameraPermissionsAsync(){return{granted:false};}export async function launchCameraAsync(){return{canceled:true};}export async function launchImageLibraryAsync(){return{canceled:true};}';
++stubs['@/lib/vault-pending']='export const vaultPending={remember:async()=>{},forget:async()=>{throw Error("Device cleanup unavailable");},replace:async()=>{}};';
++stubs['expo-router']='import React from "react";export const useLocalSearchParams=()=>({kind:"receipt"});export const useRouter=()=>({push:p=>window.__actions.push(p),replace:p=>window.__actions.push(p),setParams:()=>{},canGoBack:()=>false});export const Stack={Screen:()=>null};export const useNavigation=()=>({dispatch:()=>{}});export const useFocusEffect=fn=>React.useEffect(fn,[fn]);';
++stubs['@/lib/api']=`export class ApiError extends Error{constructor(message,status,details){super(message);this.status=status;this.details=details;}};export async function apiGet(p){if(window.__offline)throw new ApiError('Offline',503);return p.includes('/ai/scan')?{receiptExtraction:true}:{receiptBatch:true,saveRecovery:true,homeId:'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',homeName:'Demo home'};}export async function apiFormPost(p,form){window.__requests.push({method:'POST',path:p,requestId:form.get('requestId')});if(p.includes('/ai/scan')){if(window.__readFail)throw new ApiError('Reading unavailable',503);return{data:{document_kind:'receipt',merchant:'Canadian Tire',purchase_date:'2026-09-21',total:42,currency:'CAD',items:[],review_notes:[]}};}if(window.__duplicate)throw new ApiError('Already in Vault',409,{duplicateId:'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb'});localStorage.setItem('server-saved','true');if(window.__lost)throw new ApiError('Response lost',504);return{id:'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb'};}export async function apiPatch(p){window.__requests.push({method:'PATCH',path:p});return{id:'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb'};}export async function apiDelete(){};`;
++
++stubs['@/components/BarcodeLookup']='export const BarcodeLookup=()=>null;';
++stubs['expo-crypto']='export const randomUUID=()=>crypto.randomUUID();';
++stubs['@/auth/AuthProvider']='import React from "react";export function useAuth(){const[user,setUser]=React.useState(window.__user);React.useEffect(()=>{const update=()=>setUser(window.__user);window.addEventListener("qa-account",update);return()=>window.removeEventListener("qa-account",update);},[]);return{session:{user:{id:user}}};}';
++stubs['@/lib/inventory-create']=`import{createInventoryIntentStore}from"/Users/razakhan/Documents/rezlee-mobile-test/apps/mobile/src/lib/inventory-create-store";export const inventoryCreateStore=createInventoryIntentStore({getItemAsync:async k=>localStorage.getItem(k),setItemAsync:async(k,v)=>{if(window.__storageFail)throw Error("Device storage full");localStorage.setItem(k,v);},deleteItemAsync:async k=>{if(window.__cleanupFail)throw Error("Cleanup failed");localStorage.removeItem(k);}});`;
++stubs['expo-router']='import React from "react";export const Stack={Screen:()=>null};export const useLocalSearchParams=()=>({});export const useRouter=()=>({push:p=>window.__actions.push(p),replace:p=>window.__actions.push(p),canGoBack:()=>false});export const useNavigation=()=>({dispatch:()=>{}});export const useFocusEffect=fn=>React.useEffect(fn,[fn]);';
++stubs['@/lib/api']=`export class ApiError extends Error{constructor(message,status){super(message);this.status=status;}};const home='aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',id='bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
++export async function apiGet(p){
++ if(window.__backendFail)throw new ApiError('Save recovery unavailable',503);
++ if(window.__legacy)throw new ApiError('Not found',404);
++ if(p.includes('requestId=')){const r=JSON.parse(localStorage.getItem('server-receipt')||'null');return{homeId:home,state:r?.state||'unknown',itemId:r?.state==='saved'?id:null};}
++ return{homeId:home,createRecovery:true};
++}
++export async function apiPost(p,body){
++ window.__requests.push({path:p,body});
++ if(p.endsWith('/create')){
++  const prior=JSON.parse(localStorage.getItem('server-receipt')||'null');
++  if(body.action==='cancel'){if(!prior)localStorage.setItem('server-receipt',JSON.stringify({state:'cancelled'}));return{state:prior?.state||'cancelled',itemId:prior?.state==='saved'?id:null};}
++  if(prior&&prior.state!=='saved')throw new ApiError('Item deleted or save cancelled',410);
++  if(window.__offline)throw new ApiError('Offline',503);
++  localStorage.setItem('server-receipt',JSON.stringify({state:'saved',requestId:body.requestId}));
++  if(window.__lost)throw new ApiError('Response lost',504);
++ }
++ return{itemId:id};
++}
++export async function apiFormPost(){throw Error('Unexpected model call');}export async function apiDelete(){};
++`;
++(async()=>{
++ fs.mkdirSync(out,{recursive:true});
++ const entry=`import React from'react';import{createRoot}from'react-dom/client';import{Alert}from'react-native';import Screen from'/Users/razakhan/Documents/rezlee-mobile-test/apps/mobile/app/inventory-item';window.__actions=[];window.__requests=[];Alert.alert=(title,message,buttons)=>{window.__dialog={title,message};window.__confirm=()=>buttons.filter(b=>b.style!=='cancel').at(-1)?.onPress?.();};createRoot(document.getElementById('root')).render(<Screen/>);`;
++ await esbuild.build({stdin:{contents:entry,loader:'tsx',resolveDir:root},outfile:out+'/preview.js',bundle:true,platform:'browser',format:'iife',jsx:'automatic',alias:{react:deps+'/react','react-dom':deps+'/react-dom','react-native':deps+'/react-native-web'},define:{'process.env.NODE_ENV':'"production"'},plugins:[{name:'boundaries',setup(b){b.onResolve({filter:/.*/},a=>{if(stubs[a.path])return{path:a.path,namespace:'stub'};if(a.path.startsWith('@/')){const p=root+'/apps/mobile/src/'+a.path.slice(2);for(const ext of ['.ts','.tsx','/index.ts'])if(fs.existsSync(p+ext))return{path:p+ext};}});b.onLoad({filter:/.*/,namespace:'stub'},a=>({contents:stubs[a.path],loader:'js',resolveDir:root}));}}]});
++ fs.writeFileSync(out+'/preview.html','<!doctype html><meta name="viewport" content="width=device-width,initial-scale=1"><style>body{margin:0;font-family:system-ui}*{box-sizing:border-box}#root{height:100vh;display:flex;flex-direction:column}</style><div id="root"></div><script src="./preview.js"></script>');
++ const server=require('node:http').createServer((req,res)=>{const f=req.url==='/preview.js'?'preview.js':'preview.html';res.setHeader('Content-Type',f.endsWith('.js')?'application/javascript':'text/html');res.end(fs.readFileSync(out+'/'+f));});await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
++ const browser=await chromium.launch({headless:true,executablePath:'/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'}),checks=[];
++ try{
++ for(const width of [320,390])for(const scenario of ['save','lost-restart','offline-retry','cancel','cancel-completed','deleted','storage-failed','cleanup-failed','account-change','backend-unavailable','legacy']){
++  const page=await browser.newPage({viewport:{width,height:844}}),errors=[];page.on('pageerror',e=>errors.push(e.message));
++  await page.addInitScript(s=>{window.__user=sessionStorage.getItem('qa-user')||'11111111-1111-4111-8111-111111111111';window.__lost=['lost-restart','cancel-completed','deleted','account-change'].includes(s);window.__offline=['offline-retry','cancel'].includes(s);window.__storageFail=s==='storage-failed';window.__cleanupFail=s==='cleanup-failed';window.__backendFail=s==='backend-unavailable';window.__legacy=s==='legacy';},scenario);
++  await page.goto('http://127.0.0.1:'+server.address().port);
++  if(scenario==='backend-unavailable'){
++   await page.getByText('Save recovery unavailable',{exact:true}).waitFor();
++   await page.evaluate(()=>window.__backendFail=false);await page.getByRole('button',{name:'Try again',exact:true}).click();
++  }
++  await page.getByRole('button',{name:'Enter details myself',exact:true}).click();
++  await page.getByRole('textbox',{name:'Item name',exact:true}).fill('Corrected kitchen dishwasher');
++  await page.getByRole('textbox',{name:'Model number',exact:true}).fill('TEST-DW100');
++  await page.getByRole('button',{name:'Confirm and check recalls',exact:true}).click();
++  if(['lost-restart','offline-retry','cancel','cancel-completed','deleted','account-change'].includes(scenario)){
++   await page.getByRole('button',{name:'Check saved item',exact:true}).waitFor();
++   await page.waitForFunction(()=>document.body.textContent.includes('Response lost')||document.body.textContent.includes('Offline'));
++   const first=await page.evaluate(()=>window.__requests[0].body.requestId);
++   if(scenario==='account-change'){
++    await page.evaluate(()=>{window.__user='22222222-2222-4222-8222-222222222222';sessionStorage.setItem('qa-user',window.__user);window.dispatchEvent(new Event('qa-account'));});
++    await page.getByRole('button',{name:'Enter details myself',exact:true}).click();
++    if(await page.getByRole('textbox',{name:'Item name',exact:true}).inputValue()!=='')throw Error('Other account saw private fields');
++    if(await page.getByRole('button',{name:'Check saved item',exact:true}).count())throw Error('Other account saw pending save');
++   }else{
++    if(scenario==='deleted')await page.evaluate(()=>localStorage.setItem('server-receipt',JSON.stringify({state:'deleted'})));
++    await page.reload();await page.getByRole('button',{name:'Check saved item',exact:true}).waitFor();
++    if(await page.getByRole('textbox',{name:'Item name',exact:true}).inputValue()!=='Corrected kitchen dishwasher')throw Error('Correction lost');
++    if((await page.evaluate(()=>window.__requests)).length)throw Error('Restart automatically posted');
++    await page.screenshot({path:out+'/pending-'+scenario+'-'+width+'.png'});
++    if(scenario==='offline-retry'){
++     await page.getByRole('button',{name:'Check saved item',exact:true}).click();
++     await page.getByText(/No completed save was found yet/).waitFor();
++     await page.evaluate(()=>window.__offline=false);await page.getByRole('button',{name:'Retry same save',exact:true}).click();
++     await page.waitForFunction(()=>window.__actions.some(a=>a.params?.itemId));
++     if((await page.evaluate(()=>window.__requests[0])).body.requestId!==first)throw Error('Retry identity changed');
++    }else if(scenario==='cancel'||scenario==='cancel-completed'){
++     await page.getByRole('button',{name:'Cancel pending save',exact:true}).click();await page.evaluate(()=>window.__confirm());
++     if(scenario==='cancel')await page.getByText('Save cancelled. Your details are kept here for editing.',{exact:true}).waitFor();
++     else await page.waitForFunction(()=>window.__actions.some(a=>a.params?.itemId));
++    }else{
++     await page.getByRole('button',{name:'Check saved item',exact:true}).click();
++     if(scenario==='deleted')await page.getByText(/The previously saved item was deleted/).waitFor();
++     else await page.waitForFunction(()=>window.__actions.some(a=>a.params?.itemId));
++     if((await page.evaluate(()=>window.__requests)).length)throw Error('Check resubmitted create');
++    }
++   }
++  }else if(scenario==='storage-failed'){
++   await page.getByText('Could not save. Your details are still here.',{exact:true}).waitFor();if((await page.evaluate(()=>window.__requests)).length)throw Error('Posted before durable intent');
++  }else await page.waitForFunction(()=>window.__actions.some(a=>a.params?.itemId));
++  checks.push({width,scenario,errors,overflow:await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth)});await page.close();
++ }
++ }finally{await browser.close();server.close();}
++ fs.writeFileSync(out+'/render-results.json',JSON.stringify({checks,method:'Actual inventory screen and recovery store via React Native Web; mocked API/auth/native boundaries. Reload is not physical OS process death.'},null,2));
++ if(checks.some(c=>c.errors.length||c.overflow))throw Error(JSON.stringify(checks));console.log('PASS '+checks.length+' inventory recovery screen scenarios.');
++})().catch(e=>{console.error(e);process.exitCode=1});
+--- /dev/null
++++ b/scripts/qa/inventory-recovery-staging.mjs
+@@ -0,0 +1,70 @@
++// Run only after the additive migration and API are deployed to staging.
++import {createRequire} from 'node:module';
++import {readFileSync,writeFileSync,mkdirSync} from 'node:fs';
++import {randomUUID} from 'node:crypto';
++const require=createRequire(process.cwd()+'/package.json'),{createClient}=require('@supabase/supabase-js');
++const settings=JSON.parse(readFileSync(process.env.REZLEE_STAGING_QA_SETTINGS,'utf8'));
++if(settings.NEXT_PUBLIC_SUPABASE_URL!=='https://gjwvalpxnfbvryosmcbj.supabase.co')throw Error('Staging only');
++const options={auth:{persistSession:false,autoRefreshToken:false}},admin=createClient(settings.NEXT_PUBLIC_SUPABASE_URL,settings.SUPABASE_SECRET_KEY,options);
++const base='https://staging.rezlee.com',path='/api/mobile/v1/inventory/create',out='docs/checkpoints/inventory-recovery-20261011';
++const ids=[],checks=[];let completed=false,fixturesCleaned=false;
++mkdirSync(out,{recursive:true});
++const assert=(v,m)=>{if(!v)throw Error(m);checks.push(m);};
++async function call(token,url,body,method){const response=await fetch(base+url,{method:method??(body?'POST':'GET'),headers:{Authorization:'Bearer '+token,'Content-Type':'application/json'},...(body?{body:JSON.stringify(body)}:{}),signal:AbortSignal.timeout(45000)});return{status:response.status,data:await response.json()};}
++async function fixture(){
++ const email='inventory-qa-'+randomUUID()+'@example.invalid',password=randomUUID()+randomUUID();
++ const made=await admin.auth.admin.createUser({email,password,email_confirm:true,user_metadata:{qa_marker:'inventory-recovery-20261011'}});
++ if(made.error)throw Error('Fixture creation failed');ids.push(made.data.user.id);
++ const client=createClient(settings.NEXT_PUBLIC_SUPABASE_URL,settings.NEXT_PUBLIC_SUPABASE_ANON_KEY,options);
++ const login=await client.auth.signInWithPassword({email,password});if(login.error)throw Error('Fixture login failed');
++ const home=await client.from('homes').insert({user_id:made.data.user.id,nickname:'Disposable inventory QA',city:'Pickering',province:'Ontario',home_type:'house',ownership_type:'owner'}).select('id').single();
++ if(home.error)throw Error('Fixture home failed');
++ return {id:made.data.user.id,client,homeId:home.data.id,token:login.data.session.access_token};
++}
++try{
++ const a=await fixture(),b=await fixture();
++ const caps=await call(a.token,path);assert(caps.status===200&&caps.data.createRecovery&&caps.data.homeId===a.homeId,'Recovery capability available for owned home');
++ const fields={name:'Synthetic kitchen dishwasher',brand:'QA',model_number:'DW100',serial_number:'',room_or_area:'Kitchen',category:'Appliance',product_barcode:'',warranty_expires_on:''};
++ const intent={requestId:randomUUID(),homeId:a.homeId,action:'create',fields};
++ const saves=await Promise.all(Array.from({length:4},()=>call(a.token,path,intent)));
++ const itemId=saves[0].data.itemId;
++ assert(Boolean(itemId)&&saves.every(r=>r.status===200&&r.data.itemId===itemId),'Four concurrent attempts return one saved item');
++ const rows=await a.client.from('inventory_items').select('id').eq('home_id',a.homeId);
++ assert(!rows.error&&rows.data.length===1,'Concurrent retries create exactly one row');
++ const found=await call(a.token,path+'?requestId='+intent.requestId);
++ assert(found.status===200&&found.data.state==='saved'&&found.data.itemId===itemId,'Lost response recovered with a read');
++ const changed=await call(a.token,path,{...intent,fields:{...fields,name:'Changed payload'}});
++ assert(changed.status===409,'A changed payload cannot reuse the save request');
++ const correction=await call(a.token,'/api/mobile/v1/inventory',{...fields,id:itemId,name:'Corrected saved name'});
++ assert(correction.status===200,'Existing edit route remains usable');
++ const replay=await call(a.token,path,intent),detail=await call(a.token,'/api/mobile/v1/inventory?id='+itemId);
++ assert(replay.status===200&&detail.data.item.name==='Corrected saved name','Retry does not overwrite a later correction');
++ const separate=await call(a.token,path,{...intent,requestId:randomUUID()});
++ assert(separate.status===200&&separate.data.itemId!==itemId,'A deliberate identical appliance gets its own item');
++ const cancelSaved=await call(a.token,path,{requestId:intent.requestId,homeId:a.homeId,action:'cancel'});
++ assert(cancelSaved.status===200&&cancelSaved.data.state==='saved'&&cancelSaved.data.itemId===itemId,'Cancelling a completed save opens it without deleting it');
++ const cancelled={...intent,requestId:randomUUID()};
++ assert((await call(a.token,path,{requestId:cancelled.requestId,homeId:a.homeId,action:'cancel'})).data.state==='cancelled','Unsent request can be cancelled');
++ assert((await call(a.token,path,cancelled)).status===410,'Delayed create cannot follow cancellation');
++ const deleted=await call(a.token,'/api/mobile/v1/inventory?id='+itemId,undefined,'DELETE');
++ assert(deleted.status===200,'Saved item can be deleted normally');
++ assert((await call(a.token,path,intent)).status===410,'Old retry cannot recreate a deleted item');
++ assert((await call(a.token,path+'?requestId='+intent.requestId)).data.state==='deleted','Recovery explains the previous deletion');
++ const foreign=await call(b.token,path+'?requestId='+intent.requestId);
++ assert(foreign.status===200&&foreign.data.state==='unknown'&&!foreign.data.itemId,'Other account cannot read the receipt');
++ assert((await call(b.token,path,intent)).status===409,'Other account cannot submit to the first home');
++ const raw=await b.client.from('inventory_create_requests').select('request_id').eq('user_id',a.id);
++ assert(!raw.error&&raw.data.length===0,'Direct RLS hides another account receipts');
++ const denied=await a.client.from('inventory_create_requests').delete().eq('request_id',intent.requestId);
++ assert(Boolean(denied.error),'Clients cannot remove replay tombstones');
++ const invalid=await call(a.token,path,{...intent,requestId:randomUUID(),fields:{...fields,warranty_expires_on:'2026-02-30'}});
++ assert(invalid.status===400,'Impossible warranty date rejected');
++ completed=true;
++}finally{
++ const cleanup=[];
++ for(const id of ids){const result=await admin.auth.admin.deleteUser(id);if(result.error)cleanup.push('Fixture account deletion failed');}
++ fixturesCleaned=cleanup.length===0;
++ writeFileSync(out+'/hosted-results.json',JSON.stringify({checks,completed,fixturesCleaned,paidCalls:0,realCustomerDataChanged:false},null,2));
++ if(cleanup.length)throw Error(cleanup.join('; '));
++ console.log(checks.length+' checks; completed='+completed+'; disposable fixtures cleaned.');
++}
