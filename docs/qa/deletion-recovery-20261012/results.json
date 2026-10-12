@@ -1,0 +1,145 @@
+{
+  "layer": "Actual React Native screens rendered in Chromium with mocked auth/network/OS boundaries; no native acceptance claimed",
+  "checks": [
+    {
+      "scenario": "owner",
+      "width": 320,
+      "pass": true
+    },
+    {
+      "scenario": "disabled",
+      "width": 320,
+      "pass": true
+    },
+    {
+      "scenario": "corrupt",
+      "width": 320,
+      "pass": true
+    },
+    {
+      "scenario": "wrong-password",
+      "width": 320,
+      "pass": true
+    },
+    {
+      "scenario": "storage-failure",
+      "width": 320,
+      "pass": true
+    },
+    {
+      "scenario": "lost-response",
+      "width": 320,
+      "pass": true
+    },
+    {
+      "scenario": "account-switch",
+      "width": 320,
+      "pass": true
+    },
+    {
+      "scenario": "pending",
+      "width": 320,
+      "pass": true
+    },
+    {
+      "scenario": "completed",
+      "width": 320,
+      "pass": true
+    },
+    {
+      "scenario": "needs_attention",
+      "width": 320,
+      "pass": true
+    },
+    {
+      "scenario": "offline",
+      "width": 320,
+      "pass": true
+    },
+    {
+      "scenario": "social",
+      "width": 320,
+      "pass": true
+    },
+    {
+      "scenario": "otp",
+      "width": 320,
+      "pass": true
+    },
+    {
+      "scenario": "email-login",
+      "width": 320,
+      "pass": true
+    },
+    {
+      "scenario": "owner",
+      "width": 390,
+      "pass": true
+    },
+    {
+      "scenario": "disabled",
+      "width": 390,
+      "pass": true
+    },
+    {
+      "scenario": "corrupt",
+      "width": 390,
+      "pass": true
+    },
+    {
+      "scenario": "wrong-password",
+      "width": 390,
+      "pass": true
+    },
+    {
+      "scenario": "storage-failure",
+      "width": 390,
+      "pass": true
+    },
+    {
+      "scenario": "lost-response",
+      "width": 390,
+      "pass": true
+    },
+    {
+      "scenario": "account-switch",
+      "width": 390,
+      "pass": true
+    },
+    {
+      "scenario": "pending",
+      "width": 390,
+      "pass": true
+    },
+    {
+      "scenario": "completed",
+      "width": 390,
+      "pass": true
+    },
+    {
+      "scenario": "needs_attention",
+      "width": 390,
+      "pass": true
+    },
+    {
+      "scenario": "offline",
+      "width": 390,
+      "pass": true
+    },
+    {
+      "scenario": "social",
+      "width": 390,
+      "pass": true
+    },
+    {
+      "scenario": "otp",
+      "width": 390,
+      "pass": true
+    },
+    {
+      "scenario": "email-login",
+      "width": 390,
+      "pass": true
+    }
+  ]
+}

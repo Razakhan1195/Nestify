@@ -1,3 +1,5 @@
+> **Latest status, October 12:** [Overnight finishing checkpoint](overnight-finish-2026-10-12.md) and [morning testing](morning-testing-2026-10-12.md) supersede the earlier next-step/deployment statements below. iOS 25 and Android 19 are delivered for staging testing; overall launch is not signed off.
+
 # Current audit completion status — October 11, 2026
 
 This is the current closure checklist, reconciled against dated checkpoints. Implemented, staging verified, physical-device accepted and publicly released are separate states. Older roadmap sections are historical where they conflict with the linked checkpoints. No working feature is removed.
@@ -63,3 +65,14 @@ The user moved the Hark-inspired benefit-before-permission UX pass ahead of the 
 Evidence: 36 actual-screen scenarios at 320/390 widths, 924 regression tests, lint/types/Next build and iOS/Android exports passed. Client changes are available after reloading staging Expo 8081; backend unchanged. No live paid provider calls, customer messages, scheduled jobs or production release. Native OAuth/MFA, consent refusal, phone accessibility and actual customer usefulness remain pending.
 
 Next independent engineering returns to connected-account deletion/revocation. Apple sign-in/native auth, actual communications delivery, the release candidate and operational gates remain open alongside all earlier audit acceptance gates. This introduction pass does not sign them off.
+
+
+## Overnight deletion and consolidated native candidate — October 12
+
+Connected-account deletion/revocation engineering now includes durable per-account receipts, isolated recent-auth confirmation, persistent Deck-session cleanup, truthful retry/expiry behavior, newer-feature database guards and cloud recovery. A real staging eight-digit OTP issue was fixed. Expected deletion waits no longer look like operator failures. See overnight-finish-2026-10-12.md for the exact scope and rollback.
+
+Evidence: 951 regression tests, 36 rendered scenarios, 29 hosted deletion checks, 5 app-closed recovery checks and 6 operations checks passed. Fresh bill-outcome 94, phone-invitation 23 and quote-review 30 hosted checks passed. No manual customer messages or paid provider/model calls. All disposable fixtures cleaned up.
+
+iOS 0.1.0 (25) is Apple VALID / IN_BETA_TESTING for internal testers. Android 0.1.0 (19) APK is available. Expo is restarted on 8081 against staging. These consolidate the October 8–12 client work. Staging now points to nestify-5fhilaf3o; production remains unchanged.
+
+Next: physical combined acceptance, actual Apple identity setup/token lifecycle, bounded provider-by-provider pilots/revocation, operational ownership/dollar budgets and a real managed backup/restore rehearsal. Multiple-quote comparison and evidence-supported compatibility/repair-versus-replace remain separate unfinished engineering scope. Native sharing/voice and expansion remain deferred. Do not infer overall launch readiness from this candidate.

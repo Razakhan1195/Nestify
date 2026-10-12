@@ -1,0 +1,22 @@
+{
+  "verifiedAt": "2026-10-12T05:17:58.229Z",
+  "appId": "6817197470",
+  "builds": [
+    {
+      "id": "c68ada9f-35bf-4d1f-b9b0-3bc2cfdc3e93",
+      "version": "25",
+      "processingState": "VALID",
+      "uploadedDate": "2026-10-11T22:01:10-07:00",
+      "expired": false
+    }
+  ],
+  "beta": [
+    {
+      "id": "c68ada9f-35bf-4d1f-b9b0-3bc2cfdc3e93",
+      "autoNotifyEnabled": true,
+      "internalBuildState": "IN_BETA_TESTING",
+      "externalBuildState": "READY_FOR_BETA_SUBMISSION"
+    }
+  ],
+  "readOnly": true
+}

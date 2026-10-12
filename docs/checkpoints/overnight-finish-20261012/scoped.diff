@@ -1,0 +1,1875 @@
+--- before/apps/mobile/app/delete-account.tsx
++++ after/apps/mobile/app/delete-account.tsx
+@@ -1,3 +1,5 @@
++import { confirmAccountPassword } from "@/auth/confirm-password";
++import { inventoryCreateStore } from "@/lib/inventory-create";
+ import { statementBatches } from "@/lib/statement-batch";
+ import {receiptBatches} from "@/lib/receipt-batch";
+ import {vaultPending} from "@/lib/vault-pending";
+@@ -20,6 +22,10 @@
+ import { colors, layout, spacing, typography } from "@/theme/tokens";
+ 
+ export default function DeleteAccount() {
++  const { session } = useAuth();
++  return <DeleteAccountFlow key={session?.user.id ?? "signed-out"}/>;
++}
++function DeleteAccountFlow() {
+   const router = useRouter();
+   const { session } = useAuth();
+   const [preview, setPreview] = useState<DeletionPreview | null>(null);
+@@ -41,25 +47,31 @@
+   const [busy, setBusy] = useState(false);
+   const [unconfirmed, setUnconfirmed] = useState(false);
+   const running = useRef(false);
++  const active = useRef(true);
++  useEffect(() => { active.current = true; return () => { active.current = false; }; }, []);
+   usePreventRemove(busy, () => Alert.alert("Confirming your request", "Please wait for this step to finish."));
+   const refresh = useCallback(async () => {
+     if (running.current) return;
+     running.current = true;
+     try {
+-      const saved = await readDeletionReceipt();
++      const saved = await readDeletionReceipt(session?.user.id);
++      if (!active.current) return;
+       if (saved && (!session || saved.userId === session.user.id)) {
+         setReceipt(saved);
+         try {
+-          setStatus(await deletionStatus(saved)); setUnconfirmed(false); setError(null); return;
++          const nextStatus = await deletionStatus(saved);
++          if (!active.current) return;
++          setStatus(nextStatus); setUnconfirmed(false); setError(null); return;
+         } catch (err) {
++          if (!active.current) return;
+           if (!(err instanceof ApiError && err.status === 404)) throw err;
+           setUnconfirmed(true);
+         }
+       }
+-      if (session) { const next = await deletionPreview(); setPreview(next); if (next.deletion) { setStatus(next.deletion); setUnconfirmed(true); } }
++      if (session) { const next = await deletionPreview(); if (!active.current) return; setPreview(next); if (next.deletion) { setStatus(next.deletion); setUnconfirmed(true); } }
+       setError(null);
+-    } catch { setError("We couldn’t check your account. Your deletion has not been confirmed as complete."); }
+-    finally { setLoading(false); running.current = false; }
++    } catch { if (active.current) setError("We couldn’t check your account. Your deletion has not been confirmed as complete."); }
++    finally { if (active.current) setLoading(false); running.current = false; }
+   }, [session]);
+   useFocusEffect(useCallback(() => { void refresh(); }, [refresh]));
+   useEffect(() => {
+@@ -78,26 +90,29 @@
+         await emailCode.verify(session.user.email, code, session.user.id);
+         setCode("");
+       } else {
+-        const { data, error: authError } = await supabase.auth.signInWithPassword({ email: session.user.email, password });
++        await confirmAccountPassword(session.user.id, session.user.email, password);
+         setPassword("");
+-        if (authError || data.user?.id !== session.user.id) { setError("Your password couldn’t be confirmed. Try again, or reset it from sign in."); return; }
+       }
++      if (!active.current) return;
+       authenticated = true;
+       const saved = await prepareDeletionReceipt(session.user.id, status?.requestId);
++      if (!active.current) return;
+       setReceipt(saved); setUnconfirmed(true);
+       const accepted = await submitDeletion(saved);
++      if (!active.current) return;
+       setStatus(accepted); setUnconfirmed(false); setConfirmation("");
+     } catch (err) {
+-      setCode("");
++      if (!active.current) return;
++      setPassword(""); setCode("");
+       setError(!authenticated ? "Your identity couldn’t be confirmed. Check your code or password and try again. No new deletion request was submitted." : err instanceof ApiError ? err.message : "We couldn’t confirm your request. Check its status before trying again.");
+-    } finally { setBusy(false); running.current = false; }
++    } finally { if (active.current) setBusy(false); running.current = false; }
+   }
+   async function sendCode() {
+     if (running.current || !session?.user.email || !codeAvailable || wait) return;
+     running.current = true; setBusy(true); setError(null);
+-    try { await emailCode.request(session.user.email); setCodeSent(true); setCode(""); }
+-    catch { setError("We couldn’t send a code. Try again shortly."); }
+-    finally { running.current = false; setBusy(false); setNow(Date.now()); }
++    try { await emailCode.request(session.user.email); if (!active.current) return; setCodeSent(true); setCode(""); }
++    catch { if (active.current) setError("We couldn’t send a code. Try again shortly."); }
++    finally { running.current = false; if (active.current) { setBusy(false); setNow(Date.now()); } }
+   }
+   function confirm() {
+     Alert.alert("Permanently delete your account?", "Your private information and homes you own will be removed. Shared expense history in someone else’s household remains. This cannot be undone.", [
+@@ -108,11 +123,17 @@
+   async function finish() {
+     setBusy(true);
+     try {
++      const deletedUserId = receipt?.userId ?? session?.user.id;
++      const requestId = receipt?.requestId ?? status?.requestId;
++      if (!deletedUserId || !requestId || status?.status !== "completed") throw Error("Deletion not confirmed.");
++      const current = (await supabase.auth.getSession()).data.session?.user.id;
++      if (current && current !== deletedUserId) throw Error("Account changed.");
+       // Local sign-out is sufficient after the server has removed Auth/refresh sessions.
+       const signedOut = await supabase.auth.signOut({ scope: "local" });
+       if (signedOut.error) throw new Error("Sign out failed");
+-      const deletedUserId = receipt?.userId ?? session?.user.id;
+       if (deletedUserId) {
++        const pendingItem = await inventoryCreateStore.load(deletedUserId);
++        if (pendingItem) await inventoryCreateStore.forget(deletedUserId, pendingItem.requestId);
+         await setupDrafts.clear(deletedUserId);
+         await statementDrafts.clear(deletedUserId);
+         await vaultPending.clear(deletedUserId);
+@@ -121,13 +142,14 @@
+         await SecureStore.deleteItemAsync("rezlee.lock.v1." + deletedUserId);
+         await SecureStore.deleteItemAsync("shared-expense-save-" + deletedUserId);
+       }
+-      await clearDeletionReceipt(); router.replace("/(auth)/login");
++      await clearDeletionReceipt(deletedUserId, requestId);
++      if (!(await supabase.auth.getSession()).data.session) router.replace("/(auth)/login");
+     } catch { setError("We couldn’t clear this device’s sign-in. Please try again."); }
+     finally { setBusy(false); }
+   }
+   const completed = status?.status === "completed";
+   const pending = status && !completed && !unconfirmed;
+-  const credentialsReady = useCode ? codeAvailable && /^\d{6}$/.test(code) : Boolean(password);
++  const credentialsReady = useCode ? codeAvailable && /^\d{6,8}$/.test(code) : Boolean(password);
+   const canSubmit = preview?.enabled && session && !pending && !completed;
+   return <SafeAreaView edges={["left", "right", "bottom"]} style={{ flex: 1, backgroundColor: colors.background }}>
+     <ScreenNavigation title="Delete account" fallback={session ? "/account" : "/(auth)/login"} />
+@@ -159,7 +181,7 @@
+               {!codeAvailable ? <Text style={[typography.body, { color: colors.mutedForeground }]}>Email verification isn’t available in this build yet. Your account has not been changed.</Text> : <>
+                 <Text style={[typography.body, { color: colors.mutedForeground }]}>Confirm access to {session?.user.email}. {codeSent ? "Check your inbox and junk folder for the code." : "We’ll request a code for this account before accepting deletion."}</Text>
+                 <QuietAction label={wait ? `Send another code in ${wait}s` : codeSent ? "Send another code" : "Send verification code"} disabled={busy || wait > 0} onPress={() => void sendCode()} />
+-                <TextField label="Six-digit email code" value={code} onChangeText={setCode} editable={!busy} keyboardType="number-pad" textContentType="oneTimeCode" maxLength={6} />
++                <TextField label="Email verification code" value={code} onChangeText={setCode} editable={!busy} keyboardType="number-pad" textContentType="oneTimeCode" maxLength={8} />
+               </>}
+               {!socialOnly ? <QuietAction label="Use my password instead" disabled={busy} onPress={() => { setCodeMode(false); setCode(""); }} /> : null}
+             </View> : <>
+@@ -172,7 +194,7 @@
+               style={({ pressed }) => ({ minHeight: 48, paddingVertical: 12, alignItems: "center", borderRadius: 10, borderWidth: 1, borderColor: colors.destructive, opacity: !credentialsReady || confirmation !== "DELETE" || busy ? 0.45 : pressed ? 0.7 : 1 })}>
+               <Text style={[typography.body, { color: colors.destructive, fontWeight: "600" }]}>{busy ? "Confirming…" : "Permanently delete account"}</Text>
+             </Pressable>
+-            <QuietAction label="Keep my account" disabled={busy} onPress={() => router.back()} />
++            <QuietAction label="Keep my account" disabled={busy} onPress={() => router.replace("/account")} />
+           </>}
+         </> : null}
+         {error ? <ReadNotice message={error} onRetry={() => void refresh()} busy={busy} /> : null}
+--- before/apps/mobile/app/index.tsx
++++ after/apps/mobile/app/index.tsx
+@@ -35,7 +35,7 @@
+         // Check durable recovery in order. A failed read must not be mistaken
+         // for an absent receipt or invitation, and retry repeats every check.
+         let receipt;
+-        try { receipt = await readDeletionReceipt(); }
++        try { receipt = await readDeletionReceipt(userId); }
+         catch { throw new EntryRecoveryError("Your saved deletion status couldn’t be read. Try again to continue safely."); }
+         if (!active) return;
+         if (receipt && (!userId || receipt.userId === userId)) { setDestination("/delete-account"); return; }
+--- before/apps/mobile/src/lib/account-deletion.ts
++++ after/apps/mobile/src/lib/account-deletion.ts
+@@ -1,27 +1,18 @@
+ import * as SecureStore from "expo-secure-store";
+ import { apiGet, apiPost, apiDeletionReceipt } from "@/lib/api";
+ 
+-export type DeletionReceipt = { userId: string; requestId: string; receiptToken: string };
++import { createDeletionReceiptStore, type DeletionReceipt } from "./account-deletion-receipt";
++export type { DeletionReceipt } from "./account-deletion-receipt";
+ export type DeletionStatus = { requestId: string; status: "queued" | "running" | "retry" | "needs_attention" | "completed"; phase: "connections" | "files" | "account"; completedAt: string | null };
+ export type DeletionPreview = { enabled: boolean; emailCodeAvailable?: boolean; impact?: { homes: number; sharedMemberships: number; joinedHomes: number }; deletion?: DeletionStatus };
+-const key = "rezlee.account-deletion.v1";
+-export async function readDeletionReceipt(): Promise<DeletionReceipt | null> {
+-  const raw = await SecureStore.getItemAsync(key);
+-  if (!raw) return null;
+-  const record = JSON.parse(raw);
+-  if (!record || typeof record.userId !== "string" || !/^[a-f0-9-]{36}$/i.test(record.requestId) || !/^[a-f0-9]{64}$/.test(record.receiptToken)) throw new Error("Deletion receipt could not be read.");
+-  return record;
+-}
+-export async function prepareDeletionReceipt(userId: string, existingRequestId?: string): Promise<DeletionReceipt> {
+-  const current = await readDeletionReceipt();
+-  if (current?.userId === userId && (!existingRequestId || current.requestId === existingRequestId)) return current;
++const receipts = createDeletionReceiptStore(SecureStore, async (userId, requestId) => {
+   const crypto = await import("expo-crypto");
+   const bytes = await crypto.getRandomBytesAsync(32);
+-  const record = { userId, requestId: existingRequestId ?? crypto.randomUUID(), receiptToken: Array.from(bytes, n => n.toString(16).padStart(2, "0")).join("") };
+-  await SecureStore.setItemAsync(key, JSON.stringify(record));
+-  return record;
+-}
+-export async function clearDeletionReceipt() { await SecureStore.deleteItemAsync(key); }
++  return { userId, requestId: requestId ?? crypto.randomUUID(), receiptToken: Array.from(bytes, n => n.toString(16).padStart(2, "0")).join("") };
++});
++export const readDeletionReceipt = receipts.read;
++export const prepareDeletionReceipt = receipts.prepare;
++export const clearDeletionReceipt = receipts.clear;
+ export function deletionPreview() { return apiGet<DeletionPreview>("/api/mobile/v1/account/deletion", { timeoutMs: 15_000 }); }
+ export function submitDeletion(record: DeletionReceipt) { return apiPost<DeletionStatus>("/api/mobile/v1/account/deletion", { userId: record.userId, requestId: record.requestId, receiptToken: record.receiptToken, confirm: "DELETE" }, { timeoutMs: 15_000 }); }
+ export function deletionStatus(record: DeletionReceipt) { return apiDeletionReceipt<DeletionStatus>({ requestId: record.requestId, receiptToken: record.receiptToken }); }
+--- before/apps/mobile/src/lib/account-deletion-receipt.ts
++++ after/apps/mobile/src/lib/account-deletion-receipt.ts
+@@ -0,0 +1,47 @@
++export type DeletionReceipt = { userId: string; requestId: string; receiptToken: string };
++type Store = { getItemAsync(key: string): Promise<string | null>; setItemAsync(key: string, value: string): Promise<unknown>; deleteItemAsync(key: string): Promise<unknown> };
++const legacyKey = "rezlee.account-deletion.v1";
++const pointerKey = "rezlee.account-deletion.latest.v2";
++const uuid = /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i;
++function parse(raw: string | null): DeletionReceipt | null {
++  if (!raw) return null;
++  const value = JSON.parse(raw);
++  if (!value || !uuid.test(value.userId) || !uuid.test(value.requestId) || !/^[a-f0-9]{64}$/.test(value.receiptToken)) throw Error("Deletion receipt could not be read.");
++  return { userId: value.userId, requestId: value.requestId, receiptToken: value.receiptToken };
++}
++export function createDeletionReceiptStore(storage: Store, generate: (userId: string, requestId?: string) => Promise<DeletionReceipt>) {
++  let queue: Promise<unknown> = Promise.resolve();
++  const key = (userId: string) => { if (!uuid.test(userId)) throw Error("Account unavailable."); return "rezlee.account-deletion.v2." + userId; };
++  function exclusive<T>(work: () => Promise<T>) { const next = queue.then(work, work); queue = next.catch(() => {}); return next; }
++  async function read(userId?: string): Promise<DeletionReceipt | null> {
++    const target = userId ?? await storage.getItemAsync(pointerKey);
++    if (target) {
++      const saved = parse(await storage.getItemAsync(key(target)));
++      if (saved) { if (saved.userId !== target) throw Error("Deletion receipt does not match this account."); return saved; }
++    }
++    const old = parse(await storage.getItemAsync(legacyKey));
++    return old && (!userId || old.userId === userId) ? old : null;
++  }
++  return {
++    read: (userId?: string) => exclusive(() => read(userId)),
++    prepare: (userId: string, requestId?: string) => exclusive(async () => {
++      key(userId); if (requestId && !uuid.test(requestId)) throw Error("Request unavailable.");
++      const existing = await read(userId);
++      const saved = existing && (!requestId || existing.requestId === requestId) ? existing : await generate(userId, requestId);
++      if (saved.userId !== userId || (requestId && saved.requestId !== requestId)) throw Error("Receipt does not match this account.");
++      parse(JSON.stringify(saved));
++      // Persist the recoverable secret before an irreversible request is sent.
++      await storage.setItemAsync(key(userId), JSON.stringify(saved));
++      await storage.setItemAsync(pointerKey, userId);
++      return saved;
++    }),
++    clear: (userId: string, requestId: string) => exclusive(async () => {
++      const saved = await read(userId);
++      if (saved && saved.requestId !== requestId) throw Error("A different deletion request is saved.");
++      await storage.deleteItemAsync(key(userId));
++      const old = parse(await storage.getItemAsync(legacyKey));
++      if (old?.userId === userId && old.requestId === requestId) await storage.deleteItemAsync(legacyKey);
++      if (await storage.getItemAsync(pointerKey) === userId) await storage.deleteItemAsync(pointerKey);
++    }),
++  };
++}
+--- before/apps/mobile/src/auth/confirm-password.ts
++++ after/apps/mobile/src/auth/confirm-password.ts
+@@ -0,0 +1,22 @@
++import { createClient } from "@supabase/supabase-js";
++import { supabase } from "@/lib/supabase";
++import { createPasswordConfirmation } from "./confirm-password-core";
++const isolated = createClient(process.env.EXPO_PUBLIC_SUPABASE_URL ?? "", process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? "", {
++  auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
++  global: { fetch: async (input, init) => {
++    const controller = new AbortController(), timer = setTimeout(() => controller.abort(), 15000);
++    try { return await fetch(input, { ...init, signal: controller.signal }); } finally { clearTimeout(timer); }
++  } },
++});
++export const confirmAccountPassword = createPasswordConfirmation({
++  currentUser: async () => (await supabase.auth.getSession()).data.session?.user.id ?? null,
++  verify: async (email, password) => {
++    const { data, error } = await isolated.auth.signInWithPassword({ email, password });
++    if (error || !data.user || !data.session) throw Error("Password not confirmed.");
++    return { userId: data.user.id, session: data.session };
++  },
++  apply: async session => {
++    const { error } = await supabase.auth.setSession(session);
++    if (error) throw Error("Identity confirmation failed.");
++  },
++});
+--- before/apps/mobile/src/auth/confirm-password-core.ts
++++ after/apps/mobile/src/auth/confirm-password-core.ts
+@@ -0,0 +1,17 @@
++type Verified = { userId: string; session: { access_token: string; refresh_token: string } };
++type Adapter = { currentUser(): Promise<string | null>; verify(email: string, password: string): Promise<Verified>; apply(session: Verified["session"]): Promise<void> };
++/** Reauthentication must never silently sign an old account back in. */
++export function createPasswordConfirmation(adapter: Adapter) {
++  let busy = false;
++  return async (userId: string, email: string, password: string) => {
++    if (busy) throw Error("Please wait for identity confirmation.");
++    busy = true;
++    try {
++      if (await adapter.currentUser() !== userId) throw Error("Account changed");
++      const result = await adapter.verify(email, password);
++      if (result.userId !== userId || await adapter.currentUser() !== userId) throw Error("Account changed");
++      await adapter.apply(result.session);
++      if (await adapter.currentUser() !== userId) throw Error("Account changed");
++    } finally { busy = false; }
++  };
++}
+--- before/src/lib/account/deck-session-cleanup.ts
++++ after/src/lib/account/deck-session-cleanup.ts
+@@ -0,0 +1,26 @@
++import type { createDeckV2Client } from "../deck/v2-client";
++import { DeletionProblem } from "./deletion-policy";
++type Client = Pick<ReturnType<typeof createDeckV2Client>, "getSession" | "endSession" | "getCredential">;
++const terminal = (status: string) => status === "completed" || status === "failed";
++/** A saved session ID alone is insufficient permission to end a shared session. */
++export async function endOwnedDeckSession(client: Client, sessionId: string, externalId: string, operationId: string) {
++  if (!/^sess_[a-zA-Z0-9_-]+$/.test(sessionId)) throw new DeletionProblem("provider_review", false);
++  const session = await client.getSession(sessionId);
++  if (session.id !== sessionId) throw new DeletionProblem("provider_review", false);
++  // These states are terminal according to Deck's session API, independently
++  // of credential deletion. Replays need not resolve already-deleted credentials.
++  if (terminal(session.status)) return;
++  if (session.status === "completing") throw new DeletionProblem("provider_unavailable");
++  if (!["queued", "running", "idle"].includes(session.status) || !Array.isArray(session.task_runs) || !session.task_runs.length || session.task_runs.length > 100) {
++    throw new DeletionProblem("provider_review", false);
++  }
++  const ids = [...new Set(session.task_runs.map(run => run.credential_id))];
++  if (ids.length > 10 || ids.some(id => typeof id !== "string" || !/^cred_[a-zA-Z0-9_-]+$/.test(id))) throw new DeletionProblem("provider_review", false);
++  for (const id of ids) {
++    const credential = await client.getCredential(id);
++    if (credential.id !== id || credential.external_id !== externalId) throw new DeletionProblem("provider_review", false);
++  }
++  const ended = await client.endSession(sessionId, operationId + "-" + sessionId);
++  if (ended.id !== sessionId) throw new DeletionProblem("provider_review", false);
++  if (!terminal(ended.status)) throw new DeletionProblem("provider_unavailable");
++}
+--- before/src/lib/account/deletion.ts
++++ after/src/lib/account/deletion.ts
+@@ -1,10 +1,11 @@
++import { endOwnedDeckSession } from "./deck-session-cleanup";
+ import { revokeGmailForDeletion } from "./gmail-deletion";
+ import { randomUUID } from "node:crypto";
+ import { createAdminClient } from "@/lib/supabase/admin";
+ import { createDeckV2Client, DeckV2ApiError } from "@/lib/deck/v2-client";
+ import { createEzgbClient } from "@/lib/ezgb/client";
+ import { deletionStep, type DeletionDependencies } from "./deletion-engine";
+-import { DeletionProblem, type DeletionJob } from "./deletion-policy";
++import { DeletionProblem, DeletionWait, type DeletionJob } from "./deletion-policy";
+ import { accountDeletionEnabled } from "./operations";
+ 
+ function check(error: unknown) { if (error) throw new DeletionProblem("account_unavailable"); }
+@@ -40,19 +41,18 @@
+         }
+       }
+       try {
+-        // Credential deletion alone does not establish that a persistent browser
+-        // session was ended. Keep this request for verified support cleanup.
++        // End any persistent session with a verified credential-owner scope
++        // before deleting credentials. Never infer revocation from local status.
+         const savedProvider = await admin.from("providers").select("deck_session_id,deck_connection_metadata")
+           .eq("id", resource.provider_id!).eq("user_id", job.user_id!).maybeSingle();
+         check(savedProvider.error);
+-        if (savedProvider.data?.deck_session_id || savedProvider.data?.deck_connection_metadata?.sessionId) {
+-          throw new DeletionProblem("provider_review", false);
+-        }
++        const sessionIds = [...new Set([savedProvider.data?.deck_session_id, savedProvider.data?.deck_connection_metadata?.sessionId].filter((id): id is string => typeof id === "string" && Boolean(id)))];
++        for (const sessionId of sessionIds) await endOwnedDeckSession(createDeckV2Client(), sessionId, `${job.user_id}:${resource.provider_id}`, `rezlee-delete-${job.id}`);
+         // Hosted tokens remain usable until expiry. Wait before draining a
+         // temporary external ID so a late submission cannot recreate secrets.
+         const hosted = await admin.from("deck_hosted_auth_intents").select("expires_at").eq("id", resource.provider_id!).eq("user_id", job.user_id!).maybeSingle();
+         if (hosted.error && hosted.error.code !== "42P01" && hosted.error.code !== "PGRST205") check(hosted.error);
+-        if (hosted.data && Date.parse(hosted.data.expires_at) + 300000 > Date.now()) throw new DeletionProblem("provider_unavailable");
++        if (hosted.data && Date.parse(hosted.data.expires_at) + 300000 > Date.now()) throw new DeletionWait(Date.parse(hosted.data.expires_at) + 300000);
+         const deck = createDeckV2Client();
+         const expected = `${job.user_id}:${resource.provider_id}`;
+         const listed = await deck.listCredentials(expected);
+@@ -61,10 +61,6 @@
+           throw new DeletionProblem("provider_review", false);
+         }
+         const credential = listed.data.find(c => c.status !== "deleted");
+-        if (!credential) {
+-          if (listed.has_more) throw new DeletionProblem("provider_review", false);
+-          return true;
+-        }
+         // Fetch a single active run per step, verify its credential before cancellation.
+         const runs = await admin.from("provider_sync_runs").select("deck_task_run_id")
+           .eq("user_id", job.user_id!).eq("provider_id", resource.provider_id!)
+@@ -73,17 +69,23 @@
+         check(runs.error);
+         if (runs.data?.deck_task_run_id) {
+           const run = await deck.getTaskRun(runs.data.deck_task_run_id, false);
++          if (run.id !== runs.data.deck_task_run_id) throw new DeletionProblem("provider_review", false);
+           if (!["completed", "failed", "canceled", "cancelled"].includes(run.status)) {
+-            const owner = run.credential_id === credential.id ? credential : run.credential_id ? await deck.getCredential(run.credential_id) : null;
+-            if (owner?.external_id !== expected) throw new DeletionProblem("provider_review", false);
++            const owner = run.credential_id === credential?.id ? credential : run.credential_id ? await deck.getCredential(run.credential_id) : null;
++            if (!owner || owner.id !== run.credential_id || owner.external_id !== expected) throw new DeletionProblem("provider_review", false);
+             const cancelled = await deck.cancelTaskRun(run.id, `rezlee-delete-${job.id}-${run.id}`);
+-            if (!["completed", "failed", "canceled", "cancelled"].includes(cancelled.status)) throw new DeletionProblem("provider_unavailable");
++            if (cancelled.id !== run.id || !["completed", "failed", "canceled", "cancelled"].includes(cancelled.status)) throw new DeletionProblem("provider_unavailable");
+           }
++          if (run.session_id) await endOwnedDeckSession(deck, run.session_id, expected, `rezlee-delete-${job.id}`);
+           // Do not update frozen customer rows. Clear only this job's tombstoned
+           // run from the active lookup by deleting its durable customer run.
+           const removed = await admin.from("provider_sync_runs").delete().eq("user_id", job.user_id!).eq("deck_task_run_id", run.id);
+           check(removed.error);
+           return false;
++        }
++        if (!credential) {
++          if (listed.has_more) throw new DeletionProblem("provider_review", false);
++          return true;
+         }
+         await deck.deleteCredential(credential.id, `rezlee-delete-${job.id}-${credential.id}`);
+         // Restart the filtered first page after deletion. This drains all pages
+--- before/src/lib/deck/v2-client.ts
++++ after/src/lib/deck/v2-client.ts
+@@ -63,6 +63,8 @@
+   updated_at?: string;
+ };
+ 
++export type DeckV2Session = { id: string; status: string; task_runs: Array<{ id: string; credential_id: string }> };
++
+ export type DeckV2Credential = {
+   id: string;
+   status: string;
+@@ -257,6 +259,12 @@
+       const query = new URLSearchParams({ external_id: externalId, status: "unverified,verified,invalid", limit: "100" });
+       return deckRequest<DeckV2List<DeckV2Credential>>(`/credentials?${query.toString()}`);
+     },
++    getSession(sessionId: string) {
++      return deckRequest<DeckV2Session>(`/sessions/${encodeURIComponent(sessionId)}`, { timeoutMs: 12000 });
++    },
++    endSession(sessionId: string, idempotencyKey: string) {
++      return deckRequest<DeckV2Session>(`/sessions/${encodeURIComponent(sessionId)}/end`, { method: "POST", idempotencyKey, timeoutMs: 12000 });
++    },
+     getCredential(credentialId: string) {
+       return deckRequest<DeckV2Credential>(`/credentials/${encodeURIComponent(credentialId)}`);
+     },
+--- before/src/lib/sync/deck-v2-runtime.ts
++++ after/src/lib/sync/deck-v2-runtime.ts
+@@ -1,3 +1,4 @@
++import { endOwnedDeckSession } from "@/lib/account/deck-session-cleanup";
+ import { normalizeRogersVerification } from "@/lib/deck/telecom-auth";
+ import { notificationPushAllowed } from "@/lib/notifications/service";
+ import { isTelecomConfig, startTelecomImport, processTelecomEvent, scheduleTelecomRecovery } from "./deck-telecom-runtime";
+@@ -488,6 +489,7 @@
+   sourceFields?: Record<string, string>;
+ }) {
+   const provider = await loadOwnedProvider(input.supabase, input.userId, input.providerId);
++  if (providerMetadata(provider).disconnectPending === true) throw Error("Finish disconnecting this provider before connecting again.");
+   const config = await resolveDeckProviderConfig(input.supabase, provider);
+   if (isTelecomConfig(config)) return startTelecomImport({provider,config,username:input.username,password:input.password,sourceFields:input.sourceFields});
+   const deck = createDeckV2Client();
+@@ -712,6 +714,7 @@
+   taskInputOverride?: Record<string, unknown>;
+ }) {
+   const provider = await loadOwnedProvider(input.supabase, input.userId, input.providerId);
++  if (providerMetadata(provider).disconnectPending === true) throw Error("Finish disconnecting this provider before connecting again.");
+   const config = await resolveDeckProviderConfig(input.supabase, provider);
+   if (isTelecomConfig(config)) {
+     if(input.runType === "scheduled") throw Error("Scheduled telecom imports are not enabled.");
+@@ -858,52 +861,75 @@
+   };
+ }
+ 
+-export async function disconnectDeckV2Provider(input: {
++async function disconnectDeckV2ProviderImpl(input: {
+   supabase: UserSupabase;
+   userId: string;
+   providerId: string;
+ }) {
+   const provider = await loadOwnedProvider(input.supabase, input.userId, input.providerId);
+   const metadata = providerMetadata(provider);
+-  const credentialId =
+-    provider.deck_credential_id ??
+-    (typeof metadata.credentialId === "string" ? metadata.credentialId : null);
+-
+-  if (typeof metadata.telecomImportId === "string" && process.env.REZLEE_DECK_TELECOM_ENABLED === "true") {
+-    // Local disconnect wins before any in-flight statement can commit.
+-    const stopped = await input.supabase.from("providers").update({connection_status:"disconnected",requires_user_action:false}).eq("id",provider.id).eq("user_id",input.userId);
+-    if(stopped.error)throw Error("Could not stop this connection. Please try again.");
+-    const canceled = await createAdminClient().from("deck_telecom_imports").update({status:"canceled",message:"Import stopped. Your saved bills are still available.",lease_token:null,lease_until:null,finished_at:new Date().toISOString()}).eq("provider_id",provider.id).eq("user_id",input.userId).in("status",["preparing","queued","running","verification"]).select("task_run_id");
+-    if(canceled.error)throw Error("Could not finish stopping this import. Please try again.");
+-    for(const job of canceled.data ?? []) if(typeof job.task_run_id === "string") await createDeckV2Client().cancelTaskRun(job.task_run_id,`rezlee-disconnect-run-${job.task_run_id}`).catch(()=>undefined);
+-  }
+-
+-  if (credentialId?.startsWith("cred_")) {
+-    await createDeckV2Client().deleteCredential(
+-      credentialId,
+-      `rezlee-disconnect-${operationHash([provider.id, credentialId])}`,
+-    );
+-  }
+-
+-  const disconnected = await input.supabase.from("providers").update({
+-    deck_credential_id: null,
+-    deck_session_id: null,
+-    deck_connection_status: "disconnected",
+-    deck_connection_metadata: {
+-      ...metadata,
+-      credentialId: null,
+-      taskRunId: null,
+-    },
+-    connection_status: "disconnected",
+-    health_status: "needs_attention",
+-    sync_status: "authentication_required",
+-    requires_user_action: true,
+-    user_action_message: "Reconnect to resume automatic bill retrieval.",
+-    next_scheduled_sync_at: null,
++  if (provider.connection_status === "disconnected" && metadata.disconnectPending === false) return { ok: true, providerId: provider.id, status: "disconnected" };
++  const deck = createDeckV2Client(), admin = createAdminClient();
++  const expected = `${input.userId}:${provider.id}`;
++  // Fence late imports before touching the vendor. Retain all cleanup references
++  // on failure so the customer can resume after leaving/restarting the app.
++  const stopped = await input.supabase.from("providers").update({
++    connection_status: "disconnected", requires_user_action: true,
++    user_action_message: "Finish disconnecting this provider. Your saved bills remain.",
++    next_scheduled_sync_at: null, deck_connection_metadata: { ...metadata, disconnectPending: true },
+   }).eq("id", provider.id).eq("user_id", input.userId);
+-
+-  if(disconnected.error)throw Error("Could not confirm the disconnection. Please try again.");
+-  return { ok: true, providerId: provider.id, status: "disconnected" };
++  if (stopped.error) throw Error("Could not stop this connection. Please try again.");
++  try {
++    const runs = await admin.from("provider_sync_runs").select("deck_task_run_id").eq("provider_id", provider.id).eq("user_id", input.userId)
++      .in("status", ["queued", "running", "requires_user_action"]).limit(21);
++    if (runs.error || (runs.data?.length ?? 0) > 20) throw Error("Connection cleanup needs review.");
++    const telecom = await admin.from("deck_telecom_imports").update({ status: "canceled", message: "Import stopped. Your saved bills are still available.", lease_token: null, lease_until: null, finished_at: new Date().toISOString() })
++      .eq("provider_id", provider.id).eq("user_id", input.userId).in("status", ["preparing", "queued", "running", "verification"]);
++    if (telecom.error) throw Error("Connection cleanup unavailable.");
++    // Canceled rows retain the vendor reference across a lost response.
++    const recorded = await admin.from("deck_telecom_imports").select("task_run_id").eq("provider_id", provider.id).eq("user_id", input.userId).eq("status", "canceled").not("task_run_id", "is", null).order("created_at", { ascending: false }).limit(21);
++    if (recorded.error || (recorded.data?.length ?? 0) > 20) throw Error("Connection cleanup needs review.");
++    const ids = [...new Set([metadata.taskRunId, ...(runs.data ?? []).map(r => r.deck_task_run_id), ...(recorded.data ?? []).map(r => r.task_run_id)].filter((id): id is string => typeof id === "string"))];
++    const sessionIds = new Set([provider.deck_session_id, metadata.sessionId].filter((id): id is string => typeof id === "string" && Boolean(id)));
++    for (const id of ids) {
++      if (!/^trun_[a-zA-Z0-9_-]+$/.test(id)) throw Error("Connection cleanup needs review.");
++      const run = await deck.getTaskRun(id, false);
++      if (run.id !== id) throw Error("Connection cleanup needs review.");
++      if (!["completed", "failed", "canceled", "cancelled"].includes(run.status)) {
++        if (!run.credential_id) throw Error("Connection cleanup needs review.");
++        const owner = await deck.getCredential(run.credential_id);
++        if (owner.id !== run.credential_id || owner.external_id !== expected) throw Error("Connection cleanup needs review.");
++        const cancelled = await deck.cancelTaskRun(id, `rezlee-disconnect-run-${id}`);
++        if (cancelled.id !== id || !["completed", "failed", "canceled", "cancelled"].includes(cancelled.status)) throw Error("Connection cancellation is still pending.");
++      }
++      if (run.session_id) sessionIds.add(run.session_id);
++    }
++    for (const sessionId of sessionIds) await endOwnedDeckSession(deck, sessionId, expected, `rezlee-disconnect-${provider.id}`);
++    // Drain filtered first pages; this also recovers a successful credential
++    // deletion followed by a lost database response without accepting a 404.
++    let cleared = false;
++    for (let attempt = 0; attempt < 6; attempt++) {
++      const credentials = await deck.listCredentials(expected);
++      if (!Array.isArray(credentials.data) || credentials.data.some(c => c.external_id !== expected || !/^cred_[a-zA-Z0-9_-]+$/.test(c.id))) throw Error("Connection cleanup needs review.");
++      const credential = credentials.data.find(c => c.status !== "deleted");
++      if (!credential) { if (credentials.has_more) throw Error("Connection cleanup needs review."); cleared = true; break; }
++      await deck.deleteCredential(credential.id, `rezlee-disconnect-${provider.id}-${credential.id}`);
++    }
++    if (!cleared) throw Error("Connection cleanup is still pending.");
++    const disconnected = await input.supabase.from("providers").update({
++      deck_credential_id: null, deck_session_id: null, deck_connection_status: "disconnected",
++      deck_connection_metadata: { ...metadata, disconnectPending: false, credentialId: null, sessionId: null, taskRunId: null },
++      connection_status: "disconnected", health_status: "needs_attention", sync_status: "authentication_required",
++      requires_user_action: false, user_action_message: null, next_scheduled_sync_at: null,
++    }).eq("id", provider.id).eq("user_id", input.userId);
++    if (disconnected.error) throw Error("Could not save disconnect status.");
++    return { ok: true, providerId: provider.id, status: "disconnected" };
++  } catch {
++    throw Error("Bill importing is stopped, but provider access has not been confirmed as disconnected. Try again from this connection. Your saved bills remain.");
++  }
++}
++export async function disconnectDeckV2Provider(input: Parameters<typeof disconnectDeckV2ProviderImpl>[0]) {
++  return withAccountOperation(input.userId, () => disconnectDeckV2ProviderImpl(input));
+ }
+ 
+ async function submitDeckProviderInteractionImpl(input: {
+@@ -914,6 +940,7 @@
+   challengeId?: string;
+ }) {
+   const provider = await loadOwnedProvider(input.supabase, input.userId, input.providerId);
++  if (provider.connection_status === "disconnected" || providerMetadata(provider).disconnectPending === true) throw Error("This connection is stopped. Open its details to reconnect.");
+   const { data: run, error } = await input.supabase
+     .from("provider_sync_runs")
+     .select("id,deck_task_run_id,status,interaction,metadata,updated_at")
+@@ -1461,6 +1488,10 @@
+   }
+ 
+   const { provider, syncRun } = context;
++  if (provider.connection_status === "disconnected" || providerMetadata(provider).disconnectPending === true) {
++    await updateEventRow(supabase, event.id, { status: "ignored", processed_at: new Date().toISOString(), last_error: "Ignored event for a disconnected provider." });
++    return;
++  }
+   const deck = createDeckV2Client();
+   const currentTaskRunId = providerMetadata(provider).taskRunId;
+ 
+@@ -1542,7 +1573,7 @@
+           sync_failure_reason: "interaction_unreadable",
+           requires_user_action: false,
+           user_action_message: message,
+-        }).eq("id", provider.id);
++        }).eq("id", provider.id).neq("connection_status", "disconnected");
+ 
+         await updateEventRow(supabase, event.id, {
+           status: "processed",
+@@ -1570,7 +1601,7 @@
+           sync_status: "verifying",
+           requires_user_action: false,
+           user_action_message: null,
+-        }).eq("id", provider.id);
++        }).eq("id", provider.id).neq("connection_status", "disconnected");
+ 
+         await resolveVerificationNotifications(supabase, provider);
+ 
+@@ -1617,7 +1648,7 @@
+         sync_failure_reason: null,
+         requires_user_action: true,
+         user_action_message: userMessage,
+-      }).eq("id", provider.id);
++      }).eq("id", provider.id).neq("connection_status", "disconnected");
+ 
+       await upsertVerificationNotification({
+         supabase,
+@@ -1665,7 +1696,7 @@
+         sync_status: "syncing",
+         requires_user_action: false,
+         user_action_message: null,
+-      }).eq("id", provider.id);
++      }).eq("id", provider.id).neq("connection_status", "disconnected");
+ 
+       await resolveVerificationNotifications(supabase, provider);
+ 
+@@ -1705,7 +1736,7 @@
+         sync_failure_reason: null,
+         requires_user_action: true,
+         user_action_message: userMessage,
+-      }).eq("id", provider.id);
++      }).eq("id", provider.id).neq("connection_status", "disconnected");
+ 
+       await upsertVerificationNotification({
+         supabase,
+@@ -1767,7 +1798,7 @@
+           user_action_message: null,
+           last_successful_sync_at: updatedAt,
+           next_scheduled_sync_at: nextSyncAt(provider.sync_frequency_days),
+-        }).eq("id", provider.id);
++        }).eq("id", provider.id).neq("connection_status", "disconnected");
+ 
+         await resolveVerificationNotifications(supabase, provider);
+ 
+@@ -1856,7 +1887,7 @@
+         last_successful_sync_at: new Date().toISOString(),
+         next_expected_bill_date: nextDue,
+         next_scheduled_sync_at: nextSyncAt(provider.sync_frequency_days),
+-      }).eq("id", provider.id);
++      }).eq("id", provider.id).neq("connection_status", "disconnected");
+ 
+       await resolveVerificationNotifications(supabase, provider);
+ 
+@@ -1946,7 +1977,7 @@
+         },
+         ...state,
+         sync_failure_reason: code ?? "deck_task_failed",
+-      }).eq("id", provider.id);
++      }).eq("id", provider.id).neq("connection_status", "disconnected");
+ 
+       await supabase.from("sync_events").insert({
+         user_id: provider.user_id,
+--- before/tests/account-deletion-recovery.test.ts
++++ after/tests/account-deletion-recovery.test.ts
+@@ -0,0 +1,66 @@
++import test from "node:test";
++import assert from "node:assert/strict";
++import { createDeletionReceiptStore, type DeletionReceipt } from "../apps/mobile/src/lib/account-deletion-receipt";
++import { createPasswordConfirmation } from "../apps/mobile/src/auth/confirm-password-core";
++const a = "11111111-1111-4111-8111-111111111111", b = "22222222-2222-4222-8222-222222222222";
++const request = "33333333-3333-4333-8333-333333333333";
++function fixture() {
++  const saved = new Map<string, string>(); let generated = 0;
++  const storage = { getItemAsync: async (key: string) => saved.get(key) ?? null, setItemAsync: async (key: string, value: string) => { saved.set(key, value); }, deleteItemAsync: async (key: string) => { saved.delete(key); } };
++  const generate = async (userId: string, requestId = request): Promise<DeletionReceipt> => { generated++; return { userId, requestId, receiptToken: (userId === a ? "a" : "b").repeat(64) }; };
++  return { saved, storage, generate, store: createDeletionReceiptStore(storage, generate), generated: () => generated };
++}
++test("interrupted deletion keeps one durable receipt on restart and concurrent retry", async () => {
++  const f = fixture(), results = await Promise.all([f.store.prepare(a), f.store.prepare(a)]);
++  assert.deepEqual(results[0], results[1]); assert.equal(f.generated(), 1);
++  const restart = createDeletionReceiptStore(f.storage, f.generate);
++  assert.deepEqual(await restart.read(a), results[0]); assert.deepEqual(await restart.read(), results[0]);
++});
++test("two accounts keep independent deletion receipts; finishing one preserves the other", async () => {
++  const f = fixture(), first = await f.store.prepare(a), second = await f.store.prepare(b);
++  assert.deepEqual(await f.store.read(a), first); assert.deepEqual(await f.store.read(b), second);
++  await f.store.clear(a, first.requestId);
++  assert.equal(await f.store.read(a), null); assert.deepEqual(await f.store.read(), second);
++});
++test("legacy deletion receipts resume and migrate without rotating the capability", async () => {
++  const f = fixture(), legacy = { userId: a, requestId: request, receiptToken: "c".repeat(64) };
++  f.saved.set("rezlee.account-deletion.v1", JSON.stringify(legacy));
++  assert.equal(await f.store.read(b), null); assert.deepEqual(await f.store.prepare(a), legacy); assert.equal(f.generated(), 0);
++  await f.store.prepare(b); await f.store.clear(a, request);
++  assert.equal(f.saved.has("rezlee.account-deletion.v1"), false); assert.equal((await f.store.read())?.userId, b);
++});
++test("failed durable write cannot return permission to submit deletion", async () => {
++  const f = fixture(); f.storage.setItemAsync = async () => { throw Error("secure storage locked"); };
++  await assert.rejects(f.store.prepare(a)); assert.equal(await f.store.read(a), null);
++});
++test("malformed receipt and a different completion request never erase recovery data", async () => {
++  const f = fixture(); await f.store.prepare(a);
++  await assert.rejects(f.store.clear(a, b)); assert.ok(await f.store.read(a));
++  f.saved.set("rezlee.account-deletion.v2." + a, "{broken");
++  await assert.rejects(f.store.read(a)); await assert.rejects(f.store.prepare(a));
++});
++test("a receipt stored under the wrong account never becomes valid", async () => {
++  const f = fixture(), other = await f.store.prepare(b);
++  f.saved.set("rezlee.account-deletion.v2." + a, JSON.stringify(other));
++  await assert.rejects(f.store.read(a)); await assert.rejects(f.store.prepare(a));
++});
++test("lost pointer write retains the same secret for a subsequent authenticated retry", async () => {
++  const f = fixture(), write = f.storage.setItemAsync; let fail = true;
++  f.storage.setItemAsync = async (key, value) => { if (fail && key.includes("latest")) throw Error("interrupted"); await write(key, value); };
++  await assert.rejects(f.store.prepare(a)); fail = false;
++  const result = await f.store.prepare(a); assert.equal(result.receiptToken, "a".repeat(64)); assert.equal(f.generated(), 1);
++});
++test("password confirmation uses exact account and ignores a late response after account switch", async () => {
++  let current: string | null = a, release!: (value: { userId: string; session: { access_token: string; refresh_token: string } }) => void; const applied: unknown[] = [];
++  const confirm = createPasswordConfirmation({ currentUser: async () => current, verify: async () => new Promise(resolve => { release = resolve; }), apply: async s => { applied.push(s); } });
++  const work = confirm(a, "a@example.invalid", "fixture");
++  while (!release) await new Promise(resolve => setTimeout(resolve, 0));
++  current = b; release({ userId: a, session: { access_token: "fixture", refresh_token: "fixture" } });
++  await assert.rejects(work); assert.deepEqual(applied, []);
++});
++test("wrong-account password result is rejected and failed confirmation can be retried", async () => {
++  let returned = b, applied = 0;
++  const confirm = createPasswordConfirmation({ currentUser: async () => a, verify: async () => ({ userId: returned, session: { access_token: "fixture", refresh_token: "fixture" } }), apply: async () => { applied++; } });
++  await assert.rejects(confirm(a, "a@example.invalid", "fixture")); assert.equal(applied, 0);
++  returned = a; await confirm(a, "a@example.invalid", "fixture"); assert.equal(applied, 1);
++});
+--- before/tests/deck-session-cleanup.test.ts
++++ after/tests/deck-session-cleanup.test.ts
+@@ -0,0 +1,51 @@
++import test from "node:test";
++import assert from "node:assert/strict";
++import { endOwnedDeckSession } from "../src/lib/account/deck-session-cleanup";
++import { DeletionProblem } from "../src/lib/account/deletion-policy";
++import type { DeckV2Session } from "../src/lib/deck/v2-client";
++function fixture() {
++  let state: DeckV2Session = { id: "sess_fixture", status: "idle", task_runs: [{ id: "trun_fixture", credential_id: "cred_fixture" }] };
++  let externalId = "user:provider"; const calls: string[] = [];
++  return {
++    client: {
++      getSession: async () => { calls.push("read"); return state; },
++      getCredential: async (id: string) => { calls.push("owner"); return { id, status: "verified", source_id: "source_fixture", external_id: externalId }; },
++      endSession: async (id: string, key: string) => { calls.push("end:" + key); return { ...state, id, status: "completed" }; },
++    }, calls, state: (next: DeckV2Session) => { state = next; }, owner: (next: string) => { externalId = next; },
++  };
++}
++test("persistent session closes only after every credential owner is checked", async () => {
++  const f = fixture(); await endOwnedDeckSession(f.client, "sess_fixture", "user:provider", "delete-job");
++  assert.deepEqual(f.calls, ["read", "owner", "end:delete-job-sess_fixture"]);
++});
++test("another account's session is never ended", async () => {
++  const f = fixture(); f.owner("other:provider");
++  await assert.rejects(endOwnedDeckSession(f.client, "sess_fixture", "user:provider", "job"), (e: unknown) => e instanceof DeletionProblem && !e.retryable);
++  assert.deepEqual(f.calls, ["read", "owner"]);
++});
++test("a completed session replay works after its credentials were already deleted", async () => {
++  const f = fixture(); f.state({ id: "sess_fixture", status: "completed", task_runs: [] });
++  await endOwnedDeckSession(f.client, "sess_fixture", "user:provider", "job");
++  assert.deepEqual(f.calls, ["read"]);
++});
++test("a session still closing requests bounded retry without repeatedly ending it", async () => {
++  const f = fixture(); f.state({ id: "sess_fixture", status: "completing", task_runs: [] });
++  await assert.rejects(endOwnedDeckSession(f.client, "sess_fixture", "user:provider", "job"), (e: unknown) => e instanceof DeletionProblem && e.retryable);
++  assert.deepEqual(f.calls, ["read"]);
++});
++test("unknown, mismatched or unowned session details require review, not inferred success", async () => {
++  for (const state of [
++    { id: "sess_other", status: "completed", task_runs: [] },
++    { id: "sess_fixture", status: "unknown", task_runs: [] },
++    { id: "sess_fixture", status: "idle", task_runs: [] },
++    { id: "sess_fixture", status: "running", task_runs: [{ id: "trun_fixture", credential_id: "" }] },
++  ]) {
++    const f = fixture(); f.state(state);
++    await assert.rejects(endOwnedDeckSession(f.client, "sess_fixture", "user:provider", "job"));
++    assert.equal(f.calls.some(c => c.startsWith("end:")), false);
++  }
++});
++test("an accepted end request without terminal state is not confirmed revocation", async () => {
++  const f = fixture(); f.client.endSession = async id => ({ id, status: "completing", task_runs: [] });
++  await assert.rejects(endOwnedDeckSession(f.client, "sess_fixture", "user:provider", "job"), (e: unknown) => e instanceof DeletionProblem && e.retryable);
++});
+--- before/docs/overnight-finish-2026-10-12.md
++++ after/docs/overnight-finish-2026-10-12.md
+@@ -0,0 +1,60 @@
++# Rezlee overnight finishing checkpoint — October 12, 2026
++
++**Consolidated staging candidate delivered for testing. Overall launch is not signed off.** Use [the morning checklist](morning-testing-2026-10-12.md); the operational/owner gates are in [launch operations](launch-operations-2026-10-12.md).
++
++## What changed
++
++- Account deletion receipts are durable per account, survive restarts and partial storage writes, and cannot be erased by another account's completion.
++- Password reconfirmation is isolated from the main session. Late responses, unmounts and account changes cannot submit deletion for the previous account. Completion clears the account's pending recovery/draft state.
++- Deck disconnect stops imports before vendor cleanup, verifies session/credential ownership, retains cleanup references on failure, offers Finish disconnecting, and blocks stale verification/reconnect work during cleanup. Existing bills remain.
++- Persistent Deck sessions are explicitly ended during deletion. Active task cancellation and credential deletion are scoped to the verified owner. Unknown ownership and ambiguous vendor results do not count as revocation.
++- Expected hosted-sign-in expiry waits preserve the deletion failure budget. Operations labels a future scheduled wait honestly rather than raising a false failure alarm.
++- A real staging check found eight-digit email OTPs. Sign-in and deletion now accept them; both native profiles, Expo and the backend have matching email-code flags.
++- Cloud deletion recovery runs every five minutes, using a purpose-specific expiring signature generated from the existing protected scheduler secret. The raw long-lived secret is not queued in HTTP headers.
++- Newer feature tables now inherit deletion read/write protections: quote reviews, cleaning routines, notification preferences, outcome/revision records, import/recovery receipts and related tables. A full-schema guard assertion catches future omissions.
++- Foreign-key unlink cleanup remains possible without allowing ordinary late customer writes. The final regression found bill-history recreation during original-file unlink; the added cleanup migration prevents that history write for a deleting account.
++- New iOS 25 and Android 19 builds contain the accumulated October 8–12 customer-facing work, including prior Home duplicate-key, auth recovery, branded communications and Hark-inspired connection introductions.
++
++## Verification
++
++| Layer | Result and limit |
++|---|---|
++| Regression suite | **951 passed, 0 failed** after final fixes. Includes full-schema migration replay, private ownership, bill originals/history and deletion guards. |
++| Static/build checks | Root and mobile TypeScript, scoped lint, production-mode staging build and iOS/Android native exports passed. Final operations-only change passed root types/lint and hosted build. |
++| Actual-screen rendering | **28** deletion/email-code and **8** provider-disconnect scenarios at 320/390 widths. Real components; device/auth/network boundaries mocked. |
++| Live deletion acceptance | **29** checks against deployed staging Auth/routes/RLS/storage with disposable accounts, including wrong-account denial, active-operation delay, durable retry, eight-digit OTP, original/history cleanup and preservation of another household. |
++| App-closed recovery | **5** checks: live cron/HTTP worker completed an accepted fixture without any app/status requests; identity, home and bytes removed; saved receipt still worked on return. |
++| Operations | **6** no-send checks: live bounded shared budget, actual PostgREST attention filter, fixture cleanup and anonymous denial for operations/worker/deletion. |
++| Existing journeys | Fresh **94** bill-outcome, **23** phone-invitation and **30** one-quote hosted checks passed. No paid model/provider calls. |
++| Native packaging | EAS archive inspected: 921 runtime files, zero environment/signing files. Both builds finished; Apple delivery verified separately below. |
++| Expo | Restarted on 8081. Actual iOS bundle contains the staging API and correct staging Supabase host; LAN exp://10.0.0.13:8081 at verification. |
++
++No manual customer test emails, SMS, push, model requests or paid provider retrievals were sent. Disposable accounts, uploads and deletion receipts were cleaned up. These layers do not establish physical phone behavior or live vendor revocation.
++
++## Deployment and build delivery
++
++- Staging alias: https://staging.rezlee.com
++- Final backend: https://nestify-5fhilaf3o-razakhan1195s-projects.vercel.app
++- Immediate rollback: https://nestify-gzvrtlzne-razakhan1195s-projects.vercel.app
++- Pre-overnight backend: https://nestify-o77apow4z-razakhan1195s-projects.vercel.app
++- Staging migrations 202610120002, 202610120003 and 202610120004 installed and verified.
++- Deletion and email-code gates ON. Welcome remains ON with unchanged cutoff **2026-10-12T03:18:56.180803+00:00**.
++- Shared AI request caps remain 200/day and 3,000/month. Utility recurring pulls and recurring Gmail discovery remain OFF. Existing customer-started import recovery is separate.
++- **iOS 0.1.0 (25)** — EAS c4446a78-3598-4bb3-a7bf-e9c42ff795c5, FINISHED. Submission 6a4f801c-b315-483e-b0a8-77c0369da70a FINISHED. Apple build c68ada9f-35bf-4d1f-b9b0-3bc2cfdc3e93 VALID / IN_BETA_TESTING for internal testers. External state READY_FOR_BETA_SUBMISSION; no public release.
++- **Android 0.1.0 (19)** — EAS 7ff86c76-6374-4809-9032-18f2fa962e02, FINISHED. [Download APK](https://expo.dev/artifacts/eas/bHT7BG7MlUEwir2zAZQTpZNiZiF7347QmYkix_1heS8.apk).
++- Expo Go is **8081**, not 8082. Email sign-in works there; native OAuth, OS links and notifications need the installed native build.
++
++## What still requires completion
++
++1. **Apple sign-in:** actual staging provider is disabled with empty Client IDs/OAuth-secret fields. Existing client source and App Store submission credentials do not configure Sign in with Apple. Developer-service setup, token-revocation lifecycle and real native/private-relay acceptance remain.
++2. **Physical acceptance:** email inbox/reset handoff, native OAuth, welcome/security mail, camera/HEIC, OS interruption, push and two-device household/invitation behavior. User has not yet supplied acceptance results.
++3. **Provider reliability:** real consented Green Button/Deck/Gmail reconnect, grant revocation and provider-specific login/MFA/import/freshness. 54 Ontario Green Button and 29 configured Deck testing entries are not 83 accepted providers. Rogers is paused; 639 entries show Coming soon.
++4. **Usefulness and broader scope:** customer acceptance of bills/outcomes, repair and one-quote review. Multiple-quote comparison and evidence-backed compatibility/repair-versus-replace are still unfinished, separate engineering increments.
++5. **Production readiness:** real backup/restore rehearsal, approved dollar budgets, alert/support ownership, production configuration, identity/privacy/OAuth/store approval and a production-pointing release candidate. See the concrete gates in launch-operations-2026-10-12.md.
++6. **Deliberately later:** native sharing, voice, weather/AQHI, perks and broader benchmarks.
++
++## Evidence and preservation
++
++Base source checkpoint **ef008c0**. Scoped manifest, before/after ZIPs, diff, deployment/build records and hosted results are under **docs/checkpoints/overnight-finish-20261012**. Rendered evidence is under **docs/qa/deletion-recovery-20261012** and **docs/qa/provider-disconnect-20261012**.
++
++The inherited dirty source is preserved. No blanket reset, stash, source commit or production release. Database guards are additive; backend rollback is not a data restore. The exact source bundle is recoverable from the scoped after archive, and the previous version of each edited file is retained separately.
+--- before/src/lib/deck/hosted-auth.ts
++++ after/src/lib/deck/hosted-auth.ts
+@@ -47,6 +47,7 @@
+       if ((p.data?.length ?? 0) > 1) throw Error("Open the account you want to reconnect from Providers.");
+       provider = p.data?.[0] ?? null;
+     }
++    if (provider?.deck_connection_metadata && (provider.deck_connection_metadata as Record<string, unknown>).disconnectPending === true) throw Error("Finish disconnecting this provider before connecting again.");
+     const existingDeck = Boolean(provider && hasExistingDeckConnection(provider));
+     if (!existingDeck && !allowsNewDeckProvider(registryId)) throw new DeckCatalogueError(newDeckConnectionMessage(registryId));
+     if (!existingDeck && !providerCoversProvince(source.province_region, home.data.province)) throw Error("This connection is not available for your place.");
+@@ -129,6 +130,7 @@
+         checked(insert.error); p = insert;
+       }
+       const provider = p.data as ProviderRow;
++      if ((provider.deck_connection_metadata as Record<string, unknown> | null)?.disconnectPending === true) return;
+       if (provider.registry_provider_id !== intent.registry_id || provider.home_id !== intent.home_id || (provider.deck_credential_id !== intent.previous_credential_id && provider.deck_credential_id !== credential.id)) throw Error("Your provider connection changed. Open it to check its status.");
+       const state = await db.from("deck_hosted_auth_intents").select("status").eq("id", id).single(); checked(state.error); if (state.data?.status !== "pending") return;
+       await rememberDeckProvider(intent.user_id, provider.id);
+--- before/src/app/api/mobile/v1/providers/[id]/route.ts
++++ after/src/app/api/mobile/v1/providers/[id]/route.ts
+@@ -90,7 +90,8 @@
+       importProgress: process.env.REZLEE_DECK_TELECOM_ENABLED === "true" && typeof connectionMetadata.telecomImportId === "string" ? await telecomSummary(createAdminClient(),auth.user.id,provider.id) : null,
+       adapter: integration.data ? "ezgb" : "deck",
+       connectionPaused: !integration.data && isDeckProviderPaused(provider.registry_provider_id),
+-      reconnectAvailable: !isDeckProviderPaused(provider.registry_provider_id) && !integration.data && deckAdmission(registry).allowed && hostedClientCompatible(provider.registry_provider_id, new URL(request.url).searchParams.get("hostedAuthVersion")),
++      disconnectPending: connectionMetadata.disconnectPending === true,
++      reconnectAvailable: connectionMetadata.disconnectPending !== true && !isDeckProviderPaused(provider.registry_provider_id) && !integration.data && deckAdmission(registry).allowed && hostedClientCompatible(provider.registry_provider_id, new URL(request.url).searchParams.get("hostedAuthVersion")),
+       id: provider.id,
+       name: provider.display_name ?? provider.name,
+       registryProviderId: provider.registry_provider_id,
+--- before/apps/mobile/src/lib/provider-data.ts
++++ after/apps/mobile/src/lib/provider-data.ts
+@@ -23,6 +23,7 @@
+   importProgress?: {authenticated?:boolean;status:string;phase:string;saved:number;originals:number;completedWindows:number;totalWindows:number;sinceDate:string;untilDate:string;message:string;updatedAt:string;verificationExpiresAt:string|null} | null;
+   adapter?: "ezgb" | "deck";
+   reconnectAvailable?: boolean;
++  disconnectPending?: boolean;
+   connectionPaused?: boolean;
+   registryProviderId: string | null;
+   accountNumber: string | null;
+--- before/apps/mobile/app/provider/[id].tsx
++++ after/apps/mobile/app/provider/[id].tsx
+@@ -46,6 +46,7 @@
+ }
+ 
+ function isRetrieving(provider: ProviderConnectionItem) {
++  if (provider.connectionStatus === "disconnected" || provider.disconnectPending) return false;
+   if(provider.importProgress)return ["preparing","queued","running"].includes(provider.importProgress.status);
+   return (
+     ["syncing", "connecting"].includes(provider.connectionStatus) ||
+@@ -54,6 +55,8 @@
+ }
+ 
+ function statusLabel(provider: ProviderConnectionItem) {
++  if (provider.disconnectPending) return "Disconnect needs finishing";
++  if (provider.connectionStatus === "disconnected") return "Disconnected";
+   if (provider.importProgress?.phase === "authenticate" && isRetrieving(provider)) return "Signing in to your provider";
+   if (provider.importProgress?.phase === "history" && isRetrieving(provider)) return "Saving your bill history";
+   if (isVerificationExpired(provider)) return "Verification expired";
+@@ -75,6 +78,7 @@
+       ? "Couldn’t refresh account balance"
+       : "Couldn’t fetch latest bill";
+   }
++  if (provider.disconnectPending) return "Disconnect needs finishing";
+   if (provider.connectionStatus === "disconnected") return "Disconnected";
+   return "Needs attention";
+ }
+@@ -182,6 +186,8 @@
+ }
+ 
+ function statusMessage(provider: ProviderConnectionItem, phase: CustomerPhase) {
++  if (provider.disconnectPending) return "Bill importing is stopped. Finish disconnecting to confirm provider access has ended. Your saved bills remain.";
++  if (provider.connectionStatus === "disconnected") return "Your saved bills are still available. Reconnect when you want to retrieve another update.";
+   if (provider.importProgress && isRetrieving(provider) && (!phase || phase === "retrieving")) return provider.importProgress.authenticated ? "Sign-in is confirmed. Your available bills are being saved in the background." : "Stay here while your provider checks your sign-in. Complete any verification when prompted.";
+   if (phase === "starting") {
+     return "Opening a secure connection to your provider.";
+@@ -251,6 +257,7 @@
+       "The last update didn’t finish, but your connection is still saved. You can try again."
+     );
+   }
++  if (provider.disconnectPending) return "Bill importing is stopped. Finish disconnecting to confirm provider access has ended. Your saved bills remain.";
+   if (provider.connectionStatus === "disconnected") {
+     return "Your saved bills are still available. Reconnect when you want to retrieve another update.";
+   }
+@@ -453,16 +460,16 @@
+   const busy = customerPhase !== null;
+   const activeVerification =
+     !busy &&
+-    Boolean(provider?.requiresUserAction) &&
++    !provider?.disconnectPending && provider?.connectionStatus !== "disconnected" && Boolean(provider?.requiresUserAction) &&
+     fields.length > 0 &&
+     !verificationExpired;
+   const retryWithoutLogin =
+-    !busy &&
++    !provider?.disconnectPending && !busy &&
+     Boolean(provider) &&
+     !credentialReconnectNeeded &&
+     (verificationExpired || provider?.connectionStatus === "sync_failed" || ["failed","partial"].includes(provider?.importProgress?.status??""));
+   const reconnectNeeded =
+-    !busy &&
++    !provider?.disconnectPending && !busy &&
+     Boolean(provider) &&
+     !activeVerification &&
+     !retryWithoutLogin &&
+@@ -636,7 +643,7 @@
+     if (!provider) return;
+     Alert.alert(
+       "Disconnect provider?",
+-      "Your existing bills stay in Rezlee, but automatic updates will stop.",
++      "Stop bill importing and disconnect provider access. Your saved bills stay in Rezlee. This does not cancel your service or change payments.",
+       [
+         { text: "Cancel", style: "cancel" },
+         {
+@@ -649,6 +656,7 @@
+               await disconnectProviderRequest(provider.id);
+               await load();
+             } catch (disconnectError) {
++              await load();
+               setError(
+                 disconnectError instanceof ApiError
+                   ? disconnectError.message
+@@ -713,7 +721,7 @@
+                 </View>
+               </View>
+             </View>
+-            {provider.importProgress ? <TelecomImportProgress progress={provider.importProgress} onLeave={()=>router.replace("/(tabs)/bills")} onViewBill={provider.latestBill ? ()=>router.push(`/bill/${provider.latestBill!.id}`) : undefined}/> : <Surface
++            {provider.importProgress && !provider.disconnectPending && provider.connectionStatus !== "disconnected" ? <TelecomImportProgress progress={provider.importProgress} onLeave={()=>router.replace("/(tabs)/bills")} onViewBill={provider.latestBill ? ()=>router.push(`/bill/${provider.latestBill!.id}`) : undefined}/> : <Surface
+               tone={provider.requiresUserAction || busy ? "accent" : "raised"}
+               style={{ gap: spacing.sm }}
+             >
+@@ -1122,7 +1130,7 @@
+               </Text>
+             </Surface>
+ 
+-            {provider.connectionStatus !== "disconnected" ? (
++            {provider.disconnectPending || provider.connectionStatus !== "disconnected" ? (
+               <Pressable
+                 accessibilityRole="button"
+                 onPress={disconnect}
+@@ -1130,7 +1138,7 @@
+                 style={{ minHeight: 44, alignItems: "center", justifyContent: "center" }}
+               >
+                 <Text style={{ fontSize: 14, fontWeight: "600", color: colors.criticalForeground }}>
+-                  Disconnect provider
++                  {provider.disconnectPending ? "Finish disconnecting" : "Disconnect provider"}
+                 </Text>
+               </Pressable>
+             ) : null}
+--- before/apps/mobile/app/provider/deck.tsx
++++ after/apps/mobile/app/provider/deck.tsx
+@@ -163,7 +163,7 @@
+   const hosted = selectedCatalog?.hostedAuth === true;
+   const isReconnect = Boolean(reconnectProviderId);
+   const canConnect = Boolean(
+-    !loadingCatalog && !loadingExisting && (selectedCatalog?.connectionAvailable===true || Boolean(reconnectProviderId && reconnectAvailable)) &&
++    !loadingCatalog && !loadingExisting && (isReconnect ? reconnectAvailable : selectedCatalog?.connectionAvailable===true) &&
+       category &&
+       providerName.trim() &&
+       websiteUrl.trim() &&
+--- before/tests/provider-disconnect-recovery.test.ts
++++ after/tests/provider-disconnect-recovery.test.ts
+@@ -0,0 +1,102 @@
++import test from "node:test";
++import assert from "node:assert/strict";
++import { createClient } from "@supabase/supabase-js";
++async function disconnectDeckV2Provider(input: Parameters<typeof import("../src/lib/sync/deck-v2-runtime").disconnectDeckV2Provider>[0]) { return (await import("../src/lib/sync/deck-v2-runtime")).disconnectDeckV2Provider(input); }
++async function queueDeckProviderSync(input: Parameters<typeof import("../src/lib/sync/deck-v2-runtime").queueDeckProviderSync>[0]) { return (await import("../src/lib/sync/deck-v2-runtime")).queueDeckProviderSync(input); }
++async function submitDeckProviderInteraction(input: Parameters<typeof import("../src/lib/sync/deck-v2-runtime").submitDeckProviderInteraction>[0]) { return (await import("../src/lib/sync/deck-v2-runtime")).submitDeckProviderInteraction(input); }
++
++type FixtureProvider = { id: string; user_id: string; connection_status: string; deck_credential_id: string | null; deck_session_id: string | null; deck_connection_metadata: { sessionId: string | null; taskRunId: string | null; disconnectPending?: boolean }; requires_user_action?: boolean };
++
++async function fixture(work: (f: {
++ provider: FixtureProvider; requests: string[]; input: Parameters<typeof disconnectDeckV2Provider>[0];
++ fail: (kind: string) => void; activeRun: () => void;
++}) => Promise<void>) {
++ const env = { NEXT_PUBLIC_SUPABASE_URL: "https://db.example.invalid", NEXT_PUBLIC_SUPABASE_ANON_KEY: "fixture-anon", SUPABASE_SECRET_KEY: "fixture-admin", DECK_API_KEY: "fixture-deck", DECK_BASE_URL: "https://deck.example.invalid/v2", ACCOUNT_DELETION_ENABLED: "false" };
++ const oldEnv = Object.fromEntries(Object.keys(env).map(k => [k, process.env[k]])), oldFetch = globalThis.fetch;
++ Object.assign(process.env, env);
++ const userId = "00000000-0000-4000-8000-000000000001", providerId = "00000000-0000-4000-8000-000000000002";
++ const provider: FixtureProvider = { id: providerId, user_id: userId, connection_status: "connected", deck_credential_id: "cred_fixture", deck_session_id: "sess_fixture", deck_connection_metadata: { sessionId: "sess_fixture", taskRunId: null } };
++ let failure = "", deleted = false, ended = false, run = false;
++ const requests: string[] = [];
++ const json = (v: unknown, status = 200) => new Response(JSON.stringify(v), { status, headers: { "Content-Type": "application/json" } });
++ globalThis.fetch = async (resource, init) => {
++  const request = new Request(resource, init), u = new URL(request.url), m = request.method;
++  requests.push(m + " " + u.pathname);
++  if (u.hostname === "db.example.invalid") {
++   if (u.pathname === "/rest/v1/providers") {
++    assert.equal(u.searchParams.get("user_id"), "eq." + userId);
++    if (m === "GET") return json(provider);
++    assert.equal(m, "PATCH");
++    const patch = await request.json();
++    if (failure === "save" && patch.deck_credential_id === null) { failure = ""; return json({ message: "write unavailable" }, 503); }
++    Object.assign(provider, patch); return new Response(null, { status: 204 });
++   }
++   if (u.pathname === "/rest/v1/provider_sync_runs") return json(run ? [{ deck_task_run_id: "trun_fixture" }] : []);
++   if (u.pathname === "/rest/v1/deck_telecom_imports") return m === "GET" ? json([]) : new Response(null, { status: 204 });
++  }
++  if (u.hostname === "deck.example.invalid") {
++   assert.equal(provider.connection_status, "disconnected", "importing fenced before vendor calls");
++   assert.equal(provider.deck_connection_metadata.disconnectPending, true);
++   const credential = { id: "cred_fixture", external_id: failure === "foreign" ? "another:account" : userId + ":" + providerId, status: "verified" };
++   if (u.pathname === "/v2/task-runs/trun_fixture") return json({ id: "trun_fixture", status: "running", credential_id: "cred_fixture", session_id: "sess_fixture" });
++   if (u.pathname === "/v2/task-runs/trun_fixture/cancel") return json({ id: "trun_fixture", status: failure === "cancel" ? "running" : "canceled" });
++   if (u.pathname === "/v2/sessions/sess_fixture") return json({ id: "sess_fixture", status: ended ? "completed" : "idle", task_runs: [{ credential_id: "cred_fixture" }] });
++   if (u.pathname === "/v2/sessions/sess_fixture/end") { ended = true; return json({ id: "sess_fixture", status: "completed" }); }
++   if (u.pathname === "/v2/credentials/cred_fixture") {
++    if (m === "GET") return json(credential);
++    assert.equal(m, "DELETE");
++    if (failure === "vendor") { failure = ""; return json({ message: "temporarily unavailable" }, 503); }
++    deleted = true; return new Response(null, { status: 204 });
++   }
++   if (u.pathname === "/v2/credentials") {
++    assert.equal(u.searchParams.get("external_id"), userId + ":" + providerId);
++    return json({ data: deleted ? [] : [credential], has_more: false });
++   }
++  }
++  throw Error("Unexpected request: " + m + " " + u.href);
++ };
++ try {
++  const supabase = createClient(env.NEXT_PUBLIC_SUPABASE_URL, env.NEXT_PUBLIC_SUPABASE_ANON_KEY, { auth: { persistSession: false, autoRefreshToken: false } });
++  await work({ provider, requests, input: { supabase, userId, providerId }, fail: value => { failure = value; }, activeRun: () => { run = true; } });
++ } finally {
++  globalThis.fetch = oldFetch;
++  for (const [k, v] of Object.entries(oldEnv)) if (v === undefined) delete process.env[k]; else process.env[k] = v;
++ }
++}
++test("disconnect ends the owned session, drains credentials and preserves saved records", async () => fixture(async f => {
++ f.activeRun(); await disconnectDeckV2Provider(f.input);
++ assert.equal(f.provider.deck_connection_metadata.disconnectPending, false);
++ assert.equal(f.provider.deck_credential_id, null); assert.equal(f.provider.requires_user_action, false);
++ assert.ok(f.requests.includes("POST /v2/sessions/sess_fixture/end"));
++ assert.ok(f.requests.includes("POST /v2/task-runs/trun_fixture/cancel"));
++ assert.ok(f.requests.every(r => !/bills|documents|\/task-runs$/.test(r)));
++ const before = f.requests.length; await disconnectDeckV2Provider(f.input);
++ assert.deepEqual(f.requests.slice(before), ["GET /rest/v1/providers"]);
++}));
++test("vendor failure keeps cleanup references and can resume after reopening", async () => fixture(async f => {
++ f.fail("vendor"); await assert.rejects(disconnectDeckV2Provider(f.input), /not been confirmed/);
++ assert.equal(f.provider.deck_connection_metadata.disconnectPending, true);
++ assert.equal(f.provider.deck_credential_id, "cred_fixture");
++ await assert.rejects(queueDeckProviderSync(f.input), /Finish disconnecting/);
++ await assert.rejects(submitDeckProviderInteraction({ ...f.input, values: { code: "123456" } }), /connection is stopped/);
++ await disconnectDeckV2Provider(f.input);
++ assert.equal(f.provider.deck_connection_metadata.disconnectPending, false);
++ assert.equal(f.requests.filter(r => r === "POST /v2/sessions/sess_fixture/end").length, 1);
++}));
++test("a lost final database save retries without deleting an unrelated credential or claiming success", async () => fixture(async f => {
++ f.fail("save"); await assert.rejects(disconnectDeckV2Provider(f.input), /not been confirmed/);
++ assert.equal(f.provider.deck_connection_metadata.disconnectPending, true);
++ await disconnectDeckV2Provider(f.input);
++ assert.equal(f.provider.deck_connection_metadata.disconnectPending, false);
++ assert.equal(f.requests.filter(r => r === "DELETE /v2/credentials/cred_fixture").length, 1);
++}));
++test("a session belonging to another account is never ended or deleted", async () => fixture(async f => {
++ f.fail("foreign"); await assert.rejects(disconnectDeckV2Provider(f.input), /not been confirmed/);
++ assert.equal(f.provider.deck_connection_metadata.disconnectPending, true);
++ assert.ok(!f.requests.some(r => r.startsWith("DELETE ") || r.endsWith("/end")));
++}));
++test("accepted cancellation remains pending until the vendor confirms a terminal state", async () => fixture(async f => {
++ f.activeRun(); f.fail("cancel"); await assert.rejects(disconnectDeckV2Provider(f.input), /not been confirmed/);
++ assert.equal(f.provider.deck_connection_metadata.disconnectPending, true);
++ assert.ok(!f.requests.some(r => r.startsWith("DELETE ") || r.endsWith("/end")));
++}));
+--- before/src/lib/account/deletion-policy.ts
++++ after/src/lib/account/deletion-policy.ts
+@@ -11,6 +11,9 @@
+   constructor(readonly code: "provider_review" | "provider_unavailable" | "storage_unavailable" | "account_unavailable", readonly retryable = true) {
+     super(code);
+   }
++}
++export class DeletionWait extends DeletionProblem {
++  constructor(readonly until: number) { super("provider_unavailable"); }
+ }
+ export function receiptHash(value: string) { return createHash("sha256").update(value).digest("hex"); }
+ export function validReceipt(value: unknown): value is string { return typeof value === "string" && /^[a-f0-9]{64}$/.test(value); }
+@@ -27,6 +30,9 @@
+   } catch { return false; }
+ }
+ export function deletionFailure(error: unknown, attempts: number, now = Date.now()) {
++  if (error instanceof DeletionWait && Number.isFinite(error.until) && error.until > now) {
++    return { status: "retry" as const, error_code: null, attempts: Math.max(0, attempts - 1), next_attempt_at: new Date(Math.min(error.until, now + 3600_000)).toISOString() };
++  }
+   const known = error instanceof DeletionProblem ? error : new DeletionProblem("account_unavailable");
+   const stop = !known.retryable || attempts >= 5;
+   return { status: stop ? "needs_attention" as const : "retry" as const, error_code: known.code,
+--- before/tests/deletion-wait.test.ts
++++ after/tests/deletion-wait.test.ts
+@@ -0,0 +1,14 @@
++import test from "node:test";
++import assert from "node:assert/strict";
++import { deletionFailure, DeletionWait, DeletionProblem } from "../src/lib/account/deletion-policy";
++test("a still-valid hosted sign-in token waits for expiry without exhausting failure retries", () => {
++ const now = Date.UTC(2026, 9, 12), until = now + 36 * 60_000;
++ const result = deletionFailure(new DeletionWait(until), 5, now);
++ assert.equal(result.status, "retry"); assert.equal(result.attempts, 4);
++ assert.equal(result.next_attempt_at, new Date(until).toISOString()); assert.equal(result.error_code, null);
++});
++test("a corrupt wait deadline never disables bounded failure handling", () => {
++ assert.equal(deletionFailure(new DeletionWait(NaN), 5, 1000).status, "needs_attention");
++ assert.equal(deletionFailure(new DeletionWait(0), 5, 1000).status, "needs_attention");
++ assert.equal(deletionFailure(new DeletionProblem("provider_unavailable"), 5, 1000).status, "needs_attention");
++});
+--- before/scripts/qa/render-deletion-recovery.cjs
++++ after/scripts/qa/render-deletion-recovery.cjs
+@@ -0,0 +1,74 @@
++const fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict'),esbuild=require('esbuild'),{chromium}=require('/tmp/rezlee-bill-qa-tools-20261008/node_modules/playwright-core');
++const root=process.cwd(),deps='/tmp/rezlee-bill-qa-tools-20261008/node_modules',out=root+'/docs/qa/deletion-recovery-20261012';
++const stubs={
++'expo-router':'import React from "react";const router={replace:d=>window.__routes.push(d),push:d=>window.__routes.push(d),canGoBack:()=>false};export const useRouter=()=>router;export const useFocusEffect=fn=>React.useEffect(fn,[fn]);export const Stack={Screen:()=>null};',
++'expo-router/react-navigation':'export const usePreventRemove=()=>{};',
++'react-native-safe-area-context':'export {View as SafeAreaView} from "react-native";',
++'expo-haptics':'export const ImpactFeedbackStyle={Light:"Light"};export const impactAsync=async()=>{};',
++'expo-secure-store':'export const deleteItemAsync=async()=>{};',
++'@expo/vector-icons':'export const Feather=()=>null;',
++'@/auth/AuthProvider':'import React from "react";export function useAuth(){const[u,set]=React.useState(window.__user);React.useEffect(()=>{const f=()=>set(window.__user);window.addEventListener("qa-account",f);return()=>window.removeEventListener("qa-account",f)},[]);return React.useMemo(()=>({session:u?{user:{id:u,email:u+"@example.invalid",app_metadata:{provider:window.__scenario==="social"?"google":"email"}}}:null}),[u]);}',
++'@/components/ScreenNavigation':'import React from "react";import{Text}from"react-native";export const ScreenNavigation=({title})=><Text>{title}</Text>;',
++'@/auth/confirm-password':'export async function confirmAccountPassword(){window.__verifications++;if(window.__scenario==="wrong-password")throw Error("wrong");if(window.__scenario==="account-switch")await new Promise(r=>window.__resolvePassword=r);}',
++'@/auth/email-code':`import{createEmailCodeFlow}from"${root}/apps/mobile/src/auth/email-code-core";export const emailCodeReady=["otp","email-login"].includes(window.__scenario);export const emailCode=createEmailCodeFlow({send:async()=>{},currentUser:async()=>window.__user,verify:async(_,code)=>{if(code!=="87654321")throw Error("Invalid");return{userId:window.__user||"00000000-0000-4000-8000-000000000001",session:{access_token:"fixture",refresh_token:"fixture"}}},apply:async()=>{window.__verifiedCode=true;}});`,
++'@/lib/supabase':'export const supabase={auth:{getSession:async()=>({data:{session:window.__user?{user:{id:window.__user}}:null}}),signOut:async()=>{window.__signedOut++;window.__user=null;return{error:null}}}};',
++'@/lib/api':'export class ApiError extends Error{constructor(message,status){super(message);this.status=status}};',
++'@/lib/account-deletion':`import{ApiError}from"@/lib/api";import{createDeletionReceiptStore}from"${root}/apps/mobile/src/lib/account-deletion-receipt";
++const store=createDeletionReceiptStore({getItemAsync:async k=>{if(window.__scenario==="corrupt")return "{broken";return sessionStorage.getItem(k)},setItemAsync:async(k,v)=>{if(window.__scenario==="storage-failure")throw Error("storage");sessionStorage.setItem(k,v)},deleteItemAsync:async k=>sessionStorage.removeItem(k)},async(userId,requestId)=>({userId,requestId:requestId||"11111111-1111-4111-8111-111111111111",receiptToken:"a".repeat(64)}));
++export const readDeletionReceipt=(u)=>store.read(u);export const prepareDeletionReceipt=(u,r)=>store.prepare(u,r);export const clearDeletionReceipt=(u,r)=>store.clear(u,r);
++export const deletionPreview=async()=>({enabled:window.__scenario!=="disabled",emailCodeAvailable:window.__scenario==="otp",impact:{homes:1,sharedMemberships:1,joinedHomes:1}});
++export const deletionStatus=async r=>{if(window.__scenario==="offline")throw Error("network");const status=sessionStorage.getItem("qa-status");if(!status)throw new ApiError("missing",404);return{requestId:r.requestId,status,phase:"connections"};};
++export const submitDeletion=async r=>{window.__submits.push(r);if(window.__scenario==="lost-response")throw Error("network");sessionStorage.setItem("qa-status","queued");return{requestId:r.requestId,status:"queued",phase:"connections"};};
++window.__prepare=prepareDeletionReceipt;`,
++'@/lib/inventory-create':'export const inventoryCreateStore={load:async()=>null,forget:async()=>{}};',
++'@/lib/statement-batch':'export const statementBatches={removeAccount:async()=>{}};',
++'@/lib/receipt-batch':'export const receiptBatches={removeAccount:async()=>{}};',
++'@/lib/vault-pending':'export const vaultPending={clear:async()=>{}};',
++'@/lib/statement-draft':'export const statementDrafts={clear:async()=>{}};',
++'@/lib/onboarding-draft':'export const setupDrafts={clear:async()=>{}};'
++};
++(async()=>{
++fs.mkdirSync(out,{recursive:true});
++await esbuild.build({stdin:{contents:`import React from"react";import{createRoot}from"react-dom/client";import{Alert}from"react-native";import Screen from"${root}/apps/mobile/app/delete-account.tsx";import EmailCode from"${root}/apps/mobile/app/(auth)/email-code.tsx";Alert.alert=(title,message,buttons)=>{window.__dialog={title,message};window.__confirm=()=>buttons.find(b=>b.style==="destructive").onPress()};createRoot(document.getElementById("root")).render(window.__scenario==="email-login"?<EmailCode/>:<Screen/>);`,loader:"tsx",resolveDir:root},outfile:out+'/screen.js',bundle:true,platform:'browser',format:'iife',jsx:'automatic',loader:{'.png':'dataurl'},alias:{react:deps+'/react','react-dom':deps+'/react-dom','react-native':deps+'/react-native-web'},define:{global:'globalThis','process.env.NODE_ENV':'"development"'},plugins:[{name:'boundaries',setup(b){b.onResolve({filter:/.*/},a=>{if(stubs[a.path])return{path:a.path,namespace:'stub'};if(a.path.startsWith('@/')){const p=root+'/apps/mobile/src/'+a.path.slice(2);for(const ext of ['.ts','.tsx','/index.ts'])if(fs.existsSync(p+ext))return{path:p+ext};}});b.onLoad({filter:/.*/,namespace:'stub'},a=>({contents:stubs[a.path],loader:'tsx',resolveDir:root}));}}]});
++const server=require('node:http').createServer((req,res)=>{res.setHeader('Content-Type',req.url==='/screen.js'?'application/javascript':'text/html');res.end(req.url==='/screen.js'?fs.readFileSync(out+'/screen.js'):'<!doctype html><meta name="viewport" content="width=device-width,initial-scale=1"><style>body{margin:0;font-family:system-ui}*{box-sizing:border-box}#root{height:100vh;display:flex;flex-direction:column}</style><div id="root"></div><script src="/screen.js"></script>')});
++await new Promise(r=>server.listen(0,'127.0.0.1',r));const origin='http://127.0.0.1:'+server.address().port,browser=await chromium.launch({headless:true,executablePath:'/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'}),checks=[];
++try{
++for(const width of [320,390])for(const scenario of ['owner','disabled','corrupt','wrong-password','storage-failure','lost-response','account-switch','pending','completed','needs_attention','offline','social','otp','email-login']){
++const page=await browser.newPage({viewport:{width,height:844}}),errors=[];page.setDefaultTimeout(5000);page.on('pageerror',e=>errors.push(e.message));
++await page.addInitScript(({scenario})=>{window.__scenario=scenario;window.__user=scenario==="email-login"?null:"00000000-0000-4000-8000-000000000001";window.__routes=[];window.__submits=[];window.__verifications=0;window.__signedOut=0;
++if(['pending','completed','needs_attention','offline'].includes(scenario)){const r={userId:window.__user,requestId:"11111111-1111-4111-8111-111111111111",receiptToken:"a".repeat(64)};sessionStorage.setItem("rezlee.account-deletion.v2."+r.userId,JSON.stringify(r));sessionStorage.setItem("rezlee.account-deletion.latest.v2",r.userId);sessionStorage.setItem("qa-status",scenario==="pending"||scenario==="offline"?"queued":scenario);}}, {scenario});
++await page.goto(origin);
++if(scenario==='email-login'){
++await page.getByLabel('Account email',{exact:true}).fill('customer@example.invalid');await page.getByRole('button',{name:'Send code',exact:true}).click();
++await page.getByLabel('Email code',{exact:true}).fill('87654321');await page.getByRole('button',{name:'Confirm code and sign in',exact:true}).click();await page.waitForFunction(()=>window.__routes.includes('/'));assert.equal(await page.evaluate(()=>window.__verifiedCode),true);
++}else if(scenario==='otp'){
++await page.getByRole('button',{name:'Use an email code instead',exact:true}).click();await page.getByRole('button',{name:'Send verification code',exact:true}).click();
++await page.getByLabel('Email verification code',{exact:true}).fill('87654321');await page.getByLabel('Type DELETE to confirm',{exact:true}).fill('DELETE');await page.getByRole('button',{name:'Permanently delete account',exact:true}).click();await page.evaluate(()=>window.__confirm());await page.getByText('Your deletion is in progress',{exact:true}).waitFor();assert.equal(await page.evaluate(()=>window.__verifiedCode),true);
++}else if(scenario==='disabled')await page.getByText('Deletion is not available in this build yet.',{exact:false}).waitFor();
++else if(['corrupt','offline'].includes(scenario))await page.getByText('Your deletion has not been confirmed as complete.',{exact:false}).waitFor();
++else if(scenario==='pending')await page.getByText('Your deletion is in progress',{exact:true}).waitFor();
++else if(scenario==='needs_attention')await page.getByText('Deletion needs attention',{exact:true}).waitFor();
++else if(scenario==='completed'){await page.getByText('Your account is deleted',{exact:true}).waitFor();await page.getByRole('button',{name:'Return to sign in',exact:true}).click();await page.waitForFunction(()=>window.__routes.includes('/(auth)/login'));assert.equal(await page.evaluate(()=>window.__signedOut),1);}
++else if(scenario==='social'){await page.getByText('Email verification isn’t available in this build yet.',{exact:false}).waitFor();assert.equal(await page.getByRole('button',{name:'Permanently delete account',exact:true}).isEnabled(),false);}
++else{
++await page.getByLabel('Current password',{exact:true}).fill('FixturePassword!');
++await page.getByLabel('Type DELETE to confirm',{exact:true}).fill('DELETE');
++await page.getByRole('button',{name:'Permanently delete account',exact:true}).click();
++assert.equal(await page.evaluate(()=>window.__submits.length),0,'confirmation does not submit before explicit destructive choice');
++await page.evaluate(()=>window.__confirm());
++if(scenario==='wrong-password'){await page.getByText('No new deletion request was submitted.',{exact:false}).waitFor();assert.equal(await page.evaluate(()=>window.__submits.length),0);}
++else if(scenario==='storage-failure'){await page.getByText('We couldn’t confirm your request.',{exact:false}).waitFor();assert.equal(await page.evaluate(()=>window.__submits.length),0);}
++else if(scenario==='account-switch'){await page.waitForFunction(()=>Boolean(window.__resolvePassword));await page.evaluate(()=>{window.__user="00000000-0000-4000-8000-000000000002";window.dispatchEvent(new Event("qa-account"));});await page.waitForFunction(()=>{const e=document.querySelector('input[aria-label="Current password"]');return e&&e.value===""&&!e.readOnly&&!e.disabled});await page.evaluate(()=>window.__resolvePassword());assert.equal(await page.evaluate(()=>window.__submits.length),0);assert.equal(await page.getByLabel('Current password',{exact:true}).inputValue(),'');}
++else if(scenario==='lost-response'){
++await page.getByText('We couldn’t confirm your request.',{exact:false}).waitFor();
++const first=await page.evaluate(()=>window.__submits[0]);await page.reload();
++await page.getByText('The previous request hasn’t been confirmed.',{exact:false}).waitFor();
++await page.getByLabel('Current password',{exact:true}).fill('FixturePassword!');await page.getByLabel('Type DELETE to confirm',{exact:true}).fill('DELETE');await page.getByRole('button',{name:'Permanently delete account',exact:true}).click();await page.evaluate(()=>{window.__scenario='owner';window.__confirm()});await page.getByText('Your deletion is in progress',{exact:true}).waitFor();assert.deepEqual(await page.evaluate(()=>window.__submits[0]),first);
++}else await page.getByText('Your deletion is in progress',{exact:true}).waitFor();
++}
++assert.deepEqual(errors,[]);assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),'no horizontal overflow');
++await page.screenshot({path:out+'/'+scenario+'-'+width+'.png',fullPage:true});checks.push({scenario,width,pass:true});await page.close();
++}
++fs.writeFileSync(out+'/results.json',JSON.stringify({layer:'Actual React Native screens rendered in Chromium with mocked auth/network/OS boundaries; no native acceptance claimed',checks},null,2));console.log(JSON.stringify({passed:checks.length,out}));
++}finally{await browser.close();server.close();}
++})().catch(e=>{console.error(e);process.exit(1)});
+--- before/scripts/qa/account-deletion-staging.mjs
++++ after/scripts/qa/account-deletion-staging.mjs
+@@ -0,0 +1,83 @@
++import fs from "node:fs";
++import assert from "node:assert/strict";
++import { randomUUID, randomBytes, createHash } from "node:crypto";
++import { createClient } from "@supabase/supabase-js";
++const settings=JSON.parse(fs.readFileSync(process.env.REZLEE_STAGING_QA_SETTINGS,"utf8"));
++assert.equal(settings.NEXT_PUBLIC_SUPABASE_URL,"https://gjwvalpxnfbvryosmcbj.supabase.co");
++const origin=process.env.REZLEE_DELETION_QA_ORIGIN||"http://127.0.0.1:3013";
++assert.ok(["http://127.0.0.1:3013","https://staging.rezlee.com"].includes(origin));
++const options={auth:{persistSession:false,autoRefreshToken:false,detectSessionInUrl:false}};
++const admin=createClient(settings.NEXT_PUBLIC_SUPABASE_URL,settings.SUPABASE_SECRET_KEY,options),fixtures=[],jobs=[],checks=[];
++const unwrap=r=>{if(r.error)throw Error("Fixture operation failed: "+(r.error.code||r.error.status||"unknown"));return r.data};
++const check=(name,value)=>{assert.ok(value,name);checks.push({name,pass:true});console.log("PASS",name)};
++async function account(){const email="rezlee-deletion-qa-"+randomUUID()+"@example.invalid",password="Fixture-"+randomUUID()+"Aa1!";
++ const u=unwrap(await admin.auth.admin.createUser({email,password,email_confirm:true,user_metadata:{qa_fixture:"overnight-deletion-20261012"}})).user;
++ const client=createClient(settings.NEXT_PUBLIC_SUPABASE_URL,settings.NEXT_PUBLIC_SUPABASE_ANON_KEY,options);
++ const token=unwrap(await client.auth.signInWithPassword({email,password})).session.access_token;
++ const f={id:u.id,email,password,client,token,files:[]};fixtures.push(f);return f;
++}
++async function request(path,token,body){const r=await fetch(origin+path,{method:body===undefined?"GET":"POST",headers:{"Content-Type":"application/json",...(token?{Authorization:"Bearer "+token}:{})},body:body===undefined?undefined:JSON.stringify(body),signal:AbortSignal.timeout(25000)});return{status:r.status,data:await r.json(),cache:r.headers.get("cache-control")}}
++const endpoint="/api/mobile/v1/account/deletion";
++function receipt(f){const r={userId:f.id,requestId:randomUUID(),receiptToken:randomBytes(32).toString("hex"),confirm:"DELETE"};jobs.push(r.requestId);return r}
++async function completed(r){for(let i=0;i<25;i++){const response=await request(endpoint+"/status",null,r);if(response.data.status==="completed")return response;if(response.data.status==="needs_attention")throw Error("Disposable deletion needs attention");await new Promise(resolve=>setTimeout(resolve,750));}throw Error("Disposable deletion did not complete in bounded acceptance window")}
++try{
++ const a=await account(),b=await account(),c=await account();
++ const home=unwrap(await admin.from("homes").insert({user_id:a.id,nickname:"Disposable deletion home"}).select("id").single()).id;
++ const otherHome=unwrap(await admin.from("homes").insert({user_id:c.id,nickname:"Preserved other home"}).select("id").single()).id;
++ const ownMember=unwrap(await admin.from("household_members").insert({home_id:home,created_by_user_id:a.id,linked_user_id:b.id,display_name:"Disposable member",email:b.email,role:"member",status:"active"}).select("id").single()).id;
++ const joined=unwrap(await admin.from("household_members").insert({home_id:otherHome,created_by_user_id:c.id,linked_user_id:a.id,display_name:"Departing member",email:a.email,role:"member",status:"active"}).select("id").single()).id;
++ const bill=unwrap(await admin.from("bills").insert({user_id:a.id,home_id:home,name:"Disposable private bill",amount:42,due_date:"2026-10-30"}).select("id").single()).id;
++ const foreignBill=unwrap(await admin.from("bills").insert({user_id:c.id,home_id:otherHome,name:"Preserved private bill",amount:17,due_date:"2026-10-30"}).select("id").single()).id;
++ for(const f of [a,c]){const path=f.id+"/overnight-deletion-"+randomUUID()+".pdf";unwrap(await admin.storage.from("rezlee-documents").upload(path,Buffer.from("%PDF-1.4\nDisposable deletion fixture\n%%EOF"),{contentType:"application/pdf",upsert:false}));f.files.push(path);}
++ const original=unwrap(await admin.from("documents").insert({user_id:a.id,home_id:home,title:"Disposable bill original",document_type:"Bill",storage_path:a.files[0],source:"manual"}).select("id").single()).id;
++ unwrap(await admin.from("bills").update({original_document_id:original}).eq("id",bill));
++ unwrap(await admin.from("notification_preferences").upsert({user_id:a.id,push_enabled:false},{onConflict:"user_id"}));
++ const r=receipt(a),preview=await request(endpoint,a.token);
++ check("deletion preview is enabled and reports owned and joined household consequences",preview.status===200&&preview.data.enabled&&preview.data.impact.homes===1&&preview.data.impact.sharedMemberships===1&&preview.data.impact.joinedHomes===1);
++ check("status is never cached",/\bno-store\b/.test(preview.cache||""));
++ check("unauthenticated deletion is refused",(await request(endpoint,null,r)).status===401);
++ check("missing irreversible confirmation is refused",(await request(endpoint,a.token,{...r,confirm:"yes"})).status===400);
++ check("another user id cannot authorize deletion",(await request(endpoint,a.token,{...r,userId:b.id})).status===403);
++ const lease=unwrap(await admin.rpc("start_rezlee_account_operation",{p_user:a.id}));
++ check("an in-flight account operation delays deletion without accepting it",(await request(endpoint,a.token,r)).status===409);
++ check("a delayed request created no deletion job",unwrap(await admin.from("account_deletion_jobs").select("id").eq("id",r.requestId)).length===0);
++ unwrap(await admin.from("account_operation_leases").delete().eq("id",lease));
++ // Begin without the background hook to inspect the frozen account before resuming via the actual API.
++ unwrap(await admin.rpc("begin_rezlee_account_deletion",{p_user:a.id,p_id:r.requestId,p_receipt_hash:createHash("sha256").update(r.receiptToken).digest("hex")}));
++ check("frozen customer cannot read newer notification preferences",unwrap(await a.client.from("notification_preferences").select("user_id").eq("user_id",a.id)).length===0);
++ check("late background preference updates cannot alter a deleting account",Boolean((await admin.from("notification_preferences").update({bills:true}).eq("user_id",a.id)).error));
++ check("frozen customer cannot read private bills",unwrap(await a.client.from("bills").select("id").eq("id",bill)).length===0);
++ check("even a late service write cannot recreate private records",Boolean((await admin.from("bills").insert({user_id:a.id,home_id:home,name:"Late forbidden record",amount:1,due_date:"2026-10-30"})).error));
++ check("another account cannot read the private deletion journal",Boolean((await b.client.from("account_deletion_jobs").select("id").eq("id",r.requestId)).error));
++ check("a wrong receipt secret does not reveal progress",(await request(endpoint+"/status",null,{...r,receiptToken:"0".repeat(64)})).status===404);
++ const replay=await request(endpoint,a.token,r);
++ check("retrying the same accepted deletion returns the original request",replay.status===202&&replay.data.requestId===r.requestId);
++ const done=await completed(r);
++ check("real worker confirms completion after storage and identity removal",done.status===200&&done.data.status==="completed"&&done.data.completedAt);
++ check("completion receipt exposes only coarse status",Object.keys(done.data).sort().join(",")==="completedAt,phase,requestId,status");
++ check("deleted identity no longer exists",Boolean((await admin.auth.admin.getUserById(a.id)).error));
++ check("private bill and owned home are removed",unwrap(await admin.from("bills").select("id").eq("id",bill)).length===0&&unwrap(await admin.from("homes").select("id").eq("id",home)).length===0);
++ check("linked original and retained bill history are removed",unwrap(await admin.from("documents").select("id").eq("id",original)).length===0&&unwrap(await admin.from("bill_record_versions").select("id").eq("user_id",a.id)).length===0);
++ check("owned upload bytes are removed",Boolean((await admin.storage.from("rezlee-documents").download(a.files[0])).error));
++ check("other household data and uploads remain",unwrap(await admin.from("bills").select("id").eq("id",foreignBill)).length===1&&!((await admin.storage.from("rezlee-documents").download(c.files[0])).error));
++ check("departing and owned-home membership rows are removed",unwrap(await admin.from("household_members").select("id").in("id",[joined,ownMember])).length===0);
++ check("other household members retain their accounts",!((await admin.auth.admin.getUserById(b.id)).error)&&!((await admin.auth.admin.getUserById(c.id)).error));
++ check("receipt works without an auth session after account removal",(await request(endpoint+"/status",null,r)).data.status==="completed");
++ const otp=await account(),link=unwrap(await admin.auth.admin.generateLink({type:"magiclink",email:otp.email}));
++ check("no-send generated email code has a supported length",/^\d{6,8}$/.test(link.properties.email_otp));
++ const isolated=createClient(settings.NEXT_PUBLIC_SUPABASE_URL,settings.NEXT_PUBLIC_SUPABASE_ANON_KEY,options);
++ const verified=unwrap(await isolated.auth.verifyOtp({email:otp.email,token:link.properties.email_otp,type:"email"}));
++ const claims=JSON.parse(Buffer.from(verified.session.access_token.split(".")[1],"base64url").toString());
++ check("real code verification establishes OTP authentication",claims.amr.some(item=>item.method==="otp"));
++ const or=receipt(otp);
++ check("OTP deletion remains tied to the same account",(await request(endpoint,verified.session.access_token,{...or,userId:c.id})).status===403);
++ check("fresh OTP authorizes the account deletion route",(await request(endpoint,verified.session.access_token,or)).status===202);
++ check("OTP customer deletion completes",(await completed(or)).data.status==="completed");
++ const out={origin,checks,otpDigits:link.properties.email_otp.length,noMessagesSent:true,noVendorRetrievals:true,layer:"Actual Next routes and staging Supabase auth, RLS, database, storage; disposable accounts only"};
++ fs.mkdirSync("docs/qa/deletion-recovery-20261012",{recursive:true});fs.writeFileSync("docs/qa/deletion-recovery-20261012/staging-results.json",JSON.stringify(out,null,2));
++ console.log(JSON.stringify({passed:checks.length,otpDigits:out.otpDigits}));
++}finally{
++ for(const f of fixtures){if(f.files.length)unwrap(await admin.storage.from("rezlee-documents").remove(f.files));const result=await admin.auth.admin.deleteUser(f.id);if(result.error&&result.error.code!=="user_not_found")throw Error("Disposable identity cleanup failed");}
++ if(jobs.length)unwrap(await admin.from("account_deletion_jobs").delete().in("id",jobs));
++ console.log("Disposable accounts, uploads and deletion receipts cleaned up");
++}
+--- before/apps/mobile/src/auth/email-code-core.ts
++++ after/apps/mobile/src/auth/email-code-core.ts
+@@ -21,7 +21,7 @@
+     },
+     async verify(email: string, code: string, expectedUserId?: string) {
+       if (busy) throw Error("Please wait for the current request.");
+-      if (!/^\d{6}$/.test(code.trim())) throw Error("Enter the six-digit code from your email.");
++      if (!/^\d{6,8}$/.test(code.trim())) throw Error("Enter the code from your email.");
+       busy = true;
+       try {
+         const original = await adapter.currentUser();
+--- before/apps/mobile/app/(auth)/email-code.tsx
++++ after/apps/mobile/app/(auth)/email-code.tsx
+@@ -37,8 +37,8 @@
+       <TextField label="Account email" value={email} editable={!busy && !sent} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none" autoCorrect={false} autoComplete="email" maxLength={254} />
+       {sent ? <>
+         <Text style={[typography.body, { color: colors.mutedForeground }]}>If this email belongs to an account, a code has been requested. Check your inbox and junk folder. For Apple Hide My Email, use the relay address linked to Rezlee and make sure forwarding is on.</Text>
+-        <TextField label="Six-digit code" value={code} onChangeText={setCode} editable={!busy} keyboardType="number-pad" textContentType="oneTimeCode" maxLength={6} />
+-        <Button label="Confirm code and sign in" loading={busy} disabled={code.length !== 6} onPress={() => void verify()} />
++        <TextField label="Email code" value={code} onChangeText={setCode} editable={!busy} keyboardType="number-pad" textContentType="oneTimeCode" maxLength={8} />
++        <Button label="Confirm code and sign in" loading={busy} disabled={!/^\d{6,8}$/.test(code)} onPress={() => void verify()} />
+         <Button label="Use a different email" variant="secondary" disabled={busy} onPress={() => { setSent(false); setCode(""); setError(null); }} />
+       </> : null}
+       <Button label={wait ? `Send another code in ${wait}s` : sent ? "Send another code" : "Send code"} variant={sent ? "secondary" : "primary"} disabled={busy || wait > 0 || !email.trim()} onPress={() => void send()} />
+--- before/apps/mobile/eas.json
++++ after/apps/mobile/eas.json
+@@ -29,7 +29,8 @@
+       },
+       "env": {
+         "EXPO_NO_DOTENV": "1",
+-        "EXPO_PUBLIC_SOCIAL_AUTH_READY": "true"
++        "EXPO_PUBLIC_SOCIAL_AUTH_READY": "true",
++        "EXPO_PUBLIC_EMAIL_CODE_READY": "true"
+       },
+       "autoIncrement": true
+     },
+@@ -40,7 +41,8 @@
+       "developmentClient": false,
+       "env": {
+         "EXPO_NO_DOTENV": "1",
+-        "EXPO_PUBLIC_SOCIAL_AUTH_READY": "true"
++        "EXPO_PUBLIC_SOCIAL_AUTH_READY": "true",
++        "EXPO_PUBLIC_EMAIL_CODE_READY": "true"
+       },
+       "android": {
+         "buildType": "app-bundle"
+--- before/tests/email-code.test.ts
++++ after/tests/email-code.test.ts
+@@ -57,3 +57,17 @@
+  f.adapter.verify=verify; await f.flow.verify("a@example.com","123456");
+  assert.deepEqual(f.calls,["apply"]);
+ });
++
++test("configured eight-digit email codes work for same-account deletion and signed-out recovery",async()=>{
++ for(const current of ["alice",null]){
++  const f=fixture(); f.setUser(current);let received="";
++  f.adapter.verify=async(_,code)=>{received=code;return{userId:"alice",session:{access_token:"test",refresh_token:"test"}}};
++  assert.equal(await f.flow.verify("a@example.com","87654321",current??undefined),"alice");
++  assert.equal(received,"87654321");assert.deepEqual(f.calls,["apply"]);
++ }
++});
++test("truncated, overlong and non-numeric email codes cannot authenticate",async()=>{
++ for(const code of ["12345","123456789","1234a678"]){
++  const f=fixture();await assert.rejects(f.flow.verify("a@example.com",code));assert.deepEqual(f.calls,[]);
++ }
++});
+--- before/apps/mobile/scripts/start-staging.mjs
++++ after/apps/mobile/scripts/start-staging.mjs
+@@ -22,7 +22,7 @@
+  probe.listen(8081, "0.0.0.0", () => probe.close(resolve));
+ });
+ const expoGo = process.argv.includes("--go");
+-const env = { ...process.env, EXPO_NO_DOTENV: "1", REZLEE_STAGING_PROFILE: "1", EXPO_PUBLIC_SOCIAL_AUTH_READY: "true" };
++const env = { ...process.env, EXPO_NO_DOTENV: "1", REZLEE_STAGING_PROFILE: "1", EXPO_PUBLIC_SOCIAL_AUTH_READY: "true", EXPO_PUBLIC_EMAIL_CODE_READY: "true" };
+ for (const name of required) env[name] = values[name];
+ console.log(`Rezlee staging: staging.rezlee.com · port 8081 · ${expoGo ? "Expo Go (use email sign-in; Google requires the Rezlee build)" : "Rezlee development build"}. Service availability follows staging settings.`);
+ const require = createRequire(new URL("../package.json", import.meta.url));
+--- before/src/lib/account/deletion-worker-auth.ts
++++ after/src/lib/account/deletion-worker-auth.ts
+@@ -0,0 +1,14 @@
++import { createHmac, timingSafeEqual } from "node:crypto";
++import { validBearer } from "@/lib/security/bearer";
++const scope = "rezlee-account-deletion-v1";
++/** The existing scheduler signs a scoped, short-lived message; its persistent
++ * secret never enters the HTTP request queue or a URL. No user id is accepted. */
++export function validDeletionWorker(headers: Headers, secrets: { cron?: string; scheduler?: string }, now = Date.now()) {
++  if (validBearer(headers.get("authorization"), secrets.cron)) return true;
++  const timestamp = headers.get("x-rezlee-deletion-time"), signature = headers.get("x-rezlee-deletion-signature");
++  if (!secrets.scheduler || !timestamp || !/^\d{10}$/.test(timestamp) || !signature || !/^[a-f0-9]{64}$/.test(signature)) return false;
++  const age = now / 1000 - Number(timestamp);
++  if (age < -30 || age > 300) return false;
++  const expected = createHmac("sha256", secrets.scheduler).update(scope + ":" + timestamp).digest();
++  return timingSafeEqual(Buffer.from(signature, "hex"), expected);
++}
+--- before/src/app/api/account-deletion/worker/route.ts
++++ after/src/app/api/account-deletion/worker/route.ts
+@@ -1,9 +1,10 @@
+-import { validBearer } from "@/lib/security/bearer";
++import { validDeletionWorker } from "@/lib/account/deletion-worker-auth";
+ import { runAccountDeletionQueue } from "@/lib/account/deletion";
+ export const dynamic = "force-dynamic";
+ export const maxDuration = 300;
+ export async function GET(request: Request) {
+-  if (!validBearer(request.headers.get("authorization"), process.env.CRON_SECRET)) return Response.json({ error: "Unauthorized." }, { status: 401 });
+-  try { return Response.json(await runAccountDeletionQueue(), { headers: { "Cache-Control": "no-store" } }); }
+-  catch { return Response.json({ error: "Deletion worker could not finish." }, { status: 503 }); }
++  const headers = { "Cache-Control": "no-store" };
++  if (!validDeletionWorker(request.headers, { cron: process.env.CRON_SECRET, scheduler: process.env.APP_NOTIFICATION_WORKER_SECRET })) return Response.json({ error: "Unauthorized." }, { status: 401, headers });
++  try { return Response.json(await runAccountDeletionQueue(), { headers }); }
++  catch { return Response.json({ error: "Deletion worker could not finish." }, { status: 503, headers }); }
+ }
+--- before/tests/deletion-worker-auth.test.ts
++++ after/tests/deletion-worker-auth.test.ts
+@@ -0,0 +1,23 @@
++import test from "node:test";
++import assert from "node:assert/strict";
++import { createHmac } from "node:crypto";
++import { validDeletionWorker } from "../src/lib/account/deletion-worker-auth";
++const now = 1791763200000, secret = "fixture-scheduler";
++function signed(at = now / 1000, scope = "rezlee-account-deletion-v1") {
++ const time = String(at);
++ return new Headers({ "x-rezlee-deletion-time": time, "x-rezlee-deletion-signature": createHmac("sha256", secret).update(scope + ":" + time).digest("hex") });
++}
++test("deletion scheduling accepts only a fresh signature for its exact purpose", () => {
++ assert.equal(validDeletionWorker(signed(), { scheduler: secret }, now), true);
++ assert.equal(validDeletionWorker(signed(now / 1000 - 301), { scheduler: secret }, now), false);
++ assert.equal(validDeletionWorker(signed(now / 1000 + 31), { scheduler: secret }, now), false);
++ assert.equal(validDeletionWorker(signed(now / 1000, "notifications"), { scheduler: secret }, now), false);
++ assert.equal(validDeletionWorker(signed(), { scheduler: "other" }, now), false);
++});
++test("raw scheduler credentials, malformed signatures and absent settings never authorize deletion work", () => {
++ assert.equal(validDeletionWorker(new Headers({ authorization: "Bearer " + secret }), { scheduler: secret }, now), false);
++ assert.equal(validDeletionWorker(new Headers(), { scheduler: secret }, now), false);
++ const h = signed(); h.set("x-rezlee-deletion-signature", "a"); assert.equal(validDeletionWorker(h, { scheduler: secret }, now), false);
++ assert.equal(validDeletionWorker(signed(), {}, now), false);
++ assert.equal(validDeletionWorker(new Headers({ authorization: "Bearer fixture-cron" }), { cron: "fixture-cron" }, now), true);
++});
+--- before/supabase/migrations/202610120002_deletion_recovery_schedule.sql
++++ after/supabase/migrations/202610120002_deletion_recovery_schedule.sql
+@@ -0,0 +1,19 @@
++-- Install the recovery function; schedule activation is a separate staging-only
++-- deployment action after auth/storage acceptance. No utility or Gmail searches.
++create or replace function public.enqueue_rezlee_account_deletion_recovery()
++returns bigint language plpgsql security definer set search_path='' as $$
++declare worker_secret text; worker_time text; worker_signature text;
++begin
++ select decrypted_secret into worker_secret from vault.decrypted_secrets where name='rezlee_app_notification_worker_secret';
++ if worker_secret is null or length(worker_secret)<32 then raise exception 'Scheduler unavailable'; end if;
++ worker_time := floor(extract(epoch from clock_timestamp()))::bigint::text;
++ worker_signature := encode(extensions.hmac('rezlee-account-deletion-v1:'||worker_time,worker_secret,'sha256'),'hex');
++ return net.http_get(
++  url := 'https://staging.rezlee.com/api/account-deletion/worker',
++  headers := jsonb_build_object('x-rezlee-deletion-time',worker_time,'x-rezlee-deletion-signature',worker_signature),
++  timeout_milliseconds := 90000
++ );
++end $$;
++revoke all on function public.enqueue_rezlee_account_deletion_recovery() from public,anon,authenticated;
++grant execute on function public.enqueue_rezlee_account_deletion_recovery() to service_role;
++-- Deliberately no cron.schedule here: do not silently enable in production.
+--- before/scripts/qa/render-provider-disconnect.cjs
++++ after/scripts/qa/render-provider-disconnect.cjs
+@@ -0,0 +1,49 @@
++const fs = require("node:fs"), path = require("node:path"), assert = require("node:assert/strict");
++const esbuild = require("esbuild");
++const { chromium } = require("/tmp/rezlee-bill-qa-tools-20261008/node_modules/playwright-core");
++const root = process.cwd(), deps = "/tmp/rezlee-bill-qa-tools-20261008/node_modules";
++const out = root + "/docs/qa/provider-disconnect-20261012";
++const stubs = {
++  "expo-router": `import React from "react";const router={push:d=>window.__routes.push(d),replace:d=>window.__routes.push(d),canGoBack:()=>false,back:()=>window.__routes.push("back")};export const useRouter=()=>router;export const useLocalSearchParams=()=>window.__params;export const useFocusEffect=fn=>React.useEffect(fn,[fn]);export const Redirect=({href})=>{React.useEffect(()=>{window.__routes.push(href)},[href]);return null};export const Stack={Screen:({options})=>options.header?.()??null};`,
++  "react-native-safe-area-context": 'export {View as SafeAreaView} from "react-native";',
++  "react-native": 'export * from "react-native-web";export const AppState={currentState:"active",addEventListener:()=>({remove(){}})};',
++  "react-native-webview": `import React from "react";import{View,Text}from"react-native";export const WebView=React.forwardRef((props,ref)=>{window.__web=props;React.useImperativeHandle(ref,()=>({injectJavaScript:s=>window.__injections.push(s)}));return <View><Text>External sign-in screen</Text></View>});`,
++  "expo-haptics": 'export const impactAsync=async()=>{},notificationAsync=async()=>{},selectionAsync=async()=>{};export const ImpactFeedbackStyle={Light:"Light"};export const NotificationFeedbackType={Success:"Success"};',
++  "@expo/vector-icons": `import React from"react";export const Feather=({name,size=20,color})=><svg aria-hidden="true" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.6" style={{flexShrink:0}}>{name==="x"?<path d="M6 6l12 12M6 18L18 6"/>:name==="mail"?<><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 6 9 7 9-7"/></>:name==="check-square"?<><rect x="3" y="3" width="18" height="18" rx="2"/><path d="m7 12 3 3 7-7"/></>:name==="square"?<rect x="3" y="3" width="18" height="18" rx="2"/>:name==="sliders"?<><path d="M5 3v18M12 3v18M19 3v18M2 8h6M9 16h6M16 7h6"/></>:<path d="m9 5 7 7-7 7"/>}</svg>;`,
++  "@/auth/AuthProvider": 'export const useAuth=()=>({session:{user:{id:window.__user}}});',
++  "@/lib/api": `export class ApiError extends Error{};export const apiDelete=async()=>{throw Error("Unexpected API delete")},apiFormPost=async()=>{throw Error("Unexpected API upload")},apiPatch=async()=>{throw Error("Unexpected API patch")};export const apiGet=async()=>{window.__gets++;if(window.__loadError)throw Error("Couldn’t check your email connection. Try again.");if(window.__deferGet)return new Promise(r=>window.__getResolve=r);return structuredClone(window.__gmail)};export const apiPost=async(_,body)=>{window.__actions.push(body);return{}};`,
++  "@/lib/gmail-connection": `export const connectGmail=async(homeId,categories)=>{window.__gmailCalls.push({homeId,categories});if(window.__deferGmail)return new Promise(r=>window.__gmailResolve=r);if(window.__gmailSuccess){window.__gmail.link=window.__link("active");return true}return false};`,
++  "@/lib/provider-data": `export const providerCategories=["Electricity","Natural gas","Water","Internet","Mobile","Other service"];export const fetchProviderConnections=async()=>{if(window.__deferCatalog)return new Promise(r=>window.__catalogResolve=r);if(window.__catalogError)throw Error("offline");return{catalog:window.__catalog,deckTesting:true}};export const fetchProviderConnection=async()=>{if(window.__existingError)throw Error("offline");if(window.__deferExisting)return new Promise(r=>window.__existingResolve=r);return{provider:window.__provider}};export const connectProviderRequest=async body=>{window.__legacyCalls.push(body);return{providerId:"connected"}};`,
++  "@/lib/deck-hosted-auth": `export const DECK_AUTH_ORIGIN="https://auth.components.deck.co";export const startHostedAuth=async body=>{window.__deckCalls.push(body);if(window.__deferDeck)return new Promise(r=>window.__deckResolve=r);return window.__deckReady};export const checkHostedAuth=async()=>({status:"pending"});export const completeHostedAuth=async()=>({status:"completed",providerId:"connected-bell"});export const isDeckAuthUrl=()=>true;export const hostedInitScript=()=>"fixture";export const hostedMessage=data=>JSON.parse(data);`,
++  "@/lib/ezgb-data": `export const fetchEzgbAuthorization=async()=>{window.__greenCalls++;if(window.__greenError)throw Error("offline");if(window.__deferGreen)return new Promise(r=>window.__greenResolve=r);return{authorizationUrl:"https://example.invalid/consent"}};export const syncEzgb=async()=>{window.__syncCalls++;return window.__sync};export const fetchEzgbSyncStatus=async()=>{window.__statusCalls++;return window.__sync};`,
++};
++
++stubs["@/lib/provider-data"] = `export const fetchProviderConnection=async()=>({provider:structuredClone(window.__provider)});export const refreshProviderRequest=async()=>{throw Error("Unexpected refresh")},backfillProviderBillsRequest=async()=>{throw Error("Unexpected backfill")},submitProviderInteractionRequest=async()=>{throw Error("Unexpected verification")};export const disconnectProviderRequest=async()=>{window.__disconnects++;window.__provider.connectionStatus="disconnected";window.__provider.disconnectPending=window.__scenario==="retry";window.__provider.reconnectAvailable=window.__scenario!=="retry";if(window.__scenario==="retry"){const {ApiError}=await import("@/lib/api");throw new ApiError("Bill importing is stopped, but provider access has not been confirmed as disconnected. Try again from this connection. Your saved bills remain.")}return{ok:true}};`;
++stubs["@/components/utility/EzgbConnectionPanel"]='export const EzgbConnectionPanel=()=>null;';
++stubs["react-native"]='export * from "react-native-web";export const AppState={currentState:"active",addEventListener:()=>({remove(){}})};export const Alert={alert:(title,message,buttons)=>{window.__confirm=()=>buttons.find(b=>b.style==="destructive").onPress()}};';
++(async()=>{
++fs.mkdirSync(out,{recursive:true});
++await esbuild.build({stdin:{contents:`import React from"react";import{createRoot}from"react-dom/client";import Screen from"${root}/apps/mobile/app/provider/[id].tsx";createRoot(document.getElementById("root")).render(<Screen/>);`,loader:"tsx",resolveDir:root},outfile:out+'/screen.js',bundle:true,platform:'browser',format:'iife',jsx:'automatic',loader:{'.png':'dataurl'},alias:{react:deps+'/react','react-dom':deps+'/react-dom','react-native-web':deps+'/react-native-web'},define:{global:'globalThis','process.env.NODE_ENV':'"development"'},plugins:[{name:'boundaries',setup(b){b.onResolve({filter:/.*/},a=>{if(stubs[a.path])return{path:a.path,namespace:'stub'};if(a.path.startsWith('@/')){const p=root+'/apps/mobile/src/'+a.path.slice(2);for(const ext of ['.ts','.tsx','/index.ts'])if(fs.existsSync(p+ext))return{path:p+ext};}});b.onLoad({filter:/.*/,namespace:'stub'},a=>({contents:stubs[a.path],loader:'tsx',resolveDir:root}));}}]});
++const server=require('node:http').createServer((req,res)=>{res.setHeader('Content-Type',req.url==='/screen.js'?'application/javascript':'text/html');res.end(req.url==='/screen.js'?fs.readFileSync(out+'/screen.js'):'<!doctype html><meta name="viewport" content="width=device-width,initial-scale=1"><style>body{margin:0;font-family:system-ui}*{box-sizing:border-box}#root{height:100vh;display:flex;flex-direction:column}</style><div id="root"></div><script src="/screen.js"></script>')});
++await new Promise(r=>server.listen(0,'127.0.0.1',r));const origin='http://127.0.0.1:'+server.address().port,browser=await chromium.launch({headless:true,executablePath:'/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'}),checks=[];
++try{
++for(const width of [320,390])for(const scenario of ['pending','stopped','retry','success']){
++const page=await browser.newPage({viewport:{width,height:844}}),errors=[];page.setDefaultTimeout(6000);page.on('pageerror',e=>errors.push(e.message));
++await page.addInitScript(scenario=>{window.__scenario=scenario;window.__params={id:"fixture-provider"};window.__user="account-a";window.__routes=[];window.__disconnects=0;window.__provider={id:"fixture-provider",name:"Bell",displayName:"Bell",registryProviderId:"bell",websiteUrl:"https://mybell.bell.ca/",category:"Internet",adapter:"deck",accountNumber:"1234",connectionStatus:["pending","stopped"].includes(scenario)?"disconnected":"connected",disconnectPending:scenario==="pending",reconnectAvailable:scenario!=="pending",connectionPaused:false,requiresUserAction:scenario==="pending",syncMode:"bills",healthStatus:"healthy",syncStatus:"syncing",syncFailureReason:null,latestBill:null,bills:[],accounts:[],latestRun:{status:"running",interaction:{message:"Old verification",fields:[{name:"code",label:"Old verification code",type:"text"}]}},importProgress:{status:"running",phase:"history",authenticated:true,saved:2,originals:2,completedWindows:1,totalWindows:2,sinceDate:"2026-04-01",untilDate:"2026-10-01",message:"Old history import",updatedAt:"2026-10-12T00:00:00Z",verificationExpiresAt:null}}},scenario);
++await page.goto(origin);
++if(scenario==='retry'||scenario==='success'){await page.getByRole('button',{name:'Disconnect provider',exact:true}).click();assert.equal(await page.evaluate(()=>window.__disconnects),0);await page.evaluate(()=>window.__confirm());}
++if(scenario==='pending'||scenario==='retry'){
++await page.getByText('Disconnect needs finishing',{exact:true}).waitFor();
++await page.getByRole('button',{name:'Finish disconnecting',exact:true}).waitFor();
++assert.equal(await page.getByText('Old history import',{exact:true}).count(),0);
++assert.equal(await page.getByLabel('Old verification code',{exact:true}).count(),0);
++assert.equal(await page.getByRole('button',{name:'Reconnect',exact:true}).count(),0);
++}else{
++await page.getByText('Disconnected',{exact:true}).waitFor();assert.equal(await page.getByText('Old history import',{exact:true}).count(),0);
++assert.equal(await page.getByRole('button',{name:'Finish disconnecting',exact:true}).count(),0);
++}
++assert.deepEqual(errors,[]);assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));await page.screenshot({path:out+'/'+scenario+'-'+width+'.png',fullPage:true});checks.push({scenario,width,pass:true});await page.close();
++}
++fs.writeFileSync(out+'/results.json',JSON.stringify({layer:'Actual provider detail component with mocked vendor/network boundaries',checks},null,2));console.log(JSON.stringify({passed:checks.length,out}));
++}finally{await browser.close();server.close()}
++})().catch(e=>{console.error(e);process.exit(1)});
+--- before/supabase/migrations/202610120003_deletion_feature_guards.sql
++++ after/supabase/migrations/202610120003_deletion_feature_guards.sql
+@@ -0,0 +1,42 @@
++-- Newer feature tables must share the account freeze installed in September.
++-- Preserve FK SET NULL cleanup during account deletion without permitting a
++-- late worker to change customer content or recreate an owned record.
++create or replace function public.guard_deleting_rezlee_account() returns trigger
++language plpgsql security definer set search_path='' as $$
++declare target uuid; record_json jsonb := to_jsonb(new);
++begin
++ if tg_op='UPDATE' and pg_trigger_depth()>1 and not exists (
++  select 1 from jsonb_each(record_json-'updated_at') changed
++  where changed.value is distinct from (to_jsonb(old)->changed.key)
++  and not (
++   changed.value='null'::jsonb and exists (
++    select 1 from pg_catalog.pg_constraint c
++    join pg_catalog.pg_attribute a on a.attrelid=c.conrelid and a.attnum=any(c.conkey)
++    where c.conrelid=tg_relid and c.contype='f' and c.confdeltype='n' and a.attname=changed.key
++   )
++  )
++ ) then return new; end if;
++ target := coalesce((record_json->>'user_id')::uuid,(record_json->>'created_by_user_id')::uuid);
++ if target is not null then
++  perform pg_advisory_xact_lock(hashtextextended(target::text,742));
++  if not public.rezlee_account_active(target) then raise exception 'Account is being deleted' using errcode='42501'; end if;
++ end if;
++ return new;
++end $$;
++
++do $$ declare table_name text; guard text := 'public.rezlee_account_active(auth.uid()) and public.rezlee_account_active(user_id)'; begin
++ foreach table_name in array array[
++  'bill_outcome_actions','bill_record_choices','bill_record_versions','cleaning_routines','customer_feedback',
++  'deck_telecom_imports','deck_telecom_pushes','deck_telecom_snapshots','inventory_create_requests',
++  'notification_preferences','quote_reviews','shared_expense_bill_links','shared_expense_requests',
++  'vault_save_receipts','welcome_email_deliveries','gmail_import_ai_reservations'
++ ] loop
++  execute format('create policy rezlee_active_accounts on public.%I as restrictive for all to authenticated using (%s) with check (%s)',table_name,guard,guard);
++  -- Reservation finalization must still account for an already admitted cost;
++  -- this service-only ledger has no customer payload or user grants.
++  if table_name<>'gmail_import_ai_reservations' then
++   execute format('create trigger guard_deleting_account before insert or update on public.%I for each row execute function public.guard_deleting_rezlee_account()',table_name);
++  end if;
++ end loop;
++end $$;
++notify pgrst,'reload schema';
+--- before/tests/account-deletion-database.test.ts
++++ after/tests/account-deletion-database.test.ts
+@@ -24,6 +24,14 @@
+   for (const file of ["supabase/schema.sql", ...(await readdir("supabase/migrations")).filter(f=>f.endsWith(".sql")).sort().map(f=>`supabase/migrations/${f}`)]) {
+    await db.exec((await readFile(file,"utf8")).replace(/create extension if not exists "pgcrypto";/g,""));
+   }
++  // New account-owned tables must participate in the freeze. Service-only
++  // deletion journals/leases and the accounting reservation ledger are explicit exceptions.
++  const unguarded=await db.query<{name:string}>(`select c.relname as name from pg_class c join pg_namespace n on n.oid=c.relnamespace
++   where n.nspname='public' and c.relkind='r'
++   and exists(select 1 from pg_attribute a where a.attrelid=c.oid and a.attname='user_id' and not a.attisdropped)
++   and c.relname not in ('account_deletion_jobs','account_operation_leases','account_deck_providers','gmail_import_ai_reservations')
++   and not exists(select 1 from pg_trigger t join pg_proc p on p.oid=t.tgfoid where t.tgrelid=c.oid and p.proname='guard_deleting_rezlee_account')`);
++  assert.deepEqual(unguarded.rows,[], "An account-owned table is missing the deletion write freeze");
+   const tables=await db.query<{tablename:string}>("select tablename from pg_tables where schemaname='public'");
+   for(const row of tables.rows) await db.exec(`grant select,insert,update,delete on public."${row.tablename}" to authenticated,service_role`);
+   await db.exec(`insert into auth.users values('${a}','a@example.invalid'),('${b}','b@example.invalid');
+@@ -42,6 +50,11 @@
+    select public.remember_rezlee_deck_provider('${b}','${provider}');
+    insert into public.provider_sync_runs(user_id,home_id,provider_id,status,deck_task_run_id) values('${b}','${hb}','${provider}','completed','trun_test');
+    insert into public.deck_events(deck_event_id,event_type,task_run_id,payload) values('evt_before','task_run.completed','trun_test','{"sensitive":"test-only"}');`);
++  await db.exec(`insert into public.notification_preferences(user_id,push_enabled) values('${b}',false);
++   insert into public.cleaning_routines(user_id,home_id,title,timezone,definition) values('${b}','${hb}','Private routine','America/Toronto','{}');
++   insert into public.documents(id,user_id,home_id,title) values('99999999-9999-4999-8999-999999999999','${b}','${hb}','Private quote');
++   insert into public.documents(id,user_id,home_id,title) values('88888888-8888-4888-8888-888888888888','${b}','${hb}','Linked invoice');
++   insert into public.quote_reviews(document_id,user_id,home_id,source_version,invoice_id) values('99999999-9999-4999-8999-999999999999','${b}','${hb}',now(),'88888888-8888-4888-8888-888888888888');`);
+   const op=await db.query<{id:string}>(`select public.start_rezlee_account_operation('${b}') id`);
+   await assert.rejects(db.exec(`select public.begin_rezlee_account_deletion('${b}','${job}','${hash}')`),/still running/);
+   await db.exec(`delete from public.account_operation_leases where id='${op.rows[0].id}'`);
+@@ -54,8 +67,14 @@
+   await assert.rejects(db.exec(`select public.begin_rezlee_account_deletion('${b}',gen_random_uuid(),'${hash}')`),/already requested/);
+   await assert.rejects(db.exec(`select public.start_rezlee_account_operation('${b}')`),/unavailable/);
+   await assert.rejects(db.exec(`insert into public.bills(user_id,home_id,name) values('${b}','${hb}','late webhook')`),/being deleted/);
++  await assert.rejects(db.exec(`update public.notification_preferences set bills=true where user_id='${b}'`),/being deleted/);
++  await assert.rejects(db.exec(`update public.quote_reviews set read_status='ready' where user_id='${b}'`),/being deleted/);
++  await assert.rejects(db.exec(`update public.cleaning_routines set title='Late edit' where user_id='${b}'`),/being deleted/);
+   await assert.rejects(db.exec(`insert into storage.objects(bucket_id,name) values('rezlee-documents','${b}/${hb}/late.pdf')`),/unavailable/);
+   await db.exec(`set role authenticated; set request.jwt.claim.sub='${b}'`);
++  assert.equal((await db.query("select * from public.notification_preferences")).rows.length,0);
++  assert.equal((await db.query("select * from public.cleaning_routines")).rows.length,0);
++  assert.equal((await db.query("select * from public.quote_reviews")).rows.length,0);
+   assert.equal((await db.query("select * from public.homes")).rows.length,0);
+   assert.equal((await db.query("select * from public.bills")).rows.length,0);
+   assert.equal((await db.query("select * from storage.objects")).rows.length,0);
+--- before/scripts/qa/account-deletion-background-staging.mjs
++++ after/scripts/qa/account-deletion-background-staging.mjs
+@@ -0,0 +1,42 @@
++import fs from "node:fs";
++import assert from "node:assert/strict";
++import { createRequire } from "node:module";
++import { randomUUID, randomBytes, createHash } from "node:crypto";
++const { createClient }=createRequire(import.meta.url)("@supabase/supabase-js");
++const settings=JSON.parse(fs.readFileSync(process.env.REZLEE_STAGING_QA_SETTINGS,"utf8"));
++assert.equal(settings.NEXT_PUBLIC_SUPABASE_URL,"https://gjwvalpxnfbvryosmcbj.supabase.co");
++const admin=createClient(settings.NEXT_PUBLIC_SUPABASE_URL,settings.SUPABASE_SECRET_KEY,{auth:{persistSession:false,autoRefreshToken:false}});
++const unwrap=r=>{if(r.error)throw Error("Fixture operation failed: "+(r.error.code||r.error.status||"unknown"));return r.data};
++const requestId=randomUUID(),receiptToken=randomBytes(32).toString("hex"),checks=[];
++let userId,homeId,file;
++const check=(name,result)=>{assert.ok(result,name);checks.push({name,pass:true});console.log("PASS",name)};
++try{
++ const user=unwrap(await admin.auth.admin.createUser({email:"rezlee-background-qa-"+randomUUID()+"@example.invalid",password:"Fixture-"+randomUUID()+"Aa1!",email_confirm:true,user_metadata:{qa_fixture:"overnight-background-20261012"}})).user;
++ userId=user.id;
++ homeId=unwrap(await admin.from("homes").insert({user_id:userId,nickname:"Disposable background deletion"}).select("id").single()).id;
++ file=userId+"/background-"+randomUUID()+".pdf";
++ unwrap(await admin.storage.from("rezlee-documents").upload(file,Buffer.from("%PDF-1.4\nDisposable QA fixture\n%%EOF"),{contentType:"application/pdf"}));
++ unwrap(await admin.rpc("begin_rezlee_account_deletion",{p_user:userId,p_id:requestId,p_receipt_hash:createHash("sha256").update(receiptToken).digest("hex")}));
++ const startedAt=new Date().toISOString(),deadline=Date.now()+420000;
++ console.log("Waiting for scheduled cloud recovery; no mobile API or worker requests will be made.");
++ let job;
++ do{
++  job=unwrap(await admin.from("account_deletion_jobs").select("status,phase,completed_at").eq("id",requestId).single());
++  if(job.status==="completed"||job.status==="needs_attention")break;
++  await new Promise(resolve=>setTimeout(resolve,20000));
++ }while(Date.now()<deadline);
++ check("scheduled worker completes accepted deletion without an open app or status polling",job.status==="completed");
++ check("cloud recovery removes the disposable identity",Boolean((await admin.auth.admin.getUserById(userId)).error));
++ check("cloud recovery removes the disposable home",unwrap(await admin.from("homes").select("id").eq("id",homeId)).length===0);
++ check("cloud recovery removes the uploaded bytes",Boolean((await admin.storage.from("rezlee-documents").download(file)).error));
++ const r=await fetch("https://staging.rezlee.com/api/mobile/v1/account/deletion/status",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({userId,requestId,receiptToken}),signal:AbortSignal.timeout(25000)});
++ const receipt=await r.json();
++ check("the saved receipt works when the customer later returns",r.status===200&&receipt.status==="completed");
++ fs.writeFileSync("docs/checkpoints/overnight-finish-20261012/deletion-background-results.json",JSON.stringify({startedAt,finishedAt:new Date().toISOString(),checks,scheduler:"rezlee-account-deletion-recovery",schedule:"*/5 * * * *",noMessagesSent:true,noVendorRetrievals:true,noAppPollingBeforeCompletion:true,layer:"Live staging cron, pg_net, deployed worker, Supabase Auth/database/storage; disposable fixture"},null,2));
++ console.log(JSON.stringify({passed:checks.length}));
++}finally{
++ if(file)unwrap(await admin.storage.from("rezlee-documents").remove([file]));
++ if(userId){const r=await admin.auth.admin.deleteUser(userId);if(r.error&&r.error.code!=="user_not_found")throw Error("Disposable identity cleanup failed");}
++ unwrap(await admin.from("account_deletion_jobs").delete().eq("id",requestId));
++ console.log("Disposable background fixture cleaned up");
++}
+--- before/supabase/migrations/202610120004_deletion_bill_history_cleanup.sql
++++ after/supabase/migrations/202610120004_deletion_bill_history_cleanup.sql
+@@ -0,0 +1,15 @@
++-- FK cleanup of a deleting account may unlink originals. Do not recreate bill
++-- history while deleting its owner. The bill write guard still rejects normal
++-- customer/worker changes; only verified nested FK cleanup reaches this hook.
++create or replace function public.retain_rezlee_bill_version() returns trigger
++language plpgsql security definer set search_path='' as $$
++begin
++ if not public.rezlee_account_active(old.user_id) then return new; end if;
++ if public.rezlee_bill_snapshot(old) is distinct from public.rezlee_bill_snapshot(new) then
++  insert into public.bill_record_versions(bill_id,user_id,home_id,snapshot)
++  values(old.id,old.user_id,old.home_id,public.rezlee_bill_snapshot(old));
++ end if;
++ return new;
++end $$;
++revoke all on function public.retain_rezlee_bill_version() from public,anon,authenticated;
++notify pgrst,'reload schema';
+--- before/tests/bill-original-upload-database.test.ts
++++ after/tests/bill-original-upload-database.test.ts
+@@ -139,7 +139,11 @@
+   // Account freeze still blocks writes; cascaded original unlink must not block deletion.
+   await db.exec("reset role");await db.query("select public.begin_rezlee_account_deletion($1,$2,$3)",[a,key(99),"a".repeat(64)]);
+   await db.exec(`set role authenticated;set request.jwt.claim.sub='${a}'`);await assert.rejects(prep(15),/unavailable/);await assert.rejects(commit(5),/unavailable/);
+-  await db.exec("reset role");await db.query("delete from public.documents where user_id=$1",[a]);await db.query("delete from auth.users where id=$1",[a]);
++  await db.exec("reset role");
++  const historyBefore=(await db.query("select id from public.bill_record_versions where user_id=$1",[a])).rows.length;
++  await db.query("delete from public.documents where user_id=$1",[a]);
++  assert.equal((await db.query("select id from public.bill_record_versions where user_id=$1",[a])).rows.length,historyBefore,"unlinking deleted originals must not recreate bill history");
++  await db.query("delete from auth.users where id=$1",[a]);
+   assert.equal((await db.query("select id from public.bills where user_id=$1",[a])).rows.length,0);
+  }finally{await db.close();}
+ });
+--- before/src/lib/ops/policy.ts
++++ after/src/lib/ops/policy.ts
+@@ -18,9 +18,12 @@
+   const active = ["queued", "running", "started", "processing", "syncing", "verifying", "submitting_interaction"].includes(status);
+   const stale = active && (Number.isFinite(expiry) ? expiry < now : age > (kind === "statements" ? 120_000 : 20 * 60_000));
+   const known = ["queued","running","started","processing","syncing","verifying","submitting_interaction","success","succeeded","complete","completed","waiting","failed","needs_attention","retry","blocked","aborted","pending","requires_user_action","cancelled","canceled"];
+-  const state = stale ? "stalled" : known.includes(status) ? status : "unknown";
++  const scheduledWait = kind === "deletions" && status === "retry" && row.error_code == null
++    && typeof row.next_attempt_at === "string" && Date.parse(row.next_attempt_at) > now;
++  const state = scheduledWait ? "scheduled_wait" : stale ? "stalled" : known.includes(status) ? status : "unknown";
+   const attention = ["stalled", "failed", "needs_attention", "waiting", "retry", "requires_user_action", "blocked", "aborted", "unknown"].includes(state);
+-  const nextStep = state === "stalled" ? "Check worker logs using this reference before any retry."
++  const nextStep = scheduledWait ? "Waiting for the recorded retry time. Scheduled recovery will continue; no manual restart is needed."
++    : state === "stalled" ? "Check worker logs using this reference before any retry."
+     : kind === "deletions" && attention ? "Check the deletion phase and vendor disconnect result."
+     : kind === "ezgb" && state === "waiting" ? "Check available bills, authorization and interval validation."
+     : kind === "deck" && state === "requires_user_action" ? "Customer verification is required; do not retry authentication."
+--- before/src/lib/ops/attention.ts
++++ after/src/lib/ops/attention.ts
+@@ -14,6 +14,7 @@
+   const stale = queue === "ezgb"
+     ? `and(status.in.(${active}),or(expires_at.lt.${new Date(now).toISOString()},and(expires_at.is.null,created_at.lt.${cutoff})))`
+     : `and(status.in.(${active}),created_at.lt.${cutoff})`;
++  if(queue === "deletions") return `status.is.null,status.not.in.(${nonAttention},retry),and(status.eq.retry,or(error_code.not.is.null,next_attempt_at.is.null,next_attempt_at.lte.${new Date(now).toISOString()})),${stale}`;
+   return `status.is.null,status.not.in.(${nonAttention}),${stale}`;
+ }
+ export function operationsPage(value: string | null) {
+--- before/src/lib/ops/snapshot.ts
++++ after/src/lib/ops/snapshot.ts
+@@ -6,7 +6,7 @@
+   { key: "ezgb", title: "Green Button imports", table: "integration_sync_jobs", select: "id,status,attempt_count,created_at,expires_at" },
+   { key: "deck", title: "Other provider imports", table: "provider_sync_runs", select: "id,status,created_at" },
+   { key: "statements", title: "Statement reading", table: "statement_read_attempts", select: "id,status,created_at" },
+-  { key: "deletions", title: "Account deletion", table: "account_deletion_jobs", select: "id,status,attempts,created_at" },
++  { key: "deletions", title: "Account deletion", table: "account_deletion_jobs", select: "id,status,attempts,created_at,error_code,next_attempt_at" },
+   { key: "gmail", title: "Gmail discovery", table: "gmail_memory_links", orderBy: "updated_at", select: "id,user_id,status,error_code,created_at:updated_at,updated_at,lease_until,work_phase:work->>phase" },
+   { key: "ai", title: "AI requests", table: "ai_usage_events", select: "id,status,created_at" },
+ ];
+--- before/tests/operations-attention.test.ts
++++ after/tests/operations-attention.test.ts
+@@ -26,3 +26,14 @@
+  assert.match(q,/work->>phase.neq.complete/);assert.match(q,/updated_at.lt.2026-10-02T04:55:00.000Z/);
+  assert.match(q,/lease_until.lte/);assert.ok(!q.includes("token_cipher"));
+ });
++
++test("deletion expiry waits do not alarm operators, while failed and overdue retries remain visible",()=>{
++ const now=Date.parse("2026-10-12T04:00:00Z");
++ const base={status:"retry",created_at:"2026-10-12T03:00:00Z",next_attempt_at:"2026-10-12T04:30:00Z",error_code:null,attempts:0};
++ const wait=safeJob("deletions",base,now);
++ assert.equal(wait.state,"scheduled_wait");assert.equal(wait.attention,false);assert.match(wait.nextStep,/no manual restart/);
++ for(const row of [{...base,error_code:"provider_unavailable"},{...base,next_attempt_at:"2026-10-12T03:59:59Z"},{...base,next_attempt_at:null},{...base,next_attempt_at:"bad"}])assert.equal(safeJob("deletions",row,now).attention,true);
++ assert.equal(safeJob("deck",base,now).attention,true);
++ assert.match(attentionFilter("deletions",now),/error_code.not.is.null,next_attempt_at.is.null,next_attempt_at.lte.2026-10-12T04:00:00.000Z/);
++ assert.ok(!JSON.stringify(wait).includes("next_attempt_at"));
++});
+--- before/docs/launch-operations-2026-10-12.md
++++ after/docs/launch-operations-2026-10-12.md
+@@ -0,0 +1,45 @@
++# Rezlee — operational readiness, October 12
++
++This is a staging readiness record, not production approval. Current checkpoint: overnight-finish-20261012.
++
++## Verified now
++
++- Staging backend: https://nestify-5fhilaf3o-razakhan1195s-projects.vercel.app, aliased to https://staging.rezlee.com.
++- Immediate backend rollback: https://nestify-gzvrtlzne-razakhan1195s-projects.vercel.app. Earlier pre-overnight backend: https://nestify-o77apow4z-razakhan1195s-projects.vercel.app.
++- Installed staging migrations: 202610120002 (recovery dispatcher), 202610120003 (newer-feature deletion guards), 202610120004 (bill-history cleanup during deletion).
++- The cloud scheduler runs accepted deletion recovery every five minutes. Live app-closed acceptance removed a disposable identity, home and uploaded bytes without mobile status polling; its saved receipt remained usable afterward.
++- Scheduling uses a short-lived, purpose-bound signature. Raw scheduler credentials are not placed in the HTTP queue. Customer roles cannot invoke the dispatcher. Unauthenticated worker, deletion and operations endpoints return 401.
++- Two deletion jobs at most are processed concurrently. Known expiry waits preserve the retry budget. Ambiguous provider ownership/revocation stays pending for support; it never counts as completed.
++- Operations still requires the existing enabled flag, exact operator allowlist, MFA and access audit. Diagnostic projections omit credentials and customer bill/mail content. Expected future deletion waits no longer trigger false failure attention.
++- Durable shared AI admission is enabled with **200 requests/day and 3,000/month**. Existing ordinary per-user limits are 40/rolling day and 500/rolling month; Gmail's separate allowance is 100/day and 500/month within the shared cap. Missing admission state fails closed. The in-memory limiter is only an additional guard.
++- AI and statement reading are enabled in staging. This pass made no paid model/provider requests and did not raise any limit.
++- Recurring utility pulls and recurring Gmail discovery remain off. Existing pending Gmail/Deck import recovery, notifications and the new accepted-deletion dispatcher are distinct from recurring discovery.
++- iOS 25 is VALID / IN_BETA_TESTING for internal testers; Android 19 APK is built. Neither is a public production release.
++
++## Operating an interrupted deletion
++
++1. Start from the customer's safe request reference and the MFA-protected operations console. Do not request passwords, OAuth tokens, mailbox content or full bill payloads.
++2. Check whether the job is a scheduled wait, transient retry, active lease or needs_attention. A future expiry wait should continue automatically; do not reconnect or reset the journal.
++3. For a stale queue, check the staging scheduler's last execution, HTTP status and sanitized worker logs. A scheduler SQL success only proves dispatch; the live worker result and job state establish completion.
++4. For ambiguous grant/session ownership or vendor revocation, verify the matching resource with the provider under the approved support process. Never mark it revoked solely because a local row is disconnected or a vendor response is ambiguous.
++5. Preserve the original job/receipt identity when resuming. Do not delete the identity or files before the worker's connection and storage gates. Completion receipts expire after 14 days.
++6. For a widespread defect, pause new deletion entry with the deployment gate while preserving the journals, investigate in staging, and resume the same accepted work. Do not reset customer data or treat a backend rollback as a database restore.
++
++## Concrete public-launch gates
++
++| Gate | What must be evidenced | Current boundary |
++|---|---|---|
++| Apple identity | Configure the correct service/client IDs and signing secret; accept native return, private relay, duplicate-account linking and revoke-on-deletion lifecycle | Staging Apple provider is disabled; observed Client IDs and OAuth secret fields are empty. Existing App Store submission credentials are not Sign in with Apple setup. |
++| Device communications | Real confirmation/reset/welcome/security mail, push registration/delivery, locked/signed-out destinations, two-device invitations | Branded templates and no-send checks exist. Founder/device/inbox acceptance remains. Password-changed security email is ON in staging; the other six security-event switches remain OFF. |
++| Provider pilot | Consenting customers validate login/MFA, first and repeated data, freshness, reconnect and revocation for each offered provider | 29 Deck entries are configured for testing; Rogers paused. Configuration is not reliability proof. Green Button remains preferred for eligible Ontario energy services. |
++| Cost decision | Owner-approved monthly and per-feature dollar budgets, provider/model price assumptions, hard stops and an escalation owner | Request caps are verified. They are not dollar budgets. No spending authorization or unreviewed limit increase is inferred. |
++| Monitoring/support | An owner watches failed/stalled jobs, knows escalation and rollback, verifies alert delivery and crash redaction | Safe operations console and bounded recovery exist. A successful anonymous 401 check does not prove an operator MFA session or external alert delivery. |
++| Backup/restore | Restore a production-shaped backup into a separate environment; verify migrations, RLS, auth/storage metadata, uploaded bytes and cross-household isolation; record recovery time and acceptable loss | Full-schema local replay passes, but an actual managed backup/restore rehearsal is not recorded. Do not call migration replay a restore. |
++| Store/privacy/OAuth | Final disclosures match actual data access/retention; reviewer account and store materials work; Google verification and Apple/Play identity requirements accepted | Requires owner/console/reviewer evidence. No public submission was performed. |
++| Promotion | Complete device checklist, record known limits, approve production settings/migrations, release a production-pointing candidate, then monitor a bounded cohort | These builds point to staging. Do not publish them as production binaries or repoint existing testers silently. |
++
++## Rollback and preservation
++
++Re-alias staging to the immediate rollback above if the final operations-only increment regresses. The earlier deletion deployment remains available. Additive database guards stay installed; removing them would weaken the account freeze, so use a tested forward correction if necessary. Do not automatically unschedule cleanup for already accepted deletions.
++
++Source recovery uses the scoped before/after archives, manifest and diff under docs/checkpoints/overnight-finish-20261012. The inherited dirty tree is intentionally preserved; no blanket reset, stash or source commit. Public website/production were not changed.
+--- before/docs/morning-testing-2026-10-12.md
++++ after/docs/morning-testing-2026-10-12.md
+@@ -0,0 +1,41 @@
++# Rezlee — morning testing, October 12
++
++## Use these versions
++
++- **iPhone:** TestFlight → Rezlee → **0.1.0 (25)**. Apple confirmed VALID / IN_BETA_TESTING for internal testers. External/public release has not been submitted.
++- **Android:** install **0.1.0 (19)** from [this APK](https://expo.dev/artifacts/eas/bHT7BG7MlUEwir2zAZQTpZNiZiF7347QmYkix_1heS8.apk).
++- **Expo Go:** **8081**, not 8082. The server was restarted with staging settings. On the same Wi-Fi, use `exp://10.0.0.13:8081`. The Mac must remain awake. Use email sign-in; test native OAuth, notifications and OS handoffs in the installed Rezlee build.
++- All three use **staging.rezlee.com** and the isolated staging database. Previous iOS 24 / Android 18 do not contain the accumulated October 8–12 client work.
++
++## One combined customer pass
++
++Record the device, build, screen/action, expected result and actual result. For a failure, include a screenshot and approximate time; never send passwords or verification codes.
++
++| Order | What to do | What should happen |
++|---|---|---|
++| 1. Returning account | Sign into your existing account. Open Home, Bills, Vault and Care; leave and reopen the app. | No repeated-child-key warning. Existing records remain. Loading, empty categories and failures are distinguishable. Back navigation returns somewhere useful. |
++| 2. Password recovery | Sign out, choose password help and request a reset to an inbox you control. Open the email with the app closed; also try its email-code alternative. Complete the reset, then use the old and new passwords. | Rezlee-branded email. Recovery reaches the reset journey; code entry accepts the current eight-digit code. Old password stops working; the new password works. An expired/reused link offers recovery rather than trapping you. This is still a physical/inbox acceptance gate. |
++| 3. New customer | Use a separate test account you control. Complete verification, return to the app, reopen it and explore the initial next steps. | Helpful onboarding and one welcome for an eligible newly verified mobile account. No repeated welcome on reopening. Your older account should not receive a retroactive welcome. |
++| 4. Find a provider | Search for your Ontario electricity/gas provider, a water biller, a configured Deck provider, Rogers and an unsupported provider. Read each introduction and cancel once before continuing. | One finder routes eligible Ontario energy services to Green Button and other supported services to hosted Deck. Water is classified by service. Rogers and unvalidated providers remain Coming soon. The intro explains the benefit/access; cancellation preserves your choice. No need to choose the integration yourself. |
++| 5. Real connection | On an account you own and intend to test, finish consent/sign-in, handle MFA, leave and return, then inspect the first actual saved bill/original and freshness. | Accurate connection status and recoverable verification. “Connected” alone does not mean a bill has arrived. Each provider earns its own acceptance; this build does not validate all 29 Deck entries. Retrieval can incur the existing provider cost. |
++| 6. Bill and outcome | Upload a real statement, review/correct it and save. Reopen its original. Retry the same upload. Pick a supported action, then add later evidence for the same account and period basis. | One confirmed saved record; duplicates/revisions are explicit. Amount due, period charges and usage stay distinct. Outcomes explain what changed and say when evidence is insufficient; a lower bill alone is not proof of savings caused by the action. |
++| 7. Camera and interruption | Photograph a bill/receipt on the phone; exercise photo/camera permission refusal. Interrupt a save by losing connectivity or closing the app, then reopen and retry. | Honest pending/recovery states, preserved review work and one saved result. HEIC/original files reopen. Try adding a home item similarly. |
++| 8. Household and Care | With a second consenting account/device, accept an invitation, add an expense with explicit participants, record settlement, and edit/assign/complete/reopen a cleaning routine. | Correct household access and cent totals on both devices. Invitation retries reuse the original invitation. A recorded repayment does not move money. Assignment/recurrence and notification destinations are correct. |
++| 9. Home help | Resume an existing repair. Save/review one quote, check its cited facts and missing details, add answers and reopen the decision note. | Useful, cautious repair steps and explicit escalation. Quote facts stay tied to the original; unsupported advice is not presented as certainty. Multiple-quote comparison and general compatibility/repair-versus-replace are not part of the accepted one-quote milestone. |
++| 10. Notifications | Open a notification while signed out, locked and already signed in. Try one whose source record was removed. Inspect preferences. | Authentication/lock returns to the intended owned record. Obsolete updates explain what happened. Another account's private record is never shown. Real push/inbox delivery still needs this device pass. |
++| 11. Disconnect | On a connection you deliberately want to remove, disconnect, leave and return. | Imports stop and saved bills remain. A vendor failure says cleanup is pending and offers Finish disconnecting. It must not claim successful revocation before confirmation. |
++| 12. Delete a disposable account | **Use a separate disposable account, never your main account.** Inspect household consequences, reconfirm identity, submit, close the app, then return. | A durable receipt survives reopening; deletion continues in the cloud. Completion appears only after cleanup. Another household/member account remains. Real connected grants still need a deliberate consented revocation test. |
++
++## What is already checked
++
++- 951 regression tests; root/mobile types, scoped lint, hosted build and native exports.
++- 36 new rendered scenarios: 28 deletion/email-code and 8 provider-disconnect cases.
++- Live staging: 29 deletion/auth/storage checks, 5 unattended deletion checks and 6 operations checks.
++- Fresh hosted regressions: 94 bill-outcome, 23 phone-invitation and 30 one-quote checks.
++- These checks used disposable data or mocked device/vendor boundaries. They do not replace the actual customer journeys above. No manual customer test emails, SMS, push, paid model requests or provider retrievals were sent by this pass.
++
++## Still open before launch
++
++Apple sign-in configuration/token lifecycle; physical auth/email/push/camera/two-device acceptance; provider-by-provider pilots and real grant revocation; production migration/backup/restore rehearsal; approved dollar budgets, alert ownership, privacy/OAuth/store review and controlled release. See [the full checkpoint](overnight-finish-2026-10-12.md) and [operations gates](launch-operations-2026-10-12.md).
++
++The wider multi-quote, compatibility and repair-versus-replace scope remains unfinished. Native sharing, voice, weather/AQHI, perks and broader benchmarks remain later scope. This is a consolidated test candidate, not an overall launch sign-off.
+--- before/docs/audit-completion-status-2026-10-11.md
++++ after/docs/audit-completion-status-2026-10-11.md
+@@ -1,3 +1,5 @@
++> **Latest status, October 12:** [Overnight finishing checkpoint](overnight-finish-2026-10-12.md) and [morning testing](morning-testing-2026-10-12.md) supersede the earlier next-step/deployment statements below. iOS 25 and Android 19 are delivered for staging testing; overall launch is not signed off.
++
+ # Current audit completion status — October 11, 2026
+ 
+ This is the current closure checklist, reconciled against dated checkpoints. Implemented, staging verified, physical-device accepted and publicly released are separate states. Older roadmap sections are historical where they conflict with the linked checkpoints. No working feature is removed.
+@@ -63,3 +65,14 @@
+ Evidence: 36 actual-screen scenarios at 320/390 widths, 924 regression tests, lint/types/Next build and iOS/Android exports passed. Client changes are available after reloading staging Expo 8081; backend unchanged. No live paid provider calls, customer messages, scheduled jobs or production release. Native OAuth/MFA, consent refusal, phone accessibility and actual customer usefulness remain pending.
+ 
+ Next independent engineering returns to connected-account deletion/revocation. Apple sign-in/native auth, actual communications delivery, the release candidate and operational gates remain open alongside all earlier audit acceptance gates. This introduction pass does not sign them off.
++
++
++## Overnight deletion and consolidated native candidate — October 12
++
++Connected-account deletion/revocation engineering now includes durable per-account receipts, isolated recent-auth confirmation, persistent Deck-session cleanup, truthful retry/expiry behavior, newer-feature database guards and cloud recovery. A real staging eight-digit OTP issue was fixed. Expected deletion waits no longer look like operator failures. See overnight-finish-2026-10-12.md for the exact scope and rollback.
++
++Evidence: 951 regression tests, 36 rendered scenarios, 29 hosted deletion checks, 5 app-closed recovery checks and 6 operations checks passed. Fresh bill-outcome 94, phone-invitation 23 and quote-review 30 hosted checks passed. No manual customer messages or paid provider/model calls. All disposable fixtures cleaned up.
++
++iOS 0.1.0 (25) is Apple VALID / IN_BETA_TESTING for internal testers. Android 0.1.0 (19) APK is available. Expo is restarted on 8081 against staging. These consolidate the October 8–12 client work. Staging now points to nestify-5fhilaf3o; production remains unchanged.
++
++Next: physical combined acceptance, actual Apple identity setup/token lifecycle, bounded provider-by-provider pilots/revocation, operational ownership/dollar budgets and a real managed backup/restore rehearsal. Multiple-quote comparison and evidence-supported compatibility/repair-versus-replace remain separate unfinished engineering scope. Native sharing/voice and expansion remain deferred. Do not infer overall launch readiness from this candidate.
+--- before/scripts/qa/overnight-operations-staging.mjs
++++ after/scripts/qa/overnight-operations-staging.mjs
+@@ -0,0 +1,21 @@
++import fs from "node:fs";
++import assert from "node:assert/strict";
++import { createClient } from "@supabase/supabase-js";
++import { attentionFilter } from "../../src/lib/ops/attention.ts";
++const settings=JSON.parse(fs.readFileSync(process.env.REZLEE_STAGING_QA_SETTINGS,"utf8"));
++assert.equal(settings.NEXT_PUBLIC_SUPABASE_URL,"https://gjwvalpxnfbvryosmcbj.supabase.co");
++const db=createClient(settings.NEXT_PUBLIC_SUPABASE_URL,settings.SUPABASE_SECRET_KEY,{auth:{persistSession:false,autoRefreshToken:false}});
++const check=(name,value)=>{assert.ok(value,name);checks.push({name,pass:true});console.log("PASS",name)},checks=[];
++const budget=await db.from("rezlee_ai_budget_config").select("enabled,daily_requests,monthly_requests").eq("singleton",true).single();
++check("durable shared AI limits are readable and bounded",!budget.error&&budget.data.daily_requests>0&&budget.data.monthly_requests>0);
++const attention=await db.from("account_deletion_jobs").select("id",{count:"exact",head:true}).or(attentionFilter("deletions",Date.now()));
++check("live PostgREST accepts the deletion wait and attention filter",!attention.error);
++const pending=await db.from("account_deletion_jobs").select("id",{count:"exact",head:true}).neq("status","completed");
++check("all disposable deletion jobs were cleaned up",!pending.error&&pending.count===0);
++for(const path of ["/api/admin/operations","/api/account-deletion/worker","/api/mobile/v1/account/deletion"]){
++ const r=await fetch("https://staging.rezlee.com"+path,{redirect:"error",signal:AbortSignal.timeout(25000)});
++ check("unauthenticated access refused: "+path,r.status===401);
++}
++const flags=Object.fromEntries(["ACCOUNT_DELETION_ENABLED","REZLEE_EMAIL_CODE_ENABLED","REZLEE_AI_DISABLED","REZLEE_STATEMENT_READING_ENABLED","REZLEE_OPS_ENABLED","REZLEE_DECK_TESTING_ENABLED","REZLEE_WELCOME_ENABLED","REZLEE_WELCOME_START_AT"].map(k=>[k,settings[k]??null]));
++fs.writeFileSync("docs/checkpoints/overnight-finish-20261012/operations-results.json",JSON.stringify({verifiedAt:new Date().toISOString(),checks,budget:budget.data,attentionCount:attention.count,flags,notes:["No authenticated operator MFA session was impersonated.","No paid AI/provider calls or customer messages.","Request limits are not dollar budgets; production budgets and restore evidence remain gates."]},null,2));
++console.log(JSON.stringify({passed:checks.length,budget:budget.data,flags},null,2));

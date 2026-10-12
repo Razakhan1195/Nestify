@@ -1,0 +1,125 @@
+{
+  "origin": "https://staging.rezlee.com",
+  "checks": [
+    {
+      "name": "deletion preview is enabled and reports owned and joined household consequences",
+      "pass": true
+    },
+    {
+      "name": "status is never cached",
+      "pass": true
+    },
+    {
+      "name": "unauthenticated deletion is refused",
+      "pass": true
+    },
+    {
+      "name": "missing irreversible confirmation is refused",
+      "pass": true
+    },
+    {
+      "name": "another user id cannot authorize deletion",
+      "pass": true
+    },
+    {
+      "name": "an in-flight account operation delays deletion without accepting it",
+      "pass": true
+    },
+    {
+      "name": "a delayed request created no deletion job",
+      "pass": true
+    },
+    {
+      "name": "frozen customer cannot read newer notification preferences",
+      "pass": true
+    },
+    {
+      "name": "late background preference updates cannot alter a deleting account",
+      "pass": true
+    },
+    {
+      "name": "frozen customer cannot read private bills",
+      "pass": true
+    },
+    {
+      "name": "even a late service write cannot recreate private records",
+      "pass": true
+    },
+    {
+      "name": "another account cannot read the private deletion journal",
+      "pass": true
+    },
+    {
+      "name": "a wrong receipt secret does not reveal progress",
+      "pass": true
+    },
+    {
+      "name": "retrying the same accepted deletion returns the original request",
+      "pass": true
+    },
+    {
+      "name": "real worker confirms completion after storage and identity removal",
+      "pass": true
+    },
+    {
+      "name": "completion receipt exposes only coarse status",
+      "pass": true
+    },
+    {
+      "name": "deleted identity no longer exists",
+      "pass": true
+    },
+    {
+      "name": "private bill and owned home are removed",
+      "pass": true
+    },
+    {
+      "name": "linked original and retained bill history are removed",
+      "pass": true
+    },
+    {
+      "name": "owned upload bytes are removed",
+      "pass": true
+    },
+    {
+      "name": "other household data and uploads remain",
+      "pass": true
+    },
+    {
+      "name": "departing and owned-home membership rows are removed",
+      "pass": true
+    },
+    {
+      "name": "other household members retain their accounts",
+      "pass": true
+    },
+    {
+      "name": "receipt works without an auth session after account removal",
+      "pass": true
+    },
+    {
+      "name": "no-send generated email code has a supported length",
+      "pass": true
+    },
+    {
+      "name": "real code verification establishes OTP authentication",
+      "pass": true
+    },
+    {
+      "name": "OTP deletion remains tied to the same account",
+      "pass": true
+    },
+    {
+      "name": "fresh OTP authorizes the account deletion route",
+      "pass": true
+    },
+    {
+      "name": "OTP customer deletion completes",
+      "pass": true
+    }
+  ],
+  "otpDigits": 8,
+  "noMessagesSent": true,
+  "noVendorRetrievals": true,
+  "layer": "Actual Next routes and staging Supabase auth, RLS, database, storage; disposable accounts only"
+}

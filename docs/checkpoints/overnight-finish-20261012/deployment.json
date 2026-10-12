@@ -1,0 +1,21 @@
+{
+  "url": "https://nestify-5fhilaf3o-razakhan1195s-projects.vercel.app",
+  "aliasApplied": true,
+  "rollback": "https://nestify-gzvrtlzne-razakhan1195s-projects.vercel.app",
+  "productionChanged": false,
+  "welcomeStartAt": "2026-10-12T03:18:56.180803+00:00",
+  "accountDeletion": true,
+  "emailCode": true,
+  "snapshot": "/tmp/rezlee-overnight-staging-20261012",
+  "vercelCrons": [],
+  "migrations": [
+    "202610120002",
+    "202610120003",
+    "202610120004"
+  ],
+  "deletionScheduler": {
+    "name": "rezlee-account-deletion-recovery",
+    "schedule": "*/5 * * * *",
+    "active": true
+  }
+}

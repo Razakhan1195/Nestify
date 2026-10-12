@@ -1,0 +1,12 @@
+{
+  "verifiedAt": "2026-10-12T05:20:46.462401+00:00",
+  "port": 8081,
+  "mode": "Expo Go",
+  "lanUrl": "exp://10.0.0.13:8081",
+  "checks": {
+    "https://staging.rezlee.com": true,
+    "gjwvalpxnfbvryosmcbj.supabase.co": true
+  },
+  "bundleBytes": 10056725,
+  "emailCodeFlag": "true in start-staging.mjs"
+}

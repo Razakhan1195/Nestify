@@ -1,0 +1,195 @@
+{
+  "baseHead": "ef008c06ee298ac67c3adddd9c79c58de2f79988",
+  "files": {
+    "apps/mobile/app/delete-account.tsx": {
+      "before": "fdbada78cd4f2f72d3381a4f0366235510cfc54a3b65cfb4dcfb829f46cfd897",
+      "after": "68fff14c1b377dc66d26f7df45031686c7d88e64c3300e226357db0325ec2a7f"
+    },
+    "apps/mobile/app/index.tsx": {
+      "before": "4cdc35846dfdc6f5c73b4d8aedbcbdf8aed6ed58096beba37b6e0b9d5391b524",
+      "after": "3b1200ea096da7d055ab65c3189fa1e0e6a5e601bdaa06d64fa91c0bbf7a6501"
+    },
+    "apps/mobile/src/lib/account-deletion.ts": {
+      "before": "7b608b6f39898b1a291f718cae92e6b1896e093a3d90e8db0cc476f9446412a3",
+      "after": "c1ac584af2bec1e162f44d46e64da735e876d35e5a8674bcb55031c6e95bbcb9"
+    },
+    "apps/mobile/src/lib/account-deletion-receipt.ts": {
+      "before": null,
+      "after": "c2506c454dfe83b07a6f2181e7857b40d18cc83b67b5ba5bf46935c89fc749c2"
+    },
+    "apps/mobile/src/auth/confirm-password.ts": {
+      "before": null,
+      "after": "6a3851106a85cea9fcabf48a2d9fdaf9bdf1688717616ff2cdbf3fd925a0e723"
+    },
+    "apps/mobile/src/auth/confirm-password-core.ts": {
+      "before": null,
+      "after": "140bd4b844f3aae4a001e81fb91ce74b47a20636a396b9c26c404476d3cf2966"
+    },
+    "src/lib/account/deck-session-cleanup.ts": {
+      "before": null,
+      "after": "dbaf82c12d3e079eccf2dac3a10972311e2f08155d080068a3a75bd78de16fdc"
+    },
+    "src/lib/account/deletion.ts": {
+      "before": "ee06c7376ce8c3086cb763d4953f06c880498e1a4830effc3e432bff7eb2284b",
+      "after": "9c451338c669128b5464b242a4940c08e642530a5b35e3c229c641d92c9d3f90"
+    },
+    "src/lib/deck/v2-client.ts": {
+      "before": "d7104c136a121953f1375358c4ce6b59d12cbbe24aa88509177db3982af67c99",
+      "after": "e36c8990fca51d61c4d58fb36de3b8c56796a792dd5209331d38ca32932ccfaf"
+    },
+    "src/lib/sync/deck-v2-runtime.ts": {
+      "before": "80c4dbf9b0e20beb3c96bf34eea8d621fddf037b92ec07d20e8978916e766388",
+      "after": "e1f58f4074107a06ca034f1a99807a2eaa08723b447bec03ba885e1c420d47ba"
+    },
+    "tests/account-deletion-recovery.test.ts": {
+      "before": null,
+      "after": "56105d1d697788fe06973c5383abbb40b53c297e1516a9f8595c6174e12fcccd"
+    },
+    "tests/deck-session-cleanup.test.ts": {
+      "before": null,
+      "after": "79eea9f181c3cfde34ab0618292e77735f134474a44e6bb08b27a74b8feb1f50"
+    },
+    "tests/deletion-vendor-contract.test.ts": {
+      "before": "8b5aed0bfd247ed853a67cce93ba5b5cb19bc490d0b20e2201cac43eb12510db",
+      "after": "8b5aed0bfd247ed853a67cce93ba5b5cb19bc490d0b20e2201cac43eb12510db"
+    },
+    "docs/overnight-finish-2026-10-12.md": {
+      "before": null,
+      "after": "7435de6ef8a8bc8d4aac9f5be05be2b9d7272b5b6f354c3484f818a791dc05f0"
+    },
+    "src/lib/deck/hosted-auth.ts": {
+      "before": "d2edecc971321c98bcc84f05110b18412558af8938894641297ff6fb0b5c0705",
+      "after": "32d47b5b8afa2e51291e9199711356060af332631887018bf6bfce4a1cd0e55c"
+    },
+    "src/app/api/mobile/v1/providers/[id]/route.ts": {
+      "before": "950caaab5090785015e82610443f0821af1b91175ccbbb3b5d453cd6b8da7f1e",
+      "after": "abc036778f604865a741b767b3be5bc80c6ff0a890dbe89b635d29a83d74aa7b"
+    },
+    "apps/mobile/src/lib/provider-data.ts": {
+      "before": "f964c0a1d1dd0a588973eeec993f5fb1b90bb2b465f8bcdd73daf76de5009ba2",
+      "after": "a734758e06ecf5bfd2605f55af57f4164e5bd39d8cbf7424501322b1592b7fca"
+    },
+    "apps/mobile/app/provider/[id].tsx": {
+      "before": "ee872b727c9d88b2964e9bb94eddd7ec3a6180a5c02dd532dcbaf99a97a477a4",
+      "after": "408a662c962146e853736d59432c16ee7166e0419cf6622032d731ec4c8651fc"
+    },
+    "apps/mobile/app/provider/deck.tsx": {
+      "before": "3682da1b7593ffab724c0906377db2930b13075c55932d55a12570a6ae7f48a1",
+      "after": "e20bcfa605b9b6d25e67fafd7a2757bd8396bf450beb704ee07c57e4e9d8f5b6"
+    },
+    "tests/provider-disconnect-recovery.test.ts": {
+      "before": null,
+      "after": "a871a0a7a9bd4fa06a783fbf23716e9a494fbd307944d06e3e8511338b8e83f8"
+    },
+    "src/lib/account/deletion-policy.ts": {
+      "before": "46c28c81c8dc38fbbb23d6fdc86da933af09c9e758b62887145b63d169f5463b",
+      "after": "1a73aa5a1ea80a7baa62460ca8e7d51146b491c37e17f212e002837c79520936"
+    },
+    "tests/deletion-wait.test.ts": {
+      "before": null,
+      "after": "c431d80cbe4fb9209569599c4bda367d1751c8e5ea4638f117afd0873f3019ef"
+    },
+    "scripts/qa/render-deletion-recovery.cjs": {
+      "before": null,
+      "after": "aa75d65f1c80c1971d799fba130a365d6bc8dcc4ee93137ef9d1e2019faa9835"
+    },
+    "scripts/qa/account-deletion-staging.mjs": {
+      "before": null,
+      "after": "0c8706f6e6205b9a8600b51605b55aeb00e19df8696fdb720cbcc9a27ec0b3ec"
+    },
+    "apps/mobile/src/auth/email-code-core.ts": {
+      "before": "a13e61a3fd0f968bee208712c33aca12f67351be083823cacfbb0c35d2fbc65a",
+      "after": "a46d17ba54347ee459ec0f7a16da11a079c7c000d3f9396437f7e1f2972998ca"
+    },
+    "apps/mobile/app/(auth)/email-code.tsx": {
+      "before": "c7a5b5435fb3d5b06267e8e86e2d8d369f608d31fa844cd7a63021ea037ba14c",
+      "after": "4603db92b80486076f7a8fe3f1fca9c2013414d15bfa61f3c7c8a6e356ca4418"
+    },
+    "apps/mobile/eas.json": {
+      "before": "cbc45e148aa8a239df3873d0ccc8d6ff9dab29807129a0f83ace7d05dcd88115",
+      "after": "788162950f1e49b48a98c2b5e1e0218c5492ec4d174ac36b131e8abafc197bb2"
+    },
+    "tests/email-code.test.ts": {
+      "before": "f4a7ed018ec48340fb78142b771ec746a7446d5cb5eb8895b8366b88546756db",
+      "after": "6711c9ff7371e69b6f1f7c3121f947bf60d2e1730091b23e2647eb61ecce5c9f"
+    },
+    "apps/mobile/scripts/start-staging.mjs": {
+      "before": "bd04e4dd1c10940e81a47edf1277b23f1d21aaa096feaf4be93b39ecf2c4b44f",
+      "after": "a55fb0cb0b275d0df04095ec2b52aef38739d7dd9b6347584923deba8887cf98"
+    },
+    "src/lib/account/deletion-worker-auth.ts": {
+      "before": null,
+      "after": "e1bb77a30637d7fccd3aa0562855fd9f612a1a3957fe4b6b4115765fe62ac3dd"
+    },
+    "src/app/api/account-deletion/worker/route.ts": {
+      "before": "7726d4ed1c18ac2344aaa7159d2054accaebe5406c27f77987dfea63ce6bf6d0",
+      "after": "26a90fba1c8f57149bcf897aa4c6cc458fa967954b79bfce7d4e82abf85bc4f6"
+    },
+    "tests/deletion-worker-auth.test.ts": {
+      "before": null,
+      "after": "464db48f7508065311c7bcc42982a513b15316adaa6f0d07c1f3e9830345f7ee"
+    },
+    "supabase/migrations/202610120002_deletion_recovery_schedule.sql": {
+      "before": null,
+      "after": "ab2d6040015e83f1a24d6a780fb0a8d7ad3464059bdb3772fb1b9c68dc9d14c8"
+    },
+    "scripts/qa/render-provider-disconnect.cjs": {
+      "before": null,
+      "after": "e5ed918ccff873c0c31f4ce18e6a563c887bb146d75356d67c9056adb2a427da"
+    },
+    "supabase/migrations/202610120003_deletion_feature_guards.sql": {
+      "before": null,
+      "after": "c58d7fc8fe4871615c4203309fe43317143433e0de7c30208079111d68f1ad0e"
+    },
+    "tests/account-deletion-database.test.ts": {
+      "before": "cc510eb316afb2f9192330e99e3dd5174471da4aa9a7309dc74b3a5800d7adde",
+      "after": "2fc846e2d93a2783a2d486321106aa4a7dbeb4b2cce5ec9c8c2ed70a25697272"
+    },
+    "scripts/qa/account-deletion-background-staging.mjs": {
+      "before": null,
+      "after": "3f98418045acf98c76e0ecf31670e94694aa139a283ea8594ec0a973b49e8823"
+    },
+    "supabase/migrations/202610120004_deletion_bill_history_cleanup.sql": {
+      "before": null,
+      "after": "d97d49f38f35fd52b9a29ec4d7eac3c9983da683888c7cfa95c1e23f7bcee754"
+    },
+    "tests/bill-original-upload-database.test.ts": {
+      "before": "58e6eeca39e9743db23bd4e86736956cf9126228e4c1d64fa64a729108d46a9c",
+      "after": "6d502f4f41048432a50828be51e064cc5238328473509f2fc7ab56434c1e19d4"
+    },
+    "src/lib/ops/policy.ts": {
+      "before": "13f67f46acc512a8e0281ca03ccb4cdf47b9ae6fa9dca3149bc38175925b2e1d",
+      "after": "944da7037f59de436e721ec976de156d140b39557791df010b6ea75611c413b7"
+    },
+    "src/lib/ops/attention.ts": {
+      "before": "83f01b4219727d7bfd48f5cc9d9f850a9dc0166c39e52c3eaefc631b5bcd2242",
+      "after": "9154afdf51610701637e4c179f58a666dfd75690c86021a5dafb722c86115aa3"
+    },
+    "src/lib/ops/snapshot.ts": {
+      "before": "3fc6431e57f13f328d88301091b143cea0e4735a689db2bd51764a11250db55f",
+      "after": "85a29f813c96d85ded0f3adc243fff7713051dc3fe444910b04699c209d370c5"
+    },
+    "tests/operations-attention.test.ts": {
+      "before": "fbc0bd62094da59dc186abf6732d2478641bde7bfbfd11f748ab3acd880e7d90",
+      "after": "ad68e568c3c447ea49c30a2626888a73a737f153fdd50b6dca982d73abd4699d"
+    },
+    "docs/launch-operations-2026-10-12.md": {
+      "before": null,
+      "after": "0e3b7ac4b977b4ef5b546f32375403c8118179d3175ab6311cad546cd86d1253"
+    },
+    "docs/morning-testing-2026-10-12.md": {
+      "before": null,
+      "after": "077d87a7c89b3d1c2588f6361b1ac496a7383c8ff70c639aba21837de16f7e17"
+    },
+    "docs/audit-completion-status-2026-10-11.md": {
+      "before": "895d2e98927f7dfe7e85d42a94daea109e47ceb6283b154d195679c6ae7b3d4e",
+      "after": "d93a2baefe44a6a161ac3c852064646cc988a94284d67465941fffc978fe1c7d"
+    },
+    "scripts/qa/overnight-operations-staging.mjs": {
+      "before": null,
+      "after": "72c6b807ce3152411316af8b9d5d2cb11950b8c1fd6b0a0903b6e0cc129d7a4d"
+    }
+  },
+  "status": "engineering_checkpoint_ready_for_staging_testing",
+  "completedAt": "2026-10-12T05:27:21.839317+00:00"
+}

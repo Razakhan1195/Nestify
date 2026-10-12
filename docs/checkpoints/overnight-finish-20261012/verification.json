@@ -1,0 +1,45 @@
+{
+  "verifiedAt": "2026-10-12T05:27:21.839317+00:00",
+  "regression": {
+    "passed": 951,
+    "failed": 0,
+    "command": "npm test",
+    "tail": [
+      "\u2139 tests 951",
+      "\u2139 suites 0",
+      "\u2139 pass 951",
+      "\u2139 fail 0",
+      "\u2139 cancelled 0",
+      "\u2139 skipped 0",
+      "\u2139 todo 0",
+      "\u2139 duration_ms 21766.957917"
+    ]
+  },
+  "rendered": {
+    "deletionEmailCode": 28,
+    "providerDisconnect": 8
+  },
+  "hosted": {
+    "deletion": 29,
+    "backgroundDeletion": 5,
+    "operations": 6,
+    "billOutcome": 94,
+    "phoneInvitation": 23,
+    "quoteReview": 30
+  },
+  "static": {
+    "rootTypes": "passed",
+    "mobileTypes": "passed",
+    "scopedLint": "passed",
+    "hostedBuild": "passed",
+    "iosExport": "passed",
+    "androidExport": "passed"
+  },
+  "limitations": [
+    "No physical phone acceptance",
+    "No real provider grant revocation",
+    "No paid model/provider calls",
+    "No manual customer test messages",
+    "No production deployment"
+  ]
+}

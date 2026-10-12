@@ -1,0 +1,50 @@
+{
+  "verifiedAt": "2026-10-12T05:23:29.113Z",
+  "checks": [
+    {
+      "name": "durable shared AI limits are readable and bounded",
+      "pass": true
+    },
+    {
+      "name": "live PostgREST accepts the deletion wait and attention filter",
+      "pass": true
+    },
+    {
+      "name": "all disposable deletion jobs were cleaned up",
+      "pass": true
+    },
+    {
+      "name": "unauthenticated access refused: /api/admin/operations",
+      "pass": true
+    },
+    {
+      "name": "unauthenticated access refused: /api/account-deletion/worker",
+      "pass": true
+    },
+    {
+      "name": "unauthenticated access refused: /api/mobile/v1/account/deletion",
+      "pass": true
+    }
+  ],
+  "budget": {
+    "enabled": true,
+    "daily_requests": 200,
+    "monthly_requests": 3000
+  },
+  "attentionCount": 0,
+  "flags": {
+    "ACCOUNT_DELETION_ENABLED": "true",
+    "REZLEE_EMAIL_CODE_ENABLED": "true",
+    "REZLEE_AI_DISABLED": "false",
+    "REZLEE_STATEMENT_READING_ENABLED": "true",
+    "REZLEE_OPS_ENABLED": "true",
+    "REZLEE_DECK_TESTING_ENABLED": "true",
+    "REZLEE_WELCOME_ENABLED": "true",
+    "REZLEE_WELCOME_START_AT": "2026-10-12T03:18:56.180803+00:00"
+  },
+  "notes": [
+    "No authenticated operator MFA session was impersonated.",
+    "No paid AI/provider calls or customer messages.",
+    "Request limits are not dollar budgets; production budgets and restore evidence remain gates."
+  ]
+}

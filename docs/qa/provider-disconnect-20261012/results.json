@@ -1,0 +1,45 @@
+{
+  "layer": "Actual provider detail component with mocked vendor/network boundaries",
+  "checks": [
+    {
+      "scenario": "pending",
+      "width": 320,
+      "pass": true
+    },
+    {
+      "scenario": "stopped",
+      "width": 320,
+      "pass": true
+    },
+    {
+      "scenario": "retry",
+      "width": 320,
+      "pass": true
+    },
+    {
+      "scenario": "success",
+      "width": 320,
+      "pass": true
+    },
+    {
+      "scenario": "pending",
+      "width": 390,
+      "pass": true
+    },
+    {
+      "scenario": "stopped",
+      "width": 390,
+      "pass": true
+    },
+    {
+      "scenario": "retry",
+      "width": 390,
+      "pass": true
+    },
+    {
+      "scenario": "success",
+      "width": 390,
+      "pass": true
+    }
+  ]
+}

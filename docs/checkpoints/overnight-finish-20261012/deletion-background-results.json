@@ -1,0 +1,32 @@
+{
+  "startedAt": "2026-10-12T05:10:23.988Z",
+  "finishedAt": "2026-10-12T05:15:06.916Z",
+  "checks": [
+    {
+      "name": "scheduled worker completes accepted deletion without an open app or status polling",
+      "pass": true
+    },
+    {
+      "name": "cloud recovery removes the disposable identity",
+      "pass": true
+    },
+    {
+      "name": "cloud recovery removes the disposable home",
+      "pass": true
+    },
+    {
+      "name": "cloud recovery removes the uploaded bytes",
+      "pass": true
+    },
+    {
+      "name": "the saved receipt works when the customer later returns",
+      "pass": true
+    }
+  ],
+  "scheduler": "rezlee-account-deletion-recovery",
+  "schedule": "*/5 * * * *",
+  "noMessagesSent": true,
+  "noVendorRetrievals": true,
+  "noAppPollingBeforeCompletion": true,
+  "layer": "Live staging cron, pg_net, deployed worker, Supabase Auth/database/storage; disposable fixture"
+}
