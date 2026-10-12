@@ -1,0 +1,673 @@
+--- before/apps/mobile/src/components/ConnectionIntroduction.tsx
++++ after/apps/mobile/src/components/ConnectionIntroduction.tsx
+@@ -0,0 +1,43 @@
++import { Feather } from "@expo/vector-icons";
++import { Text, View } from "react-native";
++import { Surface } from "@/components/ui/Surface";
++import { colors, radii, spacing, typography } from "@/theme/tokens";
++
++type Step = { title: string; detail: string };
++type Props = {
++  title: string;
++  description: string;
++  steps: readonly Step[];
++  access: string;
++  accessNote?: string;
++};
++
++/** Presentation only: viewing an introduction never starts authorization. */
++export function ConnectionIntroduction({ title, description, steps, access, accessNote }: Props) {
++  return <View style={{ gap: spacing.xl }}>
++    <View style={{ gap: spacing.md }}>
++      <Text accessibilityRole="header" style={[typography.heading, { color: colors.foreground }]}>{title}</Text>
++      <Text style={[typography.body, { color: colors.mutedForeground }]}>{description}</Text>
++    </View>
++    <Surface tone="accent" style={{ gap: spacing.lg }}>
++      <Text accessibilityRole="header" style={[typography.section, { color: colors.foreground }]}>What happens next</Text>
++      {steps.map((step, index) => <View key={step.title} style={{ flexDirection: "row", alignItems: "flex-start", gap: spacing.md }}>
++        <View accessibilityElementsHidden importantForAccessibility="no-hide-descendants" style={{ width: 28, height: 28, borderRadius: radii.full, backgroundColor: colors.primary, alignItems: "center", justifyContent: "center" }}>
++          <Text style={[typography.meta, { color: colors.primaryForeground, fontWeight: "600" }]}>{index + 1}</Text>
++        </View>
++        <View style={{ flex: 1, gap: spacing.xs }}>
++          <Text style={[typography.body, { color: colors.foreground, fontWeight: "600" }]}>{step.title}</Text>
++          <Text style={[typography.meta, { color: colors.mutedForeground }]}>{step.detail}</Text>
++        </View>
++      </View>)}
++    </Surface>
++    <View style={{ gap: spacing.sm }}>
++      <View style={{ flexDirection: "row", alignItems: "center", gap: spacing.sm }}>
++        <Feather name="sliders" size={17} color={colors.primary}/>
++        <Text accessibilityRole="header" style={[typography.meta, { flex: 1, color: colors.foreground, fontWeight: "600" }]}>Your access, your choice</Text>
++      </View>
++      <Text style={[typography.meta, { color: colors.mutedForeground }]}>{access}</Text>
++      {accessNote ? <Text style={[typography.caption, { color: colors.mutedForeground }]}>{accessNote}</Text> : null}
++    </View>
++  </View>;
++}
+--- before/apps/mobile/app/provider/deck.tsx
++++ after/apps/mobile/app/provider/deck.tsx
+@@ -1,3 +1,5 @@
++import { useAuth } from "@/auth/AuthProvider";
++import { ConnectionIntroduction } from "@/components/ConnectionIntroduction";
+ import {ProviderBrand} from "@/components/ProviderBrand";
+ import {ConnectionBrand} from "@/components/ConnectionBrand";
+ import { BillHistoryChoice } from "@/components/BillHistoryChoice";
+@@ -48,6 +50,11 @@
+ }
+ 
+ export default function DeckProviderScreen() {
++  const { session } = useAuth();
++  const { providerId, registryProviderId } = useLocalSearchParams<{ providerId?: string; registryProviderId?: string }>();
++  return <DeckProviderFlow key={JSON.stringify([session?.user.id, providerId, registryProviderId])}/>;
++}
++function DeckProviderFlow() {
+   const router = useRouter();
+   const mounted=useRef(true);
+   useEffect(()=>{mounted.current=true;return()=>{mounted.current=false;};},[]);
+@@ -70,14 +77,19 @@
+   const [connecting, setConnecting] = useState(false);
+   const [showHosted, setShowHosted] = useState(false);
+   const [historyMonths, setHistoryMonths] = useState(6);
++  const [historyExpanded, setHistoryExpanded] = useState(false);
+   const [error, setError] = useState<string | null>(null);
++  const [notice, setNotice] = useState<string | null>(null);
++  const [loadAttempt, setLoadAttempt] = useState(0);
+   const telecom = selectedTelecom(catalog,registryProviderId);
+   const reconnectProviderId =
+     typeof providerId === "string" ? providerId : null;
+ 
+   useEffect(() => {
++    let active = true;
+     fetchProviderConnections()
+       .then((payload) => {
++        if (!active) return;
+         if (!("needsOnboarding" in payload) || !payload.needsOnboarding) {
+           setCatalog(payload.catalog ?? []);setTestingAllowed(payload.deckTesting===true);
+           if (!providerId && requestedRegistryId) {
+@@ -89,15 +101,18 @@
+           }
+         }
+       })
+-      .catch(() => setCatalogFailed(true))
+-      .finally(() => setLoadingCatalog(false));
+-  }, [providerId, requestedRegistryId]);
++      .catch(() => { if (active) setCatalogFailed(true); })
++      .finally(() => { if (active) setLoadingCatalog(false); });
++    return () => { active = false; };
++  }, [providerId, requestedRegistryId, loadAttempt]);
+ 
+   useEffect(() => {
+     if (!reconnectProviderId) return;
++    let active = true;
+ 
+     fetchProviderConnection(reconnectProviderId)
+       .then(({ provider }) => {
++        if (!active) return;
+         setReconnectAvailable(provider.reconnectAvailable === true);
+         setConnectionPaused(provider.connectionPaused === true);
+         setProviderName(provider.name);
+@@ -108,14 +123,16 @@
+         setError(null);
+       })
+       .catch((loadError) => {
++        if (!active) return;
+         setError(
+           loadError instanceof ApiError
+             ? loadError.message
+             : "Could not load this provider for reconnection.",
+         );
+       })
+-      .finally(() => setLoadingExisting(false));
+-  }, [reconnectProviderId]);
++      .finally(() => { if (active) setLoadingExisting(false); });
++    return () => { active = false; };
++  }, [reconnectProviderId, loadAttempt]);
+ 
+   const selectedCatalog = useMemo(
+     () =>
+@@ -176,7 +193,8 @@
+ 
+   async function connect() {
+     if (!canConnect) return;
+-    if (hosted) { setShowHosted(true); return; }
++    if (hosted) {
++      setNotice(null); setShowHosted(true); return; }
+     setConnecting(true);
+     setError(null);
+ 
+@@ -211,7 +229,19 @@
+   }
+ 
+   if (!isReconnect && !requestedRegistryId) return <Redirect href="/provider/connect" />;
+-  if (!isReconnect && requestedRegistryId && loadingCatalog) return <SafeAreaView style={{ flex: 1, backgroundColor: colors.background, justifyContent: "center" }}><ActivityIndicator accessibilityLabel="Checking provider availability" color={colors.primary} /></SafeAreaView>;
++  if (loadingCatalog || (isReconnect && loadingExisting)) return <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
++    <View style={{ paddingHorizontal: layout.screenHorizontal }}><NavigationButton onPress={() => safeBack(router, "/provider/connect")} label="Close" close/></View>
++    <View style={{ flex: 1, alignItems: "center", justifyContent: "center", gap: spacing.md }}><ActivityIndicator accessibilityLabel="Checking provider availability" color={colors.primary}/><Text style={[typography.body, { color: colors.mutedForeground }]}>Checking your connection options…</Text></View>
++  </SafeAreaView>;
++  if (isReconnect && (catalogFailed || (!providerName && error))) return <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
++    <View style={{ padding: layout.screenHorizontal, gap: spacing.lg }}>
++      <NavigationButton onPress={() => safeBack(router, "/provider")} label="Back"/>
++      <Text accessibilityRole="header" style={[typography.heading, { color: colors.foreground }]}>Couldn’t load this connection</Text>
++      <Text accessibilityRole="alert" style={[typography.body, { color: colors.mutedForeground }]}>{error || "Check your connection and try again. Your saved bills are still in Rezlee."}</Text>
++      <Button label="Try again" onPress={() => { setLoadingCatalog(true); setLoadingExisting(true); setCatalogFailed(false); setError(null); setLoadAttempt(value => value + 1); }}/>
++      <QuietAction label="Back to Bills" onPress={() => router.replace("/(tabs)/bills")}/>
++    </View>
++  </SafeAreaView>;
+   if ((!isReconnect && !loadingCatalog && !selectedCatalog) || (isReconnect && !loadingExisting && connectionPaused)) return <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
+     <View style={{ padding: layout.screenHorizontal, gap: spacing.lg }}>
+       <NavigationButton onPress={() => router.replace("/provider/connect")} label="Back" />
+@@ -224,7 +254,7 @@
+   if (hosted) return <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
+     <View style={{ paddingHorizontal: layout.screenHorizontal, minHeight: 52, flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+       <NavigationButton onPress={() => safeBack(router, "/(tabs)/bills")} label="Close" close/>
+-      <Text style={[typography.meta, { color: colors.foreground }]}>Connect {providerName}</Text><View style={{ width: 44 }}/>
++      <Text style={[typography.meta, { flex: 1, textAlign: "center", color: colors.foreground }]}>{isReconnect ? "Reconnect provider" : "Connect provider"}</Text><View style={{ width: 44 }}/>
+     </View>
+     <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: layout.screenHorizontal, paddingTop: spacing.lg, paddingBottom: spacing.xl, gap: spacing.xl }}>
+       <View style={{ flexDirection: "row", alignItems: "center", gap: spacing.md }}>
+@@ -232,28 +262,31 @@
+         <View style={{ flex: 1 }}><Text style={[typography.section, { color: colors.foreground }]}>{providerName}</Text><Text style={[typography.caption, { color: colors.mutedForeground }]}>Secure sign-in through Deck</Text></View>
+         {!isReconnect ? <Pressable accessibilityRole="button" onPress={() => router.replace("/provider/connect")} style={{ minHeight: 44, justifyContent: "center" }}><Text style={[typography.meta, { color: colors.primary }]}>Change</Text></Pressable> : null}
+       </View>
+-      <View style={{ gap: spacing.md }}>
+-        <Text style={[typography.heading, { color: colors.foreground }]}>{isReconnect ? `Bring your ${providerName} bills up to date` : `See what changed in your ${providerName} bill`}</Text>
+-        <Text style={[typography.body, { color: colors.mutedForeground }]}>Bring your available bills into one clear history.</Text>
++      <ConnectionIntroduction
++        title={isReconnect ? `Bring your ${providerName} bills up to date` : `Your ${providerName} bills, together`}
++        description="See how recorded charges have changed and keep your original statements easy to find."
++        steps={[
++          { title: "Sign in through Deck", detail: `Use your ${providerName} login on Deck’s sign-in screen. Have your phone nearby for any verification code.` },
++          { title: "Finish any verification", detail: "Stay until sign-in is confirmed. Then you can leave while bills arrive and check progress in your connection." },
++        ]}
++        access="Your sign-in details go directly to Deck, which stores them to retrieve your bills. They are not sent to Rezlee’s servers."
++        accessNote="Rezlee reads bills without making payments or changing your plan. You can disconnect in Rezlee; previously saved bills stay."
++      />
++      <View style={{ gap: spacing.sm }}>
++        <QuietAction label={historyExpanded ? "Hide history choices" : `Bill history · ${historyMonths} ${historyMonths === 1 ? "month" : "months"}`} onPress={() => setHistoryExpanded(value => !value)}/>
++        {historyExpanded ? <BillHistoryChoice value={historyMonths} onChange={setHistoryMonths}/> : <Text style={[typography.caption, { color: colors.mutedForeground }]}>Available originals from this date range. A newer account or quarterly billing may mean fewer bills.</Text>}
+       </View>
+-      <View style={{ gap: spacing.lg }}>
+-        {[{ icon: "file-text" as const, title: "Your statements, together", detail: "Keep the originals and see charges, fees and discounts." }, { icon: "clock" as const, title: "Get on with your day", detail: "Stay for sign-in and verification. Then close the app while your bills are saved." }, { icon: "bell" as const, title: "Know when you’re needed", detail: "Verification requests and results appear in your notification centre." }].map(item => <View key={item.title} style={{ flexDirection: "row", gap: spacing.md }}><View style={{ width: 36, height: 36, borderRadius: radii.lg, backgroundColor: colors.accent, alignItems: "center", justifyContent: "center" }}><Feather name={item.icon} size={17} color={colors.primary}/></View><View style={{ flex: 1, gap: 3 }}><Text style={[typography.meta, { color: colors.foreground, fontWeight: "600" }]}>{item.title}</Text><Text style={[typography.meta, { color: colors.mutedForeground }]}>{item.detail}</Text></View></View>)}
+-      </View>
+-      <BillHistoryChoice value={historyMonths} onChange={setHistoryMonths}/>
+       {selectedCatalog?.connectionNote ? <Text style={[typography.meta,{color:colors.mutedForeground}]}>{selectedCatalog.connectionNote}</Text> : null}
+       <Text style={[typography.caption,{color:colors.mutedForeground}]}>Provider website: {websiteUrl}</Text>
+-      <Surface tone="subtle" style={{ gap: spacing.sm }}>
+-        <View style={{ flexDirection: "row", gap: spacing.sm, alignItems: "center" }}><Feather name="lock" size={16} color={colors.primary}/><Text style={[typography.meta, { color: colors.foreground, fontWeight: "600" }]}>Secure sign-in with Deck</Text></View>
+-        <Text style={[typography.meta, { color: colors.mutedForeground }]}>Your sign-in details go directly to Deck, which stores them to retrieve your bills. They are not sent to Rezlee’s servers.</Text>
+-        <Text style={[typography.caption, { color: colors.mutedForeground }]}>Rezlee reads your bills without making payments or changing your plan. Disconnect in Rezlee whenever you choose.</Text>
+-      </Surface>
+-      <Pressable accessibilityRole="button" onPress={() => router.push("/notification-settings")} style={{ minHeight: 44, justifyContent: "center" }}><Text style={[typography.meta, { color: colors.primary }]}>Manage push notifications</Text></Pressable>
++      <Text style={[typography.caption,{color:colors.mutedForeground}]}>Automatic monthly updates aren’t enabled yet.</Text>
++      <QuietAction label="Manage push notifications" onPress={() => router.push("/notification-settings")}/>
++      {notice ? <Text accessibilityRole="alert" style={[typography.meta, { color: colors.mutedForeground }]}>{notice}</Text> : null}
+     </ScrollView>
+     <View style={{ paddingHorizontal: layout.screenHorizontal, paddingTop: spacing.md, paddingBottom: spacing.md, gap: spacing.sm, borderTopWidth: 1, borderTopColor: colors.border, backgroundColor: colors.background }}>
+-      <Button label="Continue securely with Deck" onPress={connect} disabled={!canConnect}/>
+-      <Pressable accessibilityRole="button" onPress={() => router.replace("/bill/add")} style={{ minHeight: 44, alignItems: "center", justifyContent: "center" }}><Text style={[typography.meta, { color: colors.primary }]}>Upload a bill instead</Text></Pressable>
++      <Button label={isReconnect ? "Reconnect with Deck" : "Continue with Deck"} onPress={connect} disabled={!canConnect}/>
++      <Pressable accessibilityRole="button" onPress={() => router.replace({ pathname: "/bill/add", params: { providerName, category } })} style={{ minHeight: 44, alignItems: "center", justifyContent: "center" }}><Text style={[typography.meta, { color: colors.primary }]}>Upload a bill instead</Text></Pressable>
+     </View>
+-    {showHosted && registryProviderId ? <DeckHostedAuth category={category} historyMonths={historyMonths} registryProviderId={registryProviderId} providerName={providerName} providerId={reconnectProviderId ?? undefined} accountNumber={accountNumber.trim() || undefined} onClose={submitted => { setShowHosted(false); if (submitted) router.replace("/provider"); }} onConnected={id => { setShowHosted(false); router.replace(`/provider/${id}`); }}/> : null}
++    {showHosted && registryProviderId ? <DeckHostedAuth category={category} historyMonths={historyMonths} registryProviderId={registryProviderId} providerName={providerName} providerId={reconnectProviderId ?? undefined} accountNumber={accountNumber.trim() || undefined} onClose={submitted => { setShowHosted(false); if (submitted) router.replace("/provider"); else setNotice("Sign-in closed. You can try again whenever you’re ready, or upload a bill instead."); }} onConnected={id => { setShowHosted(false); router.replace(`/provider/${id}`); }}/> : null}
+   </SafeAreaView>;
+ 
+   return (
+--- before/apps/mobile/app/provider/ezgb.tsx
++++ after/apps/mobile/app/provider/ezgb.tsx
+@@ -1,3 +1,5 @@
++import { useAuth } from "@/auth/AuthProvider";
++import { ConnectionIntroduction } from "@/components/ConnectionIntroduction";
+ import {ConnectionBrand} from "@/components/ConnectionBrand";
+ import {ezgbBillsAvailable,ezgbProgress} from "@/lib/ezgb-progress";
+ import { UtilityConnectionOutcome } from "@/components/UtilityConnectionOutcome";
+@@ -47,6 +49,11 @@
+ }
+ 
+ export default function EzgbConnectionScreen() {
++  const { session } = useAuth();
++  const { resume, utilityName } = useLocalSearchParams<{ resume?: string; utilityName?: string }>();
++  return <EzgbConnectionFlow key={JSON.stringify([session?.user.id, resume, utilityName])}/>;
++}
++function EzgbConnectionFlow() {
+   const router = useRouter();
+   const { resume, utilityName } = useLocalSearchParams<{ resume?: string; utilityName?: string }>();
+   const [authorization, setAuthorization] =
+@@ -190,7 +197,7 @@
+       >
+         <NavigationButton onPress={() => safeBack(router, "/provider/connect")} label="Close" close/>
+         <Text style={{ fontSize: 15, fontWeight: "700", color: colors.foreground }}>
+-          Connect an Ontario utility
++          Connect a utility
+         </Text>
+         <View style={{ width: 44 }} />
+       </View>
+@@ -199,21 +206,20 @@
+         <ScrollView contentContainerStyle={{ padding: layout.screenHorizontal, gap: spacing.lg }}>
+           <ConnectionBrand kind="green"/>
+           <Text style={[typography.meta, { color: colors.primary }]}>Powered by EZGB</Text>
+-          <Text accessibilityRole="header" style={[typography.heading, { color: colors.foreground }]}>{utilityName ? `Connect ${utilityName}` : "Your energy data, with your permission"}</Text>
+-          {utilityName ? <Text style={[typography.body, { color: colors.primary }]}>Green Button is the recommended connection. Choose {utilityName} on the next screen, then approve sharing through your utility.</Text> : null}
+-          <Text style={[typography.body, { color: colors.mutedForeground }]}>Connect a supported Ontario electricity or natural gas account to bring available bills and usage into Rezlee. Data and history vary by utility.</Text>
+-          <Surface tone="subtle" style={{ gap: spacing.md }}>
+-            <Text style={[typography.section, { color: colors.foreground }]}>How sharing works</Text>
+-            <Text style={[typography.body, { color: colors.mutedForeground }]}>Green Button is the energy-data sharing standard used by Ontario utilities. EZGB / Screaming Power provides the connection and retrieves the data you authorize.</Text>
+-            <Text style={[typography.body, { color: colors.mutedForeground }]}>You will choose your utility and follow its authorization process. Rezlee does not ask you to enter a utility password in a Rezlee login form for this connection.</Text>
+-            <Text style={[typography.body, { color: colors.mutedForeground }]}>Review the utility and EZGB terms before approving. You can revoke data-sharing consent through your utility; previously saved records in Rezlee are separate.</Text>
+-          </Surface>
+-          <Text style={[typography.meta, { color: colors.mutedForeground }]}>Scheduled updates are not enabled yet. Connecting does not currently mean your bills will refresh every month.</Text>
+-          <Button label="Choose my Ontario utility" onPress={() => { setStage("loading"); setStarted(true); }} />
++          <ConnectionIntroduction
++            title={utilityName ? `Your ${utilityName} bills, together` : "Your energy bills, in one place"}
++            description="Bring your energy bills and usage together. See what changed, with the history your utility provides."
++            steps={[
++              { title: utilityName ? `Choose ${utilityName}` : "Choose your Ontario utility", detail: "The recommended route for supported Ontario electricity and gas. Sign in with your utility and review its consent terms." },
++              { title: "Approve sharing, then return here", detail: "Once the import starts, you can leave and check progress in Bills." },
++            ]}
++            access="EZGB / Screaming Power retrieves the data you authorize. Review its terms before approving. Your utility sign-in is separate from your Rezlee login."
++            accessNote="You can revoke sharing through your utility. Bills already saved in Rezlee stay."
++          />
++          <Text style={[typography.caption, { color: colors.mutedForeground }]}>Automatic monthly updates aren’t enabled yet.</Text>
++          <Button label="Continue with Green Button" onPress={() => { setError(null); setStage("loading"); setStarted(true); }} />
+           <View style={{ gap: spacing.xs }}>
+             <QuietAction label="Find another provider" onPress={() => router.replace("/provider/connect")} />
+-            <Text style={[typography.section, { color: colors.foreground }]}>Outside Ontario?</Text>
+-            <Text style={[typography.body, { color: colors.mutedForeground }]}>Connections in more provinces are planned. You can upload your Canadian bills now and review your recorded charges.</Text>
+             <QuietAction label="Upload a bill instead" onPress={() => router.replace("/bill/batch")} />
+             <QuietAction label="Read the Ontario Energy Board’s Green Button guide" onPress={() => {
+               void Linking.openURL("https://www.oeb.ca/consumer-information-and-protection/green-button").catch(() => setError("Couldn’t open the guide. You can try again."));
+@@ -378,13 +384,13 @@
+               </View>
+               <View style={{ gap: spacing.sm }}>
+                 <Text style={[typography.heading, { color: colors.foreground }]}>
+-                  Your bill import didn’t finish
++                  {syncResult ? "Your bill import didn’t finish" : "Connection not finished"}
+                 </Text>
+                 <Text style={[typography.body, { color: colors.mutedForeground, lineHeight: 22 }]}>
+                   {error ?? "Return to Bills and try the connection again."}
+                 </Text>
+               </View>
+-              {syncResult ? <Button label="Try import again" onPress={() => void runSync()} /> : null}
++              {syncResult ? <Button label="Try import again" onPress={() => void runSync()} /> : <Button label="Back to connection details" onPress={() => { setStarted(false); setAuthorization(null); setError(null); setStage("intro"); }} />}
+               <Button
+                 variant="secondary"
+                 label="Back to Bills"
+--- before/apps/mobile/app/gmail-memory.tsx
++++ after/apps/mobile/app/gmail-memory.tsx
+@@ -1,3 +1,6 @@
++import { useAuth } from "@/auth/AuthProvider";
++import { ConnectionIntroduction } from "@/components/ConnectionIntroduction";
++import { QuietAction } from "@/components/Brief";
+ import { gmailPauseMessage,type ImportAllowance } from "@/lib/gmail-progress";
+ import { useCallback,useRef,useState } from "react";
+ import { useFocusEffect,useRouter } from "expo-router";
+@@ -15,7 +18,11 @@
+ const categories=[["utility_bill","Bills"],["service_invoice","Service invoices"],["receipt","Home purchases"],["warranty","Warranties"]] as const;
+ type Work={phase:string;processed:number;proposed:number;ignored:number;failed:number;count:number;capReached:boolean;after:number;before:number;mode:string};
+ type Data={progress?:{state:string;label:string};importAllowance?:ImportAllowance|null;enabled:boolean;homeId:string;homeName:string;scheduleReady:boolean;pendingCount:number;suggestions:{id:string;title:string;category:string;detail?:string}[];link:null|{id:string;email:string;status:string;ongoing:boolean;categories:string[];excluded_senders:string[];work:Work;error_code:string|null;updated_at:string}};
+-export default function GmailMemory(){
++export default function GmailMemoryScreen(){
++ const {session}=useAuth();
++ return <GmailMemory key={session?.user.id??"signed-out"}/>;
++}
++function GmailMemory(){
+  const router=useRouter(),[data,setData]=useState<Data|null>(null),[error,setError]=useState<string|null>(null),[notice,setNotice]=useState<string|null>(null),[busy,setBusy]=useState(false);
+  const [checkedAt,setCheckedAt]=useState(()=>Date.now());
+  const [details,setDetails]=useState(false),[settings,setSettings]=useState(false),[selected,setSelected]=useState<string[]>(categories.map(c=>c[0])),[excluded,setExcluded]=useState("");
+@@ -38,14 +45,15 @@
+  const action=async(body:Record<string,unknown>)=>{
+   if(lock.current)return;lock.current=true;setBusy(true);setError(null);setNotice(null);
+   try{const result=await apiPost<{revoked?:boolean}>(endpoint,body,{timeoutMs:20000});
++   if(!active.current)return;
+    if(body.action==="disconnect")setNotice(result.revoked?"Gmail disconnected. Your saved records are still in Rezlee.":"Importing stopped and stored credentials were removed. Google’s revocation could not be confirmed; remove Rezlee access in your Google account too.");
+    await load();
+-  }catch(e){setError(message(e));}finally{lock.current=false;setBusy(false);}
++  }catch(e){if(active.current)setError(message(e));}finally{lock.current=false;if(active.current)setBusy(false);}
+  };
+  const connect=async()=>{
+-  if(!data||lock.current)return;lock.current=true;setBusy(true);setError(null);setNotice(null);
+-  try{const done=await connectGmail(data.homeId,selected);if(!done)setNotice("Connection cancelled. You can keep using Rezlee without Gmail.");await load();}
+-  catch(e){setError(message(e));}finally{lock.current=false;setBusy(false);}
++  if(!data||!data.enabled||lock.current)return;lock.current=true;setBusy(true);setError(null);setNotice(null);
++  try{const connectionCategories=data.link?.status==="reconnect"?data.link.categories:selected;const done=await connectGmail(data.homeId,connectionCategories);if(!active.current)return;if(!done)setNotice("Connection cancelled. You can keep using Rezlee without Gmail.");await load();}
++  catch(e){if(active.current)setError(message(e));}finally{lock.current=false;if(active.current)setBusy(false);}
+  };
+  const confirm=(title:string,body:string,work:()=>void)=>Alert.alert(title,body,[{text:"Cancel",style:"cancel"},{text:"Continue",onPress:work}]);
+  const link=data?.link,w=link?.work;
+@@ -58,13 +66,25 @@
+  {notice?<Text accessibilityRole="alert" style={[typography.body,{color:colors.mutedForeground}]}>{notice}</Text>:null}
+  {!data&&!error?<ActivityIndicator color={colors.primary}/>:null}
+  {data&&!link||link?.status==="disconnected"?<>
+- <View style={{gap:spacing.md}}><Text accessibilityRole="header" style={[typography.heading,{color:colors.foreground}]}>Your home paperwork, already in your inbox</Text><Text style={[typography.body,{color:colors.mutedForeground}]}>Find useful bills, receipts and warranties already in your Gmail. Review what belongs in {data?.homeName||"your home"} before adding it.</Text></View>
+- <Surface tone="subtle" style={{gap:spacing.lg}}>{[["file-text","Bills become useful history"],["tool","Service details stay easy to find"],["archive","Receipts and warranties, together"]].map(([icon,label])=><View key={label} style={{flexDirection:"row",alignItems:"center",gap:spacing.md}}><Feather name={icon as "file-text"} size={22} color={colors.primary}/><Text style={[typography.body,{flex:1,color:colors.foreground}]}>{label}</Text></View>)}</Surface>
+- <Text style={[typography.caption,{color:colors.mutedForeground}]}>Starts with the last 30 days, newest first, and up to 500 matching emails. You can choose another 90 days after this search. Google grants read-only mailbox access; Rezlee searches selected home categories. It cannot send or delete your email.</Text>
+- <Button label={busy?"Connecting…":"Connect Gmail"} disabled={busy||!data?.enabled||!selected.length} onPress={()=>void connect()}/>
+- {!data?.enabled?<Text style={[typography.caption,{color:colors.mutedForeground}]}>Gmail connection isn’t available in this environment yet. Your existing uploads still work.</Text>:null}
+- <Button label="Choose what Rezlee looks for" variant="secondary" onPress={()=>setSettings(v=>!v)}/>
++ <View style={{flexDirection:"row",alignItems:"center",gap:spacing.sm}}><Feather name="mail" size={21} color={colors.primary}/><Text style={[typography.meta,{color:colors.primary}]}>Gmail · Optional connection</Text></View>
++ <ConnectionIntroduction
++  title="Find the paperwork worth keeping"
++  description={`Find bills, receipts and warranties for ${data?.homeName||"your home"}. You decide what belongs in Bills or Vault.`}
++  steps={[
++   {title:"Choose your Gmail account",detail:"Choose the inbox with your home paperwork. This permission is separate from your Rezlee sign-in."},
++   {title:"Review what Rezlee finds",detail:"We search the last 30 days, up to 500 matching emails. Once connected, you can leave while we look."},
++  ]}
++  access="Google grants read-only access to your mailbox. Rezlee searches the home categories you choose. It cannot send or delete your email."
++  accessNote="You choose what to save. You can disconnect Gmail in connection settings; previously saved records stay."
++ />
++ <View style={{gap:spacing.sm}}>
++ <Text style={[typography.meta,{color:colors.mutedForeground}]}>Looking for: {categories.filter(([id])=>selected.includes(id)).map(([,label])=>label.toLowerCase()).join(", ")||"Choose at least one category"}.</Text>
++ <QuietAction label={settings?"Hide category choices":"Choose what Rezlee looks for"} onPress={()=>setSettings(v=>!v)}/>
+  {settings?<View>{categories.map(([id,label])=>checkbox(id,label))}</View>:null}
++ </View>
++ {!data?.enabled?<Text style={[typography.caption,{color:colors.mutedForeground}]}>Gmail connection isn’t available right now. You can upload your documents below.</Text>:null}
++ <Button label={busy?"Connecting…":"Continue with Google"} disabled={busy||!data?.enabled||!selected.length} onPress={()=>void connect()}/>
++ <QuietAction label="Not now" onPress={()=>router.replace("/(tabs)/vault")}/>
+  </>:link&&w?<>
+  <Surface tone="subtle" style={{gap:spacing.md}}><View style={{flexDirection:"row",gap:spacing.md,alignItems:"center"}}><Feather name="mail" size={24} color={colors.primary}/><View style={{flex:1}}><Text style={[typography.body,{fontWeight:"600",color:colors.foreground}]}>{link.email}</Text><Text style={[typography.caption,{color:colors.mutedForeground}]}>{data?.homeName} · {link.status==="active"?"Connected":link.status==="reconnect"?"Reconnect needed":"Paused"}</Text></View></View>
+  <Text accessibilityRole="header" style={[typography.section,{color:colors.foreground}]}>{w.phase==="complete"?"Search complete":link.status==="paused"?"Your progress is saved":link.status==="reconnect"?"Reconnect to continue":"Looking for home records"}</Text>
+@@ -72,7 +92,7 @@
+  {link.status==="active"&&w.phase!=="complete"?<>{data?.progress?.state==="waiting"||data?.progress?.state==="queued"?<Feather name="clock" size={20} color={colors.mutedForeground}/>:<ActivityIndicator color={colors.primary}/>}<Text style={[typography.caption,{color:colors.mutedForeground}]}>{data?.progress?.label??"Checking saved progress. Your ready records are below."}</Text></>:null}
+  {link.error_code?<Text accessibilityRole="alert" style={[typography.body,{color:colors.mutedForeground}]}>{gmailPauseMessage(link.error_code,data?.importAllowance,checkedAt)}</Text>:null}
+  {link.error_code==="capacity"&&data?.importAllowance?.dailyLimit?<Text style={[typography.caption,{color:colors.mutedForeground}]}>Email reads: {data.importAllowance.dailyUsed} of {data.importAllowance.dailyLimit} in 24 hours · {data.importAllowance.monthlyUsed} of {data.importAllowance.monthlyLimit} in 30 days. This allowance is separate from Ask Rezlee.</Text>:null}
+- {link.status==="reconnect"?<Button label="Reconnect Gmail" disabled={busy} onPress={()=>void connect()}/>:link.status==="paused"?<Button label={link.error_code==="reader_unavailable"?"Reading temporarily unavailable":"Resume search"} disabled={busy||link.error_code==="reader_unavailable"||(link.error_code==="capacity"&&data?.importAllowance?.allowed===false&&!!data.importAllowance.retryAt&&Date.parse(data.importAllowance.retryAt)>checkedAt)} onPress={()=>void action({action:"resume"})}/>:w.phase!=="complete"?<Button label="Pause search" variant="secondary" disabled={busy} onPress={()=>void action({action:"pause"})}/>:null}
++ {link.status==="reconnect"?<><Text style={[typography.meta,{color:colors.mutedForeground}]}>Google will ask you to approve access again. Choose {link.email} to continue this search. Your saved records and search categories stay; your Rezlee sign-in won’t change.</Text><Button label="Reconnect Gmail" disabled={busy||!data?.enabled} onPress={()=>void connect()}/></>:link.status==="paused"?<Button label={link.error_code==="reader_unavailable"?"Reading temporarily unavailable":"Resume search"} disabled={busy||link.error_code==="reader_unavailable"||(link.error_code==="capacity"&&data?.importAllowance?.allowed===false&&!!data.importAllowance.retryAt&&Date.parse(data.importAllowance.retryAt)>checkedAt)} onPress={()=>void action({action:"resume"})}/>:w.phase!=="complete"?<Button label="Pause search" variant="secondary" disabled={busy} onPress={()=>void action({action:"pause"})}/>:null}
+  </Surface>
+  {(data?.suggestions??[]).length?<View style={{gap:spacing.sm}}><Text accessibilityRole="header" style={[typography.section,{color:colors.foreground}]}>Ready to save · {data?.pendingCount}</Text><Text style={[typography.caption,{color:colors.mutedForeground}]}>Check the details, then choose what to keep. Nothing is saved without you.</Text>{data?.suggestions.map(item=><Pressable key={item.id} accessibilityRole="button" onPress={()=>router.push({pathname:"/email-memory",params:{id:item.id}})} style={({pressed})=>({minHeight:80,padding:spacing.lg,marginTop:spacing.sm,backgroundColor:colors.surfaceRaised,borderRadius:16,flexDirection:"row",alignItems:"center",gap:spacing.md,opacity:pressed?0.7:1})}><Feather name={item.category==="receipt"?"shopping-bag":item.category==="warranty"?"shield":item.category==="service_invoice"?"tool":"file-text"} size={22} color={colors.primary}/><View style={{flex:1,gap:4}}><Text style={[typography.body,{color:colors.foreground}]}>{item.title}</Text><Text style={[typography.caption,{color:colors.mutedForeground}]}>{item.detail||categories.find(c=>c[0]===item.category)?.[1]||"Home record"}</Text></View><Feather name="chevron-right" size={20} color={colors.primary}/></Pressable>)}{(data?.pendingCount??0)>25?<Text style={[typography.caption,{color:colors.mutedForeground}]}>More records appear as you review these.</Text>:null}</View>:w.phase==="complete"?<Text style={[typography.body,{color:colors.mutedForeground}]}>{w.proposed?"Your records have been reviewed. Saved information is in Vault and Bills.":"No supported home records found in this search. You can upload a bill or receipt instead."}</Text>:null}
+  {w.phase==="complete"?<View style={{gap:spacing.md}}><Button label="Check for new home emails" variant="secondary" disabled={busy||link.status==="reconnect"} onPress={()=>void action({action:"new"})}/><Button label="Find older home records" variant="secondary" disabled={busy||link.status==="reconnect"} onPress={()=>confirm("Search the previous 90 days?","Search the previous 90 days for the same home categories, up to 500 candidates. Only continue if those records belong to this home.",()=>void action({action:"older"}))}/></View>:null}
+@@ -81,7 +101,7 @@
+  {settings?<Surface tone="subtle" style={{gap:spacing.md}}><Text style={[typography.caption,{color:colors.mutedForeground}]}>Search period: {new Date(w.after*1000).toLocaleDateString("en-CA")} – {new Date(w.before*1000).toLocaleDateString("en-CA")}{w.capReached?" · Search limit reached. Older records are available as another search.":""}</Text>{categories.map(([id,label])=>checkbox(id,label))}<TextField label="Ignore these senders (one email per line)" value={excluded} onChangeText={setExcluded} multiline/><Button label="Save preferences" disabled={busy||!selected.length} onPress={()=>void action({action:"preferences",categories:selected,excludedSenders:excluded.split(/[\n,]/).map(v=>v.trim()).filter(Boolean),ongoing:link.ongoing})}/><Button label="Remove unreviewed records" variant="secondary" disabled={busy} onPress={()=>confirm("Remove these records?","Search will pause and unreviewed records will be removed. Saved Bills and Vault records stay.",()=>void action({action:"forgetSuggestions"}))}/><Button label="Disconnect Gmail" variant="secondary" disabled={busy} onPress={()=>confirm("Disconnect Gmail?","Stops future reading and removes stored Gmail credentials. Saved records remain in Bills and Vault, where you can delete them.",()=>void action({action:"disconnect"}))}/></Surface>:null}
+  </>:null}
+  <Button label="Access and privacy" variant="secondary" onPress={()=>setDetails(v=>!v)}/>
+- {details?<View style={{gap:spacing.md}}><Text style={[typography.caption,{color:colors.mutedForeground}]}>Google’s read-only permission covers your mailbox. Rezlee narrows searches to home-related categories, excludes spam and promotions, and processes selected email text and one supported PDF or image attachment per email. Selected content goes to our AI processor with no-training and zero-retention routing required. Records may contain short source excerpts. Originals are saved privately only when you confirm. We keep reviewed home records, not an inbox copy. Removing records clears their details; saved records are deleted separately in Bills or Vault.</Text><Text style={[typography.caption,{color:colors.mutedForeground}]}>An invoice does not confirm that work was completed or paid. Receipts and warranties first become reviewed Vault records. Nothing is added automatically.</Text><Button label="Google account permissions" variant="secondary" onPress={()=>void Linking.openURL("https://myaccount.google.com/permissions")}/></View>:null}
++ {details?<View style={{gap:spacing.md}}><Text style={[typography.caption,{color:colors.mutedForeground}]}>Google’s read-only permission covers your mailbox. Rezlee narrows searches to home-related categories, excludes spam and promotions, and processes selected email text and one supported PDF or image attachment per email. Selected content goes to our AI processor with no-training and zero-retention routing required. Records may contain short source excerpts. Originals are saved privately only when you confirm. We keep reviewed home records, not an inbox copy. Removing records clears their details; saved records are deleted separately in Bills or Vault.</Text><Text style={[typography.caption,{color:colors.mutedForeground}]}>An invoice does not confirm that work was completed or paid. Receipts and warranties first become reviewed Vault records. Nothing is added automatically.</Text><Button label="Google account permissions" variant="secondary" onPress={()=>void Linking.openURL("https://myaccount.google.com/permissions").catch(()=>setError("Couldn’t open Google permissions. Please try again."))}/></View>:null}
+  <Button label="Upload a document instead" variant="secondary" onPress={()=>router.push("/vault-record")}/>
+  </ScrollView></SafeAreaView>;
+ }
+--- before/scripts/qa/render-connection-intros.cjs
++++ after/scripts/qa/render-connection-intros.cjs
+@@ -0,0 +1,217 @@
++const fs = require("node:fs"), path = require("node:path"), assert = require("node:assert/strict");
++const esbuild = require("esbuild");
++const { chromium } = require("/tmp/rezlee-bill-qa-tools-20261008/node_modules/playwright-core");
++const root = process.cwd(), deps = "/tmp/rezlee-bill-qa-tools-20261008/node_modules";
++const out = root + "/docs/qa/connection-intros-20261012";
++const stubs = {
++  "expo-router": `import React from "react";const router={push:d=>window.__routes.push(d),replace:d=>window.__routes.push(d),canGoBack:()=>false,back:()=>window.__routes.push("back")};export const useRouter=()=>router;export const useLocalSearchParams=()=>window.__params;export const useFocusEffect=fn=>React.useEffect(fn,[fn]);export const Redirect=({href})=>{React.useEffect(()=>{window.__routes.push(href)},[href]);return null};export const Stack={Screen:({options})=>options.header?.()??null};`,
++  "react-native-safe-area-context": 'export {View as SafeAreaView} from "react-native";',
++  "react-native": 'export * from "react-native-web";export const AppState={currentState:"active",addEventListener:()=>({remove(){}})};',
++  "react-native-webview": `import React from "react";import{View,Text}from"react-native";export const WebView=React.forwardRef((props,ref)=>{window.__web=props;React.useImperativeHandle(ref,()=>({injectJavaScript:s=>window.__injections.push(s)}));return <View><Text>External sign-in screen</Text></View>});`,
++  "expo-haptics": 'export const impactAsync=async()=>{},notificationAsync=async()=>{},selectionAsync=async()=>{};export const ImpactFeedbackStyle={Light:"Light"};export const NotificationFeedbackType={Success:"Success"};',
++  "@expo/vector-icons": `import React from"react";export const Feather=({name,size=20,color})=><svg aria-hidden="true" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.6" style={{flexShrink:0}}>{name==="x"?<path d="M6 6l12 12M6 18L18 6"/>:name==="mail"?<><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 6 9 7 9-7"/></>:name==="check-square"?<><rect x="3" y="3" width="18" height="18" rx="2"/><path d="m7 12 3 3 7-7"/></>:name==="square"?<rect x="3" y="3" width="18" height="18" rx="2"/>:name==="sliders"?<><path d="M5 3v18M12 3v18M19 3v18M2 8h6M9 16h6M16 7h6"/></>:<path d="m9 5 7 7-7 7"/>}</svg>;`,
++  "@/auth/AuthProvider": 'export const useAuth=()=>({session:{user:{id:window.__user}}});',
++  "@/lib/api": `export class ApiError extends Error{};export const apiDelete=async()=>{throw Error("Unexpected API delete")},apiFormPost=async()=>{throw Error("Unexpected API upload")},apiPatch=async()=>{throw Error("Unexpected API patch")};export const apiGet=async()=>{window.__gets++;if(window.__loadError)throw Error("Couldn’t check your email connection. Try again.");if(window.__deferGet)return new Promise(r=>window.__getResolve=r);return structuredClone(window.__gmail)};export const apiPost=async(_,body)=>{window.__actions.push(body);return{}};`,
++  "@/lib/gmail-connection": `export const connectGmail=async(homeId,categories)=>{window.__gmailCalls.push({homeId,categories});if(window.__deferGmail)return new Promise(r=>window.__gmailResolve=r);if(window.__gmailSuccess){window.__gmail.link=window.__link("active");return true}return false};`,
++  "@/lib/provider-data": `export const providerCategories=["Electricity","Natural gas","Water","Internet","Mobile","Other service"];export const fetchProviderConnections=async()=>{if(window.__deferCatalog)return new Promise(r=>window.__catalogResolve=r);if(window.__catalogError)throw Error("offline");return{catalog:window.__catalog,deckTesting:true}};export const fetchProviderConnection=async()=>{if(window.__existingError)throw Error("offline");if(window.__deferExisting)return new Promise(r=>window.__existingResolve=r);return{provider:window.__provider}};export const connectProviderRequest=async body=>{window.__legacyCalls.push(body);return{providerId:"connected"}};`,
++  "@/lib/deck-hosted-auth": `export const DECK_AUTH_ORIGIN="https://auth.components.deck.co";export const startHostedAuth=async body=>{window.__deckCalls.push(body);if(window.__deferDeck)return new Promise(r=>window.__deckResolve=r);return window.__deckReady};export const checkHostedAuth=async()=>({status:"pending"});export const completeHostedAuth=async()=>({status:"completed",providerId:"connected-bell"});export const isDeckAuthUrl=()=>true;export const hostedInitScript=()=>"fixture";export const hostedMessage=data=>JSON.parse(data);`,
++  "@/lib/ezgb-data": `export const fetchEzgbAuthorization=async()=>{window.__greenCalls++;if(window.__greenError)throw Error("offline");if(window.__deferGreen)return new Promise(r=>window.__greenResolve=r);return{authorizationUrl:"https://example.invalid/consent"}};export const syncEzgb=async()=>{window.__syncCalls++;return window.__sync};export const fetchEzgbSyncStatus=async()=>{window.__statusCalls++;return window.__sync};`,
++};
++(async () => {
++  fs.mkdirSync(out, { recursive: true });
++  for (const [name, screen] of [["deck", "provider/deck"], ["green", "provider/ezgb"], ["gmail", "gmail-memory"]]) {
++    await esbuild.build({
++      stdin: { contents: `import React from"react";import{createRoot}from"react-dom/client";import Screen from"${root}/apps/mobile/app/${screen}.tsx";function Fixture(){const[,set]=React.useState(0);window.__rerender=()=>set(n=>n+1);return <Screen/>}createRoot(document.getElementById("root")).render(<Fixture/>);`, resolveDir: root, loader: "tsx" },
++      outfile: out + "/" + name + ".js", bundle: true, platform: "browser", format: "iife", jsx: "automatic", loader: { ".png": "dataurl", ".jpg": "dataurl" },
++      alias: { react: deps + "/react", "react-dom": deps + "/react-dom", "react-native-web": deps + "/react-native-web" },
++      define: { global: "globalThis", "process.env.NODE_ENV": '"development"' },
++      plugins: [{ name: "boundaries", setup(b) {
++        b.onResolve({ filter: /.*/ }, a => {
++          if (stubs[a.path]) return { path: a.path, namespace: "stub" };
++          if (a.path.startsWith("@/")) {
++            const p = root + "/apps/mobile/src/" + a.path.slice(2);
++            for (const ext of [".ts", ".tsx", "/index.ts"]) if (fs.existsSync(p + ext)) return { path: p + ext };
++          }
++        });
++        b.onLoad({ filter: /.*/, namespace: "stub" }, a => ({ contents: stubs[a.path], loader: "tsx", resolveDir: root }));
++      } }],
++    });
++  }
++  const server = require("node:http").createServer((req, res) => {
++    const name = path.basename(req.url.split("?")[0]) || "deck";
++    if (name.endsWith(".js")) { res.setHeader("Content-Type", "application/javascript"); return res.end(fs.readFileSync(out + "/" + name)); }
++    res.setHeader("Content-Type", "text/html");
++    res.end('<!doctype html><meta name="viewport" content="width=device-width,initial-scale=1"><style>body{margin:0;font-family:system-ui}*{box-sizing:border-box}#root{height:100vh;display:flex;flex-direction:column}</style><div id="root"></div><script src="/' + name + '.js"></script>');
++  });
++  await new Promise(r => server.listen(0, "127.0.0.1", r));
++  const browser = await chromium.launch({ headless: true, executablePath: "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" });
++  const checks = [], origin = "http://127.0.0.1:" + server.address().port;
++  const scenarios = ["deck-intro-cancel-history", "deck-reconnect", "deck-unavailable", "deck-offline-retry", "deck-late-account", "deck-account-loading", "green-intro-upload", "green-consent-result", "green-error-retry", "green-resume", "green-late-account", "gmail-intro-categories-cancel", "gmail-skip", "gmail-unavailable", "gmail-reconnect", "gmail-success", "gmail-offline-retry", "gmail-late-account"];
++  try {
++    for (const width of [320, 390]) for (const scenario of scenarios) {
++      const screen = scenario.split("-")[0], page = await browser.newPage({ viewport: { width, height: 844 } });
++      page.setDefaultTimeout(6000);
++      const errors = []; page.on("pageerror", e => errors.push(e.message));
++      page.on("console", m => { if (m.type() === "error" && m.text().includes("same key")) errors.push(m.text()); });
++      await page.route(/^https?:\/\/(?!127\.0\.0\.1)/, route => route.abort());
++      await page.addInitScript(({ scenario, screen }) => {
++        window.__user = "account-a"; window.__params = screen === "deck" ? { registryProviderId: "bell" } : screen === "green" ? { utilityName: "Hydro One" } : {};
++        window.__routes = []; window.__deckCalls = []; window.__legacyCalls = []; window.__gmailCalls = []; window.__actions = []; window.__injections = [];
++        window.__gets = 0; window.__greenCalls = 0; window.__syncCalls = 0; window.__statusCalls = 0;
++        window.__catalog = [{ id: "bell", name: "Bell", utility_type: "Internet", website_url: "https://mybell.bell.ca/", connectionAvailable: true, hostedAuth: true, telecomHistory: true }];
++        window.__provider = { name: "Bell", registryProviderId: "bell", websiteUrl: "https://mybell.bell.ca/", category: "Internet", accountNumber: "fixture-account", reconnectAvailable: true, connectionPaused: false };
++        window.__deckReady = { status: "ready", token: "fixture-token", intentId: "fixture-intent", origin: "https://auth.components.deck.co", registryProviderId: "bell" };
++        window.__sync = { ok: true, ready: false, jobId: "fixture-job", status: "waiting", stats: { accountsSeen: 1, integrationsConnected: 0, billsImported: 0, quarantined: 0, errors: 0 } };
++        window.__link = status => ({ id: "fixture-link", email: "home@example.test", status, ongoing: false, categories: ["warranty"], excluded_senders: [], error_code: null, updated_at: "", work: { phase: "complete", processed: 3, proposed: 0, ignored: 3, failed: 0, count: 3, capReached: false, after: 1760000000, before: 1760000001, mode: "initial" } });
++        window.__gmail = { enabled: true, homeId: "home-a", homeName: "Your place", scheduleReady: false, pendingCount: 0, suggestions: [], link: null };
++        if (scenario === "deck-reconnect" || scenario === "deck-offline-retry" || scenario === "deck-account-loading") window.__params = { providerId: "existing-bell" };
++        if (scenario === "deck-unavailable") window.__params = { registryProviderId: "rogers" };
++        if (scenario === "deck-offline-retry") window.__existingError = true;
++        if (scenario === "deck-account-loading") window.__deferExisting = true;
++        if (scenario === "deck-late-account") window.__deferDeck = true;
++        if (scenario === "green-error-retry") window.__greenError = true;
++        if (scenario === "green-resume") window.__params = { resume: "1" };
++        if (scenario === "green-late-account") window.__deferGreen = true;
++        if (scenario === "gmail-unavailable") window.__gmail.enabled = false;
++        if (scenario === "gmail-reconnect") window.__gmail.link = window.__link("reconnect");
++        if (scenario === "gmail-success") window.__gmailSuccess = true;
++        if (scenario === "gmail-offline-retry") window.__loadError = true;
++        if (scenario === "gmail-late-account") window.__deferGmail = true;
++      }, { scenario, screen });
++      await page.goto(origin + "/" + screen);
++      const button = label => page.getByRole("button", { name: label, exact: true });
++      if (screen === "deck") {
++        if (scenario === "deck-unavailable") {
++          await page.getByText("Connection coming soon", { exact: true }).waitFor();
++          assert.equal(await button("Continue with Deck").count(), 0);
++          await button("Upload a statement").click();
++        } else if (scenario === "deck-account-loading") {
++          await page.waitForFunction(() => !!window.__existingResolve);
++          assert.equal(await page.getByRole("textbox").count(), 0, "Legacy password form flashed while loading");
++          await button("Close").click();
++        } else {
++          if (scenario === "deck-offline-retry") {
++            await page.getByText("Couldn’t load this connection", { exact: true }).waitFor();
++            await page.evaluate(() => window.__existingError = false); await button("Try again").click();
++          }
++          const reconnect = scenario === "deck-reconnect" || scenario === "deck-offline-retry";
++          await button(reconnect ? "Reconnect with Deck" : "Continue with Deck").waitFor();
++          assert.equal(await page.evaluate(() => window.__deckCalls.length), 0, "Authorization began before consent");
++          await page.getByText("Your access, your choice", { exact: true }).waitFor();
++          if (scenario === "deck-intro-cancel-history") await page.screenshot({ path: out + "/deck-intro-top-" + width + ".png" });
++          await button("Bill history · 6 months").click();
++          await page.getByRole("radio", { name: "3 months", exact: true }).click();
++          if (scenario === "deck-intro-cancel-history") await page.screenshot({ path: out + "/deck-intro-" + width + ".png" });
++          await button(reconnect ? "Reconnect with Deck" : "Continue with Deck").click();
++          await page.waitForFunction(() => window.__deckCalls.length === 1);
++          const request = await page.evaluate(() => window.__deckCalls[0]);
++          assert.equal(request.historyMonths, 3);
++          assert.equal(request.registryProviderId, "bell");
++          if (reconnect) assert.equal(request.providerId, "existing-bell");
++          if (scenario === "deck-late-account") {
++            await page.evaluate(() => { window.__user = "account-b"; window.__rerender(); });
++            await button("Continue with Deck").waitFor();
++            await page.evaluate(() => window.__deckResolve(window.__deckReady));
++            await page.waitForTimeout(80);
++            assert.equal(await page.getByText("External sign-in screen", { exact: true }).count(), 0);
++          } else if (scenario === "deck-intro-cancel-history") {
++            await button("Close Bell sign-in").click();
++            await page.getByText("Sign-in closed.", { exact: false }).waitFor();
++            assert.equal(await page.getByRole("radio", { name: "3 months", exact: true }).getAttribute("aria-checked"), "true");
++            await button("Continue with Deck").click();
++            await page.getByText("External sign-in screen", { exact: true }).waitFor();
++            await page.evaluate(() => window.__web.onMessage({ nativeEvent: { data: JSON.stringify({ type: "SUCCESS", credentialId: "fixture-credential" }), url: "https://auth.components.deck.co" } }));
++            await page.waitForFunction(() => window.__routes.includes("/provider/connected-bell"));
++          } else {
++            await button("Close Bell sign-in").click();
++            await button("Upload a bill instead").click();
++            assert.deepEqual(await page.evaluate(() => window.__routes.at(-1)), { pathname: "/bill/add", params: { providerName: "Bell", category: "Internet" } });
++          }
++        }
++        assert.equal(await page.evaluate(() => window.__legacyCalls.length), 0);
++      } else if (screen === "green") {
++        if (scenario === "green-resume") {
++          await page.getByText("Your bills aren’t ready yet", { exact: true }).waitFor();
++          assert.equal(await page.evaluate(() => window.__greenCalls), 0, "Resuming restarted authorization");
++          assert.equal(await page.evaluate(() => window.__statusCalls), 1);
++        } else {
++          await button("Continue with Green Button").waitFor();
++          assert.equal(await page.evaluate(() => window.__greenCalls), 0);
++          if (scenario === "green-intro-upload") {
++            await page.screenshot({ path: out + "/green-intro-" + width + ".png" });
++            await button("Upload a bill instead").click();
++            assert.equal(await page.evaluate(() => window.__greenCalls), 0);
++          } else {
++            await button("Continue with Green Button").click();
++            if (scenario === "green-error-retry") {
++              await page.getByText("Connection not finished", { exact: true }).waitFor();
++              await button("Back to connection details").click();
++              assert.equal(await page.evaluate(() => window.__greenCalls), 1);
++              await page.evaluate(() => window.__greenError = false);
++              await button("Continue with Green Button").click();
++            }
++            if (scenario === "green-late-account") {
++              await page.waitForFunction(() => !!window.__greenResolve);
++              await page.evaluate(() => { window.__user = "account-b"; window.__rerender(); });
++              await button("Continue with Green Button").waitFor();
++              await page.evaluate(() => window.__greenResolve({ authorizationUrl: "https://example.invalid/old-account" }));
++              await page.waitForTimeout(80);
++              assert.equal(await page.getByText("External sign-in screen", { exact: true }).count(), 0);
++            } else {
++              await page.getByText("External sign-in screen", { exact: true }).waitFor();
++              await page.evaluate(() => window.__web.onMessage({ nativeEvent: { data: JSON.stringify({ type: "ezgb_authorized" }) } }));
++              await page.getByText("Your bills aren’t ready yet", { exact: true }).waitFor();
++              assert.equal(await page.evaluate(() => window.__syncCalls), 1);
++              await button("Go back to Bills").click();
++            }
++          }
++        }
++      } else {
++        if (scenario === "gmail-offline-retry") {
++          await page.getByText("Couldn’t check your email connection. Try again.", { exact: true }).waitFor();
++          await page.evaluate(() => window.__loadError = false); await button("Try again").click();
++        }
++        if (scenario === "gmail-reconnect") {
++          await button("Reconnect Gmail").click();
++          await page.waitForFunction(() => window.__gmailCalls.length === 1);
++          assert.deepEqual(await page.evaluate(() => window.__gmailCalls[0].categories), ["warranty"]);
++        } else {
++          await button("Continue with Google").waitFor();
++          assert.equal(await page.evaluate(() => window.__gmailCalls.length), 0);
++          if (scenario === "gmail-unavailable") assert.equal(await button("Continue with Google").isDisabled(), true);
++          else if (scenario === "gmail-skip") {
++            await button("Not now").click();
++            assert.deepEqual(await page.evaluate(() => window.__routes), ["/(tabs)/vault"]);
++          } else if (scenario === "gmail-intro-categories-cancel") {
++            await page.screenshot({ path: out + "/gmail-intro-" + width + ".png" });
++            await button("Choose what Rezlee looks for").click();
++            for (const label of ["Bills", "Service invoices", "Home purchases", "Warranties"]) await page.getByRole("checkbox", { name: label, exact: true }).click();
++            assert.equal(await button("Continue with Google").isDisabled(), true);
++            await page.getByRole("checkbox", { name: "Warranties", exact: true }).click();
++            await button("Continue with Google").click();
++            await page.getByText("Connection cancelled.", { exact: false }).waitFor();
++            assert.deepEqual(await page.evaluate(() => window.__gmailCalls), [{ homeId: "home-a", categories: ["warranty"] }]);
++          } else if (scenario === "gmail-late-account") {
++            await button("Continue with Google").click(); await page.waitForFunction(() => !!window.__gmailResolve);
++            const gets = await page.evaluate(() => window.__gets);
++            await page.evaluate(() => { window.__user = "account-b"; window.__gmail.homeId = "home-b"; window.__rerender(); });
++            await button("Continue with Google").waitFor();
++            await page.evaluate(() => window.__gmailResolve(false)); await page.waitForTimeout(80);
++            assert.equal(await page.getByText("Connection cancelled.", { exact: false }).count(), 0, "Previous account completion altered screen");
++            assert.equal(await page.evaluate(() => window.__gets), gets + 1, "Previous account completion fetched new account");
++          } else if (scenario === "gmail-success") {
++            await button("Continue with Google").click();
++            await page.getByText("Search complete", { exact: true }).waitFor();
++            await page.getByText("No supported home records found", { exact: false }).waitFor();
++            assert.equal(await button("Continue with Google").count(), 0, "Intro repeated for connected account");
++          }
++        }
++      }
++      assert.deepEqual(errors, [], scenario);
++      assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false, "Horizontal overflow: " + scenario);
++      checks.push({ width, scenario, pass: true }); await page.close();
++    }
++    fs.writeFileSync(out + "/results.json", JSON.stringify({ passed: checks.length, checks, boundaries: "Actual entry screens, DeckHostedAuth, shared UI and navigation helper; simulated network, auth, OAuth/WebView, haptics, icon rendering and router. No external connections, emails, pulls or paid calls. Physical native OAuth, keyboards, MFA and screen-reader acceptance remain." }, null, 2));
++    console.log(JSON.stringify({ passed: checks.length, out }));
++  } finally { await browser.close(); server.close(); }
++})().catch(error => { console.error(error); process.exitCode = 1; });
+--- before/docs/audit-completion-status-2026-10-11.md
++++ after/docs/audit-completion-status-2026-10-11.md
+@@ -54,3 +54,12 @@
+ See customer-communications-2026-10-12.md. A one-time welcome is implemented for new verified mobile accounts after the staging rollout cutoff. All 13 Supabase auth/security templates are now branded (11 added in this increment); password-changed delivery is ON in staging, other six security switches OFF. Notification destinations now enforce current ownership/record access, retire obsolete updates, survive read-receipt failures and preserve lock/recovery/account-switch boundaries. Inbox pagination deduplicates.
+ 
+ Evidence: 924 regression tests, 20 actual-component rendered notification scenarios, 24 email layout checks and 23 hosted no-send checks recorded in the checkpoint. Lint, types, Next build and native exports passed. Physical inbox/push/deep-link acceptance is still pending; no production release, customer test messages, paid provider calls or recurring jobs. The combined founder checklist includes the previous Home/recovery work. Next independent engineering: connected-account deletion/revocation; Apple/native auth and actual device acceptance remain open alongside the other audit gates.
++
++
++## Connection introduction pass — October 12
++
++The user moved the Hark-inspired benefit-before-permission UX pass ahead of the next backend milestone. It is now implemented for Green Button, hosted Deck and Gmail; see connection-intros-2026-10-12.md. Each intro explains the useful result, sign-in/verification steps and access before continuing, with manual alternatives. Deck cancellation retains the selected history; reconnect loading is explicit; Gmail reconnect retains saved categories; entry screens isolate account changes. The unified provider finder and provider availability/classification are preserved.
++
++Evidence: 36 actual-screen scenarios at 320/390 widths, 924 regression tests, lint/types/Next build and iOS/Android exports passed. Client changes are available after reloading staging Expo 8081; backend unchanged. No live paid provider calls, customer messages, scheduled jobs or production release. Native OAuth/MFA, consent refusal, phone accessibility and actual customer usefulness remain pending.
++
++Next independent engineering returns to connected-account deletion/revocation. Apple sign-in/native auth, actual communications delivery, the release candidate and operational gates remain open alongside all earlier audit acceptance gates. This introduction pass does not sign them off.
+--- before/docs/connection-intros-2026-10-12.md
++++ after/docs/connection-intros-2026-10-12.md
+@@ -0,0 +1,49 @@
++# Connection introductions — October 12, 2026
++
++## Status
++
++The Hark-inspired benefit-before-permission pass is implemented in the mobile app for Green Button, hosted Deck connections and Gmail. This is an engineering checkpoint, not physical-phone or provider acceptance. It follows the previously agreed Hark review; the recording was not re-reviewed in this increment.
++
++Reload the staging Expo development server on **8081**. Its status endpoint was checked and is running. The existing TestFlight binary does not contain these edits. The backend remains at the customer-communications staging deployment; no backend, database, provider configuration or production change was needed.
++
++## What changed
++
++- A consistent introduction explains the useful outcome, two clear next steps, the actual access granted and how to stop sharing.
++- Green Button stays the recommended route for supported Ontario electricity and natural gas. The existing unified provider finder still chooses the route. Water/provider classifications and availability were not changed.
++- Deck explains whose login to use, who receives/stores the credentials, verification, and when the customer can leave. The default six-month history is now a compact, editable choice; all one-to-six-month options remain. Upload keeps the selected provider and category.
++- Gmail explicitly separates Google mailbox permission from Rezlee sign-in. Read-only mailbox access is visible before continuing; category choices, manual upload, detailed privacy information and “Not now” remain available.
++- Connected Gmail accounts keep their progress/review screen instead of seeing onboarding again. Reconnection retains the existing search categories and explains which Gmail account to choose.
++- Viewing an introduction does not start authorization. Deck cancellation preserves the chosen history and offers a clear notice. Green Button preparation failures offer an explicit return to the introduction; reopening does not silently start authorization.
++- Deck reconnection waits for existing-account details before showing a form, with a retry state on failure. Account/route changes reset the relevant screen instance; stale fetch and OAuth results cannot update the next account’s screen.
++- Automatic monthly utility updates remain explicitly unavailable. Existing paused/ongoing Gmail controls and runtime gates remain intact.
++
++## Verification
++
++- **36 rendered interaction scenarios passed** using the actual three screens, DeckHostedAuth, shared components and navigation helper, at 320 and 390 pixel phone widths.
++- Checked: no authorization before continuing; Deck hosted sign-in, cancellation, chosen history, successful handoff, reconnection ID, unavailable Rogers, offline retry, no credential-form flash, upload provider preservation, and late account-switch completion.
++- Checked: Green Button manual upload without authorization, consent-to-pending-import handoff, preparation failure/retry, returning to an unfinished import without reauthorization, and late account-switch completion.
++- Checked: Gmail category selection, disabled empty selection, cancellation, skip, unavailable service, saved reconnection categories, connected/empty-result view, offline retry, and late account-switch completion.
++- **924 regression tests passed**; scoped lint, mobile/web TypeScript, Next build, iOS export and Android export passed. Final UI changes were followed by a fresh 36-scenario render pass, lint/mobile types and both native exports.
++- Rendered layouts were visually reviewed and the copy was shortened afterward so the main action is visible sooner.
++- Network, auth/OAuth, native WebView, router, haptics and icon rendering were controlled test boundaries. This verifies screen behavior, not actual Google/Deck/EZGB authorization, MFA, background OS behavior or native accessibility.
++- No live provider retrievals, paid calls, outgoing email/push, new schedules or production release occurred.
++
++Evidence: `docs/qa/connection-intros-20261012/results.json` and screenshots. Runnable screen harness: `scripts/qa/render-connection-intros.cjs`.
++
++## Phone checks to combine with the earlier checklist
++
++1. Reload staging Expo on **8081**. In Bills, open the provider finder. Select your supported Ontario electricity/gas utility: confirm the introduction shows the correct name, recommends Green Button, explains consent, and offers upload/back.
++2. Select an available Deck provider such as Bell. Open “Bill history · 6 months,” choose a shorter period, continue, then close sign-in. Confirm the choice remains and the cancellation notice appears. “Upload a bill instead” should carry the provider/category forward.
++3. In Vault → Add → Import from email, inspect the Gmail introduction. Change categories, cancel Google sign-in and return. Confirm the app remains signed in and your choices remain. On an already connected account, expect progress/review controls instead of the intro.
++4. During an approved real provider/Gmail test, verify the actual account chooser, credentials/MFA, consent refusal, native return and result destination. A successful bundled export does not establish these.
++5. Check large system text and screen-reader order on a phone. Confirm all copy, close/skip controls and primary actions remain reachable.
++
++## Remaining work and next priority
++
++This closes only the connection-introduction engineering pass. Apple sign-in/native auth, actual inbox/push/deep-link acceptance, connected-account deletion/revocation and operational readiness remain open. So do the recorded physical/provider/customer gates elsewhere in the audit. The next independent engineering pass returns to connected-account deletion/revocation, with Apple/native auth still pending.
++
++## Preservation and rollback
++
++Inherited source changes remain untouched outside this scope. The checkpoint contains before/after archives, SHA-256 manifest, scoped diff and evidence. Task docs/checkpoints are committed separately; source files retain the established working-tree layout. Do not reset or overwrite the inherited dirty tree.
++
++For rollback, review `docs/checkpoints/connection-intros-20261012/scoped.diff` and restore only the three screen files from `before.zip`; remove the newly introduced component only after reverting its imports. No backend rollback is required.

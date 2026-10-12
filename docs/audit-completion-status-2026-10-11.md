@@ -54,3 +54,12 @@ Current order: (1) finish authentication/welcome/security communications and App
 See customer-communications-2026-10-12.md. A one-time welcome is implemented for new verified mobile accounts after the staging rollout cutoff. All 13 Supabase auth/security templates are now branded (11 added in this increment); password-changed delivery is ON in staging, other six security switches OFF. Notification destinations now enforce current ownership/record access, retire obsolete updates, survive read-receipt failures and preserve lock/recovery/account-switch boundaries. Inbox pagination deduplicates.
 
 Evidence: 924 regression tests, 20 actual-component rendered notification scenarios, 24 email layout checks and 23 hosted no-send checks recorded in the checkpoint. Lint, types, Next build and native exports passed. Physical inbox/push/deep-link acceptance is still pending; no production release, customer test messages, paid provider calls or recurring jobs. The combined founder checklist includes the previous Home/recovery work. Next independent engineering: connected-account deletion/revocation; Apple/native auth and actual device acceptance remain open alongside the other audit gates.
+
+
+## Connection introduction pass — October 12
+
+The user moved the Hark-inspired benefit-before-permission UX pass ahead of the next backend milestone. It is now implemented for Green Button, hosted Deck and Gmail; see connection-intros-2026-10-12.md. Each intro explains the useful result, sign-in/verification steps and access before continuing, with manual alternatives. Deck cancellation retains the selected history; reconnect loading is explicit; Gmail reconnect retains saved categories; entry screens isolate account changes. The unified provider finder and provider availability/classification are preserved.
+
+Evidence: 36 actual-screen scenarios at 320/390 widths, 924 regression tests, lint/types/Next build and iOS/Android exports passed. Client changes are available after reloading staging Expo 8081; backend unchanged. No live paid provider calls, customer messages, scheduled jobs or production release. Native OAuth/MFA, consent refusal, phone accessibility and actual customer usefulness remain pending.
+
+Next independent engineering returns to connected-account deletion/revocation. Apple sign-in/native auth, actual communications delivery, the release candidate and operational gates remain open alongside all earlier audit acceptance gates. This introduction pass does not sign them off.

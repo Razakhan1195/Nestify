@@ -1,0 +1,48 @@
+{
+  "baseHead": "0f4b7139524cc7547e119cc40820487aed2c7820",
+  "files": {
+    "apps/mobile/src/components/ConnectionIntroduction.tsx": {
+      "before": null,
+      "after": "f16185244245fc35ed8cd6865bdb231ea5fcd6db786af973530d71bc30cf4aed"
+    },
+    "apps/mobile/app/provider/deck.tsx": {
+      "before": "2b3402c49b9e847f995691aded29ae784e178f5c6cf284c2abc3724ae9c2b125",
+      "after": "3682da1b7593ffab724c0906377db2930b13075c55932d55a12570a6ae7f48a1"
+    },
+    "apps/mobile/app/provider/ezgb.tsx": {
+      "before": "76df1a605f6a561f87862e15cfa7f30f112c1ea0029f2fc00e6cec16ab097df0",
+      "after": "1b87efaef64b4151eee3b2f5dd6b95e3dec359406d481129d26a7d488ed5bac4"
+    },
+    "apps/mobile/app/gmail-memory.tsx": {
+      "before": "09852e3cf887f24315ece488009b219035186ce866d54dafd537ed7d9f470c50",
+      "after": "a336648a05e8a20ec43a0f70979f25f556c580415cffa262b280565d17f0c630"
+    },
+    "scripts/qa/render-connection-intros.cjs": {
+      "before": null,
+      "after": "6134b1955ccdaa53792619b370d92d500a3896b682b30a4aa48aca5f5b5823fd"
+    },
+    "docs/audit-completion-status-2026-10-11.md": {
+      "before": "48860ebb9179471e1f7c5169fc3f4a7bd4bdcfa7a85dcc1693d08dfbc067c36a",
+      "after": "895d2e98927f7dfe7e85d42a94daea109e47ceb6283b154d195679c6ae7b3d4e"
+    },
+    "docs/connection-intros-2026-10-12.md": {
+      "before": null,
+      "after": "31b84c3067af18dd38de9a99c404536c72645353a0a37db08406992bdb4b2610"
+    }
+  },
+  "status": "engineering_verified_phone_acceptance_pending",
+  "stagingClient": "Expo 8081; reload required",
+  "backend": "unchanged",
+  "verification": {
+    "regressionTests": 924,
+    "renderedScenarios": 36,
+    "lint": "pass",
+    "mobileTypes": "pass",
+    "webTypes": "pass",
+    "nextBuild": "pass",
+    "iosExport": "pass",
+    "androidExport": "pass"
+  },
+  "liveExternalCalls": false,
+  "productionRelease": false
+}
