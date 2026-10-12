@@ -1,0 +1,592 @@
+--- before/apps/mobile/src/lib/api.ts
++++ after/apps/mobile/src/lib/api.ts
+@@ -53,8 +53,11 @@
+  * access token as a Bearer header - the server re-validates it and scopes
+  * every query through RLS, so this client never trusts the app itself.
+  */
+-async function getAccessToken() {
++async function getAccessToken(expectedUserId?: string) {
+   const { data } = await supabase.auth.getSession();
++  if (expectedUserId && data.session?.user.id !== expectedUserId) {
++    throw new ApiError("Your account changed. Reopen this screen to continue.", 409);
++  }
+   const accessToken = data.session?.access_token;
+ 
+   if (!accessToken) {
+@@ -95,13 +98,13 @@
+ export async function apiPost<T>(
+   path: string,
+   body?: unknown,
+-  options?: { timeoutMs?: number },
++  options?: { timeoutMs?: number; expectedUserId?: string },
+ ): Promise<T> {
+   if (!apiUrl) {
+     throw new ApiError("EXPO_PUBLIC_API_URL is not configured.", 500);
+   }
+ 
+-  const accessToken = await getAccessToken();
++  const accessToken = await getAccessToken(options?.expectedUserId);
+   const controller = options?.timeoutMs ? new AbortController() : null;
+   const timeout = controller
+     ? setTimeout(() => controller.abort(), options?.timeoutMs)
+--- before/apps/mobile/src/lib/phone-invites.ts
++++ after/apps/mobile/src/lib/phone-invites.ts
+@@ -3,6 +3,8 @@
+ import { Linking, Platform } from "react-native";
+ import { apiPost, ApiError } from "./api";
+ import { supabase } from "./supabase";
++import { createPhoneInviteRecovery, type PhoneInviteInput } from "./phone-invite-recovery";
++export type { PhoneInviteInput } from "./phone-invite-recovery";
+ export type PhoneInvitationState = { state: "pending" | "awaiting_approval" | "accepted" | "expired" | "unavailable" | "other_household" | "own_household"; homeName?: string; expiresAt?: string };
+ export function normalizeInvitePhone(value: string) {
+   const clean = value.replace(/[\s().-]/g, "");
+@@ -15,35 +17,36 @@
+   if (!data.session) throw Error("Sign in before inviting someone.");
+   return "rezlee-phone-invite-" + data.session.user.id;
+ }
+-export async function createPhoneInvitation(input: { displayName: string; phone: string; relationship?: string; expensePersonId?: string }) {
+-  const key = await ownerKey();
+-  const saved = await SecureStore.getItemAsync(key);
+-  const pending = saved ? JSON.parse(saved) : { input, requestId: Crypto.randomUUID(), token: Crypto.randomUUID().replace(/-/g, "") + Crypto.randomUUID().replace(/-/g, "") };
+-  if (JSON.stringify(pending.input) !== JSON.stringify(input)) throw Error("An earlier invitation needs confirmation. Retry with the same details before creating another.");
+-  if (!saved) await SecureStore.setItemAsync(key, JSON.stringify(pending));
+-  let result: { memberId: string; expiresAt: string };
+-  try { result = await apiPost<typeof result>("/api/mobile/v1/household/phone", { operation: "create", ...input, requestId: pending.requestId, token: pending.token }); }
+-  catch (e) { if (e instanceof ApiError && e.status >= 400 && e.status < 500) await SecureStore.deleteItemAsync(key); throw e; }
+-  await SecureStore.setItemAsync(key + "-" + result.memberId, JSON.stringify({ phone: input.phone, token: pending.token }));
+-  await SecureStore.deleteItemAsync(key);
+-  return result;
++const recovery = createPhoneInviteRecovery({
++  storage: SecureStore, randomUUID: Crypto.randomUUID,
++  definiteRejection: error => error instanceof ApiError && error.status === 409 && !!error.details,
++  ownerId: async () => {
++    const { data } = await supabase.auth.getSession();
++    if (!data.session) throw Error("Sign in before inviting someone.");
++    return data.session.user.id;
++  },
++  create: (input, ownerId) => apiPost("/api/mobile/v1/household/phone", { operation: "create", ...input }, { timeoutMs: 15_000, expectedUserId: ownerId }),
++});
++export function createPhoneInvitation(input: PhoneInviteInput, expectedOwnerId?: string) {
++  return recovery.create(input, expectedOwnerId);
+ }
+ export async function openPhoneInvitation(memberId: string) {
+-  const saved = await SecureStore.getItemAsync((await ownerKey()) + "-" + memberId);
++  const key = await ownerKey();
++  const saved = await SecureStore.getItemAsync(key + "-" + memberId);
+   if (!saved) throw Error("The invitation link is not saved on this device. Cancel this invitation and create a new one to send it.");
+   const { phone, token } = JSON.parse(saved);
++  if (await ownerKey() !== key) throw Error("Your account changed. Reopen invitations to continue.");
+   const base = (process.env.EXPO_PUBLIC_API_URL || "https://rezlee.com").replace(/\/$/, "");
+   const message = "Join my household on Rezlee to keep shared expenses and home tasks together. Sign in and request to join; I’ll confirm it’s you. " + base + "/join-household#token=" + token;
+   await Linking.openURL("sms:" + phone + (Platform.OS === "ios" ? "&" : "?") + "body=" + encodeURIComponent(message));
+ }
+-export function checkPhoneInvitation(token: string, confirm = false) { return apiPost<PhoneInvitationState>("/api/mobile/v1/household/phone", { operation: confirm ? "request" : "preview", token }); }
++export function checkPhoneInvitation(token: string, confirm = false, expectedUserId?: string) { return apiPost<PhoneInvitationState>("/api/mobile/v1/household/phone", { operation: confirm ? "request" : "preview", token }, { timeoutMs: 15_000, expectedUserId }); }
+ export function approvePhoneInvitation(memberId: string, userId: string) { return apiPost<{ ok: true }>("/api/mobile/v1/household/phone", { operation: "approve", memberId, userId }); }
+ const incoming = "rezlee-incoming-phone-invite";
+ export async function saveIncomingPhoneInvite(token: string) { if (!/^[a-f0-9]{64}$/.test(token)) throw Error("Invalid invitation link."); await SecureStore.setItemAsync(incoming, token); }
+ export function readIncomingPhoneInvite() { return SecureStore.getItemAsync(incoming); }
+ export function clearIncomingPhoneInvite() { return SecureStore.deleteItemAsync(incoming); }
+ 
+-export async function pendingPhoneInvitation(): Promise<{ displayName: string; phone: string; relationship?: string; expensePersonId?: string } | null> {
+-  const raw = await SecureStore.getItemAsync(await ownerKey());
+-  return raw ? JSON.parse(raw).input : null;
++export function pendingPhoneInvitation(expectedOwnerId?: string) {
++  return recovery.pending(expectedOwnerId);
+ }
+--- before/apps/mobile/src/lib/phone-invite-recovery.ts
++++ after/apps/mobile/src/lib/phone-invite-recovery.ts
+@@ -0,0 +1,69 @@
++export type PhoneInviteInput = { displayName: string; phone: string; relationship?: string; expensePersonId?: string };
++type Intent = { input: PhoneInviteInput; requestId: string; token: string };
++type Storage = {
++  getItemAsync(key: string): Promise<string | null>;
++  setItemAsync(key: string, value: string): Promise<void>;
++  deleteItemAsync(key: string): Promise<void>;
++};
++type Dependencies = {
++  storage: Storage;
++  randomUUID(): string;
++  ownerId(): Promise<string>;
++  definiteRejection?(error: unknown): boolean;
++  create(input: PhoneInviteInput & { requestId: string; token: string }, ownerId: string): Promise<{ memberId: string; expiresAt: string }>;
++};
++export const phoneInviteKey = (ownerId: string) => "rezlee-phone-invite-" + ownerId;
++function parse(raw: string): Intent {
++  try {
++    const value = JSON.parse(raw) as Intent;
++    if (!value.input || typeof value.input.displayName !== "string" || !value.input.displayName.trim()
++      || !/^\+[1-9][0-9]{7,14}$/.test(value.input.phone)
++      || !/^[a-f0-9-]{36}$/i.test(value.requestId) || !/^[a-f0-9]{64}$/.test(value.token)
++      || (value.input.relationship !== undefined && typeof value.input.relationship !== "string")
++      || (value.input.expensePersonId !== undefined && typeof value.input.expensePersonId !== "string")) throw Error();
++    return value;
++  } catch { throw Error("Couldn’t restore the unfinished invitation. Try checking again before preparing another."); }
++}
++function sameInput(a: PhoneInviteInput, b: PhoneInviteInput) {
++  return a.displayName === b.displayName && a.phone === b.phone
++    && a.relationship === b.relationship && a.expensePersonId === b.expensePersonId;
++}
++export function createPhoneInviteRecovery(deps: Dependencies) {
++  const active = new Set<string>();
++  async function owner(expectedOwnerId?: string) {
++    const id = await deps.ownerId();
++    if (expectedOwnerId && id !== expectedOwnerId) throw Error("Your account changed. Reopen invitations to continue.");
++    return id;
++  }
++  return {
++    async pending(expectedOwnerId?: string): Promise<PhoneInviteInput | null> {
++      const raw = await deps.storage.getItemAsync(phoneInviteKey(await owner(expectedOwnerId)));
++      return raw ? parse(raw).input : null;
++    },
++    async create(input: PhoneInviteInput, expectedOwnerId?: string) {
++      const id = await owner(expectedOwnerId), key = phoneInviteKey(id);
++      if (active.has(id)) throw Error("This invitation is still being prepared.");
++      active.add(id);
++      try {
++        const raw = await deps.storage.getItemAsync(key);
++        const intent: Intent = raw ? parse(raw) : {
++          input, requestId: deps.randomUUID(),
++          token: deps.randomUUID().replace(/-/g, "") + deps.randomUUID().replace(/-/g, ""),
++        };
++        if (!sameInput(intent.input, input)) throw Error("An earlier invitation needs confirmation. Retry with the same details before creating another.");
++        if (!raw) await deps.storage.setItemAsync(key, JSON.stringify(intent));
++        // Keep the exact request and secret after every ambiguous failure, including HTTP 408.
++        // Older servers also return 400 for database failures, so 400 is not proof of rejection.
++        let result: { memberId: string; expiresAt: string };
++        try { result = await deps.create({ ...intent.input, requestId: intent.requestId, token: intent.token }, id); }
++        catch (error) {
++          if (deps.definiteRejection?.(error)) await deps.storage.deleteItemAsync(key);
++          throw error;
++        }
++        await deps.storage.setItemAsync(key + "-" + result.memberId, JSON.stringify({ phone: intent.input.phone, token: intent.token }));
++        await deps.storage.deleteItemAsync(key);
++        return result;
++      } finally { active.delete(id); }
++    },
++  };
++}
+--- before/apps/mobile/app/household/invite-phone.tsx
++++ after/apps/mobile/app/household/invite-phone.tsx
+@@ -2,43 +2,73 @@
+ import { useEffect, useRef, useState } from "react";
+ import { KeyboardAvoidingView, Platform, ScrollView, Text } from "react-native";
+ import { SafeAreaView } from "react-native-safe-area-context";
++import { useAuth } from "@/auth/AuthProvider";
+ import { Button } from "@/components/Button";
+ import { TextField } from "@/components/TextField";
+ import { ScreenNavigation } from "@/components/ScreenNavigation";
+ import { QuietAction } from "@/components/Brief";
+-import { createPhoneInvitation, pendingPhoneInvitation, normalizeInvitePhone, openPhoneInvitation } from "@/lib/phone-invites";
++import { createPhoneInvitation, pendingPhoneInvitation, normalizeInvitePhone, openPhoneInvitation, type PhoneInviteInput } from "@/lib/phone-invites";
+ import { colors, typography } from "@/theme/tokens";
+ export default function InviteByPhone() {
++  const { session } = useAuth();
++  return <InviteForm key={session?.user.id ?? "signed-out"} ownerId={session?.user.id} />;
++}
++function InviteForm({ ownerId }: { ownerId?: string }) {
+   const params = useLocalSearchParams<{ name?: string; personId?: string }>(), router = useRouter();
+   const [name, setName] = useState(params.name ?? ""), [phone, setPhone] = useState("");
+   const [member, setMember] = useState<string | null>(null), [busy, setBusy] = useState(false), [error, setError] = useState<string | null>(null), [opened, setOpened] = useState(false);
+-  const lock = useRef(false);
+-  const [pendingPersonId, setPendingPersonId] = useState<string | undefined>(params.personId);
+-  useEffect(() => { let active = true; void pendingPhoneInvitation().then(pending => {
+-    if (pending && active) { setName(pending.displayName); setPhone(pending.phone); setPendingPersonId(pending.expensePersonId); }
+-  }).catch(() => { if (active) setError("Couldn’t check unfinished invitations. Retry before preparing another."); }); return () => { active = false; }; }, []);
++  const [pending, setPending] = useState<PhoneInviteInput | null>(null);
++  const [ready, setReady] = useState(false), [checking, setChecking] = useState(true), [attempt, setAttempt] = useState(0);
++  const lock = useRef(false), mounted = useRef(true);
++  useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
++  useEffect(() => {
++    let active = true;
++    void (async () => {
++      try {
++        if (!ownerId) throw Error("Sign in before inviting someone.");
++        const saved = await pendingPhoneInvitation(ownerId);
++        if (!active) return;
++        setPending(saved);
++        if (saved) { setName(saved.displayName); setPhone(saved.phone); }
++        setReady(true);
++      } catch { if (active) { setReady(false); setError("Couldn’t check unfinished invitations. Try checking again before preparing another."); } }
++      finally { if (active) setChecking(false); }
++    })();
++    return () => { active = false; };
++  }, [ownerId, attempt]);
+   async function prepare() {
+     const number = normalizeInvitePhone(phone);
+-    if (lock.current || !number || !name.trim()) return;
++    if (lock.current || !ready || checking || !ownerId || !number || !name.trim()) return;
+     lock.current = true; setBusy(true); setError(null);
+-    try { const result = await createPhoneInvitation({ displayName: name.trim(), phone: number, ...(pendingPersonId ? { expensePersonId: pendingPersonId } : {}) }); setMember(result.memberId); }
+-    catch (e) { setError(e instanceof Error ? e.message : "Couldn’t prepare this invitation. Retry with the same details."); }
+-    finally { lock.current = false; setBusy(false); }
++    const input = pending ?? { displayName: name.trim(), phone: number, ...(params.personId ? { expensePersonId: params.personId } : {}) };
++    setPending(input);
++    try {
++      const result = await createPhoneInvitation(input, ownerId);
++      if (mounted.current) setMember(result.memberId);
++    } catch (e) {
++      if (!mounted.current) return;
++      setError(e instanceof Error ? e.message : "Couldn’t prepare this invitation. Retry with the same details.");
++      try { const saved = await pendingPhoneInvitation(ownerId); if (mounted.current) setPending(saved); }
++      catch { if (mounted.current) setReady(false); }
++    } finally { lock.current = false; if (mounted.current) setBusy(false); }
+   }
+-  async function send() { if (!member) return; setError(null); try { await openPhoneInvitation(member); setOpened(true); } catch (e) { setError(e instanceof Error ? e.message : "Couldn’t open Messages."); } }
++  async function send() { if (!member || lock.current) return; lock.current = true; setError(null); try { await openPhoneInvitation(member); if (mounted.current) setOpened(true); } catch (e) { if (mounted.current) setError(e instanceof Error ? e.message : "Couldn’t open Messages."); } finally { lock.current = false; } }
++  const editable = ready && !checking && !busy && !pending;
+   return <SafeAreaView style={{ flex: 1, backgroundColor: colors.canvas }}>
+     <ScreenNavigation title="Invite by phone" fallback="/household" />
+     <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={{ flex: 1 }}><ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ padding: 20, gap: 20 }}>
+       <Text style={[typography.heading, { color: colors.foreground }]}>{member ? "Your invitation is ready" : "Invite them to your household"}</Text>
+       {member ? <>
+-        <Text style={[typography.body, { color: colors.mutedForeground }]}>{opened ? "Messages was opened. Rezlee cannot confirm whether you sent the text. " : "Choose Open Messages to review and send the invitation yourself. "}The link expires in seven days.</Text>
++        <Text style={[typography.body, { color: colors.mutedForeground }]}>{opened ? "Messages was opened. Rezlee cannot confirm whether you sent the text. " : "Choose Open Messages to review and send the invitation yourself. "}The link expires seven days after it was first prepared.</Text>
+         <Button label="Open Messages" onPress={() => void send()} />
+         <QuietAction label="View People and invitations" onPress={() => router.replace("/household")} />
+       </> : <>
+-        <TextField label="Name" value={name} onChangeText={setName} editable={!busy && !pendingPersonId} maxLength={80} />
+-        <TextField label="Mobile number" value={phone} onChangeText={setPhone} keyboardType="phone-pad" placeholder="(416) 555-0123" editable={!busy} maxLength={24} />
++        <TextField label="Name" value={name} onChangeText={setName} editable={editable && !params.personId} maxLength={80} />
++        <TextField label="Mobile number" value={phone} onChangeText={setPhone} keyboardType="phone-pad" placeholder="(416) 555-0123" editable={editable} maxLength={24} />
+         <Text style={[typography.meta, { color: colors.mutedForeground }]}>Canadian numbers can be entered without +1. For other countries, include the country code.</Text>
+-        <Button label="Prepare invitation" disabled={!name.trim() || !normalizeInvitePhone(phone)} loading={busy} onPress={() => void prepare()} />
++        {pending ? <Text style={[typography.body, { color: colors.mutedForeground }]}>An invitation is unfinished. Check it with the same details to recover its link.</Text> : null}
++        {!ready ? <Button label={checking ? "Checking unfinished invitations" : "Check unfinished invitations"} loading={checking} onPress={() => { setChecking(true); setError(null); setAttempt(value => value + 1); }} /> : <Button label={pending ? "Check unfinished invitation" : "Prepare invitation"} disabled={checking || !name.trim() || !normalizeInvitePhone(phone)} loading={busy} onPress={() => void prepare()} />}
++        <QuietAction label="View People and invitations" onPress={() => router.replace("/household")} />
+         <QuietAction label="Invite by email instead" onPress={() => router.replace("/household/add")} />
+       </>}
+       <Text style={[typography.body, { color: colors.mutedForeground }]}>They sign in and request to join. You’ll confirm their account in People before access is granted. Shared expenses and Care are shared; private bills and Vault documents stay private.</Text>
+--- before/apps/mobile/app/household/join.tsx
++++ after/apps/mobile/app/household/join.tsx
+@@ -1,5 +1,5 @@
+ import { useLocalSearchParams, useRouter } from "expo-router";
+-import { useEffect, useState } from "react";
++import { useEffect, useRef, useState } from "react";
+ import { ActivityIndicator, ScrollView, Text } from "react-native";
+ import { SafeAreaView } from "react-native-safe-area-context";
+ import { useAuth } from "@/auth/AuthProvider";
+@@ -8,8 +8,15 @@
+ import { checkPhoneInvitation, saveIncomingPhoneInvite, readIncomingPhoneInvite, clearIncomingPhoneInvite, type PhoneInvitationState } from "@/lib/phone-invites";
+ import { colors, typography } from "@/theme/tokens";
+ export default function JoinHousehold() {
++  const { session } = useAuth();
++  const { token } = useLocalSearchParams<{ token?: string }>();
++  return <JoinInvitation key={(session?.user.id ?? "signed-out") + ":" + (token ?? "saved")} />;
++}
++function JoinInvitation() {
+   const { token: parameter } = useLocalSearchParams<{ token?: string }>();
+   const { session } = useAuth(), router = useRouter();
++  const lock = useRef(false), mounted = useRef(true);
++  useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
+   const [token, setToken] = useState<string | null>(null), [state, setState] = useState<PhoneInvitationState | null>(null);
+   const [error, setError] = useState<string | null>(null), [busy, setBusy] = useState(true);
+   useEffect(() => { let active = true; void (async () => {
+@@ -18,12 +25,13 @@
+     finally { if (active) setBusy(false); }
+   })(); return () => { active = false; }; }, [parameter]);
+   async function check(confirm = false) {
+-    if (!token || busy) return;
++    if (!token || busy || lock.current || !session) return;
++    lock.current = true;
+     setBusy(true); setError(null);
+-    try { setState(await checkPhoneInvitation(token, confirm)); } catch { setError("Couldn’t check this invitation. Try again."); } finally { setBusy(false); }
++    try { const next = await checkPhoneInvitation(token, confirm, session.user.id); if (mounted.current) setState(next); } catch { if (mounted.current) setError("Couldn’t check this invitation. Try again."); } finally { lock.current = false; if (mounted.current) setBusy(false); }
+   }
+   useEffect(() => { if (!token || !session) return; let active = true;
+-    void checkPhoneInvitation(token).then(value => { if (active) setState(value); }).catch(() => { if (active) setError("Couldn’t check this invitation. Try again."); }).finally(() => { if (active) setBusy(false); });
++    void checkPhoneInvitation(token, false, session.user.id).then(value => { if (active) setState(value); }).catch(() => { if (active) setError("Couldn’t check this invitation. Try again."); }).finally(() => { if (active) setBusy(false); });
+     return () => { active = false; };
+   }, [token, session]);
+   async function leave() { await clearIncomingPhoneInvite(); router.replace("/"); }
+--- before/tests/phone-invite-recovery.test.ts
++++ after/tests/phone-invite-recovery.test.ts
+@@ -0,0 +1,66 @@
++import test from "node:test";
++import assert from "node:assert/strict";
++import { randomUUID } from "node:crypto";
++import { createPhoneInviteRecovery, phoneInviteKey } from "../apps/mobile/src/lib/phone-invite-recovery";
++const input = { displayName: "Sam", phone: "+14165550123", relationship: "Roommate", expensePersonId: randomUUID() };
++function fixture() {
++  const values = new Map<string, string>(), calls: unknown[] = [];
++  let owner = "owner-a", failure: unknown = null, storageFailure = false, linkFailure = false, cleanupFailure = false;
++  const deps = {
++    randomUUID, ownerId: async () => owner,
++    storage: {
++      getItemAsync: async (k: string) => values.get(k) ?? null,
++      setItemAsync: async (k: string, v: string) => { if (storageFailure || (linkFailure && k.endsWith("-member"))) throw Error("Storage unavailable"); values.set(k, v); },
++      deleteItemAsync: async (k: string) => { if (cleanupFailure) throw Error("Cleanup unavailable"); values.delete(k); },
++    },
++    create: async (body: unknown, id: string) => { calls.push({ body, id }); if (failure) throw failure; return { memberId: "member", expiresAt: "2026-10-19" }; },
++    definiteRejection: (error: unknown) => error === "definite-conflict",
++  };
++  return { values, calls, store: () => createPhoneInviteRecovery(deps),
++    owner: (v: string) => { owner = v; }, fail: (v: unknown) => { failure = v; },
++    storageFail: (v: boolean) => { storageFailure = v; }, linkFail: (v: boolean) => { linkFailure = v; }, cleanupFail: (v: boolean) => { cleanupFailure = v; } };
++}
++for (const status of [408, 429, 500, 503, 400]) test("invitation survives ambiguous HTTP " + status + " and restart with identical token", async () => {
++  const f = fixture(); f.fail({ status });
++  await assert.rejects(f.store().create(input));
++  assert.deepEqual(await f.store().pending(), input);
++  f.fail(null); await f.store().create({ phone: input.phone, displayName: input.displayName, expensePersonId: input.expensePersonId, relationship: input.relationship });
++  assert.deepEqual(f.calls[0], f.calls[1]);
++  assert.equal(await f.store().pending(), null);
++  assert(f.values.has(phoneInviteKey("owner-a") + "-member"));
++});
++test("new details cannot overwrite uncertain creation", async () => {
++  const f = fixture(); f.fail(Error("Offline")); await assert.rejects(f.store().create(input));
++  await assert.rejects(f.store().create({ ...input, phone: "+14165550124" }), /same details/);
++  assert.equal(f.calls.length, 1);
++});
++test("account change cannot use another owner's pending invitation", async () => {
++  const f = fixture(); f.fail(Error("Offline")); await assert.rejects(f.store().create(input, "owner-a"));
++  f.owner("owner-b"); assert.equal(await f.store().pending("owner-b"), null);
++  await assert.rejects(f.store().create(input, "owner-a"), /account changed/);
++  assert.equal(f.calls.length, 1); f.owner("owner-a"); assert.deepEqual(await f.store().pending(), input);
++});
++test("failed initial storage makes no network request", async () => {
++  const f = fixture(); f.storageFail(true); await assert.rejects(f.store().create(input), /Storage/); assert.equal(f.calls.length, 0);
++});
++for (const boundary of ["link", "cleanup"]) test(boundary + " persistence failure recovers original server request", async () => {
++  const f = fixture(); if (boundary === "link") f.linkFail(true); else f.cleanupFail(true);
++  await assert.rejects(f.store().create(input));
++  assert.deepEqual(await f.store().pending(), input);
++  f.linkFail(false); f.cleanupFail(false); await f.store().create(input);
++  assert.deepEqual(f.calls[0], f.calls[1]);
++});
++test("damaged storage fails closed without issuing a new request", async () => {
++  const f = fixture(); f.values.set(phoneInviteKey("owner-a"), '{"input":{}}');
++  await assert.rejects(f.store().pending(), /restore/);
++  await assert.rejects(f.store().create(input), /restore/); assert.equal(f.calls.length, 0);
++});
++test("simultaneous taps produce one create request", async () => {
++  const f = fixture(), store = f.store();
++  const results = await Promise.allSettled([store.create(input), store.create(input)]);
++  assert.equal(results.filter(r => r.status === "fulfilled").length, 1); assert.equal(f.calls.length, 1);
++});
++test("confirmed server conflict releases rejected intent", async () => {
++  const f = fixture(); f.fail("definite-conflict");
++  await assert.rejects(f.store().create(input)); assert.equal(await f.store().pending(), null);
++});
+--- before/scripts/qa/render-phone-invite-recovery.cjs
++++ after/scripts/qa/render-phone-invite-recovery.cjs
+@@ -0,0 +1,88 @@
++const fs=require('node:fs'),esbuild=require('esbuild'),{chromium}=require('/tmp/rezlee-bill-qa-tools-20261008/node_modules/playwright-core');
++const root='/Users/razakhan/Documents/rezlee-mobile-test',deps='/tmp/rezlee-bill-qa-tools-20261008/node_modules',out=root+'/docs/qa/phone-invite-recovery-20261012';
++const stubs={
++'expo-router':'export const Stack={Screen:()=>null};export const useLocalSearchParams=()=>({});export const useRouter=()=>({push:p=>window.__actions.push(p),replace:p=>window.__actions.push(p),canGoBack:()=>false});export const router={replace:p=>window.__actions.push(p)};',
++'expo-constants':'export default {expoConfig:{}};',
++'expo-crypto':'export const randomUUID=()=>crypto.randomUUID();',
++'expo-secure-store':'export async function getItemAsync(k){if(window.__restoreFail)throw Error("Storage unavailable");if(window.__restoreDelay)await new Promise(r=>setTimeout(r,window.__restoreDelay));return localStorage.getItem(k);}export async function setItemAsync(k,v){if(window.__storageFail)throw Error("Storage unavailable");localStorage.setItem(k,v);}export async function deleteItemAsync(k){localStorage.removeItem(k);}',
++'expo-symbols':'import React from "react";export const SymbolView=()=>React.createElement("span",null,"←");',
++'expo-haptics':'export const impactAsync=async()=>{};export const ImpactFeedbackStyle={Light:1};',
++'react-native-safe-area-context':'import{View}from"react-native";export const SafeAreaView=View;export const useSafeAreaInsets=()=>({top:0,bottom:0,left:0,right:0});',
++'@expo/vector-icons':'import React from"react";export const Feather=()=>React.createElement("span",null,"›");',
++'@/auth/AuthProvider':'import React from"react";export function useAuth(){const[id,setId]=React.useState(window.__user);React.useEffect(()=>{const f=()=>setId(window.__user);window.addEventListener("qa-account",f);return()=>window.removeEventListener("qa-account",f)},[]);return{session:{user:{id}}};}',
++'@/lib/supabase':'export const supabase={auth:{getSession:async()=>({data:{session:{user:{id:window.__user},access_token:window.__user}}})}};',
++};
++stubs['./supabase']=stubs['@/lib/supabase'];
++(async()=>{
++ fs.mkdirSync(out,{recursive:true});
++ const entry=`import React from'react';import{createRoot}from'react-dom/client';import{Linking}from'react-native';import Invite from'${root}/apps/mobile/app/household/invite-phone';import Join from'${root}/apps/mobile/app/household/join';import{apiPost}from'${root}/apps/mobile/src/lib/api';window.__actions=[];window.__requests=[];window.__apiPost=apiPost;Linking.openURL=async url=>window.__actions.push(url);window.fetch=async(url,options)=>{const body=JSON.parse(options.body);window.__requests.push({body,owner:options.headers.Authorization});if(body.operation==='create'){if(window.__lost)return new Response(JSON.stringify({error:'Response lost'}),{status:408});return new Response(JSON.stringify({memberId:'member',expiresAt:'2026-10-19'}));}return new Response(JSON.stringify({state:window.__user==='owner-a'?'pending':'unavailable',homeName:window.__user==='owner-a'?'Sam’s home':undefined}));};createRoot(document.getElementById('root')).render(location.search.includes('join')?<Join/>:<Invite/>);`;
++ await esbuild.build({stdin:{contents:entry,loader:'tsx',resolveDir:root},outfile:out+'/preview.js',bundle:true,platform:'browser',format:'iife',jsx:'automatic',alias:{react:deps+'/react','react-dom':deps+'/react-dom','react-native':deps+'/react-native-web'},define:{'process.env.NODE_ENV':'"production"','process.env.EXPO_PUBLIC_API_URL':'"https://fixture.invalid"','__DEV__':'false'},plugins:[{name:'boundaries',setup(b){b.onResolve({filter:/.*/},a=>{if(stubs[a.path])return{path:a.path,namespace:'stub'};if(a.path.startsWith('@/')){const p=root+'/apps/mobile/src/'+a.path.slice(2);for(const ext of ['.ts','.tsx','/index.ts'])if(fs.existsSync(p+ext))return{path:p+ext};}});b.onLoad({filter:/.*/,namespace:'stub'},a=>({contents:stubs[a.path],loader:'js',resolveDir:root}));}}]});
++ fs.writeFileSync(out+'/preview.html','<!doctype html><meta name="viewport" content="width=device-width,initial-scale=1"><style>body{margin:0;font-family:system-ui}*{box-sizing:border-box}#root{height:100vh;display:flex;flex-direction:column}</style><div id="root"></div><script src="./preview.js"></script>');
++ const server=require('node:http').createServer((req,res)=>{const f=req.url==='/preview.js'?'preview.js':'preview.html';res.setHeader('Content-Type',f.endsWith('.js')?'application/javascript':'text/html');res.end(fs.readFileSync(out+'/'+f));});await new Promise(r=>server.listen(0,'127.0.0.1',r));
++ const browser=await chromium.launch({headless:true,executablePath:'/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'}),checks=[];
++ try{
++ for(const width of [320,390])for(const scenario of ['prepare','lost-restart','restore-failed','storage-failed','slow-restore','account-switch','session-race','join-account-switch']){
++  const page=await browser.newPage({viewport:{width,height:844}}),errors=[];page.on('pageerror',e=>errors.push(e.message));
++  await page.addInitScript(s=>{window.__user='owner-a';window.__lost=s==='lost-restart'||s==='account-switch';window.__restoreFail=s==='restore-failed';window.__storageFail=s==='storage-failed';window.__restoreDelay=s==='slow-restore'?700:0;if(s==='join-account-switch')localStorage.setItem('rezlee-incoming-phone-invite','a'.repeat(64));},scenario);
++  await page.goto('http://127.0.0.1:'+server.address().port+(scenario==='join-account-switch'?'/?join':'/'));
++  if(scenario==='join-account-switch'){
++   await page.getByText('Join Sam’s home',{exact:true}).waitFor();
++   await page.evaluate(()=>{window.__user='owner-b';window.dispatchEvent(new Event('qa-account'));});
++   await page.getByText('This invitation is no longer available. Ask the owner to send a fresh one.',{exact:true}).waitFor();
++   if(await page.getByText('Join Sam’s home',{exact:true}).count())throw Error('Previous household displayed');
++   if(await page.getByRole('button',{name:'Request to join',exact:true}).count())throw Error('Stale join button');
++  }else{
++   if(scenario==='restore-failed'){
++    await page.getByRole('button',{name:'Check unfinished invitations',exact:true}).waitFor();
++    if(await page.getByRole('button',{name:'Prepare invitation',exact:true}).count())throw Error('Prepare available before restore');
++    await page.evaluate(()=>window.__restoreFail=false);await page.getByRole('button',{name:'Check unfinished invitations',exact:true}).click();
++   }
++   if(scenario==='slow-restore'){
++    if(await page.getByRole('textbox',{name:'Name',exact:true}).isEditable())throw Error('Fields editable before restore');
++   }
++   await page.getByRole('button',{name:'Prepare invitation',exact:true}).waitFor();
++   if(scenario==='session-race'){
++    const result=await page.evaluate(async()=>{window.__user='owner-b';try{await window.__apiPost('/api/mobile/v1/household/phone',{operation:'create'},{expectedUserId:'owner-a'});return 'sent';}catch(e){return e.message;}});
++    if(!result.includes('account changed')||(await page.evaluate(()=>window.__requests.length)))throw Error('Request crossed accounts');
++   }else{
++    await page.getByRole('textbox',{name:'Name',exact:true}).fill('Sam');
++    await page.getByRole('textbox',{name:'Mobile number',exact:true}).fill('4165550123');
++    await page.getByRole('button',{name:'Prepare invitation',exact:true}).click();
++    if(scenario==='storage-failed'){
++     await page.getByText('Storage unavailable',{exact:true}).waitFor();if(await page.evaluate(()=>window.__requests.length))throw Error('Posted without durable intent');
++     await page.evaluate(()=>window.__storageFail=false);await page.getByRole('button',{name:'Prepare invitation',exact:true}).click();
++    }
++    if(scenario==='lost-restart'||scenario==='account-switch'){
++     await page.getByText('Response lost',{exact:true}).waitFor();
++     await page.screenshot({path:out+'/pending-'+scenario+'-'+width+'.png'});
++     const first=await page.evaluate(()=>window.__requests[0].body);
++     if(await page.getByRole('textbox',{name:'Mobile number',exact:true}).isEditable())throw Error('Pending details editable');
++     if(scenario==='account-switch'){
++      await page.evaluate(()=>{window.__user='owner-b';window.dispatchEvent(new Event('qa-account'));});
++      await page.getByRole('button',{name:'Prepare invitation',exact:true}).waitFor();
++      if(await page.getByRole('textbox',{name:'Name',exact:true}).inputValue()!=='')throw Error('Private name leaked');
++     }else{
++      await page.reload();await page.getByRole('button',{name:'Check unfinished invitation',exact:true}).waitFor();
++      if(await page.evaluate(()=>window.__requests.length))throw Error('Automatic submission on restart');
++      await page.evaluate(()=>window.__lost=false);await page.getByRole('button',{name:'Check unfinished invitation',exact:true}).click();
++      await page.getByText('Your invitation is ready',{exact:true}).waitFor();
++      const second=await page.evaluate(()=>window.__requests[0].body);if(JSON.stringify(first)!==JSON.stringify(second))throw Error('Retry changed request or token');
++     }
++    }
++    if(scenario!=='account-switch'){
++     await page.getByText('Your invitation is ready',{exact:true}).waitFor();
++     if(await page.evaluate(()=>window.__actions.length))throw Error('Messages opened automatically');
++     await page.getByRole('button',{name:'Open Messages',exact:true}).click();
++     await page.waitForFunction(()=>window.__actions.length>0);
++     if(!(await page.evaluate(()=>window.__actions[0])).startsWith('sms:+14165550123'))throw Error('Wrong Messages destination');
++    }
++   }
++  }
++  await page.screenshot({path:out+'/'+scenario+'-'+width+'.png'});
++  if(errors.length)throw Error(errors.join('; '));
++  if(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth))throw Error('Horizontal overflow');
++  checks.push({width,scenario,pass:true});await page.close();
++ }
++ fs.writeFileSync(out+'/results.json',JSON.stringify({checks,passed:checks.length,messagesSent:0,boundaries:'Actual screens, recovery storage logic and API authentication guard; mocked storage, network, auth and Messages'},null,2));console.log(JSON.stringify({passed:checks.length,out}));
++ }finally{await browser.close();server.close();}
++})().catch(e=>{console.error(e);process.exitCode=1});
+--- before/scripts/qa/phone-invitation-staging.mjs
++++ after/scripts/qa/phone-invitation-staging.mjs
+@@ -0,0 +1,61 @@
++import {readFileSync,writeFileSync} from "node:fs";
++import {createRequire} from "node:module";
++import {randomUUID} from "node:crypto";
++const require=createRequire(process.cwd()+"/package.json");
++const {createClient}=require("@supabase/supabase-js");
++if(!process.env.REZLEE_STAGING_QA_SETTINGS)throw Error("Set REZLEE_STAGING_QA_SETTINGS to an external staging credentials file; never commit it.");
++const settings=JSON.parse(readFileSync(process.env.REZLEE_STAGING_QA_SETTINGS,"utf8"));
++if(settings.NEXT_PUBLIC_SUPABASE_URL!=="https://gjwvalpxnfbvryosmcbj.supabase.co")throw Error("Staging only");
++const base="https://staging.rezlee.com",options={auth:{persistSession:false,autoRefreshToken:false}};
++const admin=createClient(settings.NEXT_PUBLIC_SUPABASE_URL,settings.SUPABASE_SECRET_KEY,options),fixtures=[],checks=[];
++let failure=null;
++function check(name,ok){if(!ok)throw Error(name);checks.push(name);console.log("PASS",name);}
++async function account(withHome=true){
++ const email=`outcome-qa-${randomUUID()}@example.invalid`,password=randomUUID()+randomUUID();
++ const made=await admin.auth.admin.createUser({email,password,email_confirm:true,user_metadata:{qa_marker:true}});
++ if(made.error)throw Error("Disposable user creation failed");
++ const f={id:made.data.user.id,client:createClient(settings.NEXT_PUBLIC_SUPABASE_URL,settings.NEXT_PUBLIC_SUPABASE_ANON_KEY,options)};fixtures.push(f);
++ const login=await f.client.auth.signInWithPassword({email,password});if(login.error)throw Error("Disposable sign-in failed");f.token=login.data.session.access_token;
++ if(!withHome)return f;
++ const home=await f.client.from("homes").insert({user_id:f.id,nickname:"Disposable outcome QA",city:"Pickering",province:"Ontario",home_type:"house",ownership_type:"owner"}).select("id").single();if(home.error)throw Error("Disposable home failed");f.home=home.data.id;return f;
++}
++
++async function api(f,body){const r=await fetch(base+"/api/mobile/v1/household/phone",{method:"POST",headers:{Authorization:"Bearer "+f.token,"Content-Type":"application/json"},body:JSON.stringify(body),signal:AbortSignal.timeout(20000)});return{status:r.status,data:await r.json()};}
++try{
++ const owner=await account(),recipient=await account(false),wrong=await account(false),otherHome=await account();
++ const secret=()=>randomUUID().replaceAll("-","")+randomUUID().replaceAll("-","");
++ const token=secret(),body={operation:"create",requestId:randomUUID(),token,phone:"+14165550123",displayName:"Disposable phone invite"};
++ const created=await api(owner,body);check("owner prepares phone invitation without sending SMS",created.status===200&&!!created.data.memberId);
++ const id=created.data.memberId;
++ const replay=await api(owner,body);check("same request recovers same invitation",replay.status===200&&replay.data.memberId===id);
++ const rows=await owner.client.from("household_members").select("id").eq("home_id",owner.home);check("replay leaves one member",rows.data?.length===1);
++ const duplicate=await api(owner,{...body,requestId:randomUUID(),token:secret()});check("different request cannot duplicate same number",duplicate.status===409);
++ check("recipient cannot create invitations",(await api(recipient,{...body,requestId:randomUUID(),token:secret()})).status===403);
++ check("owner sees own-household explanation",(await api(owner,{operation:"preview",token})).data.state==="own_household");
++ check("existing household cannot silently switch",(await api(otherHome,{operation:"request",token})).data.state==="other_household");
++ check("preview requires explicit request",(await api(recipient,{operation:"preview",token})).data.state==="pending");
++ const untouched=await owner.client.from("household_phone_invites").select("request_user_id").eq("member_id",id).single();check("preview grants no membership and records no request",untouched.data?.request_user_id===null);
++ check("recipient request waits for owner",(await api(recipient,{operation:"request",token})).data.state==="awaiting_approval");
++ check("recipient request replay is safe",(await api(recipient,{operation:"request",token})).data.state==="awaiting_approval");
++ check("another account cannot replace requester",(await api(wrong,{operation:"request",token})).data.state==="unavailable");
++ check("recipient cannot approve own request",(await api(recipient,{operation:"approve",memberId:id,userId:recipient.id})).status!==200);
++ check("owner cannot approve different account",(await api(owner,{operation:"approve",memberId:id,userId:wrong.id})).status!==200);
++ check("owner confirms exact requesting account",(await api(owner,{operation:"approve",memberId:id,userId:recipient.id})).data.ok===true);
++ check("approval replay is safe",(await api(owner,{operation:"approve",memberId:id,userId:recipient.id})).data.ok===true);
++ check("recipient sees accepted state",(await api(recipient,{operation:"preview",token})).data.state==="accepted");
++ const active=await owner.client.from("household_members").select("status,linked_user_id").eq("id",id).single();check("membership belongs to approved account",active.data?.status==="active"&&active.data?.linked_user_id===recipient.id);
++ await owner.client.from("household_members").delete().eq("id",id);
++ check("removed member cannot reuse invitation",(await api(recipient,{operation:"request",token})).data.state==="unavailable");
++ const expiredToken=secret(),expired=await api(owner,{...body,requestId:randomUUID(),token:expiredToken});
++ const expiry=await admin.from("household_phone_invites").update({expires_at:new Date(Date.now()-1000).toISOString()}).eq("member_id",expired.data.memberId);
++ check("disposable expiry fixture updated",!expiry.error);
++ check("expired invitation cannot request access",(await api(recipient,{operation:"request",token:expiredToken})).data.state==="expired");
++ check("invalid secret rejected",(await api(recipient,{operation:"preview",token:"invalid"})).status===400);
++}catch(e){failure=e instanceof Error?e.message:"Check failed";console.log("FAIL",failure);}
++finally{
++ for(const f of fixtures){const r=await admin.auth.admin.deleteUser(f.id);if(r.error)failure="Disposable cleanup failed";}
++ const left=await admin.from("household_members").select("id").in("created_by_user_id",fixtures.map(f=>f.id));
++ if(left.error||left.data.length)failure="Fixture residue";else check("disposable memberships cleaned",true);
++ writeFileSync("/tmp/rezlee-phone-hosted-results.json",JSON.stringify({checks,failure,fixtureAccounts:fixtures.length,base,paidProviderCalls:0,aiCalls:0,emailsSent:0,smsSent:0},null,2));
++}
++process.exitCode=failure?1:0;
+--- before/docs/audit-completion-status-2026-10-11.md
++++ after/docs/audit-completion-status-2026-10-11.md
+@@ -9,10 +9,10 @@
+ | Utility connections | provider-directory-2026-10-11.md: unified finder, 722 directory entries; Ontario view 54 Green Button, 29 configured Deck testing entries, 639 coming soon; Rogers paused | Green Button consent/reconnection/refresh acceptance; bounded credential-owning Deck customers validate MFA, first data and repeat retrieval per provider. No founder requirement to own all 29 accounts |
+ | Bill intelligence | bill-usefulness-2026-10-08.md: truthful amount basis, period/usage comparisons and selected-period graphs | Real mixed-provider usefulness; actual charge breakdown where available; energy-plan/interval claims require validated data. Amount due is not period spending |
+ | Did the action help? | bill-outcome-finish-2026-10-11.md: uploaded and Deck telecom amount checks; Green Button/manual energy usage follow-ups; independent action storage; 94 hosted checks and 60 rendered scenarios | bill-journey-review-2026-10-11.md adds exact agreed-price differences and account-switch form isolation, 106 rendered scenarios and a fresh 94-check hosted pass. Physical acceptance and customer usefulness; tariff-switch/dollar attribution and weather-normalized outcomes remain unproven, never implied by lower bills |
+-| Household coordination | shared-completion, settle-up and care-recovery October 10; cleaning editing, schedules, fixed/rotating assignments implemented in feedback-acceptance-2026-09-29.md | Real invitation email/phone delivery and deep links; two phones; push delivery; native cleaning edit/assignment/recurrence. Recorded repayment does not move money |
++| Household coordination | phone-invite-recovery-2026-10-12.md adds durable invitation retries and account isolation with 23 hosted and 16 rendered checks; shared-completion, settle-up and care-recovery October 10; cleaning editing, schedules, fixed/rotating assignments implemented in feedback-acceptance-2026-09-29.md | Real invitation email/phone delivery and deep links; two phones; push delivery; native cleaning edit/assignment/recurrence. Recorded repayment does not move money |
+ | Useful home AI | Repair engineering scope completed in repair-finish-2026-10-10.md; quote-review-2026-10-11.md adds saved one-quote facts/excerpts, missing-detail questions, answers and linked decision notes, with 30 hosted and 36 rendered checks | Repair phone/usefulness gate; quote-live-validation-2026-10-11.md records eight authorized live text reads and fixes for omitted/conflicting evidence; real photo/PDF and physical/customer acceptance remain. Multiple-quote comparisons and supported compatibility/repair-versus-replace remain open |
+ | Capture across Rezlee | Reviewed bill/receipt intake and Gmail implemented; exact-original reuse, bounded discovery/recovery | Actual mailbox completion/attached-original and native OAuth/recovery acceptance; broader capture still requires reconciliation. Native sharing and voice remain deliberately later |
+-| Beta / release readiness | Staging engineering evidence and native bundle exports exist; statement-reading regression fixture corrected, 890 tests pass through home-item recovery; 19 additional hosted recovery checks passed | Signed production-shaped builds, auth/deep links, notifications, connected-account deletion/revocation, privacy/OAuth/store configuration, monitoring/support, explicit cost budgets, migration/backup/restore rehearsal and controlled promotion |
++| Beta / release readiness | Staging engineering evidence and native bundle exports exist; statement-reading regression fixture corrected, 903 tests pass through phone invitation recovery; 19 additional hosted recovery checks passed | Signed production-shaped builds, auth/deep links, notifications, connected-account deletion/revocation, privacy/OAuth/store configuration, monitoring/support, explicit cost budgets, migration/backup/restore rehearsal and controlled promotion |
+ | Expansion | Intentionally later | Broader benchmarks, weather/AQHI, perks and wider validated coverage follow beta evidence |
+ 
+ ## Immediate next steps
+@@ -33,7 +33,8 @@
+ 
+ Staging Expo now uses port 8081 in Expo Go mode with explicit staging API/Supabase overrides (5449cd0); previous 8082 instructions are superseded.
+ 
+-Next priority remains the full bill-to-action customer journey, already implemented and covered by 94 hosted/60 rendered scenarios in bill-outcome-finish-2026-10-11.md. Verify discoverability and usefulness from a saved bill through explanation, action, later evidence and an honest result; fix observed defects, do not rebuild accepted arithmetic. In parallel with founder-dependent phone/provider acceptance, remaining engineering work is release-gate verification for auth/deep links, connected-account deletion/revocation, notifications and operational readiness. Each requires actual evidence; no broad launch sign-off is implied.
++The bill journey engineering pass is recorded in bill-journey-review-2026-10-11.md: 106 rendered scenarios and 94 hosted checks, with client changes available on staging Expo 8081. Physical usefulness acceptance remains open.
+ 
++Latest household pass: phone-invite-recovery-2026-10-12.md. Invitation retries preserve their original identity and link, restoration gates editing, and account changes isolate sender/recipient screens. 903 regression tests, 16 rendered checks and 23 hosted phone-membership checks passed. No SMS/email was sent. Reload Expo 8081 for the client changes; backend unchanged.
+ 
+-Latest bill-journey pass: see bill-journey-review-2026-10-11.md. Client fixes are available in staging Expo on 8081; server unchanged. Household invitation/deep-link/two-account acceptance is next. Phone checks remain pending; no customer acceptance or public-release claim.
++Next engineering priority: authentication/deep-link recovery, followed by notifications and connected-account deletion/revocation. Real invitation delivery and two-device access still require physical acceptance. Provider pilots and existing native capture/Care/repair gates remain open; no overall launch sign-off is implied.
+--- before/docs/phone-invite-recovery-2026-10-12.md
++++ after/docs/phone-invite-recovery-2026-10-12.md
+@@ -0,0 +1,38 @@
++# Household phone invitation recovery — October 12, 2026
++
++Engineering increment complete. Physical delivery and two-device acceptance remain open.
++
++## Customer problem and changes
++
++An owner preparing a household invitation could lose the original request identity and secret after an HTTP timeout. Restarting could then encounter an existing invitation without recovering its link. The form also permitted edits before saved recovery state loaded, and did not isolate its fields when the signed-in account changed.
++
++- Preserve the exact input, request ID and secret across uncertain network outcomes, including 408, rate limiting, network/server errors and older servers' ambiguous 400 responses. Retry returns the same membership.
++- Persist the intent before calling the server; retain it if saving the returned link or removing the pending record fails. A confirmed server conflict releases the rejected intent.
++- Gate form editing and preparation on successful restoration. Offer an explicit restoration retry, freeze uncertain details and retain the original relationship and expense participant.
++- Reset invitation and joining screens when the account changes. Pin POST authentication to the initiating account before capturing its bearer token. Recheck the account before opening the stored SMS link.
++- Prevent simultaneous prepare taps. Opening Messages remains an explicit owner action; the screen says Rezlee cannot confirm whether a text was sent.
++- Keep existing routes and the server's explicit recipient-request / owner-approval contract. No schema or backend deployment required.
++
++## Verification performed
++
++- 13 recovery logic tests: uncertain responses, restart identity, reordered input fields, changed details, account isolation, storage failure before/after the server, corrupt storage, double taps and confirmed conflict.
++- 16 rendered checks using actual invitation/join components and API authentication guard, at 320 and 390 px. Covered restore failure/retry, slow restoration, lost response/restart, storage failure, account changes, session race and recipient screen reset. Native storage, authentication, network and Messages were simulated. Screenshots inspected; no horizontal overflow.
++- 23 hosted checks against staging.rezlee.com using four disposable accounts: create/replay/duplicate, recipient restrictions, preview without joining, explicit request, owner approval of exact requester, wrong-account rejection, replay, expiry and removal. All fixtures cleaned.
++- Full regression: 903 passed. Scoped lint, mobile TypeScript, root TypeScript and Next build passed. Initial root typecheck overlapped Next's generated-type regeneration; rerunning after the successful build passed.
++- iOS and Android bundle exports passed. These are compilation checks, not device acceptance.
++
++No emails, SMS, paid provider calls or AI calls were made.
++
++## Availability and rollback
++
++Client changes are in the existing mobile workspace. Reload the staging Expo Go session on port 8081. The existing TestFlight binary does not automatically receive these changes. Staging backend and alias remain unchanged.
++
++Scoped before/after source archives, SHA manifest, diff and QA evidence: docs/checkpoints/phone-invite-recovery-20261012. As established for this heavily modified workspace, only the checkpoint documents and archives are committed; unrelated working changes are preserved. Restore individual scoped files from before.zip only after checking subsequent work; new files are listed in the manifest.
++
++## Remaining acceptance / next work
++
++1. On two physical phones, explicitly choose a recipient and send one invite. Verify SMS composition, the delivered link, app/browser handoff, sign-in and return to the saved invitation, owner approval and refreshed household access.
++2. Repeat with expiry/revocation and an already signed-in different account. Confirm private Bills/Vault stay private, including after removal.
++3. Exercise actual email delivery separately. Prior no-send email invite evidence remains in household-invitation-recovery-2026-10-08.md; it was not rerun or called inbox delivery here.
++4. Continue the release audit with authentication/deep-link recovery, notifications and connected-account deletion/revocation. No public launch sign-off.
++5. Ambiguous server failures deliberately keep the unfinished invitation. Persistent failures require recovery/investigation, not deletion of the sole saved secret or creation of a different request.

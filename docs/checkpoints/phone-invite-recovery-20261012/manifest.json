@@ -1,0 +1,52 @@
+[
+  {
+    "path": "apps/mobile/src/lib/api.ts",
+    "new": false,
+    "sha256": "000eb84c3982d3776268f5f7d079a7ceedd51bb5961a4ffcfcce9351bce9dccc"
+  },
+  {
+    "path": "apps/mobile/src/lib/phone-invites.ts",
+    "new": false,
+    "sha256": "3b2a3a6f32f0460dead03725612a406381b939b8f7417df71dafc724cc8f7eb1"
+  },
+  {
+    "path": "apps/mobile/src/lib/phone-invite-recovery.ts",
+    "new": true,
+    "sha256": "91bfd88f87cbdb870d3563403511ef57f9ea22ed50d1899912a82edc0e29f426"
+  },
+  {
+    "path": "apps/mobile/app/household/invite-phone.tsx",
+    "new": false,
+    "sha256": "08c16e4f5175600a732fbc97755ae157d632e74adaab72c18491615991d26702"
+  },
+  {
+    "path": "apps/mobile/app/household/join.tsx",
+    "new": false,
+    "sha256": "335393e47609de21e67ada73ae4ee1a8c606e3468fe7418f2c3858c82eae0580"
+  },
+  {
+    "path": "tests/phone-invite-recovery.test.ts",
+    "new": true,
+    "sha256": "b7cec0e760775440b9e3115cbe441a4cc3d6897876b31c3e7db785f3fbf9e64b"
+  },
+  {
+    "path": "scripts/qa/render-phone-invite-recovery.cjs",
+    "new": true,
+    "sha256": "612d225e03de2012265def6646de62679b4ce47986b0ff217d68dbeb4f484eda"
+  },
+  {
+    "path": "scripts/qa/phone-invitation-staging.mjs",
+    "new": true,
+    "sha256": "694fc3e60325fe1be6a9b208a39a7390ca672127c081e9fdbbbb3c67fec7762d"
+  },
+  {
+    "path": "docs/audit-completion-status-2026-10-11.md",
+    "new": false,
+    "sha256": "5ba7ec42a02e81c64d2beb1fc23f7375492d980a7d57488265991a0fa8a0dd3a"
+  },
+  {
+    "path": "docs/phone-invite-recovery-2026-10-12.md",
+    "new": true,
+    "sha256": "cb35518ded2d782960d7a545aff47c1427c73ec7bd7aa9f5e7f01f64574f4cfc"
+  }
+]
