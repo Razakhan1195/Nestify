@@ -1,7 +1,7 @@
 # Home-item save recovery — October 11–12, 2026
 
 ## Status
-Implemented in the local Expo/server workspace. NOT deployed or signed off on hosted staging. Migration access is the remaining rollout blocker. The prior quote-file staging deployment remains in place.
+Implemented and deployed to staging. Migration 202610110005 was applied and recorded through the authenticated Supabase SQL editor for project gjwvalpxnfbvryosmcbj. All 19 authenticated hosted checks passed; disposable accounts were cleaned. Physical iOS/Android acceptance remains open. No production/store release.
 
 ## Customer outcome
 When a new home-item save is interrupted, the device retains the exact corrected details and request identity in account-scoped SecureStore chunks before sending anything. Returning to Add home item restores the pending request without automatically submitting it. Customers can check the saved result, retry the same request, or cancel before editing.
@@ -26,18 +26,23 @@ Account changes remount the form and suppress stale save results. Recovery check
 - Pending recovery screenshot visually inspected at 390 px. No detected horizontal overflow or runtime page errors.
 - Root and mobile TypeScript, scoped lint and Next build checked; final results are in the checkpoint validation files.
 - iOS/Android Hermes exports passed. These are bundle checks, not physical-phone acceptance.
-- Hosted runner scripts/qa/inventory-recovery-staging.mjs prepared and syntax checked, NOT executed. It uses disposable staging accounts and checks concurrent requests, retained edits, cancellation/deletion, direct RLS and ownership.
-- No hosted API/RLS/concurrency result is claimed for this migration. No paid AI/provider call, customer data change, scheduled pull, production release or store release.
+- Hosted runner scripts/qa/inventory-recovery-staging.mjs executed successfully: 19 checks passed, including four concurrent requests producing exactly one item, later edits surviving replay, deliberate identical items, cancellation/deletion, direct RLS and account ownership. Both disposable staging accounts were cleaned.
+- Hosted API/RLS/concurrency verified for the recorded cases. No paid AI/provider call, customer data change, scheduled pull, production release or store release.
 
 ## Concrete rollout steps
-1. Apply supabase/migrations/202610110005_inventory_create_recovery.sql to staging project gjwvalpxnfbvryosmcbj using its authorized SQL administrator connection. It is additive; no existing schema is dropped or renamed.
-2. Deploy the scoped server snapshot to staging only, preserving unrelated working changes and existing runtime environment. Run the prepared authenticated hosted checks and clean disposable fixtures.
+1. DONE: Applied supabase/migrations/202610110005_inventory_create_recovery.sql to staging project gjwvalpxnfbvryosmcbj and recorded its version/name/SQL in migration history. Read-only verification confirmed RLS enabled, authenticated SELECT allowed, authenticated DELETE denied and anonymous create RPC denied.
+2. DONE: Built isolated /tmp/rezlee-inventory-recovery-staging-20261011 from the prior deployed quote-file snapshot, adding only the new server route and migration. Deployed https://nestify-jc17bwdp2-razakhan1195s-projects.vercel.app and assigned https://staging.rezlee.com. Hosted checks and fixture cleanup passed. Rollback alias target: https://nestify-liyhyo0kl-razakhan1195s-projects.vercel.app; keep the additive migration/data.
 3. Reload/build the matching Expo client and perform physical iOS/Android acceptance: kill/reopen during save, airplane mode, delayed server completion, repeated taps, sign-out/account switch, deleted saved item, real device storage behavior.
 4. Record actual outcomes before marking the gap closed. Do not infer hosted or physical acceptance from local tests.
 5. Resume the remaining launch audit with recorded evidence: utility-provider acceptance and freshness, bill → recommended action → subsequent evidence, household two-device invitation/notification behavior, and physical authentication/deep-link/privacy/operational checks. Reconcile existing implementations before adding features.
 
-## Access blocker
-This session can read the repo and use staging app credentials but has no discovered Supabase SQL administrator/management connection. App anon/service-role REST credentials do not grant arbitrary DDL. The earlier chat retrieval does not preserve its migration method. No Supabase CLI, database URL/password, management token or SQL tool was available in the inspected authorized project/tool settings. Do not ask the user to paste secrets into chat; restore the authorized database tool/connection or apply the named SQL in the staging Supabase SQL editor.
+## Access recovery and Expo selection
+The earlier SQL access blocker is resolved. The user completed secure GitHub sign-in to the Supabase dashboard; the migration was applied through the authenticated SQL editor, without creating or exposing a management token. No password or verification-code value was read or stored in this checkpoint.
+
+Two existing Metro processes were found. PID 88991 on port 8082 explicitly targets staging.rezlee.com and the staging Supabase project. PID 94430 on port 8081 has no staging process overrides; the mobile .env defaults target ezgb-test.rezlee.com and a different Supabase project. Both processes were left intact. Use the staging Expo session on port 8082 for acceptance; simply reloading the other session will not test this deployment.
+
+## Physical acceptance still required
+Use a disposable home item in the staging Expo session. Check ordinary save/reopen, force-close immediately after confirming and reopen Add home item, network loss and recovery, cancellation while the original request may still be completing, later deletion followed by recovery, and account switch. Confirm that corrected brand/model/serial fields survive and exactly one item exists. Repeated taps should be tested on the device. Do not count a successful Hermes export or browser reload as an OS-kill/secure-storage test.
 
 ## Checkpoint
 docs/checkpoints/inventory-recovery-20261011 contains before/after source archives, a scoped patch, source hashes, local validation logs and status. The repository has extensive unrelated working changes; restore only these scoped files after comparing hashes. Do not reset/stash the whole repository.

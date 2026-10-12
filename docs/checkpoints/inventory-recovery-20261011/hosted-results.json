@@ -1,0 +1,27 @@
+{
+  "checks": [
+    "Recovery capability available for owned home",
+    "Four concurrent attempts return one saved item",
+    "Concurrent retries create exactly one row",
+    "Lost response recovered with a read",
+    "A changed payload cannot reuse the save request",
+    "Existing edit route remains usable",
+    "Retry does not overwrite a later correction",
+    "A deliberate identical appliance gets its own item",
+    "Cancelling a completed save opens it without deleting it",
+    "Unsent request can be cancelled",
+    "Delayed create cannot follow cancellation",
+    "Saved item can be deleted normally",
+    "Old retry cannot recreate a deleted item",
+    "Recovery explains the previous deletion",
+    "Other account cannot read the receipt",
+    "Other account cannot submit to the first home",
+    "Direct RLS hides another account receipts",
+    "Clients cannot remove replay tombstones",
+    "Impossible warranty date rejected"
+  ],
+  "completed": true,
+  "fixturesCleaned": true,
+  "paidCalls": 0,
+  "realCustomerDataChanged": false
+}

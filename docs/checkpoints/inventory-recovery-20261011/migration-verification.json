@@ -1,0 +1,13 @@
+{
+  "project": "gjwvalpxnfbvryosmcbj",
+  "projectName": "rezlee-staging",
+  "method": "Authenticated Supabase SQL editor",
+  "version": "202610110005",
+  "name": "inventory_create_recovery",
+  "migrationRecorded": true,
+  "rlsEnabled": true,
+  "authenticatedSelect": true,
+  "authenticatedDelete": false,
+  "anonymousCreateExecute": false,
+  "physicalPhoneAcceptance": false
+}
