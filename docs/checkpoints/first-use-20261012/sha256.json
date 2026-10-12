@@ -1,0 +1,14 @@
+{
+  "apps/mobile/app/(auth)/welcome.tsx": "8cec8dde815343c2168eb8089d216ff54fc5d6b48461b09be6ce8c2e132e6000",
+  "apps/mobile/app/home-example.tsx": "00244a2036a1d8c315ab38181648bd236e133df5cb379e9e2038be4409003612",
+  "apps/mobile/app/onboarding.tsx": "fb3394949c2a4cab7525865dda0d760f37d2a69c290af78eacfe9eaa15c55ad9",
+  "apps/mobile/app/(tabs)/home.tsx": "6ed03d7531fdc73a6e5109ec4562033652f01a7abe2d6e4209bb5786477b3c11",
+  "apps/mobile/src/lib/home-start.ts": "03ccee49a88ba50369dfc2784b22378b6d1ca90c998a55a73368c1160a0369ff",
+  "apps/mobile/app/bill/add.tsx": "47f1864a4aac98f191690a6aded75e48cf097e48ddf4ba63d7c19c7b58bd8ed8",
+  "apps/mobile/src/components/TelecomImportProgress.tsx": "fe283e14b87f95d0270bc27766b1631e342de28d3a715614eeaf15b26a130d9d",
+  "apps/mobile/src/components/BillExamplePreview.tsx": "64dce674067e114c3f115f3e5ee25633fcea7ff988b15bd6c092a9a5f58ba96c",
+  "apps/mobile/src/lib/import-journey.ts": "89cd15f4d8b96a54f6d2885e4bd2fac08ef76b8a31f7cbe2bd28eee60d00715a",
+  "apps/mobile/app/provider/[id].tsx": "66447f0cacd438b836ce413c886bbc42938089800faafcc80fbcfb03890d17cb",
+  "scripts/qa/render-first-use.cjs": "0ce7e9a947950a0eee69fd40e3fcb8621c6ec61066f39073613e6356c8540565",
+  "tests/first-use-journey.test.ts": "90c94d7f76286fa2919a687d0703a8751eb387bc128372a7a5ffc11078cc7fce"
+}

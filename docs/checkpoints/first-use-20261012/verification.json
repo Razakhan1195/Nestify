@@ -1,0 +1,24 @@
+{
+  "fullRegression": {
+    "passed": 955,
+    "failed": 0,
+    "note": "Before final original-availability assertion; final focused run passed 19 tests."
+  },
+  "focusedFinal": 19,
+  "firstUseRendered": 64,
+  "connectionRendered": 36,
+  "checks": {
+    "mobile-typecheck": 0,
+    "lint": 1,
+    "focused": 0,
+    "render": 0,
+    "scoped-lint": 0
+  },
+  "webBuild": "passed",
+  "nativeExport": [
+    "ios",
+    "android"
+  ],
+  "physicalAcceptance": "pending",
+  "distribution": "Expo Go 8081; TestFlight build 25 predates this increment"
+}

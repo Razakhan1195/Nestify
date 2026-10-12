@@ -1,0 +1,14 @@
+[
+  "apps/mobile/app/(auth)/welcome.tsx",
+  "apps/mobile/app/home-example.tsx",
+  "apps/mobile/app/onboarding.tsx",
+  "apps/mobile/app/(tabs)/home.tsx",
+  "apps/mobile/src/lib/home-start.ts",
+  "apps/mobile/app/bill/add.tsx",
+  "apps/mobile/src/components/TelecomImportProgress.tsx",
+  "apps/mobile/src/components/BillExamplePreview.tsx",
+  "apps/mobile/src/lib/import-journey.ts",
+  "apps/mobile/app/provider/[id].tsx",
+  "scripts/qa/render-first-use.cjs",
+  "tests/first-use-journey.test.ts"
+]
