@@ -1,0 +1,185 @@
+{
+  "scope": "Only this customer communications increment; inherited dirty tree preserved",
+  "files": [
+    {
+      "path": "apps/mobile/app/_layout.tsx",
+      "beforeSha256": "50a758d77672a1d72ff53950ff1ef11b7a21b9af9f10e87cbc880308527a5f69",
+      "afterSha256": "50a758d77672a1d72ff53950ff1ef11b7a21b9af9f10e87cbc880308527a5f69"
+    },
+    {
+      "path": "apps/mobile/app/notifications.tsx",
+      "beforeSha256": "a34895cbc01bd16af8520a10bb9a7de881f4f89768432967bce2c55b96fe53d2",
+      "afterSha256": "d5cdc32d0f0c2cc73bcef19d92c0151eb77935bbb22f283a24a19e00e18a8306"
+    },
+    {
+      "path": "apps/mobile/src/components/AppNotifications.tsx",
+      "beforeSha256": "965c6b59f4c677ad67ab6e5a45da25f1454545fc1a2b9057b96b365f96230f9b",
+      "afterSha256": "d0392413e6a83e9f3bba7101b0fae392f53d4ffc3f17cf808163f4eec0725274"
+    },
+    {
+      "path": "apps/mobile/src/components/WelcomeEmailSync.tsx",
+      "beforeSha256": null,
+      "afterSha256": "7f2de3583e2f91527fd63bae3b2f7175fcd36999340c217613709fe42175bc82"
+    },
+    {
+      "path": "apps/mobile/src/lib/api.ts",
+      "beforeSha256": "000eb84c3982d3776268f5f7d079a7ceedd51bb5961a4ffcfcce9351bce9dccc",
+      "afterSha256": "36091d5e8624d2509275bc92c2c42b7e27d32851433c9140f84b02b04ce95611"
+    },
+    {
+      "path": "apps/mobile/src/lib/notification-data.ts",
+      "beforeSha256": "2180dd52146ba5eec1941314466b27c1f0f02fbce08f89f95aca0e939e81f426",
+      "afterSha256": "baeb6abf81ff061e0ade4b70167f7f791f3bbe53ac1bee57c1c20d6036f91998"
+    },
+    {
+      "path": "apps/mobile/src/lib/notification-routing.ts",
+      "beforeSha256": null,
+      "afterSha256": "73801494943ada5c2b5ff580f05423635eadcd4b85b8ca08cc42d1de4e261252"
+    },
+    {
+      "path": "apps/mobile/src/lib/push-notifications.ts",
+      "beforeSha256": "986e97aee144dabaad424f2e98a3d809ba3736c795c86cf7cb56a8d57af264b6",
+      "afterSha256": "d666ea6c434ba961e37dcc91b1d300511bdf95771128a757357aa3d709ca45fe"
+    },
+    {
+      "path": "docs/audit-completion-status-2026-10-11.md",
+      "beforeSha256": "37b19a1b8ffbb281a45c548549ce50eb2569b9c25f20212cf3f3646859a7d710",
+      "afterSha256": "48860ebb9179471e1f7c5169fc3f4a7bd4bdcfa7a85dcc1693d08dfbc067c36a"
+    },
+    {
+      "path": "docs/customer-communications-2026-10-12.md",
+      "beforeSha256": null,
+      "afterSha256": "0780c426e048b0417f36dbca20edc6ddb532fa7ee7016e557fb397520b490ef6"
+    },
+    {
+      "path": "docs/email-notification-inventory-2026-10-12.md",
+      "beforeSha256": "e224272e0b02245bc159d8736580535647f1638fb7932cb8b14f9e1b4d079ae2",
+      "afterSha256": "2a4d24ac0b385dc35f04142d8b4af1570032ae24c962870a819d73ffad0facb5"
+    },
+    {
+      "path": "scripts/qa/build-auth-email-family.cjs",
+      "beforeSha256": null,
+      "afterSha256": "f1c9bde58b70ce0866da144358c8fee8770e300abcb6a4e180646db09bcc699e"
+    },
+    {
+      "path": "scripts/qa/customer-communications-staging.mjs",
+      "beforeSha256": null,
+      "afterSha256": "6d2934b73f3f7ee415f6dffba36228e46a2edf749e4030eb4841d5a36e46dbc8"
+    },
+    {
+      "path": "scripts/qa/render-auth-email-family.mjs",
+      "beforeSha256": null,
+      "afterSha256": "5275acf11260d0b5a6fb4b2ff7b5eff795cdbadb5915f5ff31345b0be454e264"
+    },
+    {
+      "path": "scripts/qa/render-customer-communications.cjs",
+      "beforeSha256": null,
+      "afterSha256": "99502c588230137daf9c146d4be70c82a88d16ea6d952d961cbca98aa42a5170"
+    },
+    {
+      "path": "src/app/api/mobile/v1/account/welcome/route.ts",
+      "beforeSha256": null,
+      "afterSha256": "27b648cf6c524be8e02bef9597fb86cc852365d57b8eeb58ca0da29cdcf8f3a0"
+    },
+    {
+      "path": "src/app/api/mobile/v1/notifications/open/route.ts",
+      "beforeSha256": null,
+      "afterSha256": "91115f5822c9a68d229fd3d417a5de15dcc96ac2489c21c23836a9ff733065cb"
+    },
+    {
+      "path": "src/app/open/route.ts",
+      "beforeSha256": null,
+      "afterSha256": "e2340e3512442758aa481ec6c2a470719b5a5bdd3f2173c88d4d74b2e97b9fb5"
+    },
+    {
+      "path": "src/lib/email/welcome.ts",
+      "beforeSha256": null,
+      "afterSha256": "a494948104474849ed0712c6483200087f9906208f13aacd019ad3008bdb74dd"
+    },
+    {
+      "path": "src/lib/notifications/open.ts",
+      "beforeSha256": null,
+      "afterSha256": "9eae1694f7eefe79445cd7da39d4f99ac74371c7a95b820b5173f599eed26cf5"
+    },
+    {
+      "path": "src/lib/notifications/service.ts",
+      "beforeSha256": "77069a7ccd84cc14776b3a3d2d2e82febefde50dc910277a9eab79365b24339a",
+      "afterSha256": "77069a7ccd84cc14776b3a3d2d2e82febefde50dc910277a9eab79365b24339a"
+    },
+    {
+      "path": "supabase/migrations/202610120001_welcome_delivery.sql",
+      "beforeSha256": null,
+      "afterSha256": "395c8ba3468cc258dc40ba8893ff64821932696061da1822253c7f41c9da8c1c"
+    },
+    {
+      "path": "supabase/templates/README.md",
+      "beforeSha256": "823bf045a2814596f7de1f86945c5befccd2b12fe687ec20ff7d6e32e80b679d",
+      "afterSha256": "56016b7f1d851e3c4baad80e05e0a279f353051087b7aec39a178d474c53d52a"
+    },
+    {
+      "path": "supabase/templates/change-email-address.html",
+      "beforeSha256": null,
+      "afterSha256": "eadc1545f02ac99b0e84540e30cfd96c6a42bdba324e9ac879df1fd24d9e113c"
+    },
+    {
+      "path": "supabase/templates/email-address-changed.html",
+      "beforeSha256": null,
+      "afterSha256": "4c1a1fabf7f99ff86245f175db6d6c787231aa744cf2ed5874206ed06503f7fb"
+    },
+    {
+      "path": "supabase/templates/family.json",
+      "beforeSha256": null,
+      "afterSha256": "d7f98a6bbf374911471d0674c94e44f0b0740e3b43422edc77bae4ad610b13ce"
+    },
+    {
+      "path": "supabase/templates/invite-user.html",
+      "beforeSha256": null,
+      "afterSha256": "1219442f32a180705657450dbfb3b2a19426d6ff78f425e11da8f6fb0fadc682"
+    },
+    {
+      "path": "supabase/templates/magic-link-or-otp.html",
+      "beforeSha256": null,
+      "afterSha256": "7a03717dc2fff8c160c23f2cafe2b9eaeee5c1fcc1e4b3d8fe9a3559c98a9f51"
+    },
+    {
+      "path": "supabase/templates/mfa-method-added.html",
+      "beforeSha256": null,
+      "afterSha256": "d798593ae6ce9f0128a1fc594f97d92721dd2bbae2f2c648d0a169a7c065c4e7"
+    },
+    {
+      "path": "supabase/templates/mfa-method-removed.html",
+      "beforeSha256": null,
+      "afterSha256": "a1bea3a75860cc748af3a9a33b79245ff24518762509916493747b35999394d9"
+    },
+    {
+      "path": "supabase/templates/password-changed.html",
+      "beforeSha256": null,
+      "afterSha256": "637dcd578378315033e4abcc872199fded16208a571a026d3adc1651dec1175e"
+    },
+    {
+      "path": "supabase/templates/phone-number-changed.html",
+      "beforeSha256": null,
+      "afterSha256": "456c39e530a4cfd59238a60e2d88eb9f23d24b24d328835215779d3617f942ea"
+    },
+    {
+      "path": "supabase/templates/reauthentication.html",
+      "beforeSha256": null,
+      "afterSha256": "c0cda05d6ab47797767161361315c56bfb49c589033e0d4a2487d27c153d88bb"
+    },
+    {
+      "path": "supabase/templates/sign-in-method-linked.html",
+      "beforeSha256": null,
+      "afterSha256": "b6933c1e821800631fcc1e906bcbfa779deb3184837a78b3931bbee75786bcfd"
+    },
+    {
+      "path": "supabase/templates/sign-in-method-removed.html",
+      "beforeSha256": null,
+      "afterSha256": "04dc2fd122a9df3252efc9f8fc097437ae7c5f89d33e89829888d03abb411864"
+    },
+    {
+      "path": "tests/customer-communications.test.ts",
+      "beforeSha256": null,
+      "afterSha256": "69e83007a173aa1b45f67ee4567db7aaceb89011e2960bbef301db7c90f7638d"
+    }
+  ]
+}

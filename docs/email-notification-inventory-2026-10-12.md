@@ -1,6 +1,6 @@
 # Rezlee email and notification inventory — 2026-10-12
 
-This records code paths and inspected staging configuration, not proof of delivery to customer inboxes or phones. A configured sender, an API success and actual customer receipt are separate evidence. All customer-facing messages should use Rezlee branding and one useful action. No messages or new notification subscriptions were sent/enabled during this review.
+This records code paths and inspected staging configuration, not proof of delivery to customer inboxes or phones. A configured sender, an API success and actual customer receipt are separate evidence. All customer-facing messages should use Rezlee branding and one useful action. No test messages were sent. The later customer-communications-2026-10-12.md increment enabled staging welcome delivery for newly verified mobile accounts and the branded password-changed security notice. Other security switches and worker schedules stay off.
 
 ## Email inventory
 
@@ -8,22 +8,22 @@ This records code paths and inspected staging configuration, not proof of delive
 |---|---|---|
 | Confirm signup | Supabase email signup; confirmation.html | Branded staging template updated with welcome and optional starting ideas. Exact mobile confirmation return added. Real inbox and native return still need acceptance. |
 | Reset password | Supabase recovery; recovery.html | Branded staging email now offers recovery code and link. Isolated app code-entry flow and hosted verification pass. Actual delivery and OS handoff remain open. |
-| Separate welcome after verified signup | No dedicated sender found in the customer-email paths | Build one durable once-only welcome event for a newly verified account, including social signup. Existing-account sign-in must not send another welcome. One app continuation CTA and a few useful starting choices; no claim setup is complete. |
+| Separate welcome after verified signup | Mobile signed-in app entry calls the server; durable service-only welcome delivery record and Resend | Implemented and enabled on staging for new verified accounts after the recorded rollout cutoff. Concurrent/repeated requests deduplicate; bounded retries preserve the original message/key. Existing accounts excluded. Web-only accounts do not trigger this yet. Real inbox delivery remains open. |
 | Household invitation | Custom Resend sender in src/lib/email/household-invite.ts | Branded invitation is implemented. Joining shares Household/Care/expenses; private Bills/Vault stay separate. Actual delivery, expiry/revocation and two-device acceptance remain open. |
 | Waitlist confirmation | Custom Resend sender in src/lib/waitlist/server.ts | Implemented, configuration-gated, with confirmation expiry and unsubscribe. Keep distinct from live app signup; reconcile the website's current acquisition flow before launch. |
 | Support/contact submission | src/app/api/contact/route.ts sends to the configured support inbox | Internal support delivery is implemented with reference/idempotency and caps. This is not a customer acknowledgment email. |
 | Support acknowledgment to customer | No automatic customer acknowledgment found | Consider a short receipt with reference and realistic response expectation. Needs a durable delivery record to prevent duplicate acknowledgments on retries. |
-| Ordinary magic link/sign-in code | Supabase template; separate mobile email-code gate | Separate from recovery codes. Do not imply this sign-in method is broadly launched. Branding and delivery need acceptance if enabled. |
-| Auth admin invitation | Supabase Invite user template | Distinct from household invitation. No reviewed customer household flow uses this as its delivery mechanism. Brand before any intended admin-invite rollout. |
-| Change-email confirmation | Supabase Change email address template | Available auth template; customer flow and branding require reconciliation before exposing email changes. |
-| Sensitive-operation reauthentication | Supabase Reauthentication template | Available auth template; configure and test only with the associated product flow. |
-| Password-changed security notice | Supabase security email | Staging switch observed OFF. Recommended launch security notice, with branded copy and account-security/support guidance. Not enabled in this pass. |
-| Email-address-changed security notice | Supabase security email | Staging OFF. Recommended when email change is supported. |
-| Phone-number-changed security notice | Supabase security email | Staging OFF. Enable with a supported auth-phone change flow; household member contact edits are a separate concept. |
-| Sign-in method linked | Supabase security email | Staging OFF. Recommended when Apple/Google linking is enabled; test intended and unexpected linking. |
-| Sign-in method removed | Supabase security email | Staging OFF. Recommended with account linking/removal; verify the customer retains a working sign-in method. |
-| MFA method added | Supabase security email | Staging OFF. Brand and enable with actual customer MFA enrollment. |
-| MFA method removed | Supabase security email | Staging OFF. Brand and enable with actual customer MFA removal. |
+| Ordinary magic link/sign-in code | Supabase template; separate mobile email-code gate | Separate from recovery codes. Do not imply this sign-in method is broadly launched. Branded template applied on staging, preserving link and OTP. Delivery and the gated product flow need acceptance if enabled. |
+| Auth admin invitation | Supabase Invite user template | Distinct from household invitation. No reviewed customer household flow uses this as its delivery mechanism. Branded staging template applied; actual admin-invite rollout is still separate. |
+| Change-email confirmation | Supabase Change email address template | Available auth template; branded staging template applied, including the required new-email placeholder. Customer flow acceptance remains before exposing email changes. |
+| Sensitive-operation reauthentication | Supabase Reauthentication template | Branded staging template applied. Accept only with the associated sensitive-operation product flow. |
+| Password-changed security notice | Supabase security email | Branded template applied and staging switch ON. Trigger is an actual password change, not a reset request. Real delivery remains open. |
+| Email-address-changed security notice | Supabase security email | Branded staging template applied; switch OFF pending supported email-change acceptance. |
+| Phone-number-changed security notice | Supabase security email | Branded staging template applied; switch OFF. Enable with a supported auth-phone change flow; household member contact edits are a separate concept. |
+| Sign-in method linked | Supabase security email | Branded staging template applied; switch OFF. Enable with accepted Apple/Google linking; test intended and unexpected linking. |
+| Sign-in method removed | Supabase security email | Branded staging template applied; switch OFF. Enable with accepted account linking/removal; verify the customer retains a working sign-in method. |
+| MFA method added | Supabase security email | Branded staging template applied; switch OFF pending actual customer MFA enrollment. |
+| MFA method removed | Supabase security email | Branded staging template applied; switch OFF pending actual customer MFA removal. |
 | Deletion request / completion | No customer email sender found in the reviewed send paths | Reconcile with existing deletion receipt/job flow. Never say deletion is complete while provider revocation or cleanup remains pending. |
 | Optional digest / feature or marketing emails | No general customer campaign sender found in reviewed code | Later, with explicit preferences and unsubscribe. Do not turn transactional auth email into a marketing subscription. |
 
@@ -55,5 +55,7 @@ Primary source locations: src/lib/notifications/{policy,service}.ts; src/lib/dec
 2. Finish notification tap/restore/account boundaries and preference handling against actual device delivery.
 3. Tie deletion notices to true lifecycle state; complete support receipt decisions and operational ownership.
 4. Add optional engagement messages only after useful transactional behavior is accepted.
+
+The October 12 communications pass now revalidates current account/record access on notification taps, retires obsolete updates, preserves recovery/lock navigation, deduplicates push responses and pagination, and isolates late account-switch responses. Actual native push delivery and preference acceptance remain open.
 
 Each event needs a trigger, intended recipient, deduplication identity, expiry/resolution rule, preference rule, destination, fallback and delivery status. Keep private account content out of lock-screen copy. Only ask for notification permission when the customer understands its benefit. Preserve progress, explain partial completion honestly and provide one clear next step.

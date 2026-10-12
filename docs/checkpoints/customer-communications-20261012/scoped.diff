@@ -1,0 +1,1141 @@
+--- before/apps/mobile/app/notifications.tsx
++++ after/apps/mobile/app/notifications.tsx
+@@ -1,39 +1,99 @@
+-import { useCallback,useState } from "react";
+-import { Redirect,useFocusEffect,useRouter } from "expo-router";
+-import { ActivityIndicator,Pressable,RefreshControl,ScrollView,Text,View } from "react-native";
++import { useCallback, useEffect, useRef, useState } from "react";
++import { Redirect, useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
++import { ActivityIndicator, Pressable, RefreshControl, ScrollView, Text, View } from "react-native";
+ import { SafeAreaView } from "react-native-safe-area-context";
+ import { Feather } from "@expo/vector-icons";
+ import { useAuth } from "@/auth/AuthProvider";
+ import { ScreenNavigation } from "@/components/ScreenNavigation";
+-import { BriefHeading,QuietAction,ReadNotice } from "@/components/Brief";
++import { BriefHeading, QuietAction, ReadNotice } from "@/components/Brief";
+ import { useNotifications } from "@/components/AppNotifications";
+-import { fetchNotifications,readNotification,readAllNotifications,type NotificationsPayload,type AppNotification } from "@/lib/notification-data";
+-import { colors,layout,spacing,typography } from "@/theme/tokens";
+-const labels={shared_expenses:"Shared expenses",connections:"Connections",bills:"Bills",care:"Care",recalls:"Recalls"};
++import { fetchNotifications, openNotification, readNotification, readAllNotifications, type NotificationsPayload, type AppNotification } from "@/lib/notification-data";
++import { mergeNotificationItems, safeNotificationDestination } from "@/lib/notification-routing";
++import { colors, layout, spacing, typography } from "@/theme/tokens";
++const labels = { shared_expenses: "Shared expenses", connections: "Connections", bills: "Bills", care: "Care", recalls: "Recalls" };
++const notices = {
++ handled: "That update has already been handled or has expired. You can review your other updates here.",
++ unavailable: "That update is no longer available for this account. You can review your other updates here.",
++ check: "We couldn’t open that update. Check your connection, then try it from your inbox."
++};
+ export default function NotificationsScreen() {
+- const {session,isLoading}=useAuth(),router=useRouter(),{refresh}=useNotifications();
+- const [data,setData]=useState<NotificationsPayload|null>(null),[error,setError]=useState<string|null>(null),[busy,setBusy]=useState(false),[onlyUnread,setOnlyUnread]=useState(false);
+- const load=useCallback(async()=>{try{setData(await fetchNotifications());setError(null);void refresh();}catch{setError("Your notifications couldn’t be loaded. Your saved records are still available.");}},[refresh]);
+- useFocusEffect(useCallback(()=>{let active=true;void fetchNotifications().then(p=>{if(active){setData(p);setError(null);void refresh();}}).catch(()=>{if(active)setError("Your notifications couldn’t be loaded.");});return()=>{active=false;};},[refresh]));
+- async function open(n:AppNotification){setError(null);try{await readNotification(n.id);setData(p=>p?{...p,unread:Math.max(0,p.unread-(n.status==="unread"?1:0)),items:p.items.map(x=>x.id===n.id?{...x,status:"read"}:x)}:p);void refresh();if(n.href)router.push(n.href as never);}catch{setError("Could not open this notification. Please try again.");}}
+- async function markAll(){if(!data||busy)return;setBusy(true);try{await readAllNotifications(data.asOf);await load();}catch{setError("Could not mark notifications read.");}finally{setBusy(false);}}
+- async function more(){if(!data?.nextBefore||busy)return;setBusy(true);try{const next=await fetchNotifications(data.nextBefore);setData(p=>p?{...next,items:[...p.items,...next.items]}:next);}catch{setError("Could not load older notifications.");}finally{setBusy(false);}}
+- if(!isLoading&&!session)return <Redirect href="/(auth)/login"/>;
+- const items=data?.items.filter(n=>!onlyUnread||n.status==="unread")??[];
+- return <SafeAreaView edges={["left","right","bottom"]} style={{flex:1,backgroundColor:colors.background}}>
+-  <ScreenNavigation title="Notifications" fallback="/(tabs)/home"/>
+-  <ScrollView refreshControl={<RefreshControl refreshing={busy} onRefresh={()=>void load()}/>} contentContainerStyle={{padding:layout.screenHorizontal,paddingBottom:48,gap:spacing.lg}}>
+-   <BriefHeading title="Your updates, together." detail="Shared expenses, bills, care, recalls and connection updates. Opening an update won’t mark a bill paid or a task done."/>
+-   <View style={{flexDirection:"row",flexWrap:"wrap",gap:8}}><QuietAction label="Notification settings" onPress={()=>router.push("/notification-settings")}/>{data?.unread?<QuietAction label="Mark all read" disabled={busy} onPress={()=>void markAll()}/>:null}<QuietAction label={onlyUnread?"Show all":"Unread only"} onPress={()=>setOnlyUnread(v=>!v)}/></View>
+-   {error?<ReadNotice message={error} onRetry={()=>void load()}/>:null}
+-   {!data&&!error?<ActivityIndicator accessibilityLabel="Loading notifications" color={colors.primary}/>:null}
+-   {data&&!items.length?<View style={{paddingVertical:30,gap:12}}><Feather name="bell" size={28} color={colors.primary}/><Text style={[typography.section,{color:colors.foreground}]}>{onlyUnread?"You’re all caught up":"No updates yet"}</Text><Text style={[typography.body,{color:colors.mutedForeground}]}>Useful updates appear here when there’s something to review. Push notifications are optional.</Text></View>:null}
+-   {items.map(n=><Pressable key={n.id} accessibilityRole="button" accessibilityLabel={(n.status==="unread"?"Unread. ":"")+n.title} onPress={()=>void open(n)} style={({pressed})=>({padding:18,borderRadius:16,borderWidth:1,borderColor:colors.border,backgroundColor:pressed?colors.accent:n.status==="unread"?colors.surfaceSubtle:colors.surfaceRaised,gap:7})}>
+-    <View style={{flexDirection:"row",alignItems:"center",gap:8}}>{n.status==="unread"?<View style={{width:7,height:7,borderRadius:4,backgroundColor:colors.primary}}/>:null}<Text style={[typography.caption,{color:colors.mutedForeground,flex:1}]}>{labels[n.category]} · {new Date(n.createdAt).toLocaleDateString("en-CA",{month:"short",day:"numeric"})}</Text>{n.href?<Feather name="chevron-right" size={17} color={colors.primary}/>:null}</View>
+-    <Text style={[typography.body,{fontWeight:"600",color:colors.foreground}]}>{n.title}</Text>{n.body?<Text style={[typography.meta,{color:colors.mutedForeground}]}>{n.body}</Text>:null}
++ const { session, isLoading } = useAuth();
++ const { notice } = useLocalSearchParams<{ notice?: string }>();
++ if (isLoading) return <ActivityIndicator accessibilityLabel="Loading notifications" color={colors.primary} />;
++ if (!session) return <Redirect href="/(auth)/login" />;
++ return <AccountInbox key={session.user.id + ":" + (notice ?? "")} userId={session.user.id} initialNotice={notice} />;
++}
++function AccountInbox({ userId, initialNotice }: { userId: string; initialNotice?: string }) {
++ const router = useRouter(), { refresh } = useNotifications();
++ const [data, setData] = useState<NotificationsPayload | null>(null), [error, setError] = useState<string | null>(null);
++ const [notice, setNotice] = useState<string | null>(() => initialNotice && initialNotice in notices ? notices[initialNotice as keyof typeof notices] : null), [busy, setBusy] = useState<"refresh" | "more" | "read" | null>(null);
++ const [onlyUnread, setOnlyUnread] = useState(false), [opening, setOpening] = useState<string | null>(null);
++ const alive = useRef(true), version = useRef(0), operation = useRef(false), openingRef = useRef(false);
++ useEffect(() => { alive.current = true; return () => { alive.current = false; }; }, []);
++ const load = useCallback(async () => {
++  const ticket = ++version.current; setBusy("refresh");
++  try {
++   const next = await fetchNotifications(undefined, userId);
++   if (alive.current && ticket === version.current) { setData({ ...next, items: mergeNotificationItems([], next.items) }); setError(null); void refresh(); }
++  } catch { if (alive.current && ticket === version.current) setError("Your updates couldn’t be loaded. Your saved records are still available."); }
++  finally { if (alive.current && ticket === version.current) setBusy(null); }
++ }, [userId, refresh]);
++ useFocusEffect(useCallback(() => { void load(); return () => { version.current++; }; }, [load]));
++ async function open(n: AppNotification) {
++  if (openingRef.current) return;
++  openingRef.current = true; setOpening(n.id); setError(null);
++  try {
++   const destination = await openNotification(n.id, userId);
++   if (!alive.current) return;
++   const href = safeNotificationDestination(destination.href);
++   if (href === "/notifications") setNotice(destination.notice ? notices[destination.notice] : "This update is in your inbox. There’s no separate record to open.");
++   else router.push(href as never);
++   if (destination.notice) setData(previous => previous ? { ...previous,
++    unread: Math.max(0, previous.unread - (previous.items.find(item => item.id === n.id)?.status === "unread" ? 1 : 0)),
++    items: previous.items.filter(item => item.id !== n.id) } : previous);
++   // A failed read receipt must never prevent the customer reaching their record.
++   void readNotification(n.id, userId).then(() => {
++    if (!alive.current) return;
++    setData(previous => previous ? { ...previous,
++     unread: Math.max(0, previous.unread - (previous.items.find(item => item.id === n.id)?.status === "unread" ? 1 : 0)),
++     items: previous.items.map(item => item.id === n.id ? { ...item, status: "read" } : item) } : previous);
++    void refresh();
++   }).catch(() => { /* Leave unread until a later successful acknowledgement. */ });
++  } catch { if (alive.current) setError("We couldn’t open this update. Check your connection and tap it again."); }
++  finally { if (alive.current) { openingRef.current = false; setOpening(null); } }
++ }
++ async function markAll() {
++  if (!data || busy || operation.current) return;
++  operation.current = true; setBusy("read"); const ticket = version.current;
++  try { await readAllNotifications(data.asOf, userId); if (alive.current && ticket === version.current) await load(); }
++  catch { if (alive.current && ticket === version.current) setError("Couldn’t mark your updates read. Please try again."); }
++  finally { operation.current = false; if (alive.current && ticket === version.current) setBusy(null); }
++ }
++ async function more() {
++  if (!data?.nextBefore || busy || operation.current) return;
++  operation.current = true; setBusy("more"); const ticket = version.current;
++  try {
++   const next = await fetchNotifications(data.nextBefore, userId);
++   if (alive.current && ticket === version.current) setData(previous => previous ? { ...previous, nextBefore: next.nextBefore, items: mergeNotificationItems(previous.items, next.items) } : next);
++  } catch { if (alive.current && ticket === version.current) setError("Couldn’t load older updates. Please try again."); }
++  finally { operation.current = false; if (alive.current && ticket === version.current) setBusy(null); }
++ }
++ const items = data?.items.filter(n => !onlyUnread || n.status === "unread") ?? [];
++ return <SafeAreaView edges={["left", "right", "bottom"]} style={{ flex: 1, backgroundColor: colors.background }}>
++  <ScreenNavigation title="Notifications" fallback="/(tabs)/home" />
++  <ScrollView refreshControl={<RefreshControl refreshing={busy === "refresh"} onRefresh={() => void load()} />} contentContainerStyle={{ padding: layout.screenHorizontal, paddingBottom: 48, gap: spacing.lg }}>
++   <BriefHeading title="Your updates, together." detail="Shared expenses, bills, care, recalls and connection updates. Opening an update won’t mark a bill paid or a task done." />
++   <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}><QuietAction label="Notification settings" onPress={() => router.push("/notification-settings")} />{data?.unread ? <QuietAction label="Mark all read" disabled={!!busy} onPress={() => void markAll()} /> : null}<QuietAction label={onlyUnread ? "Show all" : "Unread only"} onPress={() => setOnlyUnread(value => !value)} /></View>
++   {notice ? <View style={{ padding: 16, borderRadius: 12, backgroundColor: colors.surfaceSubtle }}><Text accessibilityLiveRegion="polite" style={[typography.meta, { color: colors.foreground }]}>{notice}</Text></View> : null}
++   {error ? <ReadNotice message={error} onRetry={() => void load()} /> : null}
++   {!data && !error ? <ActivityIndicator accessibilityLabel="Loading notifications" color={colors.primary} /> : null}
++   {data && !items.length ? <View style={{ paddingVertical: 30, gap: 12 }}><Feather name="bell" size={28} color={colors.primary} /><Text style={[typography.section, { color: colors.foreground }]}>{onlyUnread || notice ? "You’re all caught up" : "No updates yet"}</Text><Text style={[typography.body, { color: colors.mutedForeground }]}>Useful updates appear here when there’s something to review. Push notifications are optional.</Text></View> : null}
++   {items.map(n => <Pressable key={n.id} accessibilityRole="button" accessibilityLabel={(n.status === "unread" ? "Unread. " : "") + n.title} accessibilityState={{ disabled: !!opening, busy: opening === n.id }} disabled={!!opening} onPress={() => void open(n)} style={({ pressed }) => ({ padding: 18, borderRadius: 16, borderWidth: 1, borderColor: colors.border, backgroundColor: pressed ? colors.accent : n.status === "unread" ? colors.surfaceSubtle : colors.surfaceRaised, gap: 7 })}>
++    <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>{n.status === "unread" ? <View style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: colors.primary }} /> : null}<Text style={[typography.caption, { color: colors.mutedForeground, flex: 1 }]}>{labels[n.category]} · {new Date(n.createdAt).toLocaleDateString("en-CA", { month: "short", day: "numeric" })}</Text>{opening === n.id ? <ActivityIndicator accessibilityLabel="Opening update" size="small" color={colors.primary} /> : n.href ? <Feather name="chevron-right" size={17} color={colors.primary} /> : null}</View>
++    <Text style={[typography.body, { fontWeight: "600", color: colors.foreground }]}>{n.title}</Text>{n.body ? <Text style={[typography.meta, { color: colors.mutedForeground }]}>{n.body}</Text> : null}
+    </Pressable>)}
+-   {data?.nextBefore?<QuietAction label={busy?"Loading…":"Load older updates"} disabled={busy} onPress={()=>void more()}/>:null}
+-   {data?.items.length?<Text style={[typography.caption,{color:colors.mutedForeground}]}>Updates from the last 30 days. Expired verification requests and handled reminders are removed automatically.</Text>:null}
++   {data?.nextBefore ? <QuietAction label={busy === "more" ? "Loading…" : "Load older updates"} disabled={!!busy} onPress={() => void more()} /> : null}
++   {data?.items.length ? <Text style={[typography.caption, { color: colors.mutedForeground }]}>Updates from the last 30 days. Expired verification requests and handled reminders are removed automatically.</Text> : null}
+   </ScrollView>
+  </SafeAreaView>;
+ }
+--- before/apps/mobile/src/components/AppNotifications.tsx
++++ after/apps/mobile/src/components/AppNotifications.tsx
+@@ -1,36 +1,79 @@
+-import { createContext,useCallback,useContext,useEffect,useState,type ReactNode } from "react";
+-import { AppState,Pressable,View,Text } from "react-native";
++import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
++import { AppState, Pressable, View, Text } from "react-native";
+ import { Feather } from "@expo/vector-icons";
+-import { useRootNavigationState,useRouter } from "expo-router";
++import { usePathname, useRootNavigationState, useRouter } from "expo-router";
+ import { useAuth } from "@/auth/AuthProvider";
+ import { useAppLock } from "@/auth/AppLockProvider";
+-import { fetchNotifications } from "@/lib/notification-data";
+-import { registerPushNotifications, getInitialProviderNotificationHref, addProviderNotificationResponseListener, clearNotificationResponse } from "@/lib/push-notifications";
++import { fetchNotifications, openNotification, readNotification } from "@/lib/notification-data";
++import { registerPushNotifications, getInitialNotificationTarget, addNotificationTargetListener, clearNotificationResponse } from "@/lib/push-notifications";
++import { notificationNavigationReady, safeNotificationDestination, type NotificationResponseTarget } from "@/lib/notification-routing";
++import { WelcomeEmailSync } from "./WelcomeEmailSync";
+ import { colors } from "@/theme/tokens";
+-const Context=createContext({unread:0,refresh:async()=>{}});
+-export const useNotifications=()=>useContext(Context);
+-export function AppNotifications({children}:{children:ReactNode}) {
+- const {session}=useAuth(),{state}=useAppLock(),router=useRouter(),navigation=useRootNavigationState();
+- const uid=session?.user.id;const ready=Boolean(uid&&state.ready&&!state.locked&&state.userId===uid&&navigation?.key);
+- const [count,setCount]=useState<{user:string;value:number}|null>(null);
+- const refresh=useCallback(async()=>{if(!uid||!ready)return;try{const p=await fetchNotifications();setCount({user:uid,value:p.unread});}catch{/* The inbox exposes a retry without an intrusive banner on every tab. */}},[uid,ready]);
+- useEffect(()=>{
+-  if(!ready)return;let active=true;
+-  const open=(href:string)=>{if(active){router.push(href as never);void clearNotificationResponse();void refresh();}};
+-  const listener=addProviderNotificationResponseListener(open);
+-  void getInitialProviderNotificationHref().then(href=>{if(href)open(href);}).catch(()=>{});
+-  const check=()=>{void refresh();void registerPushNotifications({requestPermission:false}).catch(()=>{});};
+-  check();
+-  const foreground=AppState.addEventListener("change",s=>{if(s==="active")check();});
+-  const timer=setInterval(()=>{if(AppState.currentState==="active")void refresh();},60000);
+-  return()=>{active=false;listener.remove();foreground.remove();clearInterval(timer);};
+- },[ready,uid,refresh,router]);
+- return <Context.Provider value={{unread:count&&count.user===uid?count.value:0,refresh}}>{children}</Context.Provider>;
++const Context = createContext({ unread: 0, refresh: async () => {} });
++export const useNotifications = () => useContext(Context);
++export function AppNotifications({ children }: { children: ReactNode }) {
++  const { session } = useAuth(), { state } = useAppLock(), navigation = useRootNavigationState();
++  const uid = session?.user.id ?? null;
++  const ready = Boolean(uid && state.ready && !state.locked && state.userId === uid && navigation?.key);
++  return <AccountNotifications key={uid ?? "signed-out"} userId={uid} ready={ready}>{children}</AccountNotifications>;
++}
++function AccountNotifications({ children, userId, ready }: { children: ReactNode; userId: string | null; ready: boolean }) {
++  const router = useRouter(), path = usePathname(), canOpen = ready && notificationNavigationReady(path);
++  const [unread, setUnread] = useState(0), requests = useRef(0), handled = useRef(new Set<string>());
++  const invalidate = useCallback(() => { requests.current++; }, []);
++  const refresh = useCallback(async () => {
++    if (!userId || !ready) return;
++    const version = ++requests.current;
++    try { const result = await fetchNotifications(undefined, userId); if (version === requests.current) setUnread(result.unread); }
++    catch { /* The inbox provides an explicit retry. */ }
++  }, [userId, ready]);
++  useEffect(() => {
++    if (!ready) return;
++    const check = () => { void refresh(); void registerPushNotifications({ requestPermission: false }).catch(() => {}); };
++    check();
++    const foreground = AppState.addEventListener("change", s => { if (s === "active") check(); });
++    const timer = setInterval(() => { if (AppState.currentState === "active") void refresh(); }, 60000);
++    return () => { invalidate(); foreground.remove(); clearInterval(timer); };
++  }, [ready, refresh, invalidate]);
++  useEffect(() => {
++    if (!canOpen || !userId) return;
++    let active = true, version = 0;
++    const inFlight = new Set<string>();
++    const open = async (target: NotificationResponseTarget) => {
++      if (!active || handled.current.has(target.responseId) || inFlight.has(target.responseId)) return;
++      inFlight.add(target.responseId); const ticket = ++version;
++      try {
++        // Older pushes have only a raw URL. Open the account's inbox instead of
++        // trusting that URL after a sign-out or household change.
++        const destination = target.notificationId ? await openNotification(target.notificationId, userId) : { href: "/notifications" };
++        if (!active || ticket !== version) return;
++        const href = safeNotificationDestination(destination.href);
++        router.push(destination.notice ? { pathname: "/notifications", params: { notice: destination.notice } } : href as never);
++        handled.current.add(target.responseId);
++        if (handled.current.size > 100) handled.current.delete(handled.current.values().next().value!);
++        if (target.notificationId) void readNotification(target.notificationId, userId).catch(() => {}).then(() => { if (active) void refresh(); });
++        const latest = await getInitialNotificationTarget();
++        if (active && latest?.responseId === target.responseId) await clearNotificationResponse();
++      } catch {
++        if (active && ticket === version && !handled.current.has(target.responseId)) router.push({ pathname: "/notifications", params: { notice: "check" } });
++        // Leave the OS response pending when lookup failed; foreground can retry.
++      } finally { inFlight.delete(target.responseId); }
++    };
++    const inspect = () => { void getInitialNotificationTarget().then(target => { if (target) void open(target); }).catch(() => {}); };
++    const listener = addNotificationTargetListener(target => { void open(target); });
++    const foreground = AppState.addEventListener("change", s => { if (s === "active") inspect(); });
++    inspect();
++    return () => { active = false; version++; listener.remove(); foreground.remove(); };
++  }, [canOpen, userId, router, refresh]);
++  return <Context.Provider value={{ unread: ready ? unread : 0, refresh }}>
++    {ready && userId ? <WelcomeEmailSync key={userId} userId={userId} /> : null}
++    {children}
++  </Context.Provider>;
+ }
+ export function NotificationBell() {
+- const {unread}=useNotifications(),router=useRouter();
+- return <Pressable accessibilityRole="button" accessibilityLabel={unread?"Notifications, "+unread+" unread":"Notifications"} onPress={()=>router.push("/notifications")} style={({pressed})=>({width:44,height:44,alignItems:"center",justifyContent:"center",opacity:pressed?0.6:1})}>
+-  <Feather name="bell" size={21} color={colors.primary}/>
+-  {unread>0?<View style={{position:"absolute",top:2,right:0,minWidth:17,height:17,paddingHorizontal:3,borderRadius:9,backgroundColor:colors.primary,alignItems:"center",justifyContent:"center"}}><Text style={{fontSize:10,fontWeight:"700",color:colors.background}}>{unread>99?"99+":unread}</Text></View>:null}
+- </Pressable>;
++  const { unread } = useNotifications(), router = useRouter();
++  return <Pressable accessibilityRole="button" accessibilityLabel={unread ? "Notifications, " + unread + " unread" : "Notifications"} onPress={() => router.push("/notifications")} style={({ pressed }) => ({ width: 44, height: 44, alignItems: "center", justifyContent: "center", opacity: pressed ? 0.6 : 1 })}>
++    <Feather name="bell" size={21} color={colors.primary} />
++    {unread > 0 ? <View style={{ position: "absolute", top: 2, right: 0, minWidth: 17, height: 17, paddingHorizontal: 3, borderRadius: 9, backgroundColor: colors.primary, alignItems: "center", justifyContent: "center" }}><Text style={{ fontSize: 10, fontWeight: "700", color: colors.background }}>{unread > 99 ? "99+" : unread}</Text></View> : null}
++  </Pressable>;
+ }
+--- before/apps/mobile/src/components/WelcomeEmailSync.tsx
++++ after/apps/mobile/src/components/WelcomeEmailSync.tsx
+@@ -0,0 +1,24 @@
++import { useEffect } from "react";
++import { AppState } from "react-native";
++import { apiPost } from "@/lib/api";
++
++// Transactional welcome runs quietly after verified sign-in. It never blocks
++// onboarding and the server decides eligibility, recipient and one-time identity.
++export function WelcomeEmailSync({ userId }: { userId: string }) {
++  useEffect(() => {
++    let active = true, busy = false, finished = false, lastAttempt = 0;
++    const check = async () => {
++      if (!active || busy || finished || AppState.currentState !== "active" || Date.now() - lastAttempt < 300_000) return;
++      busy = true; lastAttempt = Date.now();
++      try {
++        const result = await apiPost<{ status: string }>("/api/mobile/v1/account/welcome", undefined, { timeoutMs: 15_000, expectedUserId: userId });
++        if (active) finished = ["accepted", "ineligible", "disabled", "suppressed", "failed", "uncertain"].includes(result.status);
++      } catch { /* Retry on a later foreground. Email failure never blocks the app. */ }
++      finally { busy = false; }
++    };
++    void check();
++    const listener = AppState.addEventListener("change", state => { if (state === "active") void check(); });
++    return () => { active = false; listener.remove(); };
++  }, [userId]);
++  return null;
++}
+--- before/apps/mobile/src/lib/api.ts
++++ after/apps/mobile/src/lib/api.ts
+@@ -77,9 +77,9 @@
+   );
+ }
+ 
+-export async function apiGet<T>(path: string, options?: { timeoutMs?: number }): Promise<T> {
+-  if (!apiUrl) throw new ApiError("EXPO_PUBLIC_API_URL is not configured.", 500);
+-  const accessToken = await getAccessToken();
++export async function apiGet<T>(path: string, options?: { timeoutMs?: number; expectedUserId?: string }): Promise<T> {
++  if (!apiUrl) throw new ApiError("EXPO_PUBLIC_API_URL is not configured.", 500);
++  const accessToken = await getAccessToken(options?.expectedUserId);
+   const controller = options?.timeoutMs ? new AbortController() : null;
+   const timeout = controller ? setTimeout(() => controller.abort(), options?.timeoutMs) : null;
+   try {
+--- before/apps/mobile/src/lib/notification-data.ts
++++ after/apps/mobile/src/lib/notification-data.ts
+@@ -2,8 +2,10 @@
+ export type NotificationPreferences={push_enabled:boolean;connections:boolean;bills:boolean;care:boolean;recalls:boolean;shared_expenses?:boolean;timezone:string};
+ export type AppNotification={id:string;title:string;body:string|null;status:"unread"|"read";category:"connections"|"bills"|"care"|"recalls"|"shared_expenses";createdAt:string;href:string|null};
+ export type NotificationsPayload={items:AppNotification[];unread:number;nextBefore:string|null;asOf:string};
+-export const fetchNotifications=(before?:string)=>apiGet<NotificationsPayload>("/api/mobile/v1/notifications"+(before?"?before="+encodeURIComponent(before):""),{timeoutMs:15000});
+-export const readNotification=(id:string)=>apiPost("/api/mobile/v1/notifications",{id});
+-export const readAllNotifications=(readAllBefore:string)=>apiPost("/api/mobile/v1/notifications",{readAllBefore});
++export const fetchNotifications=(before?:string,expectedUserId?:string)=>apiGet<NotificationsPayload>("/api/mobile/v1/notifications"+(before?"?before="+encodeURIComponent(before):""),{timeoutMs:15000,expectedUserId});
++export const readNotification=(id:string,expectedUserId?:string)=>apiPost("/api/mobile/v1/notifications",{id},{timeoutMs:15000,expectedUserId});
++export const readAllNotifications=(readAllBefore:string,expectedUserId?:string)=>apiPost("/api/mobile/v1/notifications",{readAllBefore},{timeoutMs:15000,expectedUserId});
+ export const fetchNotificationPreferences=()=>apiGet<{preferences:NotificationPreferences;canManageRecalls:boolean}>("/api/mobile/v1/notifications/preferences",{timeoutMs:15000});
+ export const saveNotificationPreferences=(patch:Partial<NotificationPreferences>)=>apiPost<{preferences:NotificationPreferences}>("/api/mobile/v1/notifications/preferences",patch,{timeoutMs:15000});
++
++export const openNotification=(id:string,expectedUserId:string)=>apiPost<{href:string;notice?:"handled"|"unavailable"}>("/api/mobile/v1/notifications/open",{id},{timeoutMs:15000,expectedUserId});
+--- before/apps/mobile/src/lib/notification-routing.ts
++++ after/apps/mobile/src/lib/notification-routing.ts
+@@ -0,0 +1,19 @@
++export type NotificationResponseTarget = { responseId: string; notificationId: string | null };
++export function notificationResponseTarget(response: unknown): NotificationResponseTarget | null {
++  if (!response || typeof response !== "object") return null;
++  const request = (response as { notification?: { request?: { identifier?: unknown; content?: { data?: { notificationId?: unknown } } } } }).notification?.request;
++  if (typeof request?.identifier !== "string" || !request.identifier || request.identifier.length > 512) return null;
++  const value = request.content?.data?.notificationId;
++  return { responseId: request.identifier, notificationId: typeof value === "string" && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value) ? value : null };
++}
++export function notificationNavigationReady(path: string) {
++  return Boolean(path && path !== "/" && !/^\/(?:welcome|login|signup|forgot-password|reset-password|auth-return|onboarding|delete-account|household\/join)(?:\/|$)/.test(path));
++}
++export function safeNotificationDestination(href: unknown) {
++  return typeof href === "string" && (/^\/(provider|bill|care|shared)\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(href) || ["/provider", "/shared", "/recalls", "/notifications", "/(tabs)/bills", "/(tabs)/care"].includes(href)) ? href : "/notifications";
++}
++export function mergeNotificationItems<T extends { id: string }>(previous: T[], next: T[]): T[] {
++  const items = new Map(previous.map(item => [item.id, item]));
++  for (const item of next) items.set(item.id, item);
++  return Array.from(items.values());
++}
+--- before/apps/mobile/src/lib/push-notifications.ts
++++ after/apps/mobile/src/lib/push-notifications.ts
+@@ -1,3 +1,4 @@
++import { notificationResponseTarget, type NotificationResponseTarget } from "./notification-routing";
+ import Constants from "expo-constants";
+ import * as Device from "expo-device";
+ import * as Notifications from "expo-notifications";
+@@ -96,3 +97,10 @@
+  await supabase.from("device_push_tokens").update({enabled:false}).eq("expo_push_token",token);
+  await clearNotificationResponse();
+ }
++
++export async function getInitialNotificationTarget() {
++ return notificationResponseTarget(await Notifications.getLastNotificationResponseAsync());
++}
++export function addNotificationTargetListener(open:(target:NotificationResponseTarget)=>void) {
++ return Notifications.addNotificationResponseReceivedListener(response=>{const target=notificationResponseTarget(response);if(target)open(target);});
++}
+--- before/docs/audit-completion-status-2026-10-11.md
++++ after/docs/audit-completion-status-2026-10-11.md
+@@ -45,6 +45,12 @@
+ ## Customer authentication and experience pass — October 12
+ See customer-auth-finish-2026-10-12.md and email-notification-inventory-2026-10-12.md. The actual Home sibling-key warning was reproduced from the archived component and fixed. Password help now accepts email recovery codes with durable verification recovery and isolated auth storage. Staging confirmation/recovery emails were updated and the missing exact mobile signup return was added. Conflicting legacy mobile environment values were corrected; default Expo launch now validates staging and stays on 8081.
+ 
+-Evidence: 913 regression tests, 22 rendered checks and 9 real staging auth checks passed; lint, web/mobile types, Next build and iOS/Android exports passed. No customer messages or production release. Code verification does not certify inbox delivery or native handoff. A separate post-verification welcome sender and security notifications remain to build/enable and accept. Staging security-email switches are currently OFF. The confirmation email's welcome copy is not a separate delivered welcome lifecycle.
++Evidence: 913 regression tests, 22 rendered checks and 9 real staging auth checks passed; lint, web/mobile types, Next build and iOS/Android exports passed. No customer messages or production release. Code verification does not certify inbox delivery or native handoff. This was the status at checkpoint 192b630; the later communications increment below implements the separate welcome and enables the staging password-change notice. The confirmation email's welcome copy is not a separate delivered welcome lifecycle.
+ 
+ Current order: (1) finish authentication/welcome/security communications and Apple configuration, (2) notification destinations/preferences/delivery, (3) connected-account deletion/revocation, (4) operational limits, monitoring/support and release candidate, while completing physical acceptance and bounded provider pilots. Preserve the earlier audit gates for bill usefulness/outcomes, household two-device behavior, capture and home AI; none is silently signed off by this pass.
++
++## Customer communications pass — October 12
++
++See customer-communications-2026-10-12.md. A one-time welcome is implemented for new verified mobile accounts after the staging rollout cutoff. All 13 Supabase auth/security templates are now branded (11 added in this increment); password-changed delivery is ON in staging, other six security switches OFF. Notification destinations now enforce current ownership/record access, retire obsolete updates, survive read-receipt failures and preserve lock/recovery/account-switch boundaries. Inbox pagination deduplicates.
++
++Evidence: 924 regression tests, 20 actual-component rendered notification scenarios, 24 email layout checks and 23 hosted no-send checks recorded in the checkpoint. Lint, types, Next build and native exports passed. Physical inbox/push/deep-link acceptance is still pending; no production release, customer test messages, paid provider calls or recurring jobs. The combined founder checklist includes the previous Home/recovery work. Next independent engineering: connected-account deletion/revocation; Apple/native auth and actual device acceptance remain open alongside the other audit gates.
+--- before/docs/customer-communications-2026-10-12.md
++++ after/docs/customer-communications-2026-10-12.md
+@@ -0,0 +1,53 @@
++# Customer communications finish — October 12, 2026
++
++This increment follows customer-auth-finish-2026-10-12.md (checkpoint 192b630). It completes the next engineering slice for a combined founder test. It is staging engineering evidence, not launch or physical-device acceptance.
++
++## What changed
++
++- New verified mobile customers receive a separate branded welcome after opening the signed-in, unlocked app. The rollout cutoff prevents backfilling old accounts. Both password and social-created accounts use the same server eligibility check. Web-only signup does not currently trigger this separate welcome.
++- One service-only database record per user stores the immutable email payload, original provider idempotency key, attempts and outcome. Concurrent requests cannot claim two live sends. Retry uses the same payload/key within 23 hours, with five-minute backoff and at most five attempts. Unknown outcomes stop automatically after the safe retry window; an accepted response is not proof of inbox delivery.
++- Account deletion holds cover in-flight email operations, and delivery records cascade when the account is removed. Changed recipient addresses suppress an outstanding old welcome. Email failure never blocks app entry.
++- Eleven remaining Supabase authentication/security email templates now have Rezlee branding. Together with the prior confirmation/recovery templates, this covers the full 13-template Supabase family. Magic-link OTP and email-change placeholders are preserved.
++- Password-changed security notices are enabled on staging. The other six security switches remain OFF until their customer flows are supported and accepted. Template branding does not enable those flows.
++- Email continuation uses a hosted /open page with an explicit Open Rezlee button and web sign-in fallback. Expo Go users can switch back to the already-open app. Native scheme behavior still requires a signed build.
++- Notification taps now ask the server for the current account-owned destination. Removed, expired, handled or inaccessible updates return a clear inbox explanation; obsolete owned updates are retired so they do not return after refresh. A read-receipt failure no longer blocks opening the saved record.
++- Push responses wait until app unlock and required recovery/onboarding navigation are complete. Duplicate taps are coalesced. Late responses from a previous account cannot navigate the new account. Older pushes without an inbox ID open the current account inbox.
++- Inbox state is isolated by account. Overlapping pages deduplicate by notification ID, and a late page cannot overwrite a newer refresh.
++
++## Verification
++
++- 924 regression tests passed, including new SQL lifecycle and delivery-controller tests.
++- 20 actual-component rendered scenarios passed at 320/390 widths: read-receipt failure, missing record, offline retry, account switch, duplicate pagination, password-recovery navigation, app lock, duplicate pushes, late old-account push and welcome retry coalescing.
++- 24 email layout/link checks passed across the eleven templates plus the welcome, at 320/390 widths. Welcome and inbox screenshots were visually inspected.
++- 23 final hosted staging checks passed using disposable accounts, synthetic records and reserved .invalid addresses, including obsolete-update retirement. Exact cases are recorded in docs/qa/customer-communications-20261012/hosted-results.json.
++- Web/mobile types, scoped lint, Next build and native iOS/Android exports passed; final gate logs are archived with this checkpoint.
++- Staging deployment build authenticated the existing Resend SMTP sender without sending a message. All eleven hosted template bodies were read back; browser redaction prevents programmatic comparison of some subject fields. The password-change subject is visible in the saved preview.
++- No test email, SMS or push was sent. No real household records were edited; temporary QA accounts and their dependent records were removed. No paid AI/provider calls or recurring jobs were started.
++
++## Deployment and rollback
++
++Staging Supabase: gjwvalpxnfbvryosmcbj. Applied migration 202610120001_welcome_delivery and recorded migration history.
++
++Staging API: https://staging.rezlee.com. Deployment identity, cutoff and isolated snapshot are in docs/checkpoints/customer-communications-20261012/deployment.json. The snapshot derives from the previously deployed inventory/auth build and overlays only the new welcome, notification-open and /open server paths. Crons remain empty. Production unchanged.
++
++The welcome gate is REZLEE_WELCOME_ENABLED=true for this staging deployment, with the recorded REZLEE_WELCOME_START_AT cutoff. Keep the cutoff stable across redeploys. Never move it backward to send welcomes to old users.
++
++Rollback the API alias to https://nestify-jc17bwdp2-razakhan1195s-projects.vercel.app, or deploy with the welcome gate disabled. Turn OFF staging Password changed to restore its previous switch state. Previous template bodies are in hosted-email-rollback.json; redacted old subject placeholders must never be applied as literal subjects. The migration is additive and may remain with sending disabled. Do not drop delivery history to retry mail.
++
++The inherited source tree remains dirty. This milestone uses the established scoped before/after archive and diff checkpoint instead of sweeping unrelated work into a commit.
++
++## Combined founder test — when ready
++
++Use staging Expo Go on 8081 and reload. Existing TestFlight binaries do not acquire these client edits.
++
++1. Returning account: open Home, Bills, Vault and Care. Confirm the former Home duplicate-key warning is gone and saved records remain sensible. No new welcome should be generated for an existing account.
++2. Password recovery: request the branded reset email, enter its code on the requesting phone, set a new password and sign in again. Check the new branded password-changed notice. Repeat with a wrong/used code and an app interruption; there should be a clear recovery path.
++3. Fresh account: use an inbox you control, confirm signup, then open the signed-in app. Check one welcome, a useful Open Rezlee continuation and no duplicate welcome after reload/sign-out/sign-in.
++4. Notifications: open the bell, tap an update, switch accounts and return. Old-account updates should not carry over. A removed/expired update should explain what happened; a temporary connection failure should be retryable.
++5. Signed native build later: repeat cold-start/locked-app notification taps, OS permission/push delivery, recovery deep links and social-auth return on iOS and Android. Expo Go is not acceptance for native push or universal-link behavior.
++
++Record device/build, expected behavior, actual behavior and any screenshot. Inbox delivery, spam placement, sender authentication headers and actual native handoff remain unaccepted until observed.
++
++## Remaining order
++
++Apple/native auth configuration and acceptance remain open. The next independent engineering pass is connected-account deletion/revocation and truthful completion receipts, then operational budgets/monitoring/support and a signed release candidate. Existing physical acceptance, household two-device behavior, utility pilots, bill usefulness/outcomes, native capture and home-AI gates remain on the audit; none is closed by this communications work.
+--- before/docs/email-notification-inventory-2026-10-12.md
++++ after/docs/email-notification-inventory-2026-10-12.md
+@@ -1,6 +1,6 @@
+ # Rezlee email and notification inventory — 2026-10-12
+ 
+-This records code paths and inspected staging configuration, not proof of delivery to customer inboxes or phones. A configured sender, an API success and actual customer receipt are separate evidence. All customer-facing messages should use Rezlee branding and one useful action. No messages or new notification subscriptions were sent/enabled during this review.
++This records code paths and inspected staging configuration, not proof of delivery to customer inboxes or phones. A configured sender, an API success and actual customer receipt are separate evidence. All customer-facing messages should use Rezlee branding and one useful action. No test messages were sent. The later customer-communications-2026-10-12.md increment enabled staging welcome delivery for newly verified mobile accounts and the branded password-changed security notice. Other security switches and worker schedules stay off.
+ 
+ ## Email inventory
+ 
+@@ -8,22 +8,22 @@
+ |---|---|---|
+ | Confirm signup | Supabase email signup; confirmation.html | Branded staging template updated with welcome and optional starting ideas. Exact mobile confirmation return added. Real inbox and native return still need acceptance. |
+ | Reset password | Supabase recovery; recovery.html | Branded staging email now offers recovery code and link. Isolated app code-entry flow and hosted verification pass. Actual delivery and OS handoff remain open. |
+-| Separate welcome after verified signup | No dedicated sender found in the customer-email paths | Build one durable once-only welcome event for a newly verified account, including social signup. Existing-account sign-in must not send another welcome. One app continuation CTA and a few useful starting choices; no claim setup is complete. |
++| Separate welcome after verified signup | Mobile signed-in app entry calls the server; durable service-only welcome delivery record and Resend | Implemented and enabled on staging for new verified accounts after the recorded rollout cutoff. Concurrent/repeated requests deduplicate; bounded retries preserve the original message/key. Existing accounts excluded. Web-only accounts do not trigger this yet. Real inbox delivery remains open. |
+ | Household invitation | Custom Resend sender in src/lib/email/household-invite.ts | Branded invitation is implemented. Joining shares Household/Care/expenses; private Bills/Vault stay separate. Actual delivery, expiry/revocation and two-device acceptance remain open. |
+ | Waitlist confirmation | Custom Resend sender in src/lib/waitlist/server.ts | Implemented, configuration-gated, with confirmation expiry and unsubscribe. Keep distinct from live app signup; reconcile the website's current acquisition flow before launch. |
+ | Support/contact submission | src/app/api/contact/route.ts sends to the configured support inbox | Internal support delivery is implemented with reference/idempotency and caps. This is not a customer acknowledgment email. |
+ | Support acknowledgment to customer | No automatic customer acknowledgment found | Consider a short receipt with reference and realistic response expectation. Needs a durable delivery record to prevent duplicate acknowledgments on retries. |
+-| Ordinary magic link/sign-in code | Supabase template; separate mobile email-code gate | Separate from recovery codes. Do not imply this sign-in method is broadly launched. Branding and delivery need acceptance if enabled. |
+-| Auth admin invitation | Supabase Invite user template | Distinct from household invitation. No reviewed customer household flow uses this as its delivery mechanism. Brand before any intended admin-invite rollout. |
+-| Change-email confirmation | Supabase Change email address template | Available auth template; customer flow and branding require reconciliation before exposing email changes. |
+-| Sensitive-operation reauthentication | Supabase Reauthentication template | Available auth template; configure and test only with the associated product flow. |
+-| Password-changed security notice | Supabase security email | Staging switch observed OFF. Recommended launch security notice, with branded copy and account-security/support guidance. Not enabled in this pass. |
+-| Email-address-changed security notice | Supabase security email | Staging OFF. Recommended when email change is supported. |
+-| Phone-number-changed security notice | Supabase security email | Staging OFF. Enable with a supported auth-phone change flow; household member contact edits are a separate concept. |
+-| Sign-in method linked | Supabase security email | Staging OFF. Recommended when Apple/Google linking is enabled; test intended and unexpected linking. |
+-| Sign-in method removed | Supabase security email | Staging OFF. Recommended with account linking/removal; verify the customer retains a working sign-in method. |
+-| MFA method added | Supabase security email | Staging OFF. Brand and enable with actual customer MFA enrollment. |
+-| MFA method removed | Supabase security email | Staging OFF. Brand and enable with actual customer MFA removal. |
++| Ordinary magic link/sign-in code | Supabase template; separate mobile email-code gate | Separate from recovery codes. Do not imply this sign-in method is broadly launched. Branded template applied on staging, preserving link and OTP. Delivery and the gated product flow need acceptance if enabled. |
++| Auth admin invitation | Supabase Invite user template | Distinct from household invitation. No reviewed customer household flow uses this as its delivery mechanism. Branded staging template applied; actual admin-invite rollout is still separate. |
++| Change-email confirmation | Supabase Change email address template | Available auth template; branded staging template applied, including the required new-email placeholder. Customer flow acceptance remains before exposing email changes. |
++| Sensitive-operation reauthentication | Supabase Reauthentication template | Branded staging template applied. Accept only with the associated sensitive-operation product flow. |
++| Password-changed security notice | Supabase security email | Branded template applied and staging switch ON. Trigger is an actual password change, not a reset request. Real delivery remains open. |
++| Email-address-changed security notice | Supabase security email | Branded staging template applied; switch OFF pending supported email-change acceptance. |
++| Phone-number-changed security notice | Supabase security email | Branded staging template applied; switch OFF. Enable with a supported auth-phone change flow; household member contact edits are a separate concept. |
++| Sign-in method linked | Supabase security email | Branded staging template applied; switch OFF. Enable with accepted Apple/Google linking; test intended and unexpected linking. |
++| Sign-in method removed | Supabase security email | Branded staging template applied; switch OFF. Enable with accepted account linking/removal; verify the customer retains a working sign-in method. |
++| MFA method added | Supabase security email | Branded staging template applied; switch OFF pending actual customer MFA enrollment. |
++| MFA method removed | Supabase security email | Branded staging template applied; switch OFF pending actual customer MFA removal. |
+ | Deletion request / completion | No customer email sender found in the reviewed send paths | Reconcile with existing deletion receipt/job flow. Never say deletion is complete while provider revocation or cleanup remains pending. |
+ | Optional digest / feature or marketing emails | No general customer campaign sender found in reviewed code | Later, with explicit preferences and unsubscribe. Do not turn transactional auth email into a marketing subscription. |
+ 
+@@ -56,4 +56,6 @@
+ 3. Tie deletion notices to true lifecycle state; complete support receipt decisions and operational ownership.
+ 4. Add optional engagement messages only after useful transactional behavior is accepted.
+ 
++The October 12 communications pass now revalidates current account/record access on notification taps, retires obsolete updates, preserves recovery/lock navigation, deduplicates push responses and pagination, and isolates late account-switch responses. Actual native push delivery and preference acceptance remain open.
++
+ Each event needs a trigger, intended recipient, deduplication identity, expiry/resolution rule, preference rule, destination, fallback and delivery status. Keep private account content out of lock-screen copy. Only ask for notification permission when the customer understands its benefit. Preserve progress, explain partial completion honestly and provide one clear next step.
+--- before/scripts/qa/build-auth-email-family.cjs
++++ after/scripts/qa/build-auth-email-family.cjs
+@@ -0,0 +1,25 @@
++const fs=require("node:fs");
++const entries=[
++ ["password-changed","Your Rezlee password was changed","Your password was changed.","The password for your Rezlee account was changed. If this was you, there’s nothing else to do.","If you didn’t make this change, open Rezlee and use Forgot password on the sign-in screen to reset it. Contact Rezlee through the website’s Contact page if you need help.",null],
++ ["email-address-changed","Your Rezlee email address was changed","Your email address was changed.","The email address used for your Rezlee account was changed. If this was you, use your updated email next time you sign in.","If you didn’t make this change, contact Rezlee through the website’s Contact page immediately.",null],
++ ["phone-number-changed","Your Rezlee sign-in phone number was changed","Your sign-in phone number was changed.","The phone number used for your Rezlee account was changed. If this was you, there’s nothing else to do.","If you didn’t make this change, contact Rezlee through the website’s Contact page immediately.",null],
++ ["sign-in-method-linked","A sign-in method was added to your Rezlee account","A sign-in method was added.","A new sign-in method was linked to your Rezlee account. If this was you, you can now use that method to sign in.","If you didn’t make this change, contact Rezlee through the website’s Contact page immediately.",null],
++ ["sign-in-method-removed","A sign-in method was removed from your Rezlee account","A sign-in method was removed.","A sign-in method was removed from your Rezlee account. Use another linked method the next time you sign in.","If you didn’t make this change, or you can no longer sign in, contact Rezlee through the website’s Contact page immediately.",null],
++ ["mfa-method-added","A verification method was added to your Rezlee account","A verification method was added.","An additional verification method was added to your Rezlee account. If this was you, keep access to that method for future sign-ins.","If you didn’t make this change, contact Rezlee through the website’s Contact page immediately.",null],
++ ["mfa-method-removed","A verification method was removed from your Rezlee account","A verification method was removed.","An additional verification method was removed from your Rezlee account. If this was you, there’s nothing else to do.","If you didn’t make this change, contact Rezlee through the website’s Contact page immediately.",null],
++ ["invite-user","You’re invited to Rezlee","Your invitation to Rezlee.","You’ve been invited to create a Rezlee account. Follow the link below to accept your account invitation.","If you weren’t expecting this invitation, you can ignore this email.",["Accept invitation","{{ .ConfirmationURL }}"]],
++ ["magic-link-or-otp","Your Rezlee sign-in link","Let’s get you signed in.","Use this link to sign in to Rezlee. Open it on the device where you started.","If you didn’t request this email, you can ignore it. Never share this link.",["Sign in to Rezlee","{{ .ConfirmationURL }}"]],
++ ["change-email-address","Confirm your Rezlee email change","Confirm your email change.","A request was made to change the email address for your Rezlee account to {{ .NewEmail }}. Use the link below to confirm this part of the change.","You may need to confirm from both email addresses. If you didn’t request this change, don’t use this link.",["Confirm email change","{{ .ConfirmationURL }}"]],
++ ["reauthentication","Your Rezlee verification code","Confirm it’s you.","Use this code in Rezlee to confirm the account action you just started.","If you didn’t request this code, don’t share or use it.",["code","{{ .Token }}"]]
++];
++const esc=v=>v.replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"})[c]);
++const manifest=[];
++for(const [slug,subject,title,body,note,action] of entries){
++ let cta=action?.[0]==="code"?'<p style="padding:18px;background:#EEF2EB;border-radius:10px;font-size:28px;letter-spacing:5px;text-align:center;font-weight:600;">'+action[1]+'</p>':action?'<p style="margin:28px 0;"><a href="'+action[1]+'" style="display:inline-block;padding:15px 22px;background:#264D3E;color:#FAF7EF;border-radius:10px;text-decoration:none;font-weight:600;">'+action[0]+'</a></p>':'';
++ if(slug==='magic-link-or-otp')cta+='<p style="font-size:15px;line-height:1.6;">If Rezlee asks for a sign-in code, enter:</p><p style="padding:18px;background:#EEF2EB;border-radius:10px;font-size:28px;letter-spacing:5px;text-align:center;">{{ .Token }}</p>';
++ if(!action)cta='<p style="margin:28px 0;"><a href="{{ .SiteURL }}/'+(slug==='password-changed'?'open':'contact')+'" style="display:inline-block;padding:15px 22px;background:#264D3E;color:#FAF7EF;border-radius:10px;text-decoration:none;font-weight:600;">'+(slug==='password-changed'?'Open Rezlee':'Contact Rezlee')+'</a></p>';
++ const html='<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>'+esc(subject)+'</title></head><body style="margin:0;background:#F8F7F3;color:#202D28;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Arial,sans-serif;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td align="center" style="padding:32px 16px;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;"><tr><td style="padding:0 8px 28px;font-size:30px;font-weight:600;letter-spacing:-1px;color:#264D3E;">rezlee</td></tr><tr><td style="padding:30px 24px;background:#FFFDF8;border:1px solid #D9DFD8;border-radius:20px;"><p style="margin:0 0 14px;font-size:13px;color:#58665F;">Rezlee · Account security</p><h1 style="margin:0 0 22px;font-size:27px;line-height:1.25;font-weight:600;">'+esc(title)+'</h1><p style="font-size:16px;line-height:1.6;">'+esc(body)+'</p>'+cta+'<p style="margin:24px 0 0;font-size:15px;line-height:1.6;color:#58665F;">'+esc(note)+'</p></td></tr><tr><td style="padding:20px 8px;font-size:12px;line-height:1.6;color:#58665F;">Rezlee · Your place, under control.<br>We’ll never ask you to share a password, verification code or sign-in link.</td></tr></table></td></tr></table></body></html>\n';
++ fs.writeFileSync('supabase/templates/'+slug+'.html',html);manifest.push({slug,subject,file:'supabase/templates/'+slug+'.html',security:!action});
++}
++fs.writeFileSync('supabase/templates/family.json',JSON.stringify(manifest,null,2)+'\n');
++console.log('Prepared '+manifest.length+' branded authentication/security templates.');
+--- before/scripts/qa/customer-communications-staging.mjs
++++ after/scripts/qa/customer-communications-staging.mjs
+@@ -0,0 +1,78 @@
++import fs from "node:fs";
++import assert from "node:assert/strict";
++import { randomUUID } from "node:crypto";
++import { createClient } from "@supabase/supabase-js";
++const settings=JSON.parse(fs.readFileSync(process.env.REZLEE_STAGING_QA_SETTINGS,"utf8"));
++assert.equal(settings.NEXT_PUBLIC_SUPABASE_URL,"https://gjwvalpxnfbvryosmcbj.supabase.co");
++const origin="https://staging.rezlee.com",options={auth:{persistSession:false,autoRefreshToken:false,detectSessionInUrl:false}};
++const admin=createClient(settings.NEXT_PUBLIC_SUPABASE_URL,settings.SUPABASE_SECRET_KEY,options);
++const checks=[],users=[];
++const check=(name,condition)=>{assert.ok(condition,name);checks.push({name,pass:true})};
++const unwrap=result=>{assert.equal(result.error,null);return result.data};
++async function request(path,token,body){
++ const response=await fetch(origin+path,{method:body===undefined?"GET":"POST",headers:{...(token?{Authorization:"Bearer "+token}:{}),"Content-Type":"application/json"},body:body===undefined?undefined:JSON.stringify(body),signal:AbortSignal.timeout(20000)});
++ return{status:response.status,data:await response.json()};
++}
++try{
++ for(let i=0;i<3;i++){
++  const email="rezlee-communications-qa-"+randomUUID()+"@example.invalid",password="Fixture-"+randomUUID()+"aA1!";
++  const user=unwrap(await admin.auth.admin.createUser({email,password,email_confirm:i!==2,user_metadata:{qa_fixture:"communications-20261012"}})).user;
++  users.push({id:user.id,email,password});
++ }
++ const client=createClient(settings.NEXT_PUBLIC_SUPABASE_URL,settings.NEXT_PUBLIC_SUPABASE_ANON_KEY,options);
++ const session=unwrap(await client.auth.signInWithPassword({email:users[0].email,password:users[0].password})).session;
++ const token=session.access_token,u=users[0].id,v=users[1].id;
++ const home=unwrap(await admin.from("homes").insert({user_id:u,nickname:"Disposable communications QA"}).select("id").single()).id;
++ const foreignHome=unwrap(await admin.from("homes").insert({user_id:v,nickname:"Disposable isolated QA"}).select("id").single()).id;
++ const bill=unwrap(await admin.from("bills").insert({user_id:u,home_id:home,name:"Disposable bill",amount:42,due_date:"2026-10-30"}).select("id").single()).id;
++ const foreignBill=unwrap(await admin.from("bills").insert({user_id:v,home_id:foreignHome,name:"Other private bill",amount:10,due_date:"2026-10-30"}).select("id").single()).id;
++ const n=unwrap(await admin.from("notifications").insert({user_id:u,home_id:home,notification_type:"qa_ready",title:"Saved bill",category:"bills",metadata:{mobileHref:"/bill/"+bill}}).select("id").single()).id;
++ const other=unwrap(await admin.from("notifications").insert({user_id:v,home_id:foreignHome,notification_type:"qa_ready",title:"Private update",metadata:{mobileHref:"/bill/"+foreignBill}}).select("id").single()).id;
++ check("welcome requires authentication",(await request("/api/mobile/v1/account/welcome",null,{})).status===401);
++ check("notification target requires authentication",(await request("/api/mobile/v1/notifications/open",null,{id:n})).status===401);
++ const welcome=await request("/api/mobile/v1/account/welcome",token,{email:"must-not-use@elsewhere.invalid"});
++ check("welcome configured and reserved QA addresses never send",welcome.status===200&&welcome.data.status==="ineligible");
++ check("reserved QA route created no delivery",unwrap(await admin.from("welcome_email_deliveries").select("id").eq("user_id",u)).length===0);
++ const open=await request("/api/mobile/v1/notifications/open",token,{id:n});
++ check("owned live notification opens the saved bill",open.status===200&&open.data.href==="/bill/"+bill);
++ const foreign=await request("/api/mobile/v1/notifications/open",token,{id:other});
++ check("another account notification reveals no destination",foreign.status===200&&foreign.data.href==="/notifications"&&foreign.data.notice==="unavailable");
++ unwrap(await admin.from("notifications").update({metadata:{mobileHref:"/bill/"+foreignBill}}).eq("id",n));
++ check("an owned notification cannot expose a foreign bill",(await request("/api/mobile/v1/notifications/open",token,{id:n})).data.notice==="unavailable");
++ unwrap(await admin.from("notifications").update({metadata:{mobileHref:"/bill/"+bill},expires_at:new Date(Date.now()-60000).toISOString()}).eq("id",n));
++ check("expired notification returns a useful inbox fallback",(await request("/api/mobile/v1/notifications/open",token,{id:n})).data.notice==="handled");
++ unwrap(await admin.from("notifications").update({expires_at:null,resolved_at:new Date().toISOString()}).eq("id",n));
++ check("handled notification cannot reopen an old action",(await request("/api/mobile/v1/notifications/open",token,{id:n})).data.notice==="handled");
++ unwrap(await admin.from("notifications").update({resolved_at:null}).eq("id",n));unwrap(await admin.from("bills").delete().eq("id",bill).eq("user_id",u));
++ check("deleted saved record returns a useful inbox fallback",(await request("/api/mobile/v1/notifications/open",token,{id:n})).data.notice==="unavailable");
++ check("client cannot provide arbitrary navigation",(await request("/api/mobile/v1/notifications/open",token,{id:n,href:"https://evil.invalid"})).status===400);
++ check("invalid notification identifier rejected",(await request("/api/mobile/v1/notifications/open",token,{id:"not-a-uuid"})).status===400);
++ const payload={from:"Rezlee",to:[users[0].email],subject:"No-send test",html:"<p>Fixture only</p>",text:"Fixture only"};
++ const claim=async(id=u,p=payload,start=settings.REZLEE_WELCOME_START_AT)=>unwrap(await admin.rpc("claim_rezlee_welcome",{p_user:id,p_start:start,p_payload:p}));
++ check("future rollout cutoff suppresses backfill",(await claim(u,payload,new Date(Date.now()+3600000).toISOString())).state==="ineligible");
++ check("unverified account cannot claim welcome",(await claim(users[2].id,{...payload,to:[users[2].email]})).state==="ineligible");
++ const duplicate=await Promise.all([claim(),claim(),claim()]);
++ check("hosted concurrent welcome requests produce one lease",duplicate.filter(x=>x.state==="claimed").length===1&&duplicate.filter(x=>x.state==="waiting").length===2);
++ const first=duplicate.find(x=>x.state==="claimed");
++ check("unavailable notification is retired from future inbox loads",Boolean(unwrap(await admin.from("notifications").select("resolved_at").eq("id",n).single()).resolved_at));
++ const denied=await client.rpc("claim_rezlee_welcome",{p_user:v,p_start:settings.REZLEE_WELCOME_START_AT,p_payload:payload});
++ check("signed-in clients cannot call the privileged sender RPC",Boolean(denied.error));
++ check("delivery table is private to server",Boolean((await client.from("welcome_email_deliveries").select("*")).error));
++ unwrap(await admin.rpc("finish_rezlee_welcome",{p_user:u,p_lease:first.leaseId,p_status:"retry",p_provider_id:null}));
++ check("hosted retry has backoff",(await claim()).state==="waiting");
++ unwrap(await admin.from("welcome_email_deliveries").update({next_attempt_at:new Date(Date.now()-60000).toISOString()}).eq("user_id",u));
++ const retry=await claim(u,{...payload,subject:"Different template"});
++ check("hosted retry keeps original key and message",retry.id===first.id&&retry.payload.subject===payload.subject);
++ unwrap(await admin.rpc("finish_rezlee_welcome",{p_user:u,p_lease:retry.leaseId,p_status:"accepted",p_provider_id:"qa-no-send"}));
++ check("accepted welcome cannot send twice",(await claim()).state==="accepted");
++ const landing=await fetch(origin+"/open");const html=await landing.text();
++ check("email app continuation is hosted without external redirects",landing.status===200&&html.includes('href="rezlee://"')&&html.includes("Open Rezlee")&&!html.includes("http-equiv"));
++ const deletion=unwrap(await admin.from("account_operation_leases").select("id").eq("user_id",u));
++ check("finished welcome operations release deletion holds",deletion.length===0);
++ const file="docs/qa/customer-communications-20261012/hosted-results.json";
++ fs.writeFileSync(file,JSON.stringify({passed:checks.length,checks,noEmailSent:true,noPushSent:true,scope:"Disposable staging accounts and synthetic records; no existing customer data, no provider/AI calls. Sender RPC only claims/records; it does not send."},null,2));
++ console.log(JSON.stringify({passed:checks.length,noEmailSent:true,noPushSent:true}));
++}finally{
++ for(const user of users){const result=await admin.auth.admin.deleteUser(user.id);assert.equal(result.error,null)}
++ console.log("Disposable staging accounts and dependent records removed.");
++}
+--- before/scripts/qa/render-auth-email-family.mjs
++++ after/scripts/qa/render-auth-email-family.mjs
+@@ -0,0 +1,23 @@
++import fs from 'node:fs';
++import path from 'node:path';
++import {createRequire} from 'node:module';
++import {welcomePayload} from '../../src/lib/email/welcome.ts';
++const require=createRequire(import.meta.url),{chromium}=require('/tmp/rezlee-bill-qa-tools-20261008/node_modules/playwright-core');
++const out=process.cwd()+'/docs/qa/customer-communications-20261012/emails';fs.mkdirSync(out,{recursive:true});
++const templates=[...JSON.parse(fs.readFileSync('supabase/templates/family.json','utf8')).map(row=>({slug:row.slug,html:fs.readFileSync(row.file,'utf8')})),{slug:'welcome',html:welcomePayload('Rezlee <hello@rezlee.com>','fixture@example.invalid','https://staging.rezlee.com').html}];
++const browser=await chromium.launch({headless:true,executablePath:'/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'}),checks=[];
++try{
++ for(const template of templates){
++  const html=template.html.replaceAll('{{ .SiteURL }}','https://staging.rezlee.com').replaceAll('{{ .ConfirmationURL }}','https://staging.rezlee.com/auth/callback').replaceAll('{{ .Token }}','87654321');fs.writeFileSync(path.join(out,template.slug+'.html'),html);
++  for(const width of [320,390]){
++   const page=await browser.newPage({viewport:{width,height:900}});await page.setContent(html);
++   if(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth))throw Error('Email overflow '+template.slug);
++   if(await page.locator('h1').count()!==1)throw Error('Missing email heading '+template.slug);
++   const links=await page.locator('a').evaluateAll(nodes=>nodes.map(a=>a.href));if(links.some(link=>!link.startsWith('https://staging.rezlee.com/')))throw Error('Unexpected email destination');
++   if(['welcome','password-changed','magic-link-or-otp'].includes(template.slug))await page.screenshot({path:path.join(out,template.slug+'-'+width+'.png'),fullPage:true});
++   checks.push({template:template.slug,width,pass:true});await page.close();
++  }
++ }
++ fs.writeFileSync(path.join(out,'results.json'),JSON.stringify({passed:checks.length,checks,boundaries:'HTML and links at phone widths; email-client rendering, delivery and native handoff require real acceptance.'},null,2));
++ console.log(JSON.stringify({passed:checks.length}));
++}finally{await browser.close()}
+--- before/scripts/qa/render-customer-communications.cjs
++++ after/scripts/qa/render-customer-communications.cjs
+@@ -0,0 +1,77 @@
++const fs=require('node:fs'),path=require('node:path'),esbuild=require('esbuild'),{chromium}=require('/tmp/rezlee-bill-qa-tools-20261008/node_modules/playwright-core');
++const root=process.cwd(),deps='/tmp/rezlee-bill-qa-tools-20261008/node_modules',out=root+'/docs/qa/customer-communications-20261012';
++const stubs={
++ 'expo-router': 'import React from"react";const router={push:d=>window.__routes.push(d),replace:d=>window.__routes.push(d),back:()=>{}};export const useRouter=()=>router;export const useLocalSearchParams=()=>({notice:window.__notice});export const usePathname=()=>window.__path;export const useRootNavigationState=()=>({key:"root"});export const useFocusEffect=fn=>React.useEffect(fn,[fn]);export const Redirect=()=>null;',
++ 'react-native-safe-area-context':'export {View as SafeAreaView} from "react-native";',
++ 'react-native': 'export * from "react-native-web";export const AppState={currentState:"active",addEventListener:(_,fn)=>{window.__foreground.add(fn);return{remove:()=>window.__foreground.delete(fn)}}};',
++ '@expo/vector-icons':'export const Feather=()=>null;',
++ '@/auth/AuthProvider':'export const useAuth=()=>({session:window.__user?{user:{id:window.__user}}:null,isLoading:false});',
++ '@/auth/AppLockProvider':'export const useAppLock=()=>({state:{ready:true,locked:window.__locked,userId:window.__user}});',
++ '@/components/ScreenNavigation':'import React from"react";import{Text}from"react-native";export const ScreenNavigation=({title})=><Text>{title}</Text>;',
++ '@/lib/notification-data': 'export const fetchNotifications=async(before,user)=>{window.__fetches.push({before,user});if(window.__fetchError)throw Error("offline");if(window.__deferFetch)return new Promise(r=>window.__fetchResolve=r);return window.__payload(before,user)};export const openNotification=async(id,user)=>{window.__opens.push({id,user});if(window.__openError)throw Error("offline");if(window.__deferOpen)return new Promise(r=>window.__openResolve=r);return window.__destination};export const readNotification=async(id,user)=>{window.__reads.push({id,user});if(window.__readError)throw Error("offline")};export const readAllNotifications=async()=>{};',
++ '@/lib/push-notifications':'export const registerPushNotifications=async()=>{};export const getInitialNotificationTarget=async()=>window.__pending;export const addNotificationTargetListener=fn=>{window.__push=fn;return{remove:()=>{window.__push=null}}};export const clearNotificationResponse=async()=>{window.__clears++;window.__pending=null};',
++ '@/lib/api':'export const apiPost=async(path,body,options)=>{window.__welcome.push({path,options});if(window.__welcomeError)throw Error("offline");return{status:"accepted"}};',
++};
++(async()=>{
++ fs.mkdirSync(out,{recursive:true});
++ for(const screen of ['inbox','shell'])await esbuild.build({stdin:{contents:`import React from'react';import{createRoot}from'react-dom/client';import{Text}from'react-native';import{AppNotifications}from'${root}/apps/mobile/src/components/AppNotifications.tsx';import Inbox from'${root}/apps/mobile/app/notifications.tsx';function Fixture(){const[,render]=React.useState(0);window.__rerender=()=>render(x=>x+1);return ${screen==='shell'?'<AppNotifications><Text>App ready</Text></AppNotifications>':'<Inbox/>'}};createRoot(document.getElementById('root')).render(<Fixture/>);`,loader:'tsx',resolveDir:root},outfile:out+'/'+screen+'.js',bundle:true,platform:'browser',format:'iife',jsx:'automatic',alias:{react:deps+'/react','react-dom':deps+'/react-dom','react-native-web':deps+'/react-native-web'},define:{global:'globalThis','process.env.NODE_ENV':'"development"'},plugins:[{name:'boundaries',setup(b){b.onResolve({filter:/.*/},a=>{if(stubs[a.path])return{path:a.path,namespace:'stub'};if(a.path.startsWith('@/')){const p=root+'/apps/mobile/src/'+a.path.slice(2);for(const e of['.ts','.tsx','/index.ts'])if(fs.existsSync(p+e))return{path:p+e};}});b.onLoad({filter:/.*/,namespace:'stub'},a=>({contents:stubs[a.path],loader:'tsx',resolveDir:root}));}}]});
++ const server=require('node:http').createServer((req,res)=>{const name=req.url.slice(1).split('?')[0]||'inbox';if(name.endsWith('.js')){res.setHeader('Content-Type','application/javascript');return res.end(fs.readFileSync(out+'/'+path.basename(name)))}res.setHeader('Content-Type','text/html');res.end('<!doctype html><meta name="viewport" content="width=device-width,initial-scale=1"><style>body{margin:0;font-family:system-ui}*{box-sizing:border-box}#root{height:100vh;display:flex;flex-direction:column}</style><div id="root"></div><script src="/'+name+'.js"></script>')});
++ await new Promise(r=>server.listen(0,'127.0.0.1',r));const origin='http://127.0.0.1:'+server.address().port,browser=await chromium.launch({headless:true,executablePath:'/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'}),checks=[];
++ try{
++ for(const width of [320,390])for(const scenario of ['read-failure','removed','offline','account-switch','pagination','cold-login','duplicate-push','locked-push','late-push-account','welcome-offline']){
++  const page=await browser.newPage({viewport:{width,height:844}}),errors=[],warnings=[];page.setDefaultTimeout(7000);page.on('pageerror',e=>errors.push(e.message));page.on('console',m=>{if(m.type()==='error'&&m.text().includes('same key'))warnings.push(m.text())});
++  await page.addInitScript(s=>{
++   window.__user='account-a';window.__path='/home';window.__locked=false;window.__foreground=new Set();window.__routes=[];window.__fetches=[];window.__opens=[];window.__reads=[];window.__clears=0;window.__welcome=[];
++   window.__id='11111111-1111-4111-8111-111111111111';window.__destination={href:'/bill/'+window.__id};
++   const item={id:window.__id,title:'Your bill is ready',body:'Your saved bill is ready to review.',createdAt:'2026-10-12T10:00:00Z',status:'unread',category:'bills',href:'/bill/'+window.__id};
++   window.__payload=(before,user)=>({items:user==='account-b'?[]:before?[item,{...item,id:'22222222-2222-4222-8222-222222222222',title:'Earlier update'}]:[item],unread:user==='account-b'?0:1,nextBefore:!before&&s==='pagination'?'2026-10-11T00:00:00Z':null,asOf:'2026-10-12T12:00:00Z'});
++   window.__pending=['cold-login','duplicate-push','locked-push','late-push-account'].includes(s)?{responseId:'push-1',notificationId:window.__id}:null;
++   if(s==='read-failure'||s==='duplicate-push')window.__readError=true;
++   if(s==='removed')window.__destination={href:'/notifications',notice:'unavailable'};
++   if(s==='offline')window.__openError=true;
++   if(s==='account-switch')window.__deferFetch=true;
++   if(s==='cold-login')window.__path='/reset-password';
++   if(s==='locked-push')window.__locked=true;
++   if(s==='late-push-account')window.__deferOpen=true;
++   if(s==='welcome-offline')window.__welcomeError=true;
++  },scenario);
++  const shell=['cold-login','duplicate-push','locked-push','late-push-account','welcome-offline'].includes(scenario);
++  await page.goto(origin+'/'+(shell?'shell':'inbox'));
++  if(!shell){
++   if(scenario==='account-switch'){
++    await page.waitForFunction(()=>!!window.__fetchResolve);
++    await page.evaluate(()=>{const old=window.__fetchResolve;window.__deferFetch=false;window.__user='account-b';window.__rerender();setTimeout(()=>old(window.__payload(null,'account-a')),100)});
++    await page.getByText('No updates yet',{exact:true}).waitFor();await page.waitForTimeout(160);
++    if(await page.getByRole('button',{name:'Unread. Your bill is ready',exact:true}).count())throw Error('Previous account records leaked');
++   }else{
++    await page.getByRole('button',{name:'Unread. Your bill is ready',exact:true}).click();
++    if(scenario==='removed'){await page.getByText('That update is no longer available for this account.',{exact:false}).waitFor();if(await page.evaluate(()=>window.__routes.length))throw Error('Removed update navigated');}
++    else if(scenario==='offline'){await page.getByText('We couldn’t open this update.',{exact:false}).waitFor();await page.evaluate(()=>window.__openError=false);await page.getByRole('button',{name:'Unread. Your bill is ready',exact:true}).click();await page.waitForFunction(()=>window.__routes.length===1);}
++    else await page.waitForFunction(()=>window.__routes.length===1);
++    if(scenario==='pagination'){await page.getByRole('button',{name:'Load older updates',exact:true}).click();await page.getByText('Earlier update',{exact:true}).waitFor();if(await page.getByText('Your bill is ready',{exact:true}).count()!==1)throw Error('Duplicate pagination');}
++   }
++  }else{
++   await page.getByText('App ready',{exact:true}).waitFor();
++   if(['cold-login','locked-push'].includes(scenario)){
++    await page.waitForTimeout(100);if(await page.evaluate(()=>window.__routes.length||window.__clears))throw Error('Push stole recovery/lock navigation');
++    await page.evaluate(()=>{window.__path='/home';window.__locked=false;window.__rerender()});await page.waitForFunction(()=>window.__routes.length===1&&window.__clears===1);
++   }else if(scenario==='late-push-account'){
++    await page.waitForFunction(()=>!!window.__openResolve);
++    await page.evaluate(()=>{const old=window.__openResolve;window.__pending=null;window.__deferOpen=false;window.__user='account-b';window.__rerender();setTimeout(()=>old(window.__destination),100)});
++    await page.waitForTimeout(160);if(await page.evaluate(()=>window.__routes.length||window.__clears))throw Error('Old account push completed');
++   }else if(scenario==='duplicate-push'){
++    await page.waitForFunction(()=>window.__routes.length===1&&window.__clears===1);await page.evaluate(()=>window.__push({responseId:'push-1',notificationId:window.__id}));await page.waitForTimeout(100);
++    if(await page.evaluate(()=>window.__routes.length)!==1)throw Error('Duplicate push opened twice');
++   }else{
++    await page.waitForFunction(()=>window.__welcome.length===1);await page.evaluate(()=>{for(const fn of window.__foreground)fn('active')});await page.waitForTimeout(100);
++    if(await page.evaluate(()=>window.__welcome.length)!==1)throw Error('Welcome retry storm');
++   }
++  }
++  if(errors.length||warnings.length)throw Error(errors.concat(warnings).join(';'));
++  if(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth))throw Error('Horizontal overflow '+scenario);
++  if(!shell&&['removed','offline','pagination'].includes(scenario))await page.screenshot({path:out+'/'+scenario+'-'+width+'.png',fullPage:true});
++  checks.push({width,scenario,pass:true});await page.close();
++ }
++ fs.writeFileSync(out+'/results.json',JSON.stringify({passed:checks.length,checks,boundaries:'Actual notification inbox, app notification coordinator and welcome sync components; mocked OS push, network, auth and router. Browser rendering does not establish physical push delivery.'},null,2));console.log(JSON.stringify({passed:checks.length,out}));
++ }finally{await browser.close();server.close()}
++})().catch(e=>{console.error(e);process.exitCode=1});
+--- before/src/app/api/mobile/v1/account/welcome/route.ts
++++ after/src/app/api/mobile/v1/account/welcome/route.ts
+@@ -0,0 +1,36 @@
++import { authenticateMobileRequest } from "@/lib/supabase/mobile";
++import { createAdminClient } from "@/lib/supabase/admin";
++import { deliverWelcome, welcomePayload, type WelcomeClaim } from "@/lib/email/welcome";
++export const dynamic = "force-dynamic";
++const reply = (status: string, code = 200) => Response.json({ status }, { status: code, headers: { "Cache-Control": "no-store" } });
++export async function POST(request: Request) {
++  const auth = await authenticateMobileRequest(request);
++  if (auth.error) return Response.json({ error: auth.error.message }, { status: auth.error.status });
++  if (process.env.REZLEE_WELCOME_ENABLED !== "true") return reply("disabled");
++  const key = process.env.RESEND_API_KEY, from = process.env.RESEND_FROM_EMAIL, start = process.env.REZLEE_WELCOME_START_AT;
++  if (!key || !from || !start || !Number.isFinite(Date.parse(start))) return reply("unavailable", 503);
++  // Reserved test addresses never cause an external send. No client-supplied recipient.
++  if (!auth.user.email || /\.(invalid|test|example)$/i.test(auth.user.email)) return reply("ineligible");
++  try {
++    const db = createAdminClient();
++    const payload = welcomePayload(from, auth.user.email, process.env.NEXT_PUBLIC_APP_URL ?? "");
++    const status = await deliverWelcome({
++      claim: async () => {
++        const r = await db.rpc("claim_rezlee_welcome", { p_user: auth.user.id, p_start: start, p_payload: payload });
++        if (r.error) throw Error("Welcome unavailable");
++        return r.data as WelcomeClaim;
++      },
++      finish: async (leaseId, result, providerId) => {
++        const r = await db.rpc("finish_rezlee_welcome", { p_user: auth.user.id, p_lease: leaseId, p_status: result, p_provider_id: providerId });
++        if (r.error) throw Error("Welcome result unavailable");
++        return r.data === true;
++      },
++      send: (message, idempotencyKey) => fetch("https://api.resend.com/emails", {
++        method: "POST", signal: AbortSignal.timeout(10_000),
++        headers: { Authorization: "Bearer " + key, "Content-Type": "application/json", "Idempotency-Key": idempotencyKey },
++        body: JSON.stringify(message),
++      }),
++    });
++    return reply(status);
++  } catch { return reply("unavailable", 503); }
++}
+--- before/src/app/api/mobile/v1/notifications/open/route.ts
++++ after/src/app/api/mobile/v1/notifications/open/route.ts
+@@ -0,0 +1,32 @@
++import { z } from "zod";
++import { createAdminClient } from "@/lib/supabase/admin";
++import { authenticateMobileRequest } from "@/lib/supabase/mobile";
++import { readBoundedJson } from "@/lib/security/request";
++import { resolveNotificationTarget } from "@/lib/notifications/open";
++export const dynamic = "force-dynamic";
++export async function POST(request: Request) {
++  const auth = await authenticateMobileRequest(request);
++  if (auth.error) return Response.json({ error: auth.error.message }, { status: auth.error.status });
++  const body = z.object({ id: z.string().uuid() }).strict().safeParse(await readBoundedJson(request, 1024).catch(() => null));
++  if (!body.success) return Response.json({ error: "Choose an update to open." }, { status: 400 });
++  try {
++    const row = await auth.supabase.from("notifications").select("created_at,resolved_at,expires_at,metadata,related_table,related_id")
++      .eq("id", body.data.id).eq("user_id", auth.user.id).maybeSingle();
++    if (row.error) throw Error("Notification unavailable");
++    const target = await resolveNotificationTarget(row.data, async (table, id) => {
++      let query = auth.supabase.from(table).select("id").eq("id", id);
++      if (table === "bills" || table === "providers") query = query.eq("user_id", auth.user.id);
++      const result = await query.maybeSingle();
++      if (result.error) throw Error("Record unavailable");
++      return Boolean(result.data);
++    });
++    if (row.data && target.notice) {
++      // Retire an owned obsolete update so it does not return on the next inbox refresh.
++      // The fallback remains useful even when this read-receipt write is unavailable.
++      const timestamp = new Date().toISOString();
++      await createAdminClient().from("notifications").update({ resolved_at: timestamp, status: "read", read_at: timestamp })
++        .eq("id", body.data.id).eq("user_id", auth.user.id).is("resolved_at", null).then(() => {}, () => {});
++    }
++    return Response.json(target, { headers: { "Cache-Control": "no-store" } });
++  } catch { return Response.json({ error: "Could not check this update. Please try again." }, { status: 503 }); }
++}
+--- before/src/app/open/route.ts
++++ after/src/app/open/route.ts
+@@ -0,0 +1,13 @@
++export const dynamic = "force-dynamic";
++export async function GET() {
++  // No credentials, arbitrary destinations or account information in email links.
++  return new Response(`<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Open Rezlee</title></head>
++<body style="margin:0;background:#F8F7F3;color:#202D28;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;"><main style="max-width:440px;margin:8vh auto;padding:32px 24px;">
++<div style="font-size:30px;font-weight:600;letter-spacing:-1px;color:#264D3E;margin-bottom:36px;">rezlee</div>
++<h1 style="font-size:30px;line-height:1.2;letter-spacing:-.5px;">Your place, under control.</h1>
++<p style="font-size:17px;line-height:1.6;color:#58665F;">Open Rezlee to pick up where you left off.</p>
++<a href="rezlee://" style="display:inline-block;padding:16px 24px;border-radius:12px;background:#264D3E;color:#FAF7EF;text-decoration:none;font-weight:600;">Open Rezlee</a>
++<p style="font-size:15px;line-height:1.6;color:#58665F;margin-top:28px;">Already have the app open? Switch back to Rezlee to continue.</p>
++<p style="font-size:15px;line-height:1.6;"><a href="/login" style="color:#264D3E;">Continue on the web</a></p>
++</main></body></html>`, { headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store", "Referrer-Policy": "no-referrer", "X-Robots-Tag": "noindex, nofollow", "Content-Security-Policy": "default-src 'none'; style-src 'unsafe-inline'; base-uri 'none'; frame-ancestors 'none'; form-action 'none'" } });
++}
+--- before/src/lib/email/welcome.ts
++++ after/src/lib/email/welcome.ts
+@@ -0,0 +1,49 @@
++export type WelcomePayload = { from: string; to: string[]; subject: string; html: string; text: string; tags: { name: string; value: string }[] };
++const escape = (value: string) => value.replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!);
++export function welcomePayload(from: string, recipient: string, origin: string): WelcomePayload {
++  const url = new URL("/open", origin);
++  if (url.protocol !== "https:" || !["rezlee.com", "www.rezlee.com", "staging.rezlee.com"].includes(url.hostname)) throw Error("Welcome destination unavailable");
++  const link = escape(url.toString());
++  return {
++    from, to: [recipient], subject: "Welcome to Rezlee",
++    tags: [{ name: "category", value: "welcome" }],
++    text: ["Welcome to Rezlee.", "", "A little less to keep in your head.", "Start with one thing you’d like to take care of: a bill to understand, a record to keep, or a reminder for your home.", "", "You don’t need to set everything up today. Rezlee will help you find your next step.", "", "Open Rezlee: " + url, "", "Joining someone’s household? Return to your invitation to finish joining.", "", "You’re receiving this one-time welcome because you created a Rezlee account. Your place, under control."].join("\n"),
++    html: `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Welcome to Rezlee</title></head>
++<body style="margin:0;background:#F8F7F3;color:#202D28;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;">
++<div style="display:none;max-height:0;overflow:hidden;">Start with one thing. You can add the rest when you need it.</div>
++<table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td align="center" style="padding:32px 16px;"><table role="presentation" width="100%" style="max-width:520px;" cellpadding="0" cellspacing="0">
++<tr><td style="padding:0 8px 28px;font-size:30px;font-weight:600;letter-spacing:-1px;color:#264D3E;">rezlee</td></tr>
++<tr><td style="background:#FFFDF8;border:1px solid #D9DFD8;border-radius:20px;padding:32px 24px;">
++<p style="margin:0 0 12px;font-size:14px;color:#58665F;">Welcome to Rezlee</p>
++<h1 style="margin:0 0 20px;font-size:28px;line-height:1.2;letter-spacing:-.5px;font-weight:600;">A little less to keep<br>in your head.</h1>
++<p style="margin:0 0 22px;font-size:16px;line-height:1.6;">Start with one thing you’d like to take care of:</p>
++<table role="presentation" width="100%" style="background:#EEF2EB;border-radius:12px;" cellpadding="0" cellspacing="0"><tr><td style="padding:20px;font-size:15px;line-height:1.8;">A bill to understand.<br>A record to keep.<br>A reminder for your home.</td></tr></table>
++<p style="margin:22px 0;font-size:16px;line-height:1.6;">You don’t need to set everything up today. Rezlee will help you find your next step.</p>
++<a href="${link}" style="display:inline-block;padding:15px 24px;background:#264D3E;color:#FAF7EF;border-radius:10px;font-size:16px;font-weight:600;text-decoration:none;">Open Rezlee</a>
++<p style="margin:24px 0 0;font-size:14px;line-height:1.6;color:#58665F;">Joining someone’s household? Return to your invitation to finish joining.</p>
++</td></tr><tr><td style="padding:20px 8px;font-size:12px;line-height:1.6;color:#58665F;">You’re receiving this one-time welcome because you created a Rezlee account.<br>Rezlee · Your place, under control.</td></tr>
++</table></td></tr></table></body></html>`,
++  };
++}
++export type WelcomeClaim = { state: string; id?: string; leaseId?: string; payload?: WelcomePayload };
++type DeliveryStatus = "accepted" | "retry" | "failed" | "uncertain";
++export async function deliverWelcome(input: {
++  claim(): Promise<WelcomeClaim>;
++  finish(leaseId: string, status: DeliveryStatus, providerId: string | null): Promise<boolean>;
++  send(payload: WelcomePayload, key: string): Promise<Response>;
++}): Promise<string> {
++  const claim = await input.claim();
++  if (claim.state !== "claimed") return claim.state;
++  if (!claim.id || !claim.leaseId || !claim.payload) throw Error("Incomplete welcome claim");
++  let status: DeliveryStatus = "retry", providerId: string | null = null;
++  try {
++    const response = await input.send(claim.payload, "rezlee-welcome-" + claim.id);
++    if (response.ok) {
++      const body = await response.json().catch(() => null);
++      if (typeof body?.id === "string" && body.id.length <= 200) { status = "accepted"; providerId = body.id; }
++      else status = "uncertain";
++    } else status = response.status === 429 || response.status === 409 || response.status >= 500 ? "retry" : "failed";
++  } catch { /* Retry the same stored message/key only within the database's bounded window. */ }
++  if (!await input.finish(claim.leaseId, status, providerId)) throw Error("Could not record welcome delivery");
++  return status;
++}
+--- before/src/lib/notifications/open.ts
++++ after/src/lib/notifications/open.ts
+@@ -0,0 +1,15 @@
++import { notificationHref } from "./policy";
++export type NotificationTarget = { href: string; notice?: "handled" | "unavailable" };
++type Row = { resolved_at?: string | null; expires_at?: string | null; created_at: string; metadata?: unknown; related_table?: unknown; related_id?: unknown };
++export async function resolveNotificationTarget(row: Row | null, exists: (table: string, id: string) => Promise<boolean>, now = Date.now()): Promise<NotificationTarget> {
++  if (!row) return { href: "/notifications", notice: "unavailable" };
++  if (row.resolved_at || (row.expires_at && Date.parse(row.expires_at) <= now) || Date.parse(row.created_at) < now - 30 * 86400000) {
++    return { href: "/notifications", notice: "handled" };
++  }
++  const href = notificationHref(row);
++  if (!href) return { href: "/notifications", notice: "unavailable" };
++  const match = /^\/(provider|bill|care|shared)\/([0-9a-f-]{36})$/i.exec(href);
++  const tables: Record<string, string> = { provider: "providers", bill: "bills", care: "maintenance_tasks", shared: "shared_expense_entries" };
++  if (match && !await exists(tables[match[1].toLowerCase()], match[2])) return { href: "/notifications", notice: "unavailable" };
++  return { href };
++}
+--- before/supabase/migrations/202610120001_welcome_delivery.sql
++++ after/supabase/migrations/202610120001_welcome_delivery.sql
+@@ -0,0 +1,75 @@
++-- One welcome per newly verified account. No trigger, backfill or schedule.
++begin;
++create table public.welcome_email_deliveries (
++ id uuid primary key default gen_random_uuid(),
++ user_id uuid not null unique references auth.users(id) on delete cascade,
++ recipient_email text not null,
++ payload jsonb not null,
++ status text not null default 'pending' check(status in ('pending','sending','retry','accepted','uncertain','suppressed','failed')),
++ attempts integer not null default 0,
++ lease_id uuid,
++ first_attempt_at timestamptz,
++ last_attempt_at timestamptz,
++ next_attempt_at timestamptz not null default now(),
++ provider_id text,
++ created_at timestamptz not null default now(),
++ updated_at timestamptz not null default now()
++);
++alter table public.welcome_email_deliveries enable row level security;
++revoke all on public.welcome_email_deliveries from public,anon,authenticated;
++grant all on public.welcome_email_deliveries to service_role;
++
++create function public.claim_rezlee_welcome(p_user uuid,p_start timestamptz,p_payload jsonb) returns jsonb
++language plpgsql security definer set search_path='' as $$
++declare account jsonb; delivery public.welcome_email_deliveries%rowtype; lease uuid;
++begin
++ perform pg_advisory_xact_lock(hashtextextended(p_user::text,742));
++ if not public.rezlee_account_active(p_user) then return jsonb_build_object('state','ineligible'); end if;
++ select to_jsonb(u) into account from auth.users u where id=p_user;
++ if p_start is null or p_start>now() or (account->>'created_at')::timestamptz<p_start
++  or account->>'created_at' is null or account->>'email_confirmed_at' is null
++  or coalesce(account->>'email','')='' then return jsonb_build_object('state','ineligible'); end if;
++ -- The snapshot is supplied by the server, never by an app request body.
++ if jsonb_typeof(p_payload->'to') is distinct from 'array' or jsonb_array_length(p_payload->'to')<>1
++  or lower(p_payload->'to'->>0) is distinct from lower(account->>'email')
++  or coalesce(p_payload->>'subject','')='' then raise exception 'Invalid welcome message'; end if;
++ insert into public.welcome_email_deliveries(user_id,recipient_email,payload)
++ values(p_user,account->>'email',p_payload) on conflict(user_id) do nothing;
++ select * into delivery from public.welcome_email_deliveries where user_id=p_user for update;
++ if delivery.status in ('accepted','uncertain','suppressed','failed') then return jsonb_build_object('state',delivery.status); end if;
++ if lower(delivery.recipient_email)<>lower(account->>'email') then
++  update public.welcome_email_deliveries set status='suppressed',updated_at=now() where id=delivery.id;
++  return jsonb_build_object('state','suppressed');
++ end if;
++ if delivery.next_attempt_at>now() or (delivery.status='sending' and delivery.last_attempt_at>now()-interval '2 minutes') then
++  return jsonb_build_object('state','waiting');
++ end if;
++ -- All retries keep the original payload/key, inside Resend's 24-hour window.
++ if delivery.first_attempt_at<now()-interval '23 hours' or delivery.attempts>=5 then
++  update public.welcome_email_deliveries set status='uncertain',updated_at=now() where id=delivery.id;
++  return jsonb_build_object('state','uncertain');
++ end if;
++ lease:=gen_random_uuid();
++ insert into public.account_operation_leases(id,user_id,expires_at) values(lease,p_user,now()+interval '2 minutes');
++ update public.welcome_email_deliveries set status='sending',attempts=attempts+1,lease_id=lease,
++  first_attempt_at=coalesce(first_attempt_at,now()),last_attempt_at=now(),updated_at=now()
++ where id=delivery.id returning * into delivery;
++ return jsonb_build_object('state','claimed','id',delivery.id,'leaseId',lease,'payload',delivery.payload);
++end $$;
++
++create function public.finish_rezlee_welcome(p_user uuid,p_lease uuid,p_status text,p_provider_id text default null) returns boolean
++language plpgsql security definer set search_path='' as $$
++declare changed integer;
++begin
++ if p_status not in ('accepted','retry','failed','uncertain','suppressed') then raise exception 'Invalid welcome result'; end if;
++ update public.welcome_email_deliveries set status=p_status,provider_id=p_provider_id,
++  next_attempt_at=now()+interval '5 minutes',lease_id=null,updated_at=now()
++ where user_id=p_user and lease_id=p_lease and status='sending';
++ get diagnostics changed=row_count;
++ delete from public.account_operation_leases where id=p_lease and user_id=p_user;
++ return changed=1;
++end $$;
++revoke all on function public.claim_rezlee_welcome(uuid,timestamptz,jsonb),public.finish_rezlee_welcome(uuid,uuid,text,text) from public,anon,authenticated;
++grant execute on function public.claim_rezlee_welcome(uuid,timestamptz,jsonb),public.finish_rezlee_welcome(uuid,uuid,text,text) to service_role;
++notify pgrst,'reload schema';
++commit;
+--- before/supabase/templates/README.md
++++ after/supabase/templates/README.md
+@@ -18,4 +18,8 @@
+ Confirmation/recovery templates and custom Resend SMTP are now configured on staging gjwvalpxnfbvryosmcbj and verified by management API read-back. Production unchanged. SMTP credential acceptance succeeded; no messages sent and inbox/link journeys remain unverified. See docs/staging-auth-email-verification-2026-09-25.json.
+ 
+ ## Customer recovery update — 2026-10-12
+-Staging reset email now includes a code for the mobile Password help screen plus the existing reset link. The code can be read on any device and entered on the requesting phone; this works around custom-scheme handoff in Expo Go. Codes use Supabase recovery verification, never ordinary sign-in. The confirmation email welcomes the customer with one confirmation action and three optional starting ideas. These templates are applied to staging only. The exact mobile signup return `https://staging.rezlee.com/auth/mobile-confirmed` is now allowed. A separate post-confirmation welcome email is not implemented or enabled. Actual mailbox delivery and OS handoff remain acceptance gates. See customer-auth-finish-2026-10-12.md.
++Staging reset email now includes a code for the mobile Password help screen plus the existing reset link. The code can be read on any device and entered on the requesting phone; this works around custom-scheme handoff in Expo Go. Codes use Supabase recovery verification, never ordinary sign-in. The confirmation email welcomes the customer with one confirmation action and three optional starting ideas. These templates are applied to staging only. The exact mobile signup return `https://staging.rezlee.com/auth/mobile-confirmed` is now allowed. The later customer-communications-2026-10-12.md increment adds a separate one-time welcome after verified mobile app entry, enabled for new staging accounts after its rollout cutoff. Actual mailbox delivery and OS handoff remain acceptance gates. See customer-auth-finish-2026-10-12.md.
++
++## Full family and security update — 2026-10-12
++
++All eleven remaining auth/security bodies in family.json were applied to staging and read back; confirmation/recovery were preserved. Regenerate the eleven templates with node scripts/qa/build-auth-email-family.cjs. The magic-link template preserves Token and ConfirmationURL; email change preserves NewEmail and ConfirmationURL. Password changed is ON in staging; the other six security switches remain OFF. No test messages were sent. See customer-communications-2026-10-12.md for delivery boundaries, rollback and the combined phone checklist.
+--- before/supabase/templates/change-email-address.html
++++ after/supabase/templates/change-email-address.html
+@@ -0,0 +1 @@
++<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Confirm your Rezlee email change</title></head><body style="margin:0;background:#F8F7F3;color:#202D28;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Arial,sans-serif;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td align="center" style="padding:32px 16px;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;"><tr><td style="padding:0 8px 28px;font-size:30px;font-weight:600;letter-spacing:-1px;color:#264D3E;">rezlee</td></tr><tr><td style="padding:30px 24px;background:#FFFDF8;border:1px solid #D9DFD8;border-radius:20px;"><p style="margin:0 0 14px;font-size:13px;color:#58665F;">Rezlee · Account security</p><h1 style="margin:0 0 22px;font-size:27px;line-height:1.25;font-weight:600;">Confirm your email change.</h1><p style="font-size:16px;line-height:1.6;">A request was made to change the email address for your Rezlee account to {{ .NewEmail }}. Use the link below to confirm this part of the change.</p><p style="margin:28px 0;"><a href="{{ .ConfirmationURL }}" style="display:inline-block;padding:15px 22px;background:#264D3E;color:#FAF7EF;border-radius:10px;text-decoration:none;font-weight:600;">Confirm email change</a></p><p style="margin:24px 0 0;font-size:15px;line-height:1.6;color:#58665F;">You may need to confirm from both email addresses. If you didn’t request this change, don’t use this link.</p></td></tr><tr><td style="padding:20px 8px;font-size:12px;line-height:1.6;color:#58665F;">Rezlee · Your place, under control.<br>We’ll never ask you to share a password, verification code or sign-in link.</td></tr></table></td></tr></table></body></html>
+--- before/supabase/templates/email-address-changed.html
++++ after/supabase/templates/email-address-changed.html
+@@ -0,0 +1 @@
++<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Your Rezlee email address was changed</title></head><body style="margin:0;background:#F8F7F3;color:#202D28;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Arial,sans-serif;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td align="center" style="padding:32px 16px;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;"><tr><td style="padding:0 8px 28px;font-size:30px;font-weight:600;letter-spacing:-1px;color:#264D3E;">rezlee</td></tr><tr><td style="padding:30px 24px;background:#FFFDF8;border:1px solid #D9DFD8;border-radius:20px;"><p style="margin:0 0 14px;font-size:13px;color:#58665F;">Rezlee · Account security</p><h1 style="margin:0 0 22px;font-size:27px;line-height:1.25;font-weight:600;">Your email address was changed.</h1><p style="font-size:16px;line-height:1.6;">The email address used for your Rezlee account was changed. If this was you, use your updated email next time you sign in.</p><p style="margin:28px 0;"><a href="{{ .SiteURL }}/contact" style="display:inline-block;padding:15px 22px;background:#264D3E;color:#FAF7EF;border-radius:10px;text-decoration:none;font-weight:600;">Contact Rezlee</a></p><p style="margin:24px 0 0;font-size:15px;line-height:1.6;color:#58665F;">If you didn’t make this change, contact Rezlee through the website’s Contact page immediately.</p></td></tr><tr><td style="padding:20px 8px;font-size:12px;line-height:1.6;color:#58665F;">Rezlee · Your place, under control.<br>We’ll never ask you to share a password, verification code or sign-in link.</td></tr></table></td></tr></table></body></html>
+--- before/supabase/templates/family.json
++++ after/supabase/templates/family.json
+@@ -0,0 +1,68 @@
++[
++  {
++    "slug": "password-changed",
++    "subject": "Your Rezlee password was changed",
++    "file": "supabase/templates/password-changed.html",
++    "security": true
++  },
++  {
++    "slug": "email-address-changed",
++    "subject": "Your Rezlee email address was changed",
++    "file": "supabase/templates/email-address-changed.html",
++    "security": true
++  },
++  {
++    "slug": "phone-number-changed",
++    "subject": "Your Rezlee sign-in phone number was changed",
++    "file": "supabase/templates/phone-number-changed.html",
++    "security": true
++  },
++  {
++    "slug": "sign-in-method-linked",
++    "subject": "A sign-in method was added to your Rezlee account",
++    "file": "supabase/templates/sign-in-method-linked.html",
++    "security": true
++  },
++  {
++    "slug": "sign-in-method-removed",
++    "subject": "A sign-in method was removed from your Rezlee account",
++    "file": "supabase/templates/sign-in-method-removed.html",
++    "security": true
++  },
++  {
++    "slug": "mfa-method-added",
++    "subject": "A verification method was added to your Rezlee account",
++    "file": "supabase/templates/mfa-method-added.html",
++    "security": true
++  },
++  {
++    "slug": "mfa-method-removed",
++    "subject": "A verification method was removed from your Rezlee account",
++    "file": "supabase/templates/mfa-method-removed.html",
++    "security": true
++  },
++  {
++    "slug": "invite-user",
++    "subject": "You’re invited to Rezlee",
++    "file": "supabase/templates/invite-user.html",
++    "security": false
++  },
++  {
++    "slug": "magic-link-or-otp",
++    "subject": "Your Rezlee sign-in link",
++    "file": "supabase/templates/magic-link-or-otp.html",
++    "security": false
++  },
++  {
++    "slug": "change-email-address",
++    "subject": "Confirm your Rezlee email change",
++    "file": "supabase/templates/change-email-address.html",
++    "security": false
++  },
++  {
++    "slug": "reauthentication",
++    "subject": "Your Rezlee verification code",
++    "file": "supabase/templates/reauthentication.html",
++    "security": false
++  }
++]
+--- before/supabase/templates/invite-user.html
++++ after/supabase/templates/invite-user.html
+@@ -0,0 +1 @@
++<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>You’re invited to Rezlee</title></head><body style="margin:0;background:#F8F7F3;color:#202D28;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Arial,sans-serif;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td align="center" style="padding:32px 16px;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;"><tr><td style="padding:0 8px 28px;font-size:30px;font-weight:600;letter-spacing:-1px;color:#264D3E;">rezlee</td></tr><tr><td style="padding:30px 24px;background:#FFFDF8;border:1px solid #D9DFD8;border-radius:20px;"><p style="margin:0 0 14px;font-size:13px;color:#58665F;">Rezlee · Account security</p><h1 style="margin:0 0 22px;font-size:27px;line-height:1.25;font-weight:600;">Your invitation to Rezlee.</h1><p style="font-size:16px;line-height:1.6;">You’ve been invited to create a Rezlee account. Follow the link below to accept your account invitation.</p><p style="margin:28px 0;"><a href="{{ .ConfirmationURL }}" style="display:inline-block;padding:15px 22px;background:#264D3E;color:#FAF7EF;border-radius:10px;text-decoration:none;font-weight:600;">Accept invitation</a></p><p style="margin:24px 0 0;font-size:15px;line-height:1.6;color:#58665F;">If you weren’t expecting this invitation, you can ignore this email.</p></td></tr><tr><td style="padding:20px 8px;font-size:12px;line-height:1.6;color:#58665F;">Rezlee · Your place, under control.<br>We’ll never ask you to share a password, verification code or sign-in link.</td></tr></table></td></tr></table></body></html>
+--- before/supabase/templates/magic-link-or-otp.html
++++ after/supabase/templates/magic-link-or-otp.html
+@@ -0,0 +1 @@
++<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Your Rezlee sign-in link</title></head><body style="margin:0;background:#F8F7F3;color:#202D28;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Arial,sans-serif;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td align="center" style="padding:32px 16px;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;"><tr><td style="padding:0 8px 28px;font-size:30px;font-weight:600;letter-spacing:-1px;color:#264D3E;">rezlee</td></tr><tr><td style="padding:30px 24px;background:#FFFDF8;border:1px solid #D9DFD8;border-radius:20px;"><p style="margin:0 0 14px;font-size:13px;color:#58665F;">Rezlee · Account security</p><h1 style="margin:0 0 22px;font-size:27px;line-height:1.25;font-weight:600;">Let’s get you signed in.</h1><p style="font-size:16px;line-height:1.6;">Use this link to sign in to Rezlee. Open it on the device where you started.</p><p style="margin:28px 0;"><a href="{{ .ConfirmationURL }}" style="display:inline-block;padding:15px 22px;background:#264D3E;color:#FAF7EF;border-radius:10px;text-decoration:none;font-weight:600;">Sign in to Rezlee</a></p><p style="font-size:15px;line-height:1.6;">If Rezlee asks for a sign-in code, enter:</p><p style="padding:18px;background:#EEF2EB;border-radius:10px;font-size:28px;letter-spacing:5px;text-align:center;">{{ .Token }}</p><p style="margin:24px 0 0;font-size:15px;line-height:1.6;color:#58665F;">If you didn’t request this email, you can ignore it. Never share this link.</p></td></tr><tr><td style="padding:20px 8px;font-size:12px;line-height:1.6;color:#58665F;">Rezlee · Your place, under control.<br>We’ll never ask you to share a password, verification code or sign-in link.</td></tr></table></td></tr></table></body></html>
+--- before/supabase/templates/mfa-method-added.html
++++ after/supabase/templates/mfa-method-added.html
+@@ -0,0 +1 @@
++<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>A verification method was added to your Rezlee account</title></head><body style="margin:0;background:#F8F7F3;color:#202D28;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Arial,sans-serif;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td align="center" style="padding:32px 16px;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;"><tr><td style="padding:0 8px 28px;font-size:30px;font-weight:600;letter-spacing:-1px;color:#264D3E;">rezlee</td></tr><tr><td style="padding:30px 24px;background:#FFFDF8;border:1px solid #D9DFD8;border-radius:20px;"><p style="margin:0 0 14px;font-size:13px;color:#58665F;">Rezlee · Account security</p><h1 style="margin:0 0 22px;font-size:27px;line-height:1.25;font-weight:600;">A verification method was added.</h1><p style="font-size:16px;line-height:1.6;">An additional verification method was added to your Rezlee account. If this was you, keep access to that method for future sign-ins.</p><p style="margin:28px 0;"><a href="{{ .SiteURL }}/contact" style="display:inline-block;padding:15px 22px;background:#264D3E;color:#FAF7EF;border-radius:10px;text-decoration:none;font-weight:600;">Contact Rezlee</a></p><p style="margin:24px 0 0;font-size:15px;line-height:1.6;color:#58665F;">If you didn’t make this change, contact Rezlee through the website’s Contact page immediately.</p></td></tr><tr><td style="padding:20px 8px;font-size:12px;line-height:1.6;color:#58665F;">Rezlee · Your place, under control.<br>We’ll never ask you to share a password, verification code or sign-in link.</td></tr></table></td></tr></table></body></html>
+--- before/supabase/templates/mfa-method-removed.html
++++ after/supabase/templates/mfa-method-removed.html
+@@ -0,0 +1 @@
++<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>A verification method was removed from your Rezlee account</title></head><body style="margin:0;background:#F8F7F3;color:#202D28;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Arial,sans-serif;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td align="center" style="padding:32px 16px;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;"><tr><td style="padding:0 8px 28px;font-size:30px;font-weight:600;letter-spacing:-1px;color:#264D3E;">rezlee</td></tr><tr><td style="padding:30px 24px;background:#FFFDF8;border:1px solid #D9DFD8;border-radius:20px;"><p style="margin:0 0 14px;font-size:13px;color:#58665F;">Rezlee · Account security</p><h1 style="margin:0 0 22px;font-size:27px;line-height:1.25;font-weight:600;">A verification method was removed.</h1><p style="font-size:16px;line-height:1.6;">An additional verification method was removed from your Rezlee account. If this was you, there’s nothing else to do.</p><p style="margin:28px 0;"><a href="{{ .SiteURL }}/contact" style="display:inline-block;padding:15px 22px;background:#264D3E;color:#FAF7EF;border-radius:10px;text-decoration:none;font-weight:600;">Contact Rezlee</a></p><p style="margin:24px 0 0;font-size:15px;line-height:1.6;color:#58665F;">If you didn’t make this change, contact Rezlee through the website’s Contact page immediately.</p></td></tr><tr><td style="padding:20px 8px;font-size:12px;line-height:1.6;color:#58665F;">Rezlee · Your place, under control.<br>We’ll never ask you to share a password, verification code or sign-in link.</td></tr></table></td></tr></table></body></html>
+--- before/supabase/templates/password-changed.html
++++ after/supabase/templates/password-changed.html
+@@ -0,0 +1 @@
++<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Your Rezlee password was changed</title></head><body style="margin:0;background:#F8F7F3;color:#202D28;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Arial,sans-serif;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td align="center" style="padding:32px 16px;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;"><tr><td style="padding:0 8px 28px;font-size:30px;font-weight:600;letter-spacing:-1px;color:#264D3E;">rezlee</td></tr><tr><td style="padding:30px 24px;background:#FFFDF8;border:1px solid #D9DFD8;border-radius:20px;"><p style="margin:0 0 14px;font-size:13px;color:#58665F;">Rezlee · Account security</p><h1 style="margin:0 0 22px;font-size:27px;line-height:1.25;font-weight:600;">Your password was changed.</h1><p style="font-size:16px;line-height:1.6;">The password for your Rezlee account was changed. If this was you, there’s nothing else to do.</p><p style="margin:28px 0;"><a href="{{ .SiteURL }}/open" style="display:inline-block;padding:15px 22px;background:#264D3E;color:#FAF7EF;border-radius:10px;text-decoration:none;font-weight:600;">Open Rezlee</a></p><p style="margin:24px 0 0;font-size:15px;line-height:1.6;color:#58665F;">If you didn’t make this change, open Rezlee and use Forgot password on the sign-in screen to reset it. Contact Rezlee through the website’s Contact page if you need help.</p></td></tr><tr><td style="padding:20px 8px;font-size:12px;line-height:1.6;color:#58665F;">Rezlee · Your place, under control.<br>We’ll never ask you to share a password, verification code or sign-in link.</td></tr></table></td></tr></table></body></html>
+--- before/supabase/templates/phone-number-changed.html
++++ after/supabase/templates/phone-number-changed.html
+@@ -0,0 +1 @@
++<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Your Rezlee sign-in phone number was changed</title></head><body style="margin:0;background:#F8F7F3;color:#202D28;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Arial,sans-serif;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td align="center" style="padding:32px 16px;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;"><tr><td style="padding:0 8px 28px;font-size:30px;font-weight:600;letter-spacing:-1px;color:#264D3E;">rezlee</td></tr><tr><td style="padding:30px 24px;background:#FFFDF8;border:1px solid #D9DFD8;border-radius:20px;"><p style="margin:0 0 14px;font-size:13px;color:#58665F;">Rezlee · Account security</p><h1 style="margin:0 0 22px;font-size:27px;line-height:1.25;font-weight:600;">Your sign-in phone number was changed.</h1><p style="font-size:16px;line-height:1.6;">The phone number used for your Rezlee account was changed. If this was you, there’s nothing else to do.</p><p style="margin:28px 0;"><a href="{{ .SiteURL }}/contact" style="display:inline-block;padding:15px 22px;background:#264D3E;color:#FAF7EF;border-radius:10px;text-decoration:none;font-weight:600;">Contact Rezlee</a></p><p style="margin:24px 0 0;font-size:15px;line-height:1.6;color:#58665F;">If you didn’t make this change, contact Rezlee through the website’s Contact page immediately.</p></td></tr><tr><td style="padding:20px 8px;font-size:12px;line-height:1.6;color:#58665F;">Rezlee · Your place, under control.<br>We’ll never ask you to share a password, verification code or sign-in link.</td></tr></table></td></tr></table></body></html>
+--- before/supabase/templates/reauthentication.html
++++ after/supabase/templates/reauthentication.html
+@@ -0,0 +1 @@
++<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Your Rezlee verification code</title></head><body style="margin:0;background:#F8F7F3;color:#202D28;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Arial,sans-serif;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td align="center" style="padding:32px 16px;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;"><tr><td style="padding:0 8px 28px;font-size:30px;font-weight:600;letter-spacing:-1px;color:#264D3E;">rezlee</td></tr><tr><td style="padding:30px 24px;background:#FFFDF8;border:1px solid #D9DFD8;border-radius:20px;"><p style="margin:0 0 14px;font-size:13px;color:#58665F;">Rezlee · Account security</p><h1 style="margin:0 0 22px;font-size:27px;line-height:1.25;font-weight:600;">Confirm it’s you.</h1><p style="font-size:16px;line-height:1.6;">Use this code in Rezlee to confirm the account action you just started.</p><p style="padding:18px;background:#EEF2EB;border-radius:10px;font-size:28px;letter-spacing:5px;text-align:center;font-weight:600;">{{ .Token }}</p><p style="margin:24px 0 0;font-size:15px;line-height:1.6;color:#58665F;">If you didn’t request this code, don’t share or use it.</p></td></tr><tr><td style="padding:20px 8px;font-size:12px;line-height:1.6;color:#58665F;">Rezlee · Your place, under control.<br>We’ll never ask you to share a password, verification code or sign-in link.</td></tr></table></td></tr></table></body></html>
+--- before/supabase/templates/sign-in-method-linked.html
++++ after/supabase/templates/sign-in-method-linked.html
+@@ -0,0 +1 @@
++<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>A sign-in method was added to your Rezlee account</title></head><body style="margin:0;background:#F8F7F3;color:#202D28;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Arial,sans-serif;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td align="center" style="padding:32px 16px;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;"><tr><td style="padding:0 8px 28px;font-size:30px;font-weight:600;letter-spacing:-1px;color:#264D3E;">rezlee</td></tr><tr><td style="padding:30px 24px;background:#FFFDF8;border:1px solid #D9DFD8;border-radius:20px;"><p style="margin:0 0 14px;font-size:13px;color:#58665F;">Rezlee · Account security</p><h1 style="margin:0 0 22px;font-size:27px;line-height:1.25;font-weight:600;">A sign-in method was added.</h1><p style="font-size:16px;line-height:1.6;">A new sign-in method was linked to your Rezlee account. If this was you, you can now use that method to sign in.</p><p style="margin:28px 0;"><a href="{{ .SiteURL }}/contact" style="display:inline-block;padding:15px 22px;background:#264D3E;color:#FAF7EF;border-radius:10px;text-decoration:none;font-weight:600;">Contact Rezlee</a></p><p style="margin:24px 0 0;font-size:15px;line-height:1.6;color:#58665F;">If you didn’t make this change, contact Rezlee through the website’s Contact page immediately.</p></td></tr><tr><td style="padding:20px 8px;font-size:12px;line-height:1.6;color:#58665F;">Rezlee · Your place, under control.<br>We’ll never ask you to share a password, verification code or sign-in link.</td></tr></table></td></tr></table></body></html>
+--- before/supabase/templates/sign-in-method-removed.html
++++ after/supabase/templates/sign-in-method-removed.html
+@@ -0,0 +1 @@
++<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>A sign-in method was removed from your Rezlee account</title></head><body style="margin:0;background:#F8F7F3;color:#202D28;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Arial,sans-serif;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td align="center" style="padding:32px 16px;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;"><tr><td style="padding:0 8px 28px;font-size:30px;font-weight:600;letter-spacing:-1px;color:#264D3E;">rezlee</td></tr><tr><td style="padding:30px 24px;background:#FFFDF8;border:1px solid #D9DFD8;border-radius:20px;"><p style="margin:0 0 14px;font-size:13px;color:#58665F;">Rezlee · Account security</p><h1 style="margin:0 0 22px;font-size:27px;line-height:1.25;font-weight:600;">A sign-in method was removed.</h1><p style="font-size:16px;line-height:1.6;">A sign-in method was removed from your Rezlee account. Use another linked method the next time you sign in.</p><p style="margin:28px 0;"><a href="{{ .SiteURL }}/contact" style="display:inline-block;padding:15px 22px;background:#264D3E;color:#FAF7EF;border-radius:10px;text-decoration:none;font-weight:600;">Contact Rezlee</a></p><p style="margin:24px 0 0;font-size:15px;line-height:1.6;color:#58665F;">If you didn’t make this change, or you can no longer sign in, contact Rezlee through the website’s Contact page immediately.</p></td></tr><tr><td style="padding:20px 8px;font-size:12px;line-height:1.6;color:#58665F;">Rezlee · Your place, under control.<br>We’ll never ask you to share a password, verification code or sign-in link.</td></tr></table></td></tr></table></body></html>
+--- before/tests/customer-communications.test.ts
++++ after/tests/customer-communications.test.ts
+@@ -0,0 +1,94 @@
++import assert from "node:assert/strict";
++import test from "node:test";
++import { readFile, readdir } from "node:fs/promises";
++import { PGlite } from "@electric-sql/pglite";
++import { deliverWelcome, welcomePayload, type WelcomeClaim } from "../src/lib/email/welcome";
++import { resolveNotificationTarget } from "../src/lib/notifications/open";
++import { notificationResponseTarget, notificationNavigationReady, safeNotificationDestination, mergeNotificationItems } from "../apps/mobile/src/lib/notification-routing";
++const u = "11111111-1111-4111-8111-111111111111", v = "22222222-2222-4222-8222-222222222222";
++test("welcome is useful, branded, untracked and limited to the configured Rezlee destination", () => {
++ const p = welcomePayload("Rezlee <hello@rezlee.com>", "new@example.invalid", "https://staging.rezlee.com");
++ assert.match(p.html, /https:\/\/staging.rezlee.com\/open/); assert.match(p.text, /Joining someone/);
++ assert.equal(p.to[0], "new@example.invalid"); assert.doesNotMatch(p.html, /<img|<script|utm_/);
++ assert.throws(() => welcomePayload("Rezlee", "new@example.invalid", "https://evil.invalid"));
++ assert.throws(() => welcomePayload("Rezlee", "new@example.invalid", "http://rezlee.com"));
++});
++for (const [label, response, expected] of [
++ ["accepted", () => Response.json({ id: "provider-1" }), "accepted"],
++ ["rate limited", () => new Response("", { status: 429 }), "retry"],
++ ["provider error", () => new Response("", { status: 503 }), "retry"],
++ ["invalid recipient", () => new Response("", { status: 422 }), "failed"],
++ ["unknown acceptance", () => Response.json({}), "uncertain"],
++ ["connection lost", () => { throw Error("private provider details"); }, "retry"]
++] as const) test("welcome delivery: " + label, async () => {
++ const payload = welcomePayload("Rezlee", "new@example.invalid", "https://staging.rezlee.com");
++ const result = await deliverWelcome({
++  claim: async () => ({ state: "claimed", id: u, leaseId: v, payload }),
++  send: async (actual, key) => { assert.equal(actual, payload); assert.equal(key, "rezlee-welcome-" + u); return response(); },
++  finish: async (lease, status, id) => { assert.equal(lease, v); assert.equal(status, expected); assert.equal(id, expected === "accepted" ? "provider-1" : null); return true; }
++ }); assert.equal(result, expected);
++});
++test("terminal/noneligible welcomes never send, and failed persistence does not send again inline", async () => {
++ for (const state of ["accepted", "ineligible", "waiting", "suppressed", "uncertain", "failed"]) {
++  assert.equal(await deliverWelcome({ claim: async () => ({ state }), send: async () => { throw Error("MUST NOT SEND"); }, finish: async () => { throw Error("MUST NOT FINISH"); } }), state);
++ }
++ let sends = 0;
++ await assert.rejects(deliverWelcome({ claim: async () => ({ state: "claimed", id: u, leaseId: v, payload: welcomePayload("Rezlee", "x@example.invalid", "https://staging.rezlee.com") }), send: async () => { sends++; return Response.json({ id: "one" }); }, finish: async () => false }));
++ assert.equal(sends, 1);
++});
++test("push payloads cannot choose destinations and recovery/onboarding retain navigation priority", () => {
++ assert.equal(notificationResponseTarget(null), null);
++ assert.deepEqual(notificationResponseTarget({ notification: { request: { identifier: "push-1", content: { data: { mobileHref: "/provider/" + u } } } } }), { responseId: "push-1", notificationId: null });
++ assert.deepEqual(notificationResponseTarget({ notification: { request: { identifier: "push-1", content: { data: { notificationId: u, mobileHref: "https://evil.invalid" } } } } }), { responseId: "push-1", notificationId: u });
++ for (const path of ["/", "/welcome", "/login", "/signup", "/reset-password", "/auth-return", "/onboarding/details", "/household/join", "/delete-account"]) assert.equal(notificationNavigationReady(path), false, path);
++ for (const path of ["/home", "/notifications", "/bill/" + u]) assert.equal(notificationNavigationReady(path), true, path);
++ for (const value of ["https://evil.invalid", "/bill/../home", "//rezlee.com", "/bill/" + u + "?token=secret"]) assert.equal(safeNotificationDestination(value), "/notifications");
++ assert.equal(safeNotificationDestination("/bill/" + u), "/bill/" + u);
++ assert.deepEqual(mergeNotificationItems([{ id: u, title: "old" }], [{ id: u, title: "updated" }, { id: v, title: "older" }]), [{ id: u, title: "updated" }, { id: v, title: "older" }]);
++});
++test("notification opens recheck record visibility and stale actions", async () => {
++ const now = Date.parse("2026-10-12T12:00:00Z"), row = { created_at: "2026-10-12T11:00:00Z", metadata: { mobileHref: "/bill/" + u } };
++ assert.deepEqual(await resolveNotificationTarget(row, async (table, id) => { assert.equal(table, "bills"); assert.equal(id, u); return true; }, now), { href: "/bill/" + u });
++ assert.deepEqual(await resolveNotificationTarget(row, async () => false, now), { href: "/notifications", notice: "unavailable" });
++ assert.deepEqual(await resolveNotificationTarget(null, async () => { throw Error("NO LOOKUP"); }, now), { href: "/notifications", notice: "unavailable" });
++ for (const stale of [{ ...row, resolved_at: row.created_at }, { ...row, expires_at: "2026-10-12T12:00:00Z" }, { ...row, created_at: "2026-08-12T12:00:00Z" }]) assert.deepEqual(await resolveNotificationTarget(stale, async () => { throw Error("NO LOOKUP"); }, now), { href: "/notifications", notice: "handled" });
++ await assert.rejects(resolveNotificationTarget(row, async () => { throw Error("network"); }, now));
++});
++test("welcome database prevents backfill, concurrent duplicates, cross-account access and late retry duplicates", async () => {
++ const db = new PGlite();
++ try {
++  await db.exec("create role anon;create role authenticated;create role service_role bypassrls;create schema auth;create schema storage;create table auth.users(id uuid primary key,email text);create function auth.uid() returns uuid language sql stable as $$select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid$$;create table storage.buckets(id text primary key,name text,public boolean,file_size_limit bigint,allowed_mime_types text[]);create table storage.objects(id uuid primary key default gen_random_uuid(),bucket_id text,name text);alter table storage.objects enable row level security;create function storage.foldername(name text) returns text[] language sql immutable as $$select string_to_array(name,'/')$$;grant usage on schema public,auth,storage to authenticated,service_role;grant all on storage.objects to authenticated;");
++  for (const f of ["supabase/schema.sql", ...(await readdir("supabase/migrations")).filter(f => f.endsWith(".sql")).sort().map(f => "supabase/migrations/" + f)]) await db.exec((await readFile(f, "utf8")).replace(/create extension if not exists "pgcrypto";/g, ""));
++  await db.exec("alter table auth.users add column created_at timestamptz default now();alter table auth.users add column email_confirmed_at timestamptz;");
++  await db.query("insert into auth.users(id,email,created_at,email_confirmed_at) values($1,'new@example.invalid',now(),now()),($2,'old@example.invalid',now()-interval '1 year',now())", [u, v]);
++  const start = new Date(Date.now() - 60_000).toISOString(), payload = welcomePayload("Rezlee", "new@example.invalid", "https://staging.rezlee.com");
++  const claim = async (id = u, body = payload) => (await db.query<{ result: WelcomeClaim }>("select claim_rezlee_welcome($1,$2,$3::jsonb) as result", [id, start, JSON.stringify(body)])).rows[0].result;
++  const finish = async (lease: string, status: string) => (await db.query<{ result: boolean }>("select finish_rezlee_welcome($1,$2,$3) as result", [u, lease, status])).rows[0].result;
++  assert.equal((await claim(v)).state, "ineligible");
++  await db.query("update auth.users set email_confirmed_at=null where id=$1", [u]); assert.equal((await claim()).state, "ineligible");
++  await db.query("update auth.users set email_confirmed_at=now() where id=$1", [u]);
++  await assert.rejects(claim(u, { ...payload, to: ["someoneelse@example.invalid"] }), /Invalid welcome message/);
++  const parallel = await Promise.all([claim(), claim(), claim()]);
++  assert.deepEqual(parallel.map(x => x.state).sort(), ["claimed", "waiting", "waiting"]);
++  const first = parallel.find(x => x.state === "claimed")!;
++  assert.equal((await db.query("select id from account_operation_leases where user_id=$1", [u])).rows.length, 1);
++  assert.equal(await finish(v, "accepted"), false);
++  assert.equal(await finish(first.leaseId!, "retry"), true); assert.equal((await claim()).state, "waiting");
++  await db.query("update welcome_email_deliveries set next_attempt_at=now()-interval '1 minute' where user_id=$1", [u]);
++  const retry = await claim(u, { ...payload, subject: "NEW TEMPLATE MUST NOT CHANGE RETRY" });
++  assert.equal(retry.id, first.id); assert.deepEqual(retry.payload, first.payload); assert.notEqual(retry.leaseId, first.leaseId);
++  await db.query("update welcome_email_deliveries set attempts=5 where user_id=$1", [u]); assert.equal((await claim()).state, "waiting");
++  assert.equal(await finish(retry.leaseId!, "accepted"), true); assert.equal((await claim()).state, "accepted");
++  await db.query("update welcome_email_deliveries set status='retry',attempts=1,first_attempt_at=now()-interval '24 hours',next_attempt_at=now()-interval '1 minute' where user_id=$1", [u]);
++  assert.equal((await claim()).state, "uncertain");
++  await db.query("update welcome_email_deliveries set status='retry',attempts=1,first_attempt_at=now(),next_attempt_at=now()-interval '1 minute' where user_id=$1", [u]);
++  await db.query("update auth.users set email='changed@example.invalid' where id=$1", [u]);
++  assert.equal((await claim(u, { ...payload, to: ["changed@example.invalid"] })).state, "suppressed");
++  await db.exec("set role authenticated"); await db.query("select set_config('request.jwt.claim.sub',$1,false)", [u]);
++  await assert.rejects(db.query("select * from welcome_email_deliveries"), /permission denied/);
++  await assert.rejects(claim(), /permission denied/);
++  await db.exec("reset role");
++  await db.query("delete from auth.users where id=$1", [u]);
++  assert.equal((await db.query("select * from welcome_email_deliveries where user_id=$1", [u])).rows.length, 0);
++ } finally { await db.close(); }
++});
