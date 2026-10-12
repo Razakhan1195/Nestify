@@ -1,3 +1,5 @@
+> Follow-up: [Live file evaluation](quote-files-live-validation-2026-10-11.md) records completed file reads, evidence fixes and current staging. Physical-phone acceptance remains open.
+
 # Quote review — live customer-scenario evaluation and fixes
 Date: October 11, 2026. Follows quote-review-2026-10-11.md. User approved the four prepared scenarios under a $1 total budget and directed future work to use real customer scenarios and relevant edge cases. That standing requirement is now in AGENTS.md.
 

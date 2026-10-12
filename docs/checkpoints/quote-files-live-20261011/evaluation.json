@@ -1,0 +1,51 @@
+{
+  "method": "Actual second-round model outputs checked against known synthetic fixture page text. Final missing-page clarification logic replayed without another model call.",
+  "evaluated": [
+    {
+      "id": "complete-two-page",
+      "allExcerptsMatchKnownFixturePages": true,
+      "expectedCustomerOutcomes": true,
+      "questions": []
+    },
+    {
+      "id": "conflicting-two-page",
+      "allExcerptsMatchKnownFixturePages": true,
+      "expectedCustomerOutcomes": true,
+      "questions": [
+        "price",
+        "taxes",
+        "partsLabour",
+        "exclusions",
+        "schedule",
+        "payment",
+        "warranty"
+      ]
+    },
+    {
+      "id": "clear-first-page",
+      "allExcerptsMatchKnownFixturePages": true,
+      "expectedCustomerOutcomes": true,
+      "questions": [
+        "exclusions",
+        "schedule",
+        "payment",
+        "warranty"
+      ]
+    },
+    {
+      "id": "unreadable-image",
+      "allExcerptsMatchKnownFixturePages": true,
+      "expectedCustomerOutcomes": true,
+      "questions": [
+        "scope",
+        "price",
+        "taxes",
+        "partsLabour",
+        "exclusions",
+        "schedule",
+        "payment",
+        "warranty"
+      ]
+    }
+  ]
+}

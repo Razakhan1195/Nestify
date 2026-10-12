@@ -1,0 +1,471 @@
+{
+  "startedAt": "2026-10-12T00:43:27.545Z",
+  "maxCalls": 4,
+  "approvedDollars": 1,
+  "reservedCalls": 4,
+  "model": "google/gemini-2.5-flash",
+  "maxOutputTokensPerCall": 4500,
+  "automaticRetries": 0,
+  "costBound": {
+    "inputTokensPerCall": 100000,
+    "inputUsdPerMillion": 0.3,
+    "outputUsdPerMillion": 2.5,
+    "maximumEstimatedUsd": 0.165,
+    "combinedTwoRoundEstimatedUsd": 0.33,
+    "source": "https://vercel.com/ai-gateway/models/gemini-2.5-flash",
+    "note": "Conservative token-price bound for four bounded one-image/two-page fixtures including schema/system text. Not a billed usage report."
+  },
+  "cases": [
+    {
+      "id": "complete-two-page",
+      "documentId": "cc949409-1339-4c74-a78a-6e1d16a0396e",
+      "state": "ready",
+      "facts": [
+        {
+          "key": "supplier",
+          "page": 1,
+          "value": "Example Installation Co. | QA-101",
+          "excerpt": "Example Installation Co. | QA-101",
+          "citations": [
+            {
+              "page": 1,
+              "excerpt": "Example Installation Co. | QA-101"
+            }
+          ]
+        },
+        {
+          "key": "scope",
+          "page": null,
+          "value": "Supply and install dishwasher TEST-DW100.\nRemoval and disposal of the old dishwasher included.",
+          "excerpt": "Page 1: Supply and install dishwasher TEST-DW100.\n\nPage 1: Removal and disposal of the old dishwasher included.",
+          "citations": [
+            {
+              "page": 1,
+              "excerpt": "Supply and install dishwasher TEST-DW100."
+            },
+            {
+              "page": 1,
+              "excerpt": "Removal and disposal of the old dishwasher included."
+            }
+          ]
+        },
+        {
+          "key": "partsLabour",
+          "page": 1,
+          "value": "Parts CAD 600. Labour CAD 200.",
+          "excerpt": "Parts CAD 600. Labour CAD 200.",
+          "citations": [
+            {
+              "page": 1,
+              "excerpt": "Parts CAD 600. Labour CAD 200."
+            }
+          ]
+        },
+        {
+          "key": "price",
+          "page": null,
+          "value": "Subtotal CAD 800.\nTotal CAD 904.",
+          "excerpt": "Page 1: Subtotal CAD 800.\n\nPage 1: Total CAD 904.",
+          "citations": [
+            {
+              "page": 1,
+              "excerpt": "Subtotal CAD 800."
+            },
+            {
+              "page": 1,
+              "excerpt": "Total CAD 904."
+            }
+          ]
+        },
+        {
+          "key": "taxes",
+          "page": 1,
+          "value": "HST CAD 104.",
+          "excerpt": "HST CAD 104.",
+          "citations": [
+            {
+              "page": 1,
+              "excerpt": "HST CAD 104."
+            }
+          ]
+        },
+        {
+          "key": "exclusions",
+          "page": 2,
+          "value": "Cabinet modifications excluded. No allowances.",
+          "excerpt": "Cabinet modifications excluded. No allowances.",
+          "citations": [
+            {
+              "page": 2,
+              "excerpt": "Cabinet modifications excluded. No allowances."
+            }
+          ]
+        },
+        {
+          "key": "schedule",
+          "page": null,
+          "value": "Start and finish: November 2, 2026.\nQuote expires October 25, 2026.",
+          "excerpt": "Page 2: Start and finish: November 2, 2026.\n\nPage 2: Quote expires October 25, 2026.",
+          "citations": [
+            {
+              "page": 2,
+              "excerpt": "Start and finish: November 2, 2026."
+            },
+            {
+              "page": 2,
+              "excerpt": "Quote expires October 25, 2026."
+            }
+          ]
+        },
+        {
+          "key": "payment",
+          "page": 2,
+          "value": "Deposit CAD 100; balance CAD 804 after installation.",
+          "excerpt": "Deposit CAD 100; balance CAD 804 after installation.",
+          "citations": [
+            {
+              "page": 2,
+              "excerpt": "Deposit CAD 100; balance CAD 804 after installation."
+            }
+          ]
+        },
+        {
+          "key": "warranty",
+          "page": null,
+          "value": "Workmanship warranty: 12 months.\nParts warranty: 24 months.",
+          "excerpt": "Page 2: Workmanship warranty: 12 months.\n\nPage 2: Parts warranty: 24 months.",
+          "citations": [
+            {
+              "page": 2,
+              "excerpt": "Workmanship warranty: 12 months."
+            },
+            {
+              "page": 2,
+              "excerpt": "Parts warranty: 24 months."
+            }
+          ]
+        }
+      ],
+      "checks": [
+        "Retain TEST-DW100 scope and CAD 800 subtotal / CAD 904 total.",
+        "Include second-page exclusion, dates, deposit and both warranty durations.",
+        "No claim of payment, completed work or verified compatibility."
+      ],
+      "startedAt": "2026-10-12T00:43:29.069Z",
+      "elapsedMs": 4978,
+      "questions": [],
+      "excerptsRequireVisualReview": true,
+      "pageNumbersWithinFile": true,
+      "resultSurvivedReload": true
+    },
+    {
+      "id": "conflicting-two-page",
+      "documentId": "1791dea0-063f-470d-92c1-705b630e480d",
+      "state": "ready",
+      "facts": [
+        {
+          "key": "supplier",
+          "page": 1,
+          "value": "Example Cabinet Co.",
+          "excerpt": "Example Cabinet Co.",
+          "citations": [
+            {
+              "page": 1,
+              "excerpt": "Example Cabinet Co."
+            }
+          ]
+        },
+        {
+          "key": "scope",
+          "page": 1,
+          "value": "Replace two cabinet doors.",
+          "excerpt": "Replace two cabinet doors.",
+          "citations": [
+            {
+              "page": 1,
+              "excerpt": "Replace two cabinet doors."
+            }
+          ]
+        },
+        {
+          "key": "price",
+          "page": null,
+          "value": "Subtotal CAD 1000.\nDisposal allowance CAD 50.\nTotal CAD 900.",
+          "excerpt": "Page 1: Subtotal CAD 1000.\n\nPage 1: Disposal allowance CAD 50.\n\nPage 2: Total CAD 900.",
+          "citations": [
+            {
+              "page": 1,
+              "excerpt": "Subtotal CAD 1000."
+            },
+            {
+              "page": 1,
+              "excerpt": "Disposal allowance CAD 50."
+            },
+            {
+              "page": 2,
+              "excerpt": "Total CAD 900."
+            }
+          ]
+        },
+        {
+          "key": "taxes",
+          "page": 1,
+          "value": "Taxes not specified.",
+          "excerpt": "Taxes not specified.",
+          "citations": [
+            {
+              "page": 1,
+              "excerpt": "Taxes not specified."
+            }
+          ]
+        },
+        {
+          "key": "exclusions",
+          "page": null,
+          "value": "Disposal allowance CAD 50.\nExtra cabinet work requires a revised quote.",
+          "excerpt": "Page 1: Disposal allowance CAD 50.\n\nPage 2: Extra cabinet work requires a revised quote.",
+          "citations": [
+            {
+              "page": 1,
+              "excerpt": "Disposal allowance CAD 50."
+            },
+            {
+              "page": 2,
+              "excerpt": "Extra cabinet work requires a revised quote."
+            }
+          ]
+        },
+        {
+          "key": "schedule",
+          "page": 2,
+          "value": "Dates to be agreed.",
+          "excerpt": "Dates to be agreed.",
+          "citations": [
+            {
+              "page": 2,
+              "excerpt": "Dates to be agreed."
+            }
+          ]
+        },
+        {
+          "key": "warranty",
+          "page": 2,
+          "value": "Warranty terms not provided.",
+          "excerpt": "Warranty terms not provided.",
+          "citations": [
+            {
+              "page": 2,
+              "excerpt": "Warranty terms not provided."
+            }
+          ]
+        }
+      ],
+      "checks": [
+        "Retain subtotal CAD 1000 on page 1 and total CAD 900 on page 2.",
+        "Retain CAD 50 allowance and request clarification; do not reconcile amounts.",
+        "Dates, tax and warranty remain uncertain."
+      ],
+      "startedAt": "2026-10-12T00:43:36.032Z",
+      "elapsedMs": 4915,
+      "questions": [
+        {
+          "key": "price",
+          "question": "What is the total price and currency? Is it fixed or an estimate?"
+        },
+        {
+          "key": "taxes",
+          "question": "Does the quoted total include tax, travel, delivery, disposal and other fees?"
+        },
+        {
+          "key": "partsLabour",
+          "question": "Which parts or exact models and labour are included? Are substitutions allowed?"
+        },
+        {
+          "key": "exclusions",
+          "question": "What is excluded or covered by an allowance, and how would extra work be priced and approved?"
+        },
+        {
+          "key": "schedule",
+          "question": "When could work start and finish, and how long is this quote valid?"
+        },
+        {
+          "key": "payment",
+          "question": "What deposit is required, when are later payments due, and what happens if the work changes?"
+        },
+        {
+          "key": "warranty",
+          "question": "What parts and workmanship are covered, for how long, and who handles a problem?"
+        }
+      ],
+      "excerptsRequireVisualReview": true,
+      "pageNumbersWithinFile": true,
+      "resultSurvivedReload": true
+    },
+    {
+      "id": "clear-first-page",
+      "documentId": "afa8b719-5651-4ff7-9693-438be465bf69",
+      "state": "ready",
+      "facts": [
+        {
+          "key": "supplier",
+          "page": 1,
+          "value": "Example Installation Co.",
+          "excerpt": "Example Installation Co.",
+          "citations": [
+            {
+              "page": 1,
+              "excerpt": "Example Installation Co."
+            }
+          ]
+        },
+        {
+          "key": "scope",
+          "page": null,
+          "value": "Supply and install dishwasher TEST-DW100.\nRemoval and disposal of the old dishwasher included.",
+          "excerpt": "Page 1: Supply and install dishwasher TEST-DW100.\n\nPage 1: Removal and disposal of the old dishwasher included.",
+          "citations": [
+            {
+              "page": 1,
+              "excerpt": "Supply and install dishwasher TEST-DW100."
+            },
+            {
+              "page": 1,
+              "excerpt": "Removal and disposal of the old dishwasher included."
+            }
+          ]
+        },
+        {
+          "key": "partsLabour",
+          "page": null,
+          "value": "Parts CAD 600.\nLabour CAD 200.",
+          "excerpt": "Page 1: Parts CAD 600.\n\nPage 1: Labour CAD 200.",
+          "citations": [
+            {
+              "page": 1,
+              "excerpt": "Parts CAD 600."
+            },
+            {
+              "page": 1,
+              "excerpt": "Labour CAD 200."
+            }
+          ]
+        },
+        {
+          "key": "price",
+          "page": null,
+          "value": "Subtotal CAD 800.\nTotal CAD 904.",
+          "excerpt": "Page 1: Subtotal CAD 800.\n\nPage 1: Total CAD 904.",
+          "citations": [
+            {
+              "page": 1,
+              "excerpt": "Subtotal CAD 800."
+            },
+            {
+              "page": 1,
+              "excerpt": "Total CAD 904."
+            }
+          ]
+        },
+        {
+          "key": "taxes",
+          "page": 1,
+          "value": "HST CAD 104.",
+          "excerpt": "HST CAD 104.",
+          "citations": [
+            {
+              "page": 1,
+              "excerpt": "HST CAD 104."
+            }
+          ]
+        },
+        {
+          "key": "exclusions",
+          "page": 1,
+          "value": "Terms continue on page 2.",
+          "excerpt": "Terms continue on page 2.",
+          "citations": [
+            {
+              "page": 1,
+              "excerpt": "Terms continue on page 2."
+            }
+          ]
+        }
+      ],
+      "checks": [
+        "Read the visible scope and CAD amounts.",
+        "Do not invent terms from the unavailable second page.",
+        "Missing warranty, dates, deposit and exclusions need original review."
+      ],
+      "startedAt": "2026-10-12T00:43:42.182Z",
+      "elapsedMs": 4847,
+      "questions": [
+        {
+          "key": "schedule",
+          "question": "When could work start and finish, and how long is this quote valid?"
+        },
+        {
+          "key": "payment",
+          "question": "What deposit is required, when are later payments due, and what happens if the work changes?"
+        },
+        {
+          "key": "warranty",
+          "question": "What parts and workmanship are covered, for how long, and who handles a problem?"
+        }
+      ],
+      "excerptsRequireVisualReview": true,
+      "pageNumbersWithinFile": true,
+      "resultSurvivedReload": true
+    },
+    {
+      "id": "unreadable-image",
+      "documentId": "8ba951f6-3f7e-4b9f-aa83-f0a3ca881ddb",
+      "state": "ready",
+      "facts": [],
+      "checks": [
+        "Plain gray synthetic image contains no readable quote. Return no facts or a failed read.",
+        "Keep original and manual review available. Never invent prices or warranty."
+      ],
+      "startedAt": "2026-10-12T00:43:47.807Z",
+      "elapsedMs": 2593,
+      "questions": [
+        {
+          "key": "scope",
+          "question": "Can you list the exact work, quantities and finish or cleanup included?"
+        },
+        {
+          "key": "price",
+          "question": "What is the total price and currency? Is it fixed or an estimate?"
+        },
+        {
+          "key": "taxes",
+          "question": "Does the quoted total include tax, travel, delivery, disposal and other fees?"
+        },
+        {
+          "key": "partsLabour",
+          "question": "Which parts or exact models and labour are included? Are substitutions allowed?"
+        },
+        {
+          "key": "exclusions",
+          "question": "What is excluded or covered by an allowance, and how would extra work be priced and approved?"
+        },
+        {
+          "key": "schedule",
+          "question": "When could work start and finish, and how long is this quote valid?"
+        },
+        {
+          "key": "payment",
+          "question": "What deposit is required, when are later payments due, and what happens if the work changes?"
+        },
+        {
+          "key": "warranty",
+          "question": "What parts and workmanship are covered, for how long, and who handles a problem?"
+        }
+      ],
+      "excerptsRequireVisualReview": true,
+      "pageNumbersWithinFile": true,
+      "resultSurvivedReload": true
+    }
+  ],
+  "cleaned": true,
+  "finishedAt": "2026-10-12T00:43:51.704Z"
+}

@@ -1,3 +1,5 @@
+> Follow-up: [Live file evaluation](quote-files-live-validation-2026-10-11.md) records completed file reads, evidence fixes and current staging. Physical-phone acceptance remains open.
+
 # Capture file acceptance — October 11, 2026
 
 ## Customer problems fixed

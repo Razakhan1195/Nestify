@@ -1,0 +1,38 @@
+{
+  "src/lib/ai/quote.ts": {
+    "sha256": "3dc564d9dfa47f58af0988bfe39991956fa7a61a502d1e891b369636be7a9563",
+    "existed": true
+  },
+  "apps/mobile/src/lib/quote-review.ts": {
+    "sha256": "8f8993a529ac332b996e82fd0a005ba039570ba28b404c76b385cc3fd949dd3f",
+    "existed": true
+  },
+  "apps/mobile/app/quotes.tsx": {
+    "sha256": "8b1f87cc7709e2065f45857bdc9e448dde06f4f247c8e6226e2c7fb8dc2743b5",
+    "existed": true
+  },
+  "scripts/qa/render-quotes.cjs": {
+    "sha256": "10cf6f5e0d6d942f4ee908b305d6ce184ecc5cbc2af744c1bed3150f37a8f62c",
+    "existed": true
+  },
+  "src/lib/ai/quote-file-evidence.ts": {
+    "sha256": "20aea97e48608c7ae891fdac6d83f64347981fa23e02da70a6c96a9d8454de79",
+    "existed": false
+  },
+  "tests/quote-file-evidence.test.ts": {
+    "sha256": "96e54c114b6d47f2718d1221e86f8f51a9167d83ad363fa2fbfc907b1cc46b01",
+    "existed": false
+  },
+  "scripts/qa/quote-files-recovery-staging.mjs": {
+    "sha256": "5a82b1e383403746aae0ccbaf41d56c6a07fe29705c84f5b39444a9042d04bd3",
+    "existed": false
+  },
+  "scripts/qa/quote-files-recheck-staging.mjs": {
+    "sha256": "be18f3ad752dbe8296eb844e1abf5de83a2f62fb3c5fa059609aab0f80e342a0",
+    "existed": false
+  },
+  "scripts/qa/evaluate-quote-files.ts": {
+    "sha256": "a36c92352d60c36024e254b169ce6a9d053a1218a87d4d2f8e37be71e59d44f4",
+    "existed": false
+  }
+}

@@ -1,0 +1,5 @@
+complete-two-page ready 4978ms 9 facts 
+conflicting-two-page ready 4915ms 7 facts price,taxes,partsLabour,exclusions,schedule,payment,warranty
+clear-first-page ready 4847ms 6 facts schedule,payment,warranty
+unreadable-image ready 2593ms 0 facts scope,price,taxes,partsLabour,exclusions,schedule,payment,warranty
+Evaluation complete; reserved calls 4 fixtures cleaned true

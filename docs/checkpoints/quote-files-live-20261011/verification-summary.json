@@ -1,0 +1,15 @@
+{
+  "fullTests": 884,
+  "failed": 0,
+  "renderedScenarios": 48,
+  "hostedChecks": 30,
+  "liveFileReads": 8,
+  "sameScenarios": 4,
+  "approvedTotalBudgetUsd": 1,
+  "conservativeEstimatedUsd": 0.33,
+  "billingMeasured": false,
+  "fixturesCleaned": true,
+  "physicalAcceptance": false,
+  "productionReleased": false,
+  "nextEngineeringGap": "Home-item ambiguous create/restart recovery"
+}
