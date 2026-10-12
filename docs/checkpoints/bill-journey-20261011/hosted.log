@@ -1,0 +1,96 @@
+PASS unauthenticated request denied
+PASS one baseline bill opens useful empty action
+PASS candidate list separates multiple accounts
+PASS foreign household cannot read action
+PASS unconfirmed agreement is not accepted
+PASS negative costs are rejected
+PASS baseline must predate effective change
+PASS planned action saves without claiming a result
+PASS stale replay cannot duplicate or overwrite action
+PASS foreign household cannot mutate action
+PASS action resumes with its notes and cost
+PASS implemented action awaits evidence without fake monitoring
+PASS another own account cannot become evidence
+PASS another household cannot become evidence
+PASS baseline cannot verify itself
+PASS cannot finish without comparable evidence
+PASS later matching statement checks agreed total
+PASS comparison does not deduct costs or label savings
+PASS Bills exposes outcome follow-up separately from provider enquiry
+PASS follow-up summary excludes private agreement notes
+PASS snooze persists without a notification job
+PASS finished check retains evidence and action identity
+PASS fixture evidence correction saved
+PASS corrected evidence recalculates previously completed result
+PASS reopen preserves action and clears old evidence deliberately
+PASS baseline correction invalidates old comparison
+PASS baseline review requires explicit acknowledgement
+PASS reviewed corrected baseline recalculates transparently
+PASS old baseline reference retained on correction
+PASS overlapping/revised periods withhold confirmation
+PASS deleted evidence does not leave a verified result
+PASS stopping cannot attach foreign evidence
+PASS stop tracking with deleted evidence preserves baseline and action
+PASS outcome saves preserve bill fields and original raw metadata
+PASS energy uses a separate comparison
+PASS fixed telecom target cannot masquerade as utility savings
+PASS electricity identifies the correct comparison
+PASS electricity action planned
+PASS electricity waits for saved evidence
+PASS electricity later evidence compared honestly
+PASS electricity amount basis remains explicit
+PASS electricity action discoverable in Bills
+PASS electricity follow-up projection excludes private notes
+PASS electricity provider metadata replacement preserves action
+PASS electricity another household denied
+PASS electricity concurrent writes have one winner
+PASS electricity check can finish
+PASS electricity estimated evidence invalidates completed result
+PASS electricity corrected evidence recalculates higher usage
+PASS electricity corrected baseline requires review
+PASS electricity baseline cannot be silently accepted
+PASS electricity explicit corrected baseline review succeeds
+PASS electricity overlapping baseline withholds result
+PASS electricity missing evidence removes result
+PASS electricity can stop with missing evidence
+PASS electricity changed service details do not hide saved action
+PASS electricity baseline removal cascades only its action
+PASS gas identifies the correct comparison
+PASS gas action planned
+PASS gas waits for saved evidence
+PASS gas later evidence compared honestly
+PASS gas amount basis remains explicit
+PASS gas action discoverable in Bills
+PASS gas follow-up projection excludes private notes
+PASS gas provider metadata replacement preserves action
+PASS gas another household denied
+PASS gas concurrent writes have one winner
+PASS gas check can finish
+PASS gas estimated evidence invalidates completed result
+PASS gas corrected evidence recalculates higher usage
+PASS gas corrected baseline requires review
+PASS gas baseline cannot be silently accepted
+PASS gas explicit corrected baseline review succeeds
+PASS gas overlapping baseline withholds result
+PASS gas missing evidence removes result
+PASS gas can stop with missing evidence
+PASS gas changed service details do not hide saved action
+PASS gas baseline removal cascades only its action
+PASS deck identifies the correct comparison
+PASS deck action planned
+PASS deck waits for saved evidence
+PASS deck later evidence compared honestly
+PASS deck amount basis remains explicit
+PASS deck action discoverable in Bills
+PASS deck follow-up projection excludes private notes
+PASS deck provider metadata replacement preserves action
+PASS deck another household denied
+PASS deck concurrent writes have one winner
+PASS deck check can finish
+PASS deck missing evidence removes result
+PASS deck can stop with missing evidence
+PASS deck changed service details do not hide saved action
+PASS deck baseline removal cascades only its action
+CLEANED disposable account
+CLEANED disposable account
+PASS all disposable bills and actions cleaned

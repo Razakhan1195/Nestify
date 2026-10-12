@@ -1,0 +1,853 @@
+{
+  "checks": [
+    {
+      "kind": "telecom",
+      "width": 320,
+      "scenario": "empty",
+      "overflow": false,
+      "errors": [],
+      "writes": 1
+    },
+    {
+      "kind": "telecom",
+      "width": 320,
+      "scenario": "waiting",
+      "overflow": false,
+      "errors": [],
+      "writes": 2
+    },
+    {
+      "kind": "telecom",
+      "width": 320,
+      "scenario": "matched",
+      "overflow": false,
+      "errors": [],
+      "writes": 0
+    },
+    {
+      "kind": "telecom",
+      "width": 320,
+      "scenario": "corrected",
+      "overflow": false,
+      "errors": [],
+      "writes": 0
+    },
+    {
+      "kind": "telecom",
+      "width": 320,
+      "scenario": "stopped",
+      "overflow": false,
+      "errors": [],
+      "writes": 1
+    },
+    {
+      "kind": "telecom",
+      "width": 320,
+      "scenario": "lost-saved",
+      "overflow": false,
+      "errors": [],
+      "writes": 1
+    },
+    {
+      "kind": "telecom",
+      "width": 320,
+      "scenario": "lost-unchanged",
+      "overflow": false,
+      "errors": [],
+      "writes": 2
+    },
+    {
+      "kind": "telecom",
+      "width": 320,
+      "scenario": "lost-conflict",
+      "overflow": false,
+      "errors": [],
+      "writes": 1
+    },
+    {
+      "kind": "telecom",
+      "width": 320,
+      "scenario": "validation",
+      "overflow": false,
+      "errors": [],
+      "writes": 1
+    },
+    {
+      "kind": "telecom",
+      "width": 320,
+      "scenario": "failure",
+      "overflow": false,
+      "errors": [],
+      "writes": 0
+    },
+    {
+      "kind": "telecom",
+      "width": 320,
+      "scenario": "account-change",
+      "overflow": false,
+      "errors": [],
+      "writes": 0
+    },
+    {
+      "kind": "telecom",
+      "width": 320,
+      "scenario": "different",
+      "overflow": false,
+      "errors": [],
+      "writes": 0
+    },
+    {
+      "kind": "telecom",
+      "width": 320,
+      "scenario": "no-evidence",
+      "overflow": false,
+      "errors": [],
+      "writes": 0
+    },
+    {
+      "kind": "telecom",
+      "width": 320,
+      "scenario": "entry",
+      "overflow": false,
+      "errors": [],
+      "writes": 2
+    },
+    {
+      "kind": "telecom",
+      "width": 390,
+      "scenario": "empty",
+      "overflow": false,
+      "errors": [],
+      "writes": 1
+    },
+    {
+      "kind": "telecom",
+      "width": 390,
+      "scenario": "waiting",
+      "overflow": false,
+      "errors": [],
+      "writes": 2
+    },
+    {
+      "kind": "telecom",
+      "width": 390,
+      "scenario": "matched",
+      "overflow": false,
+      "errors": [],
+      "writes": 0
+    },
+    {
+      "kind": "telecom",
+      "width": 390,
+      "scenario": "corrected",
+      "overflow": false,
+      "errors": [],
+      "writes": 0
+    },
+    {
+      "kind": "telecom",
+      "width": 390,
+      "scenario": "stopped",
+      "overflow": false,
+      "errors": [],
+      "writes": 1
+    },
+    {
+      "kind": "telecom",
+      "width": 390,
+      "scenario": "lost-saved",
+      "overflow": false,
+      "errors": [],
+      "writes": 1
+    },
+    {
+      "kind": "telecom",
+      "width": 390,
+      "scenario": "lost-unchanged",
+      "overflow": false,
+      "errors": [],
+      "writes": 2
+    },
+    {
+      "kind": "telecom",
+      "width": 390,
+      "scenario": "lost-conflict",
+      "overflow": false,
+      "errors": [],
+      "writes": 1
+    },
+    {
+      "kind": "telecom",
+      "width": 390,
+      "scenario": "validation",
+      "overflow": false,
+      "errors": [],
+      "writes": 1
+    },
+    {
+      "kind": "telecom",
+      "width": 390,
+      "scenario": "failure",
+      "overflow": false,
+      "errors": [],
+      "writes": 0
+    },
+    {
+      "kind": "telecom",
+      "width": 390,
+      "scenario": "account-change",
+      "overflow": false,
+      "errors": [],
+      "writes": 0
+    },
+    {
+      "kind": "telecom",
+      "width": 390,
+      "scenario": "different",
+      "overflow": false,
+      "errors": [],
+      "writes": 0
+    },
+    {
+      "kind": "telecom",
+      "width": 390,
+      "scenario": "no-evidence",
+      "overflow": false,
+      "errors": [],
+      "writes": 0
+    },
+    {
+      "kind": "telecom",
+      "width": 390,
+      "scenario": "entry",
+      "overflow": false,
+      "errors": [],
+      "writes": 2
+    },
+    {
+      "kind": "deck",
+      "width": 320,
+      "scenario": "empty",
+      "overflow": false,
+      "errors": [],
+      "writes": 1
+    },
+    {
+      "kind": "deck",
+      "width": 320,
+      "scenario": "waiting",
+      "overflow": false,
+      "errors": [],
+      "writes": 2
+    },
+    {
+      "kind": "deck",
+      "width": 320,
+      "scenario": "matched",
+      "overflow": false,
+      "errors": [],
+      "writes": 0
+    },
+    {
+      "kind": "deck",
+      "width": 320,
+      "scenario": "corrected",
+      "overflow": false,
+      "errors": [],
+      "writes": 0
+    },
+    {
+      "kind": "deck",
+      "width": 320,
+      "scenario": "stopped",
+      "overflow": false,
+      "errors": [],
+      "writes": 1
+    },
+    {
+      "kind": "deck",
+      "width": 320,
+      "scenario": "lost-saved",
+      "overflow": false,
+      "errors": [],
+      "writes": 1
+    },
+    {
+      "kind": "deck",
+      "width": 320,
+      "scenario": "lost-unchanged",
+      "overflow": false,
+      "errors": [],
+      "writes": 2
+    },
+    {
+      "kind": "deck",
+      "width": 320,
+      "scenario": "lost-conflict",
+      "overflow": false,
+      "errors": [],
+      "writes": 1
+    },
+    {
+      "kind": "deck",
+      "width": 320,
+      "scenario": "validation",
+      "overflow": false,
+      "errors": [],
+      "writes": 1
+    },
+    {
+      "kind": "deck",
+      "width": 320,
+      "scenario": "failure",
+      "overflow": false,
+      "errors": [],
+      "writes": 0
+    },
+    {
+      "kind": "deck",
+      "width": 320,
+      "scenario": "account-change",
+      "overflow": false,
+      "errors": [],
+      "writes": 0
+    },
+    {
+      "kind": "deck",
+      "width": 320,
+      "scenario": "different",
+      "overflow": false,
+      "errors": [],
+      "writes": 0
+    },
+    {
+      "kind": "deck",
+      "width": 320,
+      "scenario": "no-evidence",
+      "overflow": false,
+      "errors": [],
+      "writes": 0
+    },
+    {
+      "kind": "deck",
+      "width": 390,
+      "scenario": "empty",
+      "overflow": false,
+      "errors": [],
+      "writes": 1
+    },
+    {
+      "kind": "deck",
+      "width": 390,
+      "scenario": "waiting",
+      "overflow": false,
+      "errors": [],
+      "writes": 2
+    },
+    {
+      "kind": "deck",
+      "width": 390,
+      "scenario": "matched",
+      "overflow": false,
+      "errors": [],
+      "writes": 0
+    },
+    {
+      "kind": "deck",
+      "width": 390,
+      "scenario": "corrected",
+      "overflow": false,
+      "errors": [],
+      "writes": 0
+    },
+    {
+      "kind": "deck",
+      "width": 390,
+      "scenario": "stopped",
+      "overflow": false,
+      "errors": [],
+      "writes": 1
+    },
+    {
+      "kind": "deck",
+      "width": 390,
+      "scenario": "lost-saved",
+      "overflow": false,
+      "errors": [],
+      "writes": 1
+    },
+    {
+      "kind": "deck",
+      "width": 390,
+      "scenario": "lost-unchanged",
+      "overflow": false,
+      "errors": [],
+      "writes": 2
+    },
+    {
+      "kind": "deck",
+      "width": 390,
+      "scenario": "lost-conflict",
+      "overflow": false,
+      "errors": [],
+      "writes": 1
+    },
+    {
+      "kind": "deck",
+      "width": 390,
+      "scenario": "validation",
+      "overflow": false,
+      "errors": [],
+      "writes": 1
+    },
+    {
+      "kind": "deck",
+      "width": 390,
+      "scenario": "failure",
+      "overflow": false,
+      "errors": [],
+      "writes": 0
+    },
+    {
+      "kind": "deck",
+      "width": 390,
+      "scenario": "account-change",
+      "overflow": false,
+      "errors": [],
+      "writes": 0
+    },
+    {
+      "kind": "deck",
+      "width": 390,
+      "scenario": "different",
+      "overflow": false,
+      "errors": [],
+      "writes": 0
+    },
+    {
+      "kind": "deck",
+      "width": 390,
+      "scenario": "no-evidence",
+      "overflow": false,
+      "errors": [],
+      "writes": 0
+    },
+    {
+      "kind": "gas",
+      "width": 320,
+      "scenario": "empty",
+      "overflow": false,
+      "errors": [],
+      "writes": 1
+    },
+    {
+      "kind": "gas",
+      "width": 320,
+      "scenario": "waiting",
+      "overflow": false,
+      "errors": [],
+      "writes": 2
+    },
+    {
+      "kind": "gas",
+      "width": 320,
+      "scenario": "matched",
+      "overflow": false,
+      "errors": [],
+      "writes": 0
+    },
+    {
+      "kind": "gas",
+      "width": 320,
+      "scenario": "corrected",
+      "overflow": false,
+      "errors": [],
+      "writes": 0
+    },
+    {
+      "kind": "gas",
+      "width": 320,
+      "scenario": "stopped",
+      "overflow": false,
+      "errors": [],
+      "writes": 1
+    },
+    {
+      "kind": "gas",
+      "width": 320,
+      "scenario": "lost-saved",
+      "overflow": false,
+      "errors": [],
+      "writes": 1
+    },
+    {
+      "kind": "gas",
+      "width": 320,
+      "scenario": "lost-unchanged",
+      "overflow": false,
+      "errors": [],
+      "writes": 2
+    },
+    {
+      "kind": "gas",
+      "width": 320,
+      "scenario": "lost-conflict",
+      "overflow": false,
+      "errors": [],
+      "writes": 1
+    },
+    {
+      "kind": "gas",
+      "width": 320,
+      "scenario": "validation",
+      "overflow": false,
+      "errors": [],
+      "writes": 1
+    },
+    {
+      "kind": "gas",
+      "width": 320,
+      "scenario": "failure",
+      "overflow": false,
+      "errors": [],
+      "writes": 0
+    },
+    {
+      "kind": "gas",
+      "width": 320,
+      "scenario": "account-change",
+      "overflow": false,
+      "errors": [],
+      "writes": 0
+    },
+    {
+      "kind": "gas",
+      "width": 320,
+      "scenario": "different",
+      "overflow": false,
+      "errors": [],
+      "writes": 0
+    },
+    {
+      "kind": "gas",
+      "width": 320,
+      "scenario": "no-evidence",
+      "overflow": false,
+      "errors": [],
+      "writes": 0
+    },
+    {
+      "kind": "gas",
+      "width": 390,
+      "scenario": "empty",
+      "overflow": false,
+      "errors": [],
+      "writes": 1
+    },
+    {
+      "kind": "gas",
+      "width": 390,
+      "scenario": "waiting",
+      "overflow": false,
+      "errors": [],
+      "writes": 2
+    },
+    {
+      "kind": "gas",
+      "width": 390,
+      "scenario": "matched",
+      "overflow": false,
+      "errors": [],
+      "writes": 0
+    },
+    {
+      "kind": "gas",
+      "width": 390,
+      "scenario": "corrected",
+      "overflow": false,
+      "errors": [],
+      "writes": 0
+    },
+    {
+      "kind": "gas",
+      "width": 390,
+      "scenario": "stopped",
+      "overflow": false,
+      "errors": [],
+      "writes": 1
+    },
+    {
+      "kind": "gas",
+      "width": 390,
+      "scenario": "lost-saved",
+      "overflow": false,
+      "errors": [],
+      "writes": 1
+    },
+    {
+      "kind": "gas",
+      "width": 390,
+      "scenario": "lost-unchanged",
+      "overflow": false,
+      "errors": [],
+      "writes": 2
+    },
+    {
+      "kind": "gas",
+      "width": 390,
+      "scenario": "lost-conflict",
+      "overflow": false,
+      "errors": [],
+      "writes": 1
+    },
+    {
+      "kind": "gas",
+      "width": 390,
+      "scenario": "validation",
+      "overflow": false,
+      "errors": [],
+      "writes": 1
+    },
+    {
+      "kind": "gas",
+      "width": 390,
+      "scenario": "failure",
+      "overflow": false,
+      "errors": [],
+      "writes": 0
+    },
+    {
+      "kind": "gas",
+      "width": 390,
+      "scenario": "account-change",
+      "overflow": false,
+      "errors": [],
+      "writes": 0
+    },
+    {
+      "kind": "gas",
+      "width": 390,
+      "scenario": "different",
+      "overflow": false,
+      "errors": [],
+      "writes": 0
+    },
+    {
+      "kind": "gas",
+      "width": 390,
+      "scenario": "no-evidence",
+      "overflow": false,
+      "errors": [],
+      "writes": 0
+    },
+    {
+      "kind": "electricity",
+      "width": 320,
+      "scenario": "empty",
+      "overflow": false,
+      "errors": [],
+      "writes": 1
+    },
+    {
+      "kind": "electricity",
+      "width": 320,
+      "scenario": "waiting",
+      "overflow": false,
+      "errors": [],
+      "writes": 2
+    },
+    {
+      "kind": "electricity",
+      "width": 320,
+      "scenario": "matched",
+      "overflow": false,
+      "errors": [],
+      "writes": 0
+    },
+    {
+      "kind": "electricity",
+      "width": 320,
+      "scenario": "corrected",
+      "overflow": false,
+      "errors": [],
+      "writes": 0
+    },
+    {
+      "kind": "electricity",
+      "width": 320,
+      "scenario": "stopped",
+      "overflow": false,
+      "errors": [],
+      "writes": 1
+    },
+    {
+      "kind": "electricity",
+      "width": 320,
+      "scenario": "lost-saved",
+      "overflow": false,
+      "errors": [],
+      "writes": 1
+    },
+    {
+      "kind": "electricity",
+      "width": 320,
+      "scenario": "lost-unchanged",
+      "overflow": false,
+      "errors": [],
+      "writes": 2
+    },
+    {
+      "kind": "electricity",
+      "width": 320,
+      "scenario": "lost-conflict",
+      "overflow": false,
+      "errors": [],
+      "writes": 1
+    },
+    {
+      "kind": "electricity",
+      "width": 320,
+      "scenario": "validation",
+      "overflow": false,
+      "errors": [],
+      "writes": 1
+    },
+    {
+      "kind": "electricity",
+      "width": 320,
+      "scenario": "failure",
+      "overflow": false,
+      "errors": [],
+      "writes": 0
+    },
+    {
+      "kind": "electricity",
+      "width": 320,
+      "scenario": "account-change",
+      "overflow": false,
+      "errors": [],
+      "writes": 0
+    },
+    {
+      "kind": "electricity",
+      "width": 320,
+      "scenario": "different",
+      "overflow": false,
+      "errors": [],
+      "writes": 0
+    },
+    {
+      "kind": "electricity",
+      "width": 320,
+      "scenario": "no-evidence",
+      "overflow": false,
+      "errors": [],
+      "writes": 0
+    },
+    {
+      "kind": "electricity",
+      "width": 390,
+      "scenario": "empty",
+      "overflow": false,
+      "errors": [],
+      "writes": 1
+    },
+    {
+      "kind": "electricity",
+      "width": 390,
+      "scenario": "waiting",
+      "overflow": false,
+      "errors": [],
+      "writes": 2
+    },
+    {
+      "kind": "electricity",
+      "width": 390,
+      "scenario": "matched",
+      "overflow": false,
+      "errors": [],
+      "writes": 0
+    },
+    {
+      "kind": "electricity",
+      "width": 390,
+      "scenario": "corrected",
+      "overflow": false,
+      "errors": [],
+      "writes": 0
+    },
+    {
+      "kind": "electricity",
+      "width": 390,
+      "scenario": "stopped",
+      "overflow": false,
+      "errors": [],
+      "writes": 1
+    },
+    {
+      "kind": "electricity",
+      "width": 390,
+      "scenario": "lost-saved",
+      "overflow": false,
+      "errors": [],
+      "writes": 1
+    },
+    {
+      "kind": "electricity",
+      "width": 390,
+      "scenario": "lost-unchanged",
+      "overflow": false,
+      "errors": [],
+      "writes": 2
+    },
+    {
+      "kind": "electricity",
+      "width": 390,
+      "scenario": "lost-conflict",
+      "overflow": false,
+      "errors": [],
+      "writes": 1
+    },
+    {
+      "kind": "electricity",
+      "width": 390,
+      "scenario": "validation",
+      "overflow": false,
+      "errors": [],
+      "writes": 1
+    },
+    {
+      "kind": "electricity",
+      "width": 390,
+      "scenario": "failure",
+      "overflow": false,
+      "errors": [],
+      "writes": 0
+    },
+    {
+      "kind": "electricity",
+      "width": 390,
+      "scenario": "account-change",
+      "overflow": false,
+      "errors": [],
+      "writes": 0
+    },
+    {
+      "kind": "electricity",
+      "width": 390,
+      "scenario": "different",
+      "overflow": false,
+      "errors": [],
+      "writes": 0
+    },
+    {
+      "kind": "electricity",
+      "width": 390,
+      "scenario": "no-evidence",
+      "overflow": false,
+      "errors": [],
+      "writes": 0
+    }
+  ],
+  "method": "Actual React Native components through React Native Web. Explicit synthetic fixtures and API/router/native boundary mocks. Not device acceptance."
+}

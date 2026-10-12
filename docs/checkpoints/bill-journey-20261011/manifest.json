@@ -1,0 +1,13 @@
+{
+  "baseCheckpoint": "63cc2af381c4cc6cc2679fd8214399e51b499904",
+  "files": [
+    {
+      "path": "apps/mobile/app/bill/outcome.tsx",
+      "sha256": "6e705a1ecaba831c277f3194488514432905a5530678286ecb2c18ab2b850abf"
+    },
+    {
+      "path": "scripts/qa/render-bill-journey.cjs",
+      "sha256": "ca36c5f27cf0196a796decf0f5e3b5c36e3f5ab14aa27cfc43ed36af52c41fb8"
+    }
+  ]
+}
