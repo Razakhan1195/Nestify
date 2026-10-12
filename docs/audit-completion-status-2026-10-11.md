@@ -37,4 +37,6 @@ The bill journey engineering pass is recorded in bill-journey-review-2026-10-11.
 
 Latest household pass: phone-invite-recovery-2026-10-12.md. Invitation retries preserve their original identity and link, restoration gates editing, and account changes isolate sender/recipient screens. 903 regression tests, 16 rendered checks and 23 hosted phone-membership checks passed. No SMS/email was sent. Reload Expo 8081 for the client changes; backend unchanged.
 
-Next engineering priority: authentication/deep-link recovery, followed by notifications and connected-account deletion/revocation. Real invitation delivery and two-device access still require physical acceptance. Provider pilots and existing native capture/Care/repair gates remain open; no overall launch sign-off is implied.
+Latest authentication entry pass: auth-entry-recovery-2026-10-12.md fixes failed required recovery reads, retries and stale-account destinations. 34 actual-component rendered scenarios and 903 regression tests pass. Client available after reload on Expo 8081; no backend deployment. Physical password-reset/link and native OAuth acceptance remain open.
+
+Next engineering priority: notification destination/recovery, followed by connected-account deletion/revocation. Real invitation delivery and two-device access still require physical acceptance. Provider pilots and existing native capture/Care/repair gates remain open; no overall launch sign-off is implied.

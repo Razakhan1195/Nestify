@@ -1,0 +1,22 @@
+[
+  {
+    "path": "apps/mobile/app/index.tsx",
+    "new": false,
+    "sha256": "4cdc35846dfdc6f5c73b4d8aedbcbdf8aed6ed58096beba37b6e0b9d5391b524"
+  },
+  {
+    "path": "scripts/qa/render-auth-entry-recovery.cjs",
+    "new": true,
+    "sha256": "5a1124b5a7b4d45bdb6526f3bbd0bfcee93ee79b9b83e800835adbbaf34cae1f"
+  },
+  {
+    "path": "docs/audit-completion-status-2026-10-11.md",
+    "new": false,
+    "sha256": "528ab3794fc7d351b5421ebc0d27a9868b936f9c012577fc589d4bbed6e62ed2"
+  },
+  {
+    "path": "docs/auth-entry-recovery-2026-10-12.md",
+    "new": true,
+    "sha256": "2851744380f37c281a86c3b961e8c085eb317f3055cb747db4014a9ad7111d2a"
+  }
+]
