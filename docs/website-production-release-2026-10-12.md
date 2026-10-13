@@ -31,3 +31,7 @@
 - Advertising-tracker consent and actual network behaviour should be verified whenever a tracker is enabled, especially any server-side events.
 - A live *successful* POST with a new disposable email was not performed to avoid consuming or changing a production membership. Do not claim it was tested.
 - For rollback, promote the previous deployment ID, then verify rezlee.com pages and signup.
+
+## Live responsive QA
+- Actual rezlee.com rendered through Chrome device emulation at 360px, 390px and 1280px without horizontal overflow.
+- Visually inspected the live mobile waitlist: one email field, one primary button, no checkbox, and working visible links to offer terms and privacy.
