@@ -1,5 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { NextRequest } from "next/server";
 import { middleware } from "../src/middleware";
 import { customerWebAccessEnabled, isCustomerWebRoute } from "../src/lib/auth/web-access";
@@ -50,4 +51,12 @@ test("operator access still requires the configured UUID allowlist", () => {
   assert.equal(operatorAllowed(operator, {REZLEE_OPS_ENABLED: "true", REZLEE_OPS_USER_IDS: operator}), true);
   assert.equal(operatorAllowed(other, {REZLEE_OPS_ENABLED: "true", REZLEE_OPS_USER_IDS: operator}), false);
   assert.equal(operatorAllowed(operator, {}), false);
+});
+
+test("visiting the public homepage never forces an operator into admin", () => {
+  const source = readFileSync("src/app/page.tsx", "utf8");
+  assert.match(source, /RezleeLanding/);
+  assert.doesNotMatch(source, /operatorAccess|redirect\s*\(\s*["\x27]\/admin/);
+  const admin = readFileSync("src/app/admin/waitlist/page.tsx", "utf8");
+  assert.match(admin, /operatorAccess/);
 });

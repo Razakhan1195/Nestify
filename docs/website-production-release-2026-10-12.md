@@ -35,3 +35,11 @@
 ## Live responsive QA
 - Actual rezlee.com rendered through Chrome device emulation at 360px, 390px and 1280px without horizontal overflow.
 - Visually inspected the live mobile waitlist: one email field, one primary button, no checkbox, and working visible links to offer terms and privacy.
+
+## Homepage admin redirect hotfix
+- The homepage previously checked `operatorAccess()` and redirected authorized admin sessions to `/admin`, which in turn redirected to `/admin/waitlist`. This caused the public domain to behave like an admin bookmark for signed-in operators.
+- `src/app/page.tsx` now always renders the public landing page. Admin routes retain independent authorization via `operatorAccess()`. The customer web feature gate remains unchanged.
+- Added a regression test verifying the homepage no longer redirects to admin and the admin dashboard still checks authorization.
+- TypeScript, targeted lint and all 24 production-baseline tests passed.
+- Host deployment: dpl_6HyuyJGdKq9YGJ7SuzAQimocAL2i (https://nestify-nraugrkde-razakhan1195s-projects.vercel.app). Promoted to rezlee.com. Previous deployment dpl_3qYdGkQVGrDVbcb45hJavyEKqR7r remains available for rollback.
+- Live smoke checks: / returns 200 with "Less home admin" public hero; unauthenticated /admin/waitlist redirects to /admin/access; /privacy and /waitlist/privacy return 200.
