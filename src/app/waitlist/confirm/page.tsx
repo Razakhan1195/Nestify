@@ -1,24 +1,26 @@
 import Link from "next/link";
-import { WaitlistAction } from "@/components/marketing/waitlist-action";
 import type { Metadata } from "next";
-export const dynamic = "force-dynamic";
+
 export const metadata: Metadata = {
+  title: "Waitlist update | Rezlee",
   robots: { index: false, follow: false },
   referrer: "no-referrer",
 };
-export default async function Page({
-  searchParams,
-}: {
-  searchParams: Promise<{ id?: string; token?: string }>;
-}) {
-  const p = await searchParams;
+export default function Page() {
   return (
-    <main className="mx-auto min-h-screen max-w-lg px-6 py-16">
-      <p className="mb-8 font-semibold text-primary">
-        REZLEE · FOUNDING MEMBERS
+    <main className="mx-auto min-h-screen max-w-lg space-y-5 px-6 py-16">
+      <p className="font-semibold text-primary">REZLEE · FOUNDING MEMBERS</p>
+      <h1 className="text-3xl font-semibold">No confirmation needed.</h1>
+      <p>
+        We’ve simplified the Rezlee waitlist. If you previously signed up,
+        you no longer need to confirm your email. Existing reservations are
+        preserved.
       </p>
-      <WaitlistAction action="confirm" id={p.id ?? ""} token={p.token ?? ""} />
-      <Link href="/#waitlist" className="mt-8 block underline">
+      <p>
+        Want to check? Enter the same email on our waitlist form.
+        Your existing registration won’t use another membership place.
+      </p>
+      <Link href="/#waitlist" className="inline-block underline">
         Back to Rezlee
       </Link>
     </main>
