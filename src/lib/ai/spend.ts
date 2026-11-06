@@ -1,18 +1,27 @@
+import { independentAiMiddleware, independentOpenAIModel, spendModelId } from "./independent-input";
 import { privateAiMiddleware } from "./privacy-policy";
 import { verifiedZeroCostRejection } from "./failure-receipt";
 import { randomUUID } from "node:crypto";
 import { gateway } from "@ai-sdk/gateway";
-import { wrapLanguageModel, type LanguageModel } from "ai";
+import { wrapLanguageModel, type LanguageModel, type LanguageModelMiddleware } from "ai";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { completeUsage, spendMiddleware, type SpendFeature } from "./spend-policy";
 /** Separate identity for every actual attempt, including retries, streams and explicit fallbacks. */
 export function budgetedModel(model: LanguageModel, feature: SpendFeature, observe?: (event: {stage: "reserve" | "settle"; elapsedMs: number; success: boolean}) => void) {
+  return modelWithBudget(model, feature, privateAiMiddleware(), observe);
+}
+/** Only fresh, independently supplied inputs may opt into this entry point. */
+export function independentInputModel(fallback: LanguageModel, feature: SpendFeature) {
+  const direct = independentOpenAIModel();
+  return direct ? modelWithBudget(direct, feature, independentAiMiddleware()) : budgetedModel(fallback, feature);
+}
+function modelWithBudget(model: LanguageModel, feature: SpendFeature, privacy: LanguageModelMiddleware, observe?: (event: {stage: "reserve" | "settle"; elapsedMs: number; success: boolean}) => void) {
   const resolved = typeof model === "string" ? gateway(model) : model;
   if (resolved.specificationVersion !== "v3") throw new Error("This AI operation is not available.");
-  return wrapLanguageModel({ model: resolved, middleware: [privateAiMiddleware(), spendMiddleware(async () => {
+  return wrapLanguageModel({ model: resolved, middleware: [privacy, spendMiddleware(async () => {
     const id = randomUUID(), db = createAdminClient(), started = Date.now();
     try {
-      const r = await db.rpc("reserve_rezlee_ai_attempt", { p_id: id, p_feature: feature, p_model: resolved.modelId });
+      const r = await db.rpc("reserve_rezlee_ai_attempt", { p_id: id, p_feature: feature, p_model: spendModelId(resolved.provider, resolved.modelId) });
       observe?.({stage: "reserve", elapsedMs: Date.now() - started, success: !r.error && r.data === "allowed"});
       if (r.error || r.data !== "allowed") return false;
       return { settle: async usage => {

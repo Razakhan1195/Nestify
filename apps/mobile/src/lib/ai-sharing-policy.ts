@@ -1,6 +1,6 @@
 export const AI_SHARING_VERSION = "2026-10-13";
 export const AI_SHARING_TITLE = "Choose how Rezlee uses AI";
-export const AI_SHARING_DESCRIPTION = "When you ask for AI help, Rezlee sends your question, selected files or email content, and relevant saved household details to Google or OpenAI. Vercel may route these requests. These services process the information to read documents and provide answers or suggestions.";
+export const AI_SHARING_DESCRIPTION = "When you ask for AI help, Rezlee sends your question, selected files or email content, and relevant saved household details to Google or OpenAI. Vercel may route these requests. These services process the information to read documents and provide answers or suggestions. Fresh uploads and descriptions may go directly to OpenAI, which may keep safety logs for up to 30 days (longer if legally required). We do not opt your content into model training. Gmail data and saved household context use protected routing.";
 export const AI_SHARING_CONTROL = "AI is optional. You can keep adding and reviewing records manually. Change this choice in Settings → AI privacy. Gmail connection permission is separate.";
 export function requestUsesAi(path:string,body?:unknown){
  const p=path.split("?")[0],b=body&&typeof body==="object"?body as Record<string,unknown>:{};

@@ -63,18 +63,18 @@ export async function POST(req: Request) {
 
   try {
     if (kind === "appliance") {
-      const data = await extractAppliance(part);
+      const data = await extractAppliance(part, "independent");
       return Response.json({ kind, data });
     }
     if (kind === "warranty") {
-      const data = await extractWarranty(part);
+      const data = await extractWarranty(part, "independent");
       return Response.json({ kind, data });
     }
     if (kind === "bill") {
-      const data = await extractBill(part);
+      const data = await extractBill(part, "independent");
       return Response.json({ kind, data });
     }
-    const data = await classifyDocument(part);
+    const data = await classifyDocument(part, "independent");
     return Response.json({ kind, data });
   } catch {
     console.error("[v0] ai scan failed");
