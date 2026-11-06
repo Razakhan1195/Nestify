@@ -6,7 +6,7 @@ Decision date: November 6, 2026
 
 Authority: Raza's instruction to implement useful OpenAI processing with proportionate safeguards.
 
-Status: implementation candidate; activation and live provider acceptance pending a dedicated API key. This document does not record ZDR approval.
+Status: adopted policy. Direct processing has a dedicated production key and has passed live document extraction. Deployment, activation and test evidence are recorded in the dated release checkpoint; this document does not record ZDR approval.
 
 ## Policy
 
