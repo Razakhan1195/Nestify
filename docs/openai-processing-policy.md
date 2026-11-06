@@ -30,7 +30,7 @@ This is an initial implementation boundary, not a permanent prohibition on using
 - Dedicated server secret REZLEE_OPENAI_API_KEY; no mobile/web bundle secret. Require REZLEE_OPENAI_DIRECT_ENABLED=true as well.
 - Fixed official Responses endpoint and gpt-5-mini. No arbitrary base URL, model, API-key or routing override from a request.
 - store:false; no previous response/conversation, hosted tools, remote file references or Files API uploads. PDF/image data is sent inline and filenames are generic.
-- Standard API processing is not ZDR. OpenAI does not train on API content by default; standard abuse-monitoring content may be retained for up to 30 days, with applicable legal exceptions. Service metadata is distinct from response storage.
+- Standard API processing is not ZDR. OpenAI does not train on API content by default; standard abuse-monitoring content may be retained for up to 30 days, with applicable legal and safety exceptions. Service metadata is distinct from response storage.
 - Existing authenticated consent, ownership, daily allowances, rate controls and dollar reservations remain in effect. Every provider attempt must reserve before disclosure and settle using reported input/output totals, including reasoning tokens.
 - Direct gpt-5-mini maps to the existing openai/gpt-5-mini price record. No unpriced model is admitted. Unknown failures keep their reservation.
 - No automatic fallback from protected data to standard-retention OpenAI. Missing direct configuration preserves protected routing. A failed configured direct request returns the existing recoverable customer error; it does not silently fan out to another provider.
@@ -41,6 +41,14 @@ This is an initial implementation boundary, not a permanent prohibition on using
 AI remains optional, with revocation in Settings → AI privacy and manual entry/review available. This change keeps the existing named providers, purposes and server-enforced permission. The shared disclosure and website policy now explicitly explain standard OpenAI retention versus protected Gmail processing.
 
 The existing consent version is retained because the published policy already distinguished independently supplied information from Google data and did not promise universal zero retention. Do not claim renewed consent was collected. Publish the matching privacy notice before activating direct traffic; include the revised in-app explanation in the next native build. If the purpose, recipients or material commitments change beyond this scope, update the consent version and deployment together.
+
+## Connected records and uploaded information
+
+AI permission covers the disclosed household features using relevant connected-provider bills, independently uploaded information and saved records together. It is not limited to the file attached to the latest question. Keep the data sources, purposes and named AI processors visible in the existing permission explanation; do not ask again for every bill or question within that scope. Provider retrieval authorisation and optional AI permission remain distinct.
+
+Renew permission where a material change introduces a new purpose or materially different sharing; a clearer example of an existing disclosed purpose does not itself create a new purpose. Any enabled background AI feature must fall within the explanation and recheck permission. This clarification does not enable background features or change source routing.
+
+The saved-data route is an implementation boundary because records can contain Gmail-derived information, not a general rule that utility data or saved documents legally require ZDR. New provenance-aware routing can be considered under the existing review procedure.
 
 ## Activation procedure
 
