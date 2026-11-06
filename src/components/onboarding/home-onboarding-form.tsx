@@ -4,6 +4,7 @@ import { useActionState } from "react";
 
 import { createHome, type ActionState } from "@/app/actions";
 import { SubmitButton } from "@/components/submit-button";
+import { homeTypeOptions, ownershipTypeOptions } from "@/lib/onboarding/config";
 import {
   Card,
   CardContent,
@@ -26,12 +27,12 @@ export type HomeOnboardingDefaults = {
   street_address?: string;
 };
 
-function FieldError({ errors }: { errors?: string[] }) {
+function FieldError({ errors, field }: { errors?: string[]; field: string }) {
   if (!errors?.length) {
     return null;
   }
 
-  return <p className="text-sm text-destructive">{errors[0]}</p>;
+  return <p id={field + "-error"} role="alert" className="text-sm text-destructive">{errors[0]}</p>;
 }
 
 export function HomeOnboardingForm({
@@ -62,6 +63,8 @@ export function HomeOnboardingForm({
             <Label htmlFor="nickname">Nickname</Label>
             <Input
               defaultValue={defaults.nickname}
+              aria-invalid={Boolean(state.errors?.nickname?.length)}
+              aria-describedby={state.errors?.nickname?.length ? "nickname-error" : undefined}
               id="nickname"
               name="nickname"
               placeholder="Main home"
@@ -70,7 +73,7 @@ export function HomeOnboardingForm({
             <p className="text-xs text-muted-foreground">
               Use whatever you call it day to day, like Main home or Condo.
             </p>
-            <FieldError errors={state.errors?.nickname} />
+            <FieldError field="nickname" errors={state.errors?.nickname} />
           </div>
 
           <div className="grid gap-2">
@@ -78,6 +81,8 @@ export function HomeOnboardingForm({
             <Input
               autoComplete="street-address"
               defaultValue={defaults.street_address}
+              aria-invalid={Boolean(state.errors?.street_address?.length)}
+              aria-describedby={state.errors?.street_address?.length ? "street_address-error" : undefined}
               id="street_address"
               name="street_address"
               placeholder="123 King St W"
@@ -86,7 +91,7 @@ export function HomeOnboardingForm({
               This helps organize records by property. You can leave unit or
               extra address details for later.
             </p>
-            <FieldError errors={state.errors?.street_address} />
+            <FieldError field="street_address" errors={state.errors?.street_address} />
           </div>
 
           <div className="grid gap-4 sm:grid-cols-3">
@@ -95,76 +100,81 @@ export function HomeOnboardingForm({
               <Input
                 autoComplete="address-level2"
                 defaultValue={defaults.city}
+                aria-invalid={Boolean(state.errors?.city?.length)}
+                aria-describedby={state.errors?.city?.length ? "city-error" : undefined}
                 id="city"
                 name="city"
                 required
               />
-              <FieldError errors={state.errors?.city} />
+              <FieldError field="city" errors={state.errors?.city} />
             </div>
             <div className="grid gap-2">
               <Label htmlFor="province">Province</Label>
               <Input
                 autoComplete="address-level1"
                 defaultValue={defaults.province}
+                aria-invalid={Boolean(state.errors?.province?.length)}
+                aria-describedby={state.errors?.province?.length ? "province-error" : undefined}
                 id="province"
                 name="province"
                 placeholder="ON"
                 required
               />
-              <FieldError errors={state.errors?.province} />
+              <FieldError field="province" errors={state.errors?.province} />
             </div>
             <div className="grid gap-2">
-              <Label htmlFor="postal_code">Postal code</Label>
+              <Label htmlFor="postal_code">Postal code (optional)</Label>
               <Input
                 autoComplete="postal-code"
                 defaultValue={defaults.postal_code}
+                aria-invalid={Boolean(state.errors?.postal_code?.length)}
+                aria-describedby={state.errors?.postal_code?.length ? "postal_code-error" : undefined}
                 id="postal_code"
                 name="postal_code"
                 placeholder="M5V 1A1"
-                required
               />
-              <FieldError errors={state.errors?.postal_code} />
+              <FieldError field="postal_code" errors={state.errors?.postal_code} />
             </div>
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="grid gap-2">
-              <Label htmlFor="home_type">Home type</Label>
+              <Label htmlFor="home_type">Home type (optional)</Label>
               <select
                 className="h-8 w-full rounded-lg border border-input bg-background px-2.5 text-sm outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
                 defaultValue={defaults.home_type ?? ""}
+                aria-invalid={Boolean(state.errors?.home_type?.length)}
+                aria-describedby={state.errors?.home_type?.length ? "home_type-error" : undefined}
                 id="home_type"
                 name="home_type"
-                required
               >
                 <option value="">Choose a type</option>
-                <option value="Detached">Detached</option>
-                <option value="Semi-detached">Semi-detached</option>
-                <option value="Townhouse">Townhouse</option>
-                <option value="Condo">Condo</option>
-                <option value="Apartment">Apartment</option>
-                <option value="Other">Other</option>
+                {homeTypeOptions.map((option) => (
+                  <option key={option} value={option}>
+                    {option}
+                  </option>
+                ))}
               </select>
-              <FieldError errors={state.errors?.home_type} />
+              <FieldError field="home_type" errors={state.errors?.home_type} />
             </div>
             <div className="grid gap-2">
-              <Label htmlFor="ownership_type">How do you live here?</Label>
+              <Label htmlFor="ownership_type">Living situation (optional)</Label>
               <select
                 className="h-8 w-full rounded-lg border border-input bg-background px-2.5 text-sm outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
                 defaultValue={defaults.ownership_type ?? ""}
+                aria-invalid={Boolean(state.errors?.ownership_type?.length)}
+                aria-describedby={state.errors?.ownership_type?.length ? "ownership_type-error" : undefined}
                 id="ownership_type"
                 name="ownership_type"
-                required
               >
                 <option value="">Choose what fits</option>
-                <option value="Own">Own</option>
-                <option value="Rent">Rent</option>
-                <option value="Shared home">Shared with roommates</option>
-                <option value="Family home">Family home</option>
-                <option value="Investment property">Investment property</option>
-                <option value="Other">Other</option>
+                {ownershipTypeOptions.map((option) => (
+                  <option key={option} value={option}>
+                    {option === "Shared home" ? "Shared with roommates" : option}
+                  </option>
+                ))}
               </select>
-              <FieldError errors={state.errors?.ownership_type} />
+              <FieldError field="ownership_type" errors={state.errors?.ownership_type} />
             </div>
           </div>
 
@@ -172,12 +182,12 @@ export function HomeOnboardingForm({
             <Label htmlFor="closing_date">
               Move-in or closing date (optional)
             </Label>
-            <Input id="closing_date" name="closing_date" type="date" />
+            <Input aria-invalid={Boolean(state.errors?.closing_date?.length)} aria-describedby={state.errors?.closing_date?.length ? "closing_date-error" : undefined} id="closing_date" name="closing_date" type="date" />
             <p className="text-xs text-muted-foreground">
               Optional. Useful later for insurance, taxes, warranties, and home
               history.
             </p>
-            <FieldError errors={state.errors?.closing_date} />
+            <FieldError field="closing_date" errors={state.errors?.closing_date} />
           </div>
 
           <div className="grid gap-2">
@@ -185,6 +195,8 @@ export function HomeOnboardingForm({
               Approximate year built
             </Label>
             <Input
+              aria-invalid={Boolean(state.errors?.approximate_year_built?.length)}
+              aria-describedby={state.errors?.approximate_year_built?.length ? "approximate_year_built-error" : undefined}
               id="approximate_year_built"
               inputMode="numeric"
               name="approximate_year_built"
@@ -194,7 +206,7 @@ export function HomeOnboardingForm({
             <p className="text-xs text-muted-foreground">
               Optional. This can power maintenance recommendations later.
             </p>
-            <FieldError errors={state.errors?.approximate_year_built} />
+            <FieldError field="approximate_year_built" errors={state.errors?.approximate_year_built} />
           </div>
 
           <SubmitButton

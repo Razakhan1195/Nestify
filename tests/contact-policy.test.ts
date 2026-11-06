@@ -1,0 +1,8 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+import {parseContact,contactMail,contactDeliveryKey} from "../src/lib/contact/policy";
+const base={id:"a54f8ebc-72a7-4d7d-9c69-1b19b3f8a120",email:"  Person@Example.com ",name:" Person ",topic:"App support",message:"The screen does not load."};
+test("valid contact requests normalize email and preserve useful text",()=>{const p=parseContact(base);assert(p);assert.equal(p.email,"person@example.com");assert.equal(p.name,"Person");assert.equal(p.message,base.message);});
+test("reject invalid emails, arbitrary topics, malformed IDs and oversized messages",()=>{for(const x of [{email:"a@example.com\nBcc: x@example.com"},{topic:"arbitrary\nsubject"},{id:"abc"},{message:"short"},{message:"a".repeat(3001)},{name:"a".repeat(81)}])assert.equal(parseContact({...base,...x}),null);assert.equal(parseContact(null),null);assert.equal(parseContact([]),null);});
+test("support destination cannot be selected by a form submission",()=>{const p=parseContact({...base,to:"attacker@example.com",subject:"other",message:"<script>alert(1)</script>"});assert(p);const mail=contactMail(p,"Rezlee <hello@example.com>","support@example.com");assert.deepEqual(mail.to,["support@example.com"]);assert.equal(mail.reply_to,"person@example.com");assert.equal(mail.subject,"Rezlee contact: App support");assert(!("html" in mail));assert(mail.text.includes("unverified website submission"));});
+test("same request retries use one delivery key; corrected content changes it",()=>{const p=parseContact(base)!;assert.equal(contactDeliveryKey(p),contactDeliveryKey({...p}));assert.notEqual(contactDeliveryKey(p),contactDeliveryKey({...p,message:"A corrected support question"}));assert(!contactDeliveryKey(p).includes(p.email));});

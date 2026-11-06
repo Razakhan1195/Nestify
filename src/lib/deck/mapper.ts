@@ -78,6 +78,12 @@ export function mapDeckBillToBillRow(input: {
   providerId: string;
 }) {
   const { bill, homeId, providerId, userId } = input;
+  const paymentStatus = bill.paymentStatus?.trim().toLowerCase() ?? null;
+  const paid = paymentStatus === "paid" || paymentStatus === "paid_in_full";
+  const statementAmount = bill.statementAmount ?? bill.amountDue;
+  const amountPaid =
+    bill.amountPaid ??
+    (paid && statementAmount !== null ? statementAmount : null);
 
   return {
     user_id: userId,
@@ -85,7 +91,19 @@ export function mapDeckBillToBillRow(input: {
     provider_id: providerId,
     external_bill_id: bill.externalBillId,
     name: `${bill.providerName} bill`,
-    amount: bill.amountDue,
+    amount: statementAmount,
+    current_amount_due: bill.amountDue,
+    amount_paid: amountPaid,
+    payment_date: bill.paymentDate ?? null,
+    autopay_status:
+      bill.autopayEnrolled === true
+        ? "enrolled"
+        : bill.autopayEnrolled === false
+          ? "not_enrolled"
+          : null,
+    autopay_scheduled_amount: bill.autopayScheduledAmount ?? null,
+    autopay_scheduled_date: bill.autopayScheduledDate ?? null,
+    autopay_payment_method: bill.autopayPaymentMethod ?? null,
     currency: bill.currency,
     due_date: bill.dueDate,
     issue_date: bill.issueDate,
@@ -103,6 +121,17 @@ export function mapDeckBillToBillRow(input: {
       category: bill.category,
       rawData: bill.rawData,
     },
-    status: "upcoming",
+    payment_status:
+      paid
+        ? "paid"
+        : paymentStatus === "scheduled" || paymentStatus === "partial"
+          ? paymentStatus
+          : "unpaid",
+    status:
+      paid
+        ? "paid"
+        : bill.amountDue === null || !bill.dueDate || !bill.category.trim()
+          ? "incomplete"
+          : "upcoming",
   };
 }

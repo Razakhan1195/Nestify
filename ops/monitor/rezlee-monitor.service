@@ -1,0 +1,20 @@
+[Unit]
+Description=Rezlee independent health and alert check
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+DynamicUser=yes
+StateDirectory=rezlee-monitor
+StateDirectoryMode=0700
+EnvironmentFile=/etc/rezlee/monitor.env
+Environment=REZLEE_MONITOR_STATE_FILE=/var/lib/rezlee-monitor/state.json
+ExecStart=/usr/bin/node /opt/rezlee/scripts/monitor-release.mjs
+TimeoutStartSec=40
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ProtectHome=yes
+UMask=0077
+

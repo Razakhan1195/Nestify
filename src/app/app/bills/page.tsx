@@ -1,3 +1,4 @@
+import {effectiveBillTable} from "@/lib/product/bill-records";
 import { FilterLinks } from "@/components/product/filter-links";
 import { classifyBillStatus } from "@/lib/product/rules";
 import { SubmitButton } from "@/components/submit-button";
@@ -298,7 +299,7 @@ export default async function BillsPage({ searchParams }: BillsPageProps) {
   const home = await requireCurrentUserHome(user.id);
   const [{ data: bills, error }, { data: providers }] = await Promise.all([
     supabase
-      .from("bills")
+      .from(effectiveBillTable())
       .select(
         "id,name,amount,currency,due_date,status,source,payment_status,recurrence,custom_provider_name,provider_id,raw_data,providers!bills_provider_id_fkey(display_name,name,provider_priority)",
       )

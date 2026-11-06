@@ -1,0 +1,17 @@
+name: Publish reviewed candidate update
+on:
+  workflow_dispatch: {}
+jobs:
+  update_candidate:
+    type: update
+    environment: production
+    env:
+      EAS_BUILD_PROFILE: production-candidate
+      EXPO_NO_DOTENV: '1'
+    params:
+      platform: all
+      channel: production-candidate
+      upload_sentry_sourcemaps: true
+    hooks:
+      before_update:
+        - run: node scripts/validate-update.cjs

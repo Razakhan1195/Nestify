@@ -1,5 +1,5 @@
 import * as Haptics from "expo-haptics";
-import { Pressable, ScrollView, Text } from "react-native";
+import { Pressable, ScrollView, Text, View, useWindowDimensions } from "react-native";
 
 import { colors, radii, spacing } from "@/theme/tokens";
 
@@ -16,11 +16,13 @@ export function FilterChips<T extends string>({
   selected,
   onSelect,
 }: FilterChipsProps<T>) {
+  const {fontScale}=useWindowDimensions();
+  const wrap=fontScale>1.3;
+  const Container=wrap?View:ScrollView;
   return (
-    <ScrollView
-      horizontal
-      showsHorizontalScrollIndicator={false}
-      contentContainerStyle={{ gap: spacing.sm }}
+    <Container
+      {...(!wrap?{horizontal:true,showsHorizontalScrollIndicator:false,keyboardShouldPersistTaps:"handled" as const,contentContainerStyle:{gap:spacing.sm}}:{style:{flexDirection:"row" as const,flexWrap:"wrap" as const,gap:spacing.sm}})}
+
     >
       {options.map((option) => {
         const isActive = option.value === selected;
@@ -30,21 +32,27 @@ export function FilterChips<T extends string>({
             accessibilityRole="button"
             accessibilityState={{ selected: isActive }}
             onPress={() => {
-              Haptics.selectionAsync();
+              if (isActive) return;
+              void Haptics.selectionAsync().catch(() => {});
               onSelect(option.value);
             }}
-            style={{
+            style={({ pressed }) => ({
+              opacity: pressed ? 0.7 : 1,
+              minHeight: 44,
+              justifyContent: "center",
               paddingHorizontal: spacing.lg,
               paddingVertical: spacing.sm,
               borderRadius: radii.full,
-              backgroundColor: isActive ? colors.primary : colors.secondary,
-            }}
+              backgroundColor: isActive ? colors.accent : "transparent",
+              borderWidth: 1,
+              borderColor: isActive ? colors.primary : colors.border,
+            })}
           >
             <Text
               style={{
                 fontSize: 13,
                 fontWeight: "600",
-                color: isActive ? colors.primaryForeground : colors.secondaryForeground,
+                color: isActive ? colors.primary : colors.mutedForeground,
               }}
             >
               {option.label}
@@ -52,6 +60,6 @@ export function FilterChips<T extends string>({
           </Pressable>
         );
       })}
-    </ScrollView>
+    </Container>
   );
 }

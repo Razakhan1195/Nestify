@@ -1,3 +1,4 @@
+import {effectiveBillTable} from "@/lib/product/bill-records";
 import Link from "next/link";
 import {
   ArrowLeft,
@@ -75,14 +76,6 @@ function getDeckMetadataValue(
 ) {
   const value = metadata?.[key];
   return typeof value === "string" ? value : null;
-}
-
-function supportsDurhamWaterCredentials(
-  providerName: string,
-  setupName?: string,
-) {
-  const text = `${providerName} ${setupName ?? ""}`.toLowerCase();
-  return text.includes("durham") || text.includes("water");
 }
 
 function getDeckInteraction(
@@ -182,7 +175,7 @@ export default async function ProviderDetailPage({
       .order("created_at", { ascending: false })
       .limit(5),
     supabase
-      .from("bills")
+      .from(effectiveBillTable())
       .select(
         "id,name,amount,currency,due_date,issue_date,billing_period_start,billing_period_end,account_number_masked,status,created_at",
       )
@@ -194,18 +187,18 @@ export default async function ProviderDetailPage({
   ]);
 
   const capabilities = provider.data_capabilities ?? setup?.capabilities ?? {};
-  const deckCredentialId = getDeckMetadataValue(
-    provider.deck_connection_metadata,
-    "credentialId",
-  );
+  const deckCredentialId =
+    provider.deck_credential_id ??
+    getDeckMetadataValue(provider.deck_connection_metadata, "credentialId");
   const hasDeckCredential = Boolean(deckCredentialId?.startsWith("cred_"));
   const credentialStatus = getDeckMetadataValue(
     provider.deck_connection_metadata,
     "credentialStatus",
   );
-  const canCollectDeckCredentials = supportsDurhamWaterCredentials(
-    provider.display_name ?? provider.name,
-    setup?.name,
+  const canCollectDeckCredentials = Boolean(
+    provider.website_url ||
+      provider.registry_provider_id ||
+      getDeckMetadataValue(provider.deck_connection_metadata, "sourceId"),
   );
   const deckInteraction = getDeckInteraction(
     provider.deck_connection_metadata,
@@ -429,9 +422,9 @@ export default async function ProviderDetailPage({
         <CardHeader>
           <CardTitle>Actions</CardTitle>
           <CardDescription>
-            Connect through our integration partner, then sync this provider to
-            retrieve bill amount, due date, PDFs, usage where available, and
-            changes over time.
+            Connect through Deck, then let Rezlee retrieve the latest bill amount,
+            due date, billing period, account reference, and payment status
+            where the provider makes them available.
           </CardDescription>
         </CardHeader>
         <CardContent className="grid gap-4">
@@ -457,9 +450,9 @@ export default async function ProviderDetailPage({
                 </p>
               </div>
               <p className="text-amber-900">
-                Rezlee does not have the security question loaded yet. If you
-                answered it in Deck, check the result. Otherwise restart sync to
-                request the prompt again.
+                The provider needs another verification step, but Deck has not
+                returned the fields yet. Refresh this page first; if it remains
+                stuck, retry the bill retrieval.
               </p>
               <DeckProviderActionButton
                 action="sync"
@@ -467,7 +460,7 @@ export default async function ProviderDetailPage({
                 restartSync
                 variant="outline"
               >
-                Check / restart sync
+                Retry bill retrieval
               </DeckProviderActionButton>
             </div>
           ) : null}
@@ -476,12 +469,12 @@ export default async function ProviderDetailPage({
             <div className="rounded-lg border border-amber-200 bg-amber-50/60 p-4">
               <div className="mb-3">
                 <p className="text-sm font-medium text-amber-950">
-                  Pilot/dev credential flow
+                  Connect your provider account
                 </p>
                 <p className="text-sm text-amber-900">
-                  This direct Durham Water login flow is for pilot development
-                  only. Credentials are sent to Deck Vault. Rezlee stores only
-                  the Deck credential reference, not the provider password.
+                  Sign in once so Deck can retrieve bills for Rezlee. Credentials
+                  are sent to Deck Vault; Rezlee stores the credential reference,
+                  not your provider password.
                 </p>
               </div>
               {hasDeckCredential ? (

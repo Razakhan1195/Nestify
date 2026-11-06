@@ -1,0 +1,56 @@
+import assert from "node:assert/strict";
+import test from "node:test";
+import {readFile,readdir} from "node:fs/promises";
+import {PGlite} from "@electric-sql/pglite";
+import {randomUUID} from "node:crypto";
+import {emptyQuote} from "../apps/mobile/src/lib/quote-review";
+test("quote reviews serialize, replay safely, retain originals, invalidate stale work and isolate accounts",async()=>{
+ const db=new PGlite(),a=randomUUID(),b=randomUUID(),ha=randomUUID(),hb=randomUUID(),id=randomUUID(),foreign=randomUUID(),invoice=randomUUID();
+ try{
+  await db.exec(`create role anon;create role authenticated;create role authenticator; create role service_role bypassrls;create schema auth;create schema storage;
+   create table auth.users(id uuid primary key,email text);
+   create function auth.uid() returns uuid language sql stable as $$select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid$$;
+   create table storage.buckets(id text primary key,name text,public boolean,file_size_limit bigint,allowed_mime_types text[]);
+   create table storage.objects(id uuid primary key default gen_random_uuid(),bucket_id text,name text);alter table storage.objects enable row level security;
+   create function storage.foldername(name text) returns text[] language sql immutable as $$select string_to_array(name,'/')$$;
+   grant usage on schema public,auth,storage to authenticated,service_role;`);
+  for(const file of ["supabase/schema.sql",...(await readdir("supabase/migrations")).filter(f=>f.endsWith(".sql")).sort().map(f=>"supabase/migrations/"+f)])
+   await db.exec((await readFile(file,"utf8")).replace(/create extension if not exists "pgcrypto";/g,""));
+  await db.exec(`grant select,insert,update,delete on public.homes,public.documents to authenticated;grant select on public.providers to authenticated;
+   insert into auth.users values('${a}','a@example.invalid'),('${b}','b@example.invalid');
+   insert into public.homes(id,user_id,nickname) values('${ha}','${a}','A'),('${hb}','${b}','B');
+   insert into public.documents(id,user_id,home_id,title,notes) values('${id}','${a}','${ha}','Fixture quote','Proposed installation CAD 800'),('${invoice}','${a}','${ha}','Fixture invoice',''),('${foreign}','${b}','${hb}','Private quote','');
+   set role authenticated;set request.jwt.claim.sub='${a}';`);
+  const stamp=async()=>(await db.query<{v:string}>("select updated_at::text v from documents where id=$1",[id])).rows[0].v;
+  const initial=await stamp(),draft=emptyQuote();draft.fields.scope="Proposed installation";draft.reviewed=true;draft.invoiceId=invoice;
+  const call=async(version:number,action:string,request=randomUUID(),payload:unknown=null,source=initial,doc=id,home=ha)=>(await db.query<{v:{review:{revision:number;read_status:string;payload:typeof draft;invoice_id:string|null};replayed:boolean}}>("select change_rezlee_quote($1,$2,$3,$4,$5,$6,$7::jsonb) v",[doc,home,source,version,request,action,payload===null?null:JSON.stringify(payload)])).rows[0].v;
+  const request=randomUUID();
+  assert.equal((await call(0,"save",request,draft)).review.revision,1);
+  assert.equal((await call(0,"save",request,draft)).replayed,true);
+  await assert.rejects(call(0,"save",request,{...draft,decisionNote:"altered"}),/Retry changed/);
+  await assert.rejects(call(0,"save",randomUUID(),draft),/Review changed/);
+  await assert.rejects(call(1,"save",randomUUID(),{...draft,invoiceId:foreign}),/Linked record unavailable/);
+  await assert.rejects(db.query("update quote_reviews set revision=99 where document_id=$1",[id]),/permission denied/);
+  const readId=randomUUID();assert.equal((await call(1,"read",readId)).review.read_status,"reading");
+  assert.equal((await call(1,"read",readId)).replayed,true);
+  await assert.rejects(call(2,"read"),/Reading in progress/);
+  assert.equal((await call(2,"cancel")).review.read_status,"idle");
+  const finish=async(req:string)=>(await db.query<{v:boolean}>("select finish_rezlee_quote($1,$2,$3::jsonb) v",[id,req,'[{"key":"price","value":"CAD 800","excerpt":"CAD 800","page":null}]'])).rows[0].v;
+  assert.equal(await finish(readId),false);
+  const nextId=randomUUID();await call(3,"read",nextId);
+  assert.equal(await finish(nextId),true);assert.equal(await finish(nextId),false);
+  await db.query("update documents set notes='Corrected proposed work' where id=$1",[id]);
+  await assert.rejects(call(5,"save",randomUUID(),draft),/Original changed/);
+  const fresh=await stamp(),third=randomUUID();const changed=await call(5,"read",third,null,fresh);
+  assert.equal(changed.review.payload.reviewed,false);assert.equal(changed.review.payload.decision,"considering");
+  await db.query("update documents set notes='Another revision' where id=$1",[id]);assert.equal(await finish(third),false);
+  await db.exec(`set request.jwt.claim.sub='${b}';`);
+  assert.equal((await db.query("select * from quote_reviews")).rows.length,0);
+  await assert.rejects(call(6,"cancel",randomUUID(),null,fresh),/Quote unavailable/);
+  assert.equal(await finish(third),false);
+  await db.exec(`set request.jwt.claim.sub='${a}';delete from documents where id='${invoice}';`);
+  assert.equal((await db.query<{invoice_id:string|null}>("select invoice_id from quote_reviews")).rows[0].invoice_id,null);
+  await db.exec(`delete from documents where id='${id}';`);
+  assert.equal((await db.query("select * from quote_reviews")).rows.length,0);
+ }finally{await db.close();}
+});

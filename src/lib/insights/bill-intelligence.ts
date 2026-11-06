@@ -1,3 +1,4 @@
+import {effectiveBillTable} from "@/lib/product/bill-records";
 import { getProviderSetupByPriority } from "@/lib/providers";
 import {
   billIntelligenceMigrationMessage,
@@ -235,7 +236,7 @@ async function fetchBillWithProvider(
   homeId: string,
 ) {
   const { data, error } = await supabase
-    .from("bills")
+    .from(effectiveBillTable())
     .select(
       "id,user_id,home_id,provider_id,name,amount,currency,due_date,issue_date,billing_period_start,billing_period_end,usage_amount,usage_unit,pdf_available,detected_fees,line_items,source,status,created_at,providers!bills_provider_id_fkey(id,display_name,name,provider_priority,connection_status,health_status,sync_frequency,next_expected_bill_date)",
     )
@@ -250,13 +251,14 @@ async function fetchBillWithProvider(
 
 async function fetchPreviousBill(supabase: Supabase, bill: IntelligenceBill) {
   let query = supabase
-    .from("bills")
+    .from(effectiveBillTable())
     .select(
       "id,user_id,home_id,provider_id,name,amount,currency,due_date,issue_date,billing_period_start,billing_period_end,usage_amount,usage_unit,pdf_available,detected_fees,line_items,source,status,created_at,providers!bills_provider_id_fkey(id,display_name,name,provider_priority)",
     )
     .eq("user_id", bill.user_id)
     .eq("home_id", bill.home_id)
     .neq("id", bill.id)
+    .neq("status", "archived")
     .not("amount", "is", null)
     .order("due_date", { ascending: false, nullsFirst: false })
     .order("created_at", { ascending: false })
@@ -285,6 +287,8 @@ export async function refreshBillIntelligenceForBill(input: {
     input.userId,
     input.homeId,
   );
+  // Historical records are context, never fresh payment or increase alerts.
+  if (bill.status === "archived") return;
   const previous = await fetchPreviousBill(supabase, bill);
   const label = billDisplayName(bill);
   const periodKey = billingPeriodKey(bill);
@@ -696,7 +700,7 @@ export async function refreshMissingExpectedBillEvent(input: {
   }
 
   const { data: latestBill } = await supabase
-    .from("bills")
+    .from(effectiveBillTable())
     .select("id,due_date,issue_date,created_at")
     .eq("user_id", input.userId)
     .eq("home_id", input.homeId)
@@ -747,7 +751,7 @@ export async function refreshProviderBillIntelligence(input: {
 }) {
   const supabase = input.supabase ?? (await createClient());
   const { data: bills, error } = await supabase
-    .from("bills")
+    .from(effectiveBillTable())
     .select("id")
     .eq("user_id", input.userId)
     .eq("home_id", input.homeId)

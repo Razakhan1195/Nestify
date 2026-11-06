@@ -1,5 +1,5 @@
 export async function readBoundedJson(
-  request: Request,
+  request: Pick<Request, "headers" | "body">,
   maxBytes = 256 * 1024,
 ): Promise<unknown> {
   if (Number(request.headers.get("content-length")) > maxBytes)

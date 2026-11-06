@@ -1,3 +1,4 @@
+import {effectiveBillTable} from "@/lib/product/bill-records";
 import { isBillIncomplete } from "@/lib/product/rules";
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -268,22 +269,14 @@ export default async function AppHomePage({
   } = await supabase.auth.getUser();
 
   if (userError || !user) {
-    console.warn("[home:fetch] no authenticated user", {
-      message: userError?.message,
-    });
+    console.warn("[home:fetch] no authenticated user");
     redirect("/login");
   }
 
   const { data: home, error } = await getCurrentUserHome(user.id);
 
   if (error) {
-    console.error("[home:fetch] fetch failed", {
-      code: error.code,
-      details: error.details,
-      hint: error.hint,
-      message: error.message,
-      user_id: user.id,
-    });
+    console.error("[home:fetch] fetch failed");
 
     return (
       <div className="grid gap-6">
@@ -335,7 +328,7 @@ export default async function AppHomePage({
       .eq("home_id", home.id)
       .order("provider_priority", { ascending: true, nullsFirst: false }),
     supabase
-      .from("bills")
+      .from(effectiveBillTable())
       .select(
         "id,provider_id,name,amount,currency,due_date,issue_date,billing_period_start,billing_period_end,pdf_available,status,source,raw_data,created_at,providers!bills_provider_id_fkey(display_name,name,provider_priority)",
       )

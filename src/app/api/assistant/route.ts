@@ -1,9 +1,10 @@
+import { privateGatewayModelId } from "@/lib/ai/privacy-policy";
+import {budgetedModel} from "@/lib/ai/spend";
 import { readBoundedJson } from "@/lib/security/request";
 import { hasSupabaseEnv } from "@/lib/supabase/env";
 import { reserveAiRequest } from "@/lib/ai/reservation";
 import { z } from "zod";
 import { gateway } from "@ai-sdk/gateway";
-import { google } from "@ai-sdk/google";
 import {
   convertToModelMessages,
   createUIMessageStream,
@@ -82,50 +83,10 @@ function gatewayIsConfigured() {
   );
 }
 
-function googleIsConfigured() {
-  return Boolean(process.env.GOOGLE_GENERATIVE_AI_API_KEY);
-}
-
 function getAssistantRuntime() {
-  const providerPreference = (
-    process.env.AI_ASSISTANT_PROVIDER ?? "auto"
-  ).toLowerCase();
-  const preferGoogle =
-    providerPreference === "auto" || providerPreference === "google";
-  const preferGateway =
-    providerPreference === "auto" || providerPreference === "gateway";
-
-  if (preferGoogle && googleIsConfigured()) {
-    const modelId = process.env.AI_ASSISTANT_MODEL ?? AI_MODELS.assistantGoogle;
-    return {
-      configured: true,
-      model: google(modelId),
-      modelId,
-      provider: "google",
-    } as const;
-  }
-
-  if (preferGateway && gatewayIsConfigured()) {
-    const modelId =
-      process.env.AI_ASSISTANT_MODEL ?? AI_MODELS.assistantGateway;
-    return {
-      configured: true,
-      model: gateway(modelId),
-      modelId,
-      provider: "gateway",
-    } as const;
-  }
-
-  return {
-    configured: false,
-    message:
-      "I can help with home questions once AI is connected. For the cheapest setup, add a Google AI Studio key to `.env.local` as `GOOGLE_GENERATIVE_AI_API_KEY=...`, then restart `npm run dev`.\n\nYou can also use Vercel AI Gateway by setting `AI_GATEWAY_API_KEY=...`. The assistant UI, home context, and cost controls are wired; it just needs a model credential.",
-    modelId:
-      providerPreference === "gateway"
-        ? (process.env.AI_ASSISTANT_MODEL ?? AI_MODELS.assistantGateway)
-        : (process.env.AI_ASSISTANT_MODEL ?? AI_MODELS.assistantGoogle),
-    provider: providerPreference === "gateway" ? "gateway" : "google",
-  } as const;
+  if (!gatewayIsConfigured()) return { configured: false } as const;
+  const modelId = privateGatewayModelId(process.env.AI_ASSISTANT_MODEL ?? AI_MODELS.assistantGateway);
+  return { configured: true, model: gateway(modelId), modelId, provider: "gateway" } as const;
 }
 
 async function countUsage(input: {
@@ -327,17 +288,15 @@ export async function POST(req: Request) {
 
   const result = streamText({
     abortSignal: AbortSignal.any([req.signal, AbortSignal.timeout(25000)]),
-    model: runtime.model,
+    model: budgetedModel(runtime.model,"assistant"),
     maxOutputTokens,
     system: `${SYSTEM_PROMPT}\n\nToday's date: ${today}.\n\n--- HOME CONTEXT ---\n${homeContext}\n--- END HOME CONTEXT ---`,
     messages: await convertToModelMessages(messages),
-    onError: ({ error }) => {
-      console.error("[assistant] model request failed", error);
+    onError: () => {
+      console.error("[assistant] model request failed");
       void updateUsageEvent({
         errorMessage:
-          error instanceof Error
-            ? error.message
-            : "Assistant model request failed.",
+          "Assistant model request failed.",
         eventId: usageEventId,
         status: "failed",
         supabase,
@@ -363,8 +322,8 @@ export async function POST(req: Request) {
   });
 
   return result.toUIMessageStreamResponse({
-    onError: (error) => {
-      console.error("[assistant] stream failed", error);
+    onError: () => {
+      console.error("[assistant] stream failed");
       return "Rezlee could not reach the assistant. Please try again shortly.";
     },
   });

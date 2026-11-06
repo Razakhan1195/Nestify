@@ -13,9 +13,11 @@ export async function POST(req: Request) {
   const guard = await guardAiRequest();
   if (!guard.ok) return guard.response;
 
-  let form: FormData;
+  let form: { get(name: string): unknown };
   try {
-    form = await req.formData();
+    form = (await req.formData()) as unknown as {
+      get(name: string): unknown;
+    };
   } catch {
     return Response.json(
       { error: "Describe the issue to get help." },
@@ -59,8 +61,8 @@ export async function POST(req: Request) {
   try {
     const data = await diagnoseRepair({ description, location, file });
     return Response.json({ data });
-  } catch (error) {
-    console.error("[v0] ai diagnose failed", error);
+  } catch {
+    console.error("[v0] ai diagnose failed");
     return Response.json(
       { error: "We couldn't analyze that right now. Please try again." },
       { status: 502 },

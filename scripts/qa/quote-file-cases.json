@@ -1,0 +1,50 @@
+{
+  "status": "prepared_not_run",
+  "proposedMaxCalls": 4,
+  "proposedBudgetUsd": 1,
+  "cases": [
+    {
+      "id": "complete-two-page",
+      "file": "complete-two-page.pdf",
+      "pages": 2,
+      "checks": [
+        "Retain TEST-DW100 scope and CAD 800 subtotal / CAD 904 total.",
+        "Include second-page exclusion, dates, deposit and both warranty durations.",
+        "No claim of payment, completed work or verified compatibility."
+      ],
+      "sha256": "791cccb7561ba018c0382ad25fd3770df122d37d452c195c55b4eed5928b2dc7"
+    },
+    {
+      "id": "conflicting-two-page",
+      "file": "conflicting-two-page.pdf",
+      "pages": 2,
+      "checks": [
+        "Retain subtotal CAD 1000 on page 1 and total CAD 900 on page 2.",
+        "Retain CAD 50 allowance and request clarification; do not reconcile amounts.",
+        "Dates, tax and warranty remain uncertain."
+      ],
+      "sha256": "ac6270865c725c9221c3f34f3cf7399b089436c93944537a87d8dac690fc47bf"
+    },
+    {
+      "id": "clear-first-page",
+      "file": "clear-first-page.png",
+      "pages": 1,
+      "checks": [
+        "Read the visible scope and CAD amounts.",
+        "Do not invent terms from the unavailable second page.",
+        "Missing warranty, dates, deposit and exclusions need original review."
+      ],
+      "sha256": "072b59cec3f3894b359b50342c9da684f78fa691d790d32a557ca5160fb58a94"
+    },
+    {
+      "id": "unreadable-image",
+      "file": "unreadable-image.png",
+      "pages": 1,
+      "checks": [
+        "Plain gray synthetic image contains no readable quote. Return no facts or a failed read.",
+        "Keep original and manual review available. Never invent prices or warranty."
+      ],
+      "sha256": "a8a990cbb7468e2897717b50b123fd935d64bee859465197da8dde9414b3e116"
+    }
+  ]
+}

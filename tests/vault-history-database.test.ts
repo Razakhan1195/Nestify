@@ -1,0 +1,40 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+import {readFile} from "node:fs/promises";
+import {randomUUID} from "node:crypto";
+import {PGlite} from "@electric-sql/pglite";
+type Cursor={time:string;id:string;kind:string};type Page={rows:{id:string;kind:string;title:string}[];total:number;nextCursor:Cursor|null};
+test("full Vault search finds older originals, pages equal timestamps and preserves private boundaries",async()=>{
+ const db=new PGlite(),a=randomUUID(),b=randomUUID(),ha=randomUUID(),hb=randomUUID();
+ try{
+  await db.exec(`create role anon;create role authenticated;create role service_role;create schema auth;
+  create function auth.uid()returns uuid language sql stable as $$select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid$$;
+  create table homes(id uuid primary key,user_id uuid);
+  create table documents(id uuid primary key default gen_random_uuid(),user_id uuid,home_id uuid,title text,notes text,document_type text,file_name text,source text,expires_on date,created_at timestamptz default now(),storage_path text);
+  create table inventory_items(id uuid primary key default gen_random_uuid(),user_id uuid,home_id uuid,name text,brand text,model_number text,room_or_area text,category text,warranty_expires_on date,created_at timestamptz default now());
+  grant usage on schema public,auth to authenticated;grant select on homes,documents,inventory_items to authenticated;
+  alter table homes enable row level security;alter table documents enable row level security;alter table inventory_items enable row level security;
+  create policy own_homes on homes for select to authenticated using(user_id=auth.uid());create policy own_docs on documents for select to authenticated using(user_id=auth.uid());create policy own_items on inventory_items for select to authenticated using(user_id=auth.uid());`);
+  await db.exec(await readFile("supabase/migrations/202610130006_vault_history_search.sql","utf8"));
+  await db.query("insert into homes values($1,$2),($3,$4)",[ha,a,hb,b]);
+  await db.query("insert into documents(user_id,home_id,title)select $1,$2,'Record '||g from generate_series(1,137)g",[a,ha]);
+  await db.query("insert into inventory_items(user_id,home_id,name)select $1,$2,'Item '||g from generate_series(1,137)g",[a,ha]);
+  await db.query("update documents set title='Older warranty 100%_exact',created_at='2020-01-01',expires_on=current_date+4 where title='Record 1'");
+  await db.query("update inventory_items set name='Older covered item',created_at='2020-01-01',warranty_expires_on=current_date+4 where name='Item 1'");
+  await db.query("insert into documents(user_id,home_id,title)values($1,$2,'Foreign private record')",[b,hb]);
+  await db.exec("set role authenticated");await db.query("select set_config('request.jwt.claim.sub',$1,false)",[a]);
+  const search=async(view="documents",q="",cursor:Cursor|null=null,home=ha)=>(await db.query<{v:Page}>("select search_rezlee_vault($1,$2,$3,$4,$5,$6)v",[home,view,q,cursor?.time??null,cursor?.id??null,cursor?.kind??null])).rows[0].v;
+  const summary=(await db.query<{v:{recordsCount:number;itemsCount:number;warrantyCount:number;expiringSoonCount:number}}>("select rezlee_vault_summary($1)v",[ha])).rows[0].v;
+  assert.deepEqual(summary,{recordsCount:137,itemsCount:137,warrantyCount:2,expiringSoonCount:2});
+  const first=await search();assert.equal(first.rows.length,50);assert.equal(first.total,137);assert.ok(first.nextCursor);
+  const second=await search("documents","",first.nextCursor),third=await search("documents","",second.nextCursor);
+  assert.equal(second.rows.length,50);assert.equal(third.rows.length,37);assert.equal(third.nextCursor,null);assert.equal(new Set([...first.rows,...second.rows,...third.rows].map(r=>r.id)).size,137);
+  assert.equal((await search("documents","100%_exact")).rows.length,1,"literal percent and underscore are not SQL wildcards");
+  assert.equal((await search("warranties")).rows.length,2,"old warranty document and item are found beyond the recent100");
+  assert.equal((await search("documents","Foreign")).total,0);await assert.rejects(search("documents","",null,hb),/Home unavailable/);
+  await assert.rejects(search("documents","x".repeat(101)),/Invalid search/);await assert.rejects(db.query("select search_rezlee_vault($1,'documents','',now(),null,'document')",[ha]),/Invalid search/);
+  await db.exec("reset role");await db.query("insert into documents(user_id,home_id,title,created_at)values($1,$2,'Newer record',now()+interval '1 day')",[a,ha]);
+  await db.exec("set role authenticated");const afterInsert=await search("documents","",first.nextCursor);assert.deepEqual(afterInsert.rows.map(r=>r.id),second.rows.map(r=>r.id),"new entry does not shift an existing keyset page");
+  await db.exec("reset role;set role anon");await assert.rejects(search(),/permission denied/);
+ }finally{await db.close();}
+});

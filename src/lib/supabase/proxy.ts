@@ -42,6 +42,17 @@ export async function updateSession(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
+  if (user && process.env.REZLEE_APPLE_NOTIFICATIONS_ENABLED === "true" && request.nextUrl.pathname.startsWith("/app")) {
+    const access = await supabase.rpc("rezlee_mobile_access");
+    if (access.error?.code === "PT401" || (!access.error && access.data === "reauthenticate")) {
+      await supabase.auth.signOut({ scope: "local" });
+      const url = request.nextUrl.clone(); url.pathname = "/login"; url.search = "";
+      const response = NextResponse.redirect(url);
+      for (const cookie of supabaseResponse.cookies.getAll()) response.cookies.set(cookie);
+      return response;
+    }
+  }
+
   // Redirect unauthenticated users away from protected app routes.
   if (!user && request.nextUrl.pathname.startsWith("/app")) {
     const url = request.nextUrl.clone();

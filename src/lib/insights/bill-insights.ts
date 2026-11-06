@@ -13,15 +13,18 @@ export function generateBillInsights({
   providerId,
   userId,
 }: BillInsightInput) {
+  const complete = bill.amountDue !== null && Boolean(bill.dueDate);
   const insights = [
     {
       user_id: userId,
       home_id: homeId,
-      title: `${bill.providerName} bill is ready`,
-      body: `${bill.providerName} has a ${bill.currency} ${bill.amountDue.toFixed(
-        2
-      )} bill due on ${bill.dueDate}.`,
-      insight_type: "bill_detected",
+      title: complete
+        ? `${bill.providerName} bill is ready`
+        : `${bill.providerName} bill was imported`,
+      body: complete
+        ? `${bill.providerName} has a ${bill.currency} ${bill.amountDue?.toFixed(2)} bill due on ${bill.dueDate}.`
+        : `Rezlee imported the bill data Deck could retrieve. Review the missing details before relying on reminders.`,
+      insight_type: complete ? "bill_detected" : "bill_incomplete",
       source: `deck:${providerId}:${bill.externalBillId}`,
     },
   ];

@@ -21,6 +21,7 @@ export type BillCompletenessInput = {
 
 export type BillStatusInput = BillCompletenessInput & {
   paid_at?: string | null;
+  payment_status?: string | null;
 };
 
 export function hasBillCategory(rawData: unknown) {
@@ -70,8 +71,15 @@ export function classifyBillStatus(
 ): BillStatus {
   const status = bill.status?.toLowerCase();
 
-  if (status === "paid" || bill.paid_at) return "paid";
+  // A saved statement remains history even when its original payment is known.
   if (status === "archived") return "archived";
+  if (
+    status === "paid" ||
+    bill.paid_at ||
+    bill.payment_status?.toLowerCase() === "paid"
+  ) {
+    return "paid";
+  }
   if (isBillIncomplete(bill)) return "incomplete";
 
   const dueInDays = daysUntilDate(bill.due_date, today);

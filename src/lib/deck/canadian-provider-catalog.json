@@ -1,0 +1,939 @@
+[
+  {
+    "id": "238b9f9d-12ec-4160-a9eb-e742f637b699",
+    "name": "Alectra Utilities",
+    "utility_type": "Electricity",
+    "status": "needs_mapping",
+    "website_url": "https://myalectra.alectrautilities.com/",
+    "deck_source_id": null,
+    "deck_agent_id": null,
+    "deck_task_id": null,
+    "metadata": {},
+    "searchAliases": [
+      "Water",
+      "Markham water",
+      "Vaughan water"
+    ],
+    "connectionNote": "Alectra bills water for Markham and Vaughan. Use your Alectra account. A combined electricity and water statement stays one bill."
+  },
+  {
+    "id": "a955470f-54ee-4b77-9356-c344614b177c",
+    "name": "ATCO",
+    "utility_type": "Natural Gas",
+    "status": "needs_mapping",
+    "website_url": "https://store.atcoenergy.com/login",
+    "deck_source_id": null,
+    "deck_agent_id": null,
+    "deck_task_id": null,
+    "metadata": {},
+    "searchAliases": [],
+    "connectionNote": "Use an existing online account with bills already available. We won’t register an account or change your billing preferences."
+  },
+  {
+    "id": "c5fde591-7690-4c5b-bd30-b7b157f783cb",
+    "name": "Aviva",
+    "utility_type": "Home Insurance",
+    "status": "coming_soon",
+    "website_url": "https://www.aviva.ca/myaviva/self-serve/landing?ui_locales=en",
+    "deck_source_id": null,
+    "deck_agent_id": null,
+    "deck_task_id": null,
+    "metadata": {},
+    "searchAliases": [],
+    "connectionNote": "Use MyAviva for eligible Aviva Direct policies. Broker-managed policies may require your broker’s portal. Only issued billing statements are imported; policy documents and quotations are not bills."
+  },
+  {
+    "id": "10e25817-7a48-4fd1-8570-9faebd7554e8",
+    "name": "BC Hydro",
+    "utility_type": "Electricity",
+    "status": "needs_mapping",
+    "website_url": "https://app.bchydro.com/accounts-billing/login.html",
+    "deck_source_id": null,
+    "deck_agent_id": null,
+    "deck_task_id": null,
+    "metadata": {},
+    "searchAliases": [],
+    "connectionNote": "Use an existing online account with bills already available. We won’t register an account or change your billing preferences."
+  },
+  {
+    "id": "fc092591-8083-4e58-aaab-8f34e4435e0b",
+    "name": "Bell",
+    "utility_type": "Internet",
+    "status": "active",
+    "website_url": "https://mybell.bell.ca/",
+    "deck_source_id": "src_FJQYLOYeClqiaNRS",
+    "deck_agent_id": "agt_IMw1W8GgGi8KBPCu",
+    "deck_task_id": "task_1DI6s8bfKTNA8TyY",
+    "metadata": {
+      "deck_capabilities": {
+        "latest_bill": "task_1DI6s8bfKTNA8TyY",
+        "bills_since_date": "task_33NsIoUXCshYtc5Q"
+      },
+      "primary_sync_mode": "bill",
+      "deck_mapping_status": "pilot_unverified",
+      "deck_session_strategy": "reuse",
+      "deck_telecom_contract": "ca-telecom-20261004-v1",
+      "deck_telecom_history_task_id": "task_33NsIoUXCshYtc5Q"
+    },
+    "searchAliases": [],
+    "connectionNote": "Use your MyBell login. We’ll choose email verification; if email isn’t offered, we’ll ask you how to continue."
+  },
+  {
+    "id": "d19e9491-8952-4339-af75-86bd494e35ea",
+    "name": "a.p.i. ALARM",
+    "utility_type": "Other Home Services",
+    "status": "coming_soon",
+    "website_url": "https://sedonaapi.apialarm.com/Canada/Account/Login",
+    "deck_source_id": null,
+    "deck_agent_id": null,
+    "deck_task_id": null,
+    "metadata": {},
+    "searchAliases": [
+      "Bell Smart Home",
+      "home security",
+      "AlarmForce",
+      "API Alarm"
+    ],
+    "connectionNote": "Former Bell Smart Home customer? Use the a.p.i. ALARM billing-portal username and password for invoices now issued by a.p.i. If your bill names another issuer, choose that issuer or upload the bill."
+  },
+  {
+    "id": "48aac579-5020-42bc-9830-a728580eae11",
+    "name": "City of Mississauga Property Tax",
+    "utility_type": "Property Tax",
+    "status": "needs_mapping",
+    "website_url": "https://mississauga.ca/apps/#/assessment/enter?redirect=eBill%20View",
+    "deck_source_id": null,
+    "deck_agent_id": null,
+    "deck_task_id": null,
+    "metadata": {},
+    "searchAliases": [],
+    "connectionNote": "Use your existing property tax roll number and tax PIN. Your account must already have eBills available.",
+    "sourceConfig": {
+      "authMethod": "source_fields",
+      "fields": {
+        "roll_number": {
+          "label": "Property tax roll number",
+          "tokenized": true
+        },
+        "tax_pin": {
+          "label": "Your tax PIN",
+          "tokenized": true
+        }
+      }
+    }
+  },
+  {
+    "id": "0daf98f6-aad1-44ae-bb48-2c9dc541d093",
+    "name": "City of Toronto Property Tax",
+    "utility_type": "Property Tax",
+    "status": "needs_mapping",
+    "website_url": "https://www.toronto.ca/services-payments/property-taxes-utilities/property-tax/property-tax-lookup/",
+    "deck_source_id": null,
+    "deck_agent_id": null,
+    "deck_task_id": null,
+    "metadata": {},
+    "searchAliases": [],
+    "connectionNote": "Use an existing online account with bills already available. We won’t register an account or change your billing preferences.",
+    "sourceConfig": {
+      "authMethod": "source_fields",
+      "fields": {
+        "roll_number": {
+          "label": "Assessment roll number",
+          "tokenized": true
+        },
+        "last_name": {
+          "label": "Last name or business name on the bill",
+          "tokenized": true
+        },
+        "postal_code": {
+          "label": "Mailing postal code",
+          "tokenized": true
+        },
+        "customer_number": {
+          "label": "Customer number (6–9 digits)",
+          "tokenized": true
+        }
+      }
+    }
+  },
+  {
+    "id": "ec3f5013-f3ab-4fa0-86cf-c8b11795cc19",
+    "name": "City of Toronto Water",
+    "utility_type": "Water",
+    "status": "needs_mapping",
+    "website_url": "https://www.toronto.ca/services-payments/property-taxes-utilities/utility-bill/utility-account-lookup/",
+    "deck_source_id": null,
+    "deck_agent_id": null,
+    "deck_task_id": null,
+    "metadata": {},
+    "searchAliases": [],
+    "connectionNote": "Toronto uses details from your utility bill, not a username and password. Have the account number, client number, name, postal code and last payment method ready. Only existing eBills can be retrieved.",
+    "sourceConfig": {
+      "authMethod": "source_fields",
+      "fields": {
+        "account_number": {
+          "label": "Utility account number (9 digits)",
+          "tokenized": true,
+          "validation": {
+            "pattern": "[0-9]{9}",
+            "message": "Enter all 9 digits, including leading zeros."
+          }
+        },
+        "client_number": {
+          "label": "Client number as printed on your bill",
+          "tokenized": true
+        },
+        "last_name": {
+          "label": "Last name or business name on the bill",
+          "tokenized": true
+        },
+        "postal_code": {
+          "label": "Postal code of the service address",
+          "tokenized": true,
+          "required": false
+        },
+        "last_payment_method": {
+          "label": "Most recent payment method",
+          "type": "select",
+          "options": [
+            {
+              "value": "N/A",
+              "label": "N/A"
+            },
+            {
+              "value": "Pre-Authorized",
+              "label": "Pre-Authorized"
+            },
+            {
+              "value": "Mail-In Cheque",
+              "label": "Mail-In Cheque"
+            },
+            {
+              "value": "In-Person",
+              "label": "In-Person"
+            },
+            {
+              "value": "Bank Payment",
+              "label": "Bank Payment"
+            },
+            {
+              "value": "Payment Drop Box",
+              "label": "Payment Drop Box"
+            },
+            {
+              "value": "MyToronto Pay",
+              "label": "MyToronto Pay"
+            }
+          ]
+        }
+      }
+    }
+  },
+  {
+    "id": "f8c40350-2807-4b6c-87b9-c61b201ebe66",
+    "name": "Cogeco",
+    "utility_type": "Internet",
+    "status": "needs_mapping",
+    "website_url": "https://myaccount.cogeco.ca/",
+    "deck_source_id": null,
+    "deck_agent_id": null,
+    "deck_task_id": null,
+    "metadata": {},
+    "searchAliases": [],
+    "connectionNote": "Use an existing online account with bills already available. We won’t register an account or change your billing preferences."
+  },
+  {
+    "id": "3f236e11-3755-41d8-9f60-48dd9d4a0f55",
+    "name": "Elexicon Energy",
+    "utility_type": "Electricity",
+    "status": "needs_mapping",
+    "website_url": "https://elexiconenergy.com/myelexicon/login",
+    "deck_source_id": null,
+    "deck_agent_id": null,
+    "deck_task_id": null,
+    "metadata": {},
+    "searchAliases": [],
+    "connectionNote": "Use an existing online account with bills already available. We won’t register an account or change your billing preferences."
+  },
+  {
+    "id": "7b6bc836-b853-4855-9fb3-673b058356ee",
+    "name": "Enbridge Gas",
+    "utility_type": "Natural Gas",
+    "status": "needs_mapping",
+    "website_url": "https://myaccount.enbridgegas.com/",
+    "deck_source_id": null,
+    "deck_agent_id": null,
+    "deck_task_id": null,
+    "metadata": {},
+    "searchAliases": [],
+    "connectionNote": "Use an existing online account with bills already available. We won’t register an account or change your billing preferences."
+  },
+  {
+    "id": "887052bf-0944-4407-be64-a605547cd0f0",
+    "name": "Enercare",
+    "utility_type": "Other Home Services",
+    "status": "needs_mapping",
+    "website_url": "https://myaccount.enercare.ca/",
+    "deck_source_id": null,
+    "deck_agent_id": null,
+    "deck_task_id": null,
+    "metadata": {},
+    "searchAliases": [],
+    "connectionNote": "Use an existing online account with bills already available. We won’t register an account or change your billing preferences."
+  },
+  {
+    "id": "70db3106-273f-4b93-967e-57357f78e91c",
+    "name": "Énergir",
+    "utility_type": "Natural Gas",
+    "status": "needs_mapping",
+    "website_url": "https://espaceclient.energir.com/",
+    "deck_source_id": null,
+    "deck_agent_id": null,
+    "deck_task_id": null,
+    "metadata": {},
+    "searchAliases": [],
+    "connectionNote": "Use an existing online account with bills already available. We won’t register an account or change your billing preferences."
+  },
+  {
+    "id": "92a3348c-8869-4608-9c35-e63289aa8e86",
+    "name": "ENMAX",
+    "utility_type": "Electricity",
+    "status": "needs_mapping",
+    "website_url": "https://myaccount.enmax.com/",
+    "deck_source_id": null,
+    "deck_agent_id": null,
+    "deck_task_id": null,
+    "metadata": {},
+    "searchAliases": [],
+    "connectionNote": "Use an existing online account with bills already available. We won’t register an account or change your billing preferences."
+  },
+  {
+    "id": "341fae69-7710-4241-9482-16dd0ec93bd1",
+    "name": "EPCOR",
+    "utility_type": "Electricity",
+    "status": "needs_mapping",
+    "website_url": "https://myaccount.epcor.com/",
+    "deck_source_id": null,
+    "deck_agent_id": null,
+    "deck_task_id": null,
+    "metadata": {},
+    "searchAliases": [],
+    "connectionNote": "Use an existing online account with bills already available. We won’t register an account or change your billing preferences."
+  },
+  {
+    "id": "3ec39573-8629-48dc-bf5e-59989dadbe6c",
+    "name": "Fido",
+    "utility_type": "Mobile",
+    "status": "coming_soon",
+    "website_url": "https://www.fido.ca/signin",
+    "deck_source_id": null,
+    "deck_agent_id": null,
+    "deck_task_id": null,
+    "metadata": {},
+    "searchAliases": [],
+    "connectionNote": "Use an existing online account with bills already available. We won’t register an account or change your billing preferences."
+  },
+  {
+    "id": "5d77a22e-1900-45c8-8fb6-e77a20f49dd0",
+    "name": "FortisBC",
+    "utility_type": "Natural Gas",
+    "status": "needs_mapping",
+    "website_url": "https://accounts.fortisbc.com/",
+    "deck_source_id": null,
+    "deck_agent_id": null,
+    "deck_task_id": null,
+    "metadata": {},
+    "searchAliases": [],
+    "connectionNote": "Use an existing online account with bills already available. We won’t register an account or change your billing preferences."
+  },
+  {
+    "id": "c6c663bc-8734-4a77-a03b-efd7424a9e36",
+    "name": "Freedom Mobile",
+    "utility_type": "Mobile",
+    "status": "coming_soon",
+    "website_url": "https://login.freedommobile.ca/",
+    "deck_source_id": null,
+    "deck_agent_id": null,
+    "deck_task_id": null,
+    "metadata": {},
+    "searchAliases": [],
+    "connectionNote": "Use your Freedom phone number and 4-digit My Account PIN. Complete any verification when prompted.",
+    "sourceConfig": {
+      "authMethod": "source_fields",
+      "fields": {
+        "phone_number": {
+          "label": "Freedom mobile phone number",
+          "tokenized": true
+        },
+        "account_pin": {
+          "label": "4-digit My Account PIN",
+          "tokenized": true
+        }
+      }
+    }
+  },
+  {
+    "id": "21acc47d-4cdb-4050-ba0a-aa5951984529",
+    "name": "GFL Environmental",
+    "utility_type": "Other Home Services",
+    "status": "needs_mapping",
+    "website_url": "https://myaccount.gflenv.com/",
+    "deck_source_id": null,
+    "deck_agent_id": null,
+    "deck_task_id": null,
+    "metadata": {},
+    "searchAliases": [],
+    "connectionNote": "Use an existing online account with bills already available. We won’t register an account or change your billing preferences."
+  },
+  {
+    "id": "27899f67-d526-4b94-9d77-ee46d254c8d4",
+    "name": "Hydro One",
+    "utility_type": "Electricity",
+    "status": "needs_mapping",
+    "website_url": "https://www.hydroone.com/login",
+    "deck_source_id": null,
+    "deck_agent_id": null,
+    "deck_task_id": null,
+    "metadata": {},
+    "searchAliases": [],
+    "connectionNote": "Use an existing online account with bills already available. We won’t register an account or change your billing preferences."
+  },
+  {
+    "id": "6215b953-135d-4ca9-a89f-cf04b991e5e0",
+    "name": "Hydro-Québec",
+    "utility_type": "Electricity",
+    "status": "needs_mapping",
+    "website_url": "https://session.hydroquebec.com/",
+    "deck_source_id": null,
+    "deck_agent_id": null,
+    "deck_task_id": null,
+    "metadata": {},
+    "searchAliases": [],
+    "connectionNote": "Use an existing online account with bills already available. We won’t register an account or change your billing preferences."
+  },
+  {
+    "id": "9095ff86-3093-4320-ad29-46a033d21cbe",
+    "name": "Intact",
+    "utility_type": "Home Insurance",
+    "status": "coming_soon",
+    "website_url": "https://apps.intactinsurance.com/cc/",
+    "deck_source_id": null,
+    "deck_agent_id": null,
+    "deck_task_id": null,
+    "metadata": {},
+    "searchAliases": [],
+    "connectionNote": "We’ll retrieve issued billing statements, where available. Monthly instalments may share an annual statement; policy documents aren’t treated as bills."
+  },
+  {
+    "id": "1ef9173c-6b2c-491e-b4ce-e9a40df13c5d",
+    "name": "Koodo",
+    "utility_type": "Mobile",
+    "status": "coming_soon",
+    "website_url": "https://www.koodomobile.com/selfserve",
+    "deck_source_id": null,
+    "deck_agent_id": null,
+    "deck_task_id": null,
+    "metadata": {},
+    "searchAliases": [],
+    "connectionNote": "Use an existing online account with bills already available. We won’t register an account or change your billing preferences."
+  },
+  {
+    "id": "bad50809-5b9e-4cf8-890c-8df9f9e76b12",
+    "name": "Manitoba Hydro",
+    "utility_type": "Electricity",
+    "status": "needs_mapping",
+    "website_url": "https://account.hydro.mb.ca/",
+    "deck_source_id": null,
+    "deck_agent_id": null,
+    "deck_task_id": null,
+    "metadata": {},
+    "searchAliases": [],
+    "connectionNote": "Use an existing online account with bills already available. We won’t register an account or change your billing preferences."
+  },
+  {
+    "id": "e5fa0d80-7f59-4e07-a963-ec3203986d1f",
+    "name": "Region of Durham Water",
+    "utility_type": "Water",
+    "status": "active",
+    "website_url": "https://secure6.i-doxs.net/RegionOfDurham/Secure/ViewBill.aspx",
+    "deck_source_id": null,
+    "deck_agent_id": null,
+    "deck_task_id": null,
+    "metadata": {
+      "deck_task_id_env": "DECK_DURHAM_WATER_TASK_ID",
+      "deck_agent_id_env": "DECK_DURHAM_WATER_AGENT_ID",
+      "deck_source_id_env": "DECK_DURHAM_WATER_SOURCE_ID"
+    },
+    "searchAliases": [
+      "Pickering",
+      "Ajax",
+      "Whitby",
+      "Oshawa",
+      "Clarington",
+      "Bowmanville",
+      "Scugog",
+      "Uxbridge",
+      "Brock",
+      "Durham water"
+    ],
+    "connectionNote": "Use your MyDurhamWater login for municipal water in Durham Region. Private wells do not have a municipal water bill."
+  },
+  {
+    "id": "907a48ab-b278-4319-9dd0-0d70152e114f",
+    "name": "Reliance Home Comfort",
+    "utility_type": "Other Home Services",
+    "status": "needs_mapping",
+    "website_url": "https://myreliancehome.com/Reliance/SignIn.aspx",
+    "deck_source_id": null,
+    "deck_agent_id": null,
+    "deck_task_id": null,
+    "metadata": {},
+    "searchAliases": [],
+    "connectionNote": "Use an existing online account with bills already available. We won’t register an account or change your billing preferences."
+  },
+  {
+    "id": "11d2d635-9635-4971-bc49-809919b0b90d",
+    "name": "Rogers",
+    "utility_type": "Internet",
+    "status": "needs_mapping",
+    "website_url": "https://www.rogers.com/consumer/profile/signin",
+    "deck_source_id": "src_lBTe7Vv2YgOPARV8",
+    "deck_agent_id": "agt_tV6SBXa6k6zotImn",
+    "deck_task_id": "task_aTq1JfpCQggDk2Is",
+    "metadata": {
+      "deck_capabilities": {
+        "latest_bill": "task_aTq1JfpCQggDk2Is",
+        "bills_since_date": "task_UwQSVJGHTgSdPKSa"
+      },
+      "primary_sync_mode": "bill",
+      "deck_mapping_status": "pilot_unverified",
+      "deck_session_strategy": "reuse",
+      "deck_telecom_contract": "ca-telecom-20261004-v1",
+      "deck_telecom_history_task_id": "task_UwQSVJGHTgSdPKSa"
+    },
+    "searchAliases": [],
+    "connectionNote": "Use an existing online account with bills already available. We won’t register an account or change your billing preferences."
+  },
+  {
+    "id": "fcad9691-d7ef-4f8a-a9e1-32654903f0c9",
+    "name": "SaskEnergy",
+    "utility_type": "Natural Gas",
+    "status": "needs_mapping",
+    "website_url": "https://account.saskenergy.com/",
+    "deck_source_id": null,
+    "deck_agent_id": null,
+    "deck_task_id": null,
+    "metadata": {},
+    "searchAliases": [],
+    "connectionNote": "Use an existing online account with bills already available. We won’t register an account or change your billing preferences."
+  },
+  {
+    "id": "ba7797f5-a1d0-4b50-817b-eaa6eceabc20",
+    "name": "SaskPower",
+    "utility_type": "Electricity",
+    "status": "needs_mapping",
+    "website_url": "https://www.saskpower.com/profile/my-dashboard",
+    "deck_source_id": null,
+    "deck_agent_id": null,
+    "deck_task_id": null,
+    "metadata": {},
+    "searchAliases": [],
+    "connectionNote": "Use an existing online account with bills already available. We won’t register an account or change your billing preferences."
+  },
+  {
+    "id": "7ce0b2ec-3b4d-476c-9486-8cc4fcc7d2dc",
+    "name": "Shaw / Rogers",
+    "utility_type": "Internet",
+    "status": "needs_mapping",
+    "website_url": "https://www.rogers.com/myrogers/shaw/",
+    "deck_source_id": null,
+    "deck_agent_id": null,
+    "deck_task_id": null,
+    "metadata": {},
+    "searchAliases": [],
+    "connectionNote": "Use an existing online account with bills already available. We won’t register an account or change your billing preferences."
+  },
+  {
+    "id": "da6c6734-d7e2-4e4d-ad66-e4ff7ddb91f2",
+    "name": "Sonnet",
+    "utility_type": "Home Insurance",
+    "status": "coming_soon",
+    "website_url": "https://secure.sonnet.ca/",
+    "deck_source_id": null,
+    "deck_agent_id": null,
+    "deck_task_id": null,
+    "metadata": {},
+    "searchAliases": [],
+    "connectionNote": "We’ll retrieve issued billing statements, where available. Monthly instalments may share an annual statement; policy documents aren’t treated as bills."
+  },
+  {
+    "id": "8176879f-1664-4ba7-9180-00f5cbeb636f",
+    "name": "Square One",
+    "utility_type": "Home Insurance",
+    "status": "coming_soon",
+    "website_url": "https://www.squareone.ca/sales/account",
+    "deck_source_id": null,
+    "deck_agent_id": null,
+    "deck_task_id": null,
+    "metadata": {},
+    "searchAliases": [],
+    "connectionNote": "We’ll retrieve issued billing statements, where available. Monthly instalments may share an annual statement; policy documents aren’t treated as bills."
+  },
+  {
+    "id": "ffac23e5-9049-432b-8620-6ce0328f5d60",
+    "name": "TD Insurance",
+    "utility_type": "Home Insurance",
+    "status": "coming_soon",
+    "website_url": "https://myinsurance.td.com/waw/ins/pol/application/login",
+    "deck_source_id": null,
+    "deck_agent_id": null,
+    "deck_task_id": null,
+    "metadata": {},
+    "searchAliases": [],
+    "connectionNote": "We’ll retrieve issued billing statements, where available. Monthly instalments may share an annual statement; policy documents aren’t treated as bills."
+  },
+  {
+    "id": "a4845595-c672-4318-b691-6a002f24275d",
+    "name": "TekSavvy",
+    "utility_type": "Internet",
+    "status": "needs_mapping",
+    "website_url": "https://mysavvy.teksavvy.com/",
+    "deck_source_id": null,
+    "deck_agent_id": null,
+    "deck_task_id": null,
+    "metadata": {},
+    "searchAliases": [],
+    "connectionNote": "Use an existing online account with bills already available. We won’t register an account or change your billing preferences."
+  },
+  {
+    "id": "076a4f69-404d-40c9-85df-97fe6e973f3b",
+    "name": "Telus",
+    "utility_type": "Internet",
+    "status": "needs_mapping",
+    "website_url": "https://www.telus.com/my-telus",
+    "deck_source_id": "src_1HYbsrbGdCPC2XvV",
+    "deck_agent_id": "agt_YeKtkhreqKNqM1kN",
+    "deck_task_id": "task_gxqoLtAZF9HaBtha",
+    "metadata": {
+      "deck_capabilities": {
+        "latest_bill": "task_gxqoLtAZF9HaBtha",
+        "bills_since_date": "task_J8IMmQ78UpXiuLx4"
+      },
+      "primary_sync_mode": "bill",
+      "deck_mapping_status": "pilot_unverified",
+      "deck_session_strategy": "reuse",
+      "deck_telecom_contract": "ca-telecom-20261004-v1",
+      "deck_telecom_history_task_id": "task_J8IMmQ78UpXiuLx4"
+    },
+    "searchAliases": [],
+    "connectionNote": "Use an existing online account with bills already available. We won’t register an account or change your billing preferences."
+  },
+  {
+    "id": "c402d56b-1a0e-48d9-9bc1-070f15489f21",
+    "name": "Telus SmartHome Security",
+    "utility_type": "Other Home Services",
+    "status": "coming_soon",
+    "website_url": "https://www.telus.com/my-telus",
+    "deck_source_id": null,
+    "deck_agent_id": null,
+    "deck_task_id": null,
+    "metadata": {},
+    "searchAliases": [],
+    "connectionNote": "Use an existing online account with bills already available. We won’t register an account or change your billing preferences."
+  },
+  {
+    "id": "9ad6ac69-15fd-4e09-a34a-a58a4b9c4f46",
+    "name": "The Co-operators",
+    "utility_type": "Home Insurance",
+    "status": "coming_soon",
+    "website_url": "https://www.cooperators.ca/SSLPages/sign-in.aspx",
+    "deck_source_id": null,
+    "deck_agent_id": null,
+    "deck_task_id": null,
+    "metadata": {},
+    "searchAliases": [],
+    "connectionNote": "We’ll retrieve issued billing statements, where available. Monthly instalments may share an annual statement; policy documents aren’t treated as bills."
+  },
+  {
+    "id": "e9982e68-a71c-4986-8486-094c2dc20fe0",
+    "name": "Toronto Hydro",
+    "utility_type": "Electricity",
+    "status": "needs_mapping",
+    "website_url": "https://www.torontohydro.com/log-in",
+    "deck_source_id": null,
+    "deck_agent_id": null,
+    "deck_task_id": null,
+    "metadata": {},
+    "searchAliases": [],
+    "connectionNote": "Use an existing online account with bills already available. We won’t register an account or change your billing preferences."
+  },
+  {
+    "id": "63557595-af57-4082-af51-63482bc0283a",
+    "name": "Town of Pickering Property Tax",
+    "utility_type": "Property Tax",
+    "status": "needs_mapping",
+    "website_url": "https://www.pickering.ca/property-roads-safety/property-taxes/",
+    "deck_source_id": null,
+    "deck_agent_id": null,
+    "deck_task_id": null,
+    "metadata": {},
+    "searchAliases": [],
+    "connectionNote": "This municipality provides eBills by email. Upload your saved bill; an online statement-history login has not been verified.",
+    "fallback": true
+  },
+  {
+    "id": "1408e610-b68c-448d-8d6e-996061418d94",
+    "name": "Town of Whitby Property Tax",
+    "utility_type": "Property Tax",
+    "status": "needs_mapping",
+    "website_url": "https://ebilling.whitby.ca/ebilling",
+    "deck_source_id": null,
+    "deck_agent_id": null,
+    "deck_task_id": null,
+    "metadata": {},
+    "searchAliases": [],
+    "connectionNote": "This municipality provides eBills by email. Upload your saved bill; an online statement-history login has not been verified.",
+    "fallback": true
+  },
+  {
+    "id": "b0f5350c-fff9-4b5e-9e0d-43bfbeb9bbd1",
+    "name": "Videotron",
+    "utility_type": "Internet",
+    "status": "needs_mapping",
+    "website_url": "https://moncompte.videotron.com/",
+    "deck_source_id": null,
+    "deck_agent_id": null,
+    "deck_task_id": null,
+    "metadata": {},
+    "searchAliases": [],
+    "connectionNote": "Use an existing online account with bills already available. We won’t register an account or change your billing preferences."
+  },
+  {
+    "id": "cb71c2c7-af83-4598-9671-5c30059f6b92",
+    "name": "Virgin Plus",
+    "utility_type": "Mobile",
+    "status": "coming_soon",
+    "website_url": "https://www.virginplus.ca/en/login/index.html",
+    "deck_source_id": null,
+    "deck_agent_id": null,
+    "deck_task_id": null,
+    "metadata": {},
+    "searchAliases": [],
+    "connectionNote": "Use an existing online account with bills already available. We won’t register an account or change your billing preferences."
+  },
+  {
+    "id": "8558d98d-a189-44c8-ac7b-2e90b8406d4e",
+    "name": "Waste Connections",
+    "utility_type": "Other Home Services",
+    "status": "needs_mapping",
+    "website_url": "https://secure6.i-doxs.net/bdx/default.aspx?BillerID=H1ol0uvn2h",
+    "deck_source_id": null,
+    "deck_agent_id": null,
+    "deck_task_id": null,
+    "metadata": {},
+    "searchAliases": [],
+    "connectionNote": "Use an existing online account with bills already available. We won’t register an account or change your billing preferences."
+  },
+  {
+    "id": "f3c26ba7-e999-5c3c-900c-efd1407b51b6",
+    "name": "Region of Peel Water",
+    "website_url": "https://peelregion.idoxs.ca/",
+    "utility_type": "Water",
+    "status": "needs_mapping",
+    "metadata": {},
+    "searchAliases": [
+      "Brampton",
+      "Mississauga",
+      "Caledon",
+      "Peel water"
+    ],
+    "connectionNote": "Use your Peel water online account. Residential bills are usually quarterly, so six months may contain only two statements.",
+    "fallback": false,
+    "province_region": "Ontario"
+  },
+  {
+    "id": "ca878ba1-cb76-57af-99f8-6e8ab2635ba8",
+    "name": "Richmond Hill Water",
+    "website_url": "https://waterbill.richmondhill.ca/",
+    "utility_type": "Water",
+    "status": "needs_mapping",
+    "metadata": {},
+    "searchAliases": [
+      "Richmond Hill",
+      "York water"
+    ],
+    "connectionNote": "Use the Richmond Hill Water Customer Portal. Residential water bills are usually quarterly.",
+    "fallback": false,
+    "province_region": "Ontario"
+  },
+  {
+    "id": "d6c3cdbd-3dfc-5803-a5df-f89e7d8904f0",
+    "name": "East Gwillimbury Water",
+    "website_url": "https://icityonline.aspgov.com/eastgwillimbury/live/",
+    "utility_type": "Water",
+    "status": "needs_mapping",
+    "metadata": {},
+    "searchAliases": [
+      "East Gwillimbury",
+      "Holland Landing",
+      "Sharon",
+      "Mount Albert",
+      "Queensville"
+    ],
+    "connectionNote": "Use your registered East Gwillimbury online account with your water account already linked.",
+    "fallback": false,
+    "province_region": "Ontario"
+  },
+  {
+    "id": "d28fa0df-2aaf-5ca1-9935-fd7066b7729a",
+    "name": "Georgina Water",
+    "website_url": "https://access.georgina.ca/",
+    "utility_type": "Water",
+    "status": "needs_mapping",
+    "metadata": {},
+    "searchAliases": [
+      "Georgina",
+      "Keswick",
+      "Sutton",
+      "Jacksons Point"
+    ],
+    "connectionNote": "Use your registered Georgina Tax & Water Portal account.",
+    "fallback": false,
+    "province_region": "Ontario"
+  },
+  {
+    "id": "1f84bee2-6ea5-5c09-882e-a82da77df899",
+    "name": "Stouffville Water",
+    "website_url": "https://vth.townofws.ca/",
+    "utility_type": "Water",
+    "status": "needs_mapping",
+    "metadata": {},
+    "searchAliases": [
+      "Stouffville",
+      "Whitchurch-Stouffville",
+      "Ballantrae",
+      "Musselmans Lake"
+    ],
+    "connectionNote": "Use Virtual Town Hall for statements. Water Watch is a separate consumption service.",
+    "fallback": false,
+    "province_region": "Ontario"
+  },
+  {
+    "id": "e7d5b887-3496-53f9-ae37-dbdec04dd6a8",
+    "name": "Burlington Hydro",
+    "website_url": "https://myaccount.burlingtonhydro.com/",
+    "utility_type": "Electricity",
+    "status": "needs_mapping",
+    "metadata": {},
+    "searchAliases": [
+      "Water",
+      "Burlington",
+      "Burlington water",
+      "Halton water"
+    ],
+    "connectionNote": "Burlington Hydro bills water for Burlington. Use this account for the original combined statement. Connecting Green Button is separate and does not necessarily include water bill PDFs.",
+    "fallback": false,
+    "province_region": "Ontario"
+  },
+  {
+    "id": "3acb3933-a718-575c-8e51-340a255e1ab2",
+    "name": "Halton Hills Hydro",
+    "website_url": "https://accountonline.haltonhillshydro.com/",
+    "utility_type": "Electricity",
+    "status": "needs_mapping",
+    "metadata": {},
+    "searchAliases": [
+      "Water",
+      "Halton Hills",
+      "Halton Hills water",
+      "Halton water"
+    ],
+    "connectionNote": "Halton Hills Hydro bills water for Halton Hills. Use this account for the original combined statement. Connecting Green Button is separate and does not necessarily include water bill PDFs.",
+    "fallback": false,
+    "province_region": "Ontario"
+  },
+  {
+    "id": "9a7fc17e-83cf-5ba8-8268-b7d244e8efb9",
+    "name": "Milton Hydro",
+    "website_url": "https://engage360.miltonhydro.com/",
+    "utility_type": "Electricity",
+    "status": "needs_mapping",
+    "metadata": {},
+    "searchAliases": [
+      "Water",
+      "Milton",
+      "Milton water",
+      "Halton water"
+    ],
+    "connectionNote": "Milton Hydro bills water for Milton. Use this account for the original combined statement. Connecting Green Button is separate and does not necessarily include water bill PDFs.",
+    "fallback": false,
+    "province_region": "Ontario"
+  },
+  {
+    "id": "4a0c59d2-6e3a-5ed0-b68c-0f404e237a91",
+    "name": "Oakville Hydro",
+    "website_url": "https://myaccount.oakvillehydro.com/",
+    "utility_type": "Electricity",
+    "status": "needs_mapping",
+    "metadata": {},
+    "searchAliases": [
+      "Water",
+      "Oakville",
+      "Oakville water",
+      "Halton water"
+    ],
+    "connectionNote": "Oakville Hydro bills water for Oakville. Use this account for the original combined statement. Connecting Green Button is separate and does not necessarily include water bill PDFs.",
+    "fallback": false,
+    "province_region": "Ontario"
+  },
+  {
+    "id": "7f8dfe81-0b10-5b44-847e-aef7d1912464",
+    "name": "NT Power",
+    "website_url": "https://myaccount.ntpower.ca/",
+    "utility_type": "Electricity",
+    "status": "needs_mapping",
+    "metadata": {},
+    "searchAliases": [
+      "Water",
+      "Newmarket",
+      "Newmarket water",
+      "York water"
+    ],
+    "connectionNote": "NT Power bills water for Newmarket. Use this account for the original combined statement. Connecting Green Button is separate and does not necessarily include water bill PDFs.",
+    "fallback": false,
+    "province_region": "Ontario"
+  },
+  {
+    "id": "aab9f4c9-47b9-5714-9bc8-98f12d668e0e",
+    "name": "Aurora Water",
+    "website_url": "https://www.aurora.ca/home-and-property/utilities/water-and-sewer-billing/",
+    "utility_type": "Water",
+    "status": "needs_mapping",
+    "metadata": {},
+    "searchAliases": [
+      "Aurora",
+      "York water"
+    ],
+    "connectionNote": "Aurora sends eBills by email. Upload your saved water bill; we haven’t verified a bill-history portal for automatic retrieval.",
+    "fallback": true,
+    "province_region": "Ontario"
+  },
+  {
+    "id": "12a14153-074d-5cec-b09f-7f29b725e086",
+    "name": "King Township Water",
+    "website_url": "https://www.king.ca/waterbilling",
+    "utility_type": "Water",
+    "status": "needs_mapping",
+    "metadata": {},
+    "searchAliases": [
+      "King",
+      "King City",
+      "Nobleton",
+      "Schomberg",
+      "Ansnorveldt"
+    ],
+    "connectionNote": "King sends eBills by email. Its water-monitoring portal is for usage. Upload a water bill to keep the original and track its charges.",
+    "fallback": true,
+    "province_region": "Ontario"
+  }
+]

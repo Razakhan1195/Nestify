@@ -13,46 +13,17 @@ import {
 
 import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { onboardingGoals } from "@/lib/onboarding/config";
 import { cn } from "@/lib/utils";
 
-const goals = [
-  {
-    id: "bills",
-    title: "Bills and recurring costs",
-    description: "Know what is due, what changed, and what your home costs.",
-    icon: ReceiptText,
-  },
-  {
-    id: "maintenance",
-    title: "Maintenance reminders",
-    description: "Create a simple rhythm for seasonal and recurring home care.",
-    icon: Wrench,
-  },
-  {
-    id: "documents",
-    title: "Documents and records",
-    description: "Make one vault for policies, tax records, warranties, and PDFs.",
-    icon: FileText,
-  },
-  {
-    id: "inventory",
-    title: "Warranties and appliances",
-    description: "Track model numbers, warranty dates, and important home items.",
-    icon: PackageCheck,
-  },
-  {
-    id: "projects",
-    title: "Repairs and projects",
-    description: "Keep renovations, quotes, costs, and service history together.",
-    icon: Hammer,
-  },
-  {
-    id: "assistant",
-    title: "Home issue help",
-    description: "Log problems and decide whether to monitor, maintain, or call help.",
-    icon: Sparkles,
-  },
-] as const;
+const goalIcons = {
+  bills: ReceiptText,
+  maintenance: Wrench,
+  documents: FileText,
+  inventory: PackageCheck,
+  projects: Hammer,
+  assistant: Sparkles,
+} as const;
 
 export function OnboardingGoalsForm() {
   const router = useRouter();
@@ -85,8 +56,8 @@ export function OnboardingGoalsForm() {
   return (
     <div className="grid gap-6">
       <div className="grid gap-4 sm:grid-cols-2">
-        {goals.map((goal) => {
-          const Icon = goal.icon;
+        {onboardingGoals.map((goal) => {
+          const Icon = goalIcons[goal.id];
           const active = selected.includes(goal.id);
 
           return (

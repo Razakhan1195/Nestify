@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { buildOnboardingPlan } from "@/lib/onboarding/config";
 import {
   Card,
   CardContent,
@@ -20,70 +21,15 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 
-const allActions = [
-  {
-    id: "bills",
-    title: "Add your first bill",
-    description:
-      "Start with one known home cost. Exact automation can come later.",
-    href: "/app/bills",
-    cta: "Add bill",
-    icon: ReceiptText,
-  },
-  {
-    id: "maintenance",
-    title: "Create one maintenance reminder",
-    description:
-      "A furnace filter, smoke detector check, or gutter reminder makes the dashboard useful fast.",
-    href: "/app/maintenance",
-    cta: "Add reminder",
-    icon: Wrench,
-  },
-  {
-    id: "documents",
-    title: "Save one important record",
-    description:
-      "Add an insurance policy, property tax bill, warranty, or manual to start your Home Vault.",
-    href: "/app/documents",
-    cta: "Save record",
-    icon: FileText,
-  },
-  {
-    id: "inventory",
-    title: "Add an appliance or warranty",
-    description:
-      "Track a furnace, water heater, fridge, or dishwasher with warranty details.",
-    href: "/app/inventory",
-    cta: "Add item",
-    icon: PackageCheck,
-  },
-  {
-    id: "projects",
-    title: "Create a repair or project",
-    description:
-      "Use this for renovations, quotes, repair costs, and home history.",
-    href: "/app/projects",
-    cta: "Create project",
-    icon: Hammer,
-  },
-  {
-    id: "assistant",
-    title: "Get help with an issue",
-    description:
-      "Capture symptoms and urgency so the issue can become a task or project later.",
-    href: "/app/help",
-    cta: "Start issue check",
-    icon: Sparkles,
-  },
-  {
-    id: "providers",
-    title: "Connect or add providers",
-    description: "Provider sync can enrich the dashboard, but it is optional.",
-    href: "/app/providers",
-    cta: "Review providers",
-    icon: LifeBuoy,
-  },
-] as const;
+const actionIcons = {
+  bills: ReceiptText,
+  maintenance: Wrench,
+  documents: FileText,
+  inventory: PackageCheck,
+  projects: Hammer,
+  assistant: Sparkles,
+  providers: LifeBuoy,
+} as const;
 
 export function OnboardingSetupPlan({
   goals,
@@ -92,12 +38,7 @@ export function OnboardingSetupPlan({
   goals: string[];
   homeName: string;
 }) {
-  const selectedActions = allActions.filter(
-    (action) => goals.includes(action.id) || action.id === "providers",
-  );
-  const visibleActions = selectedActions.length
-    ? selectedActions
-    : allActions.slice(0, 4);
+  const visibleActions = buildOnboardingPlan(goals);
 
   return (
     <div className="grid gap-6">
@@ -124,7 +65,7 @@ export function OnboardingSetupPlan({
 
       <div className="grid gap-4 md:grid-cols-2">
         {visibleActions.map((action) => {
-          const Icon = action.icon;
+          const Icon = actionIcons[action.id];
 
           return (
             <Card className="rounded-lg" key={action.id}>
@@ -137,7 +78,7 @@ export function OnboardingSetupPlan({
               </CardHeader>
               <CardContent>
                 <Button asChild>
-                  <Link href={action.href}>
+                  <Link href={action.webHref}>
                     {action.cta}
                     <ArrowRight className="size-4" />
                   </Link>

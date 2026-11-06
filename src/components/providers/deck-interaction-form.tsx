@@ -21,37 +21,7 @@ export function DeckInteractionForm({
   const router = useRouter();
   const formRef = useRef<HTMLFormElement>(null);
   const [message, setMessage] = useState<string | null>(null);
-  const [checking, setChecking] = useState(false);
   const [pending, setPending] = useState(false);
-
-  async function checkResult() {
-    setMessage(null);
-    setChecking(true);
-
-    try {
-      const response = await fetch("/api/deck/sync-provider", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ providerId }),
-      });
-      const result = (await response.json()) as {
-        message?: string;
-      };
-
-      if (!response.ok) {
-        throw new Error(result.message ?? "Could not check Deck result.");
-      }
-
-      setMessage(result.message ?? "Checked Deck result.");
-      router.refresh();
-    } catch (error) {
-      setMessage(
-        error instanceof Error ? error.message : "Could not check Deck result.",
-      );
-    } finally {
-      setChecking(false);
-    }
-  }
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -101,16 +71,10 @@ export function DeckInteractionForm({
       <div>
         <p className="text-sm font-medium">Verification needed</p>
         <p className="text-sm text-muted-foreground">{interaction.message}</p>
-        {interaction.fields.some((field) =>
-          field.label.toLowerCase().includes("security"),
-        ) ? (
-          <p className="mt-1 text-sm text-muted-foreground">
-            If the exact question is not shown here, Deck did not send it back
-            to Rezlee. Use the question shown in the Deck session, then enter
-            the answer below. If you already answered it in Deck, use “Check
-            Deck result” below.
-          </p>
-        ) : null}
+        <p className="mt-1 text-sm text-muted-foreground">
+          Submit the value requested by your provider. Rezlee sends it back to
+          the same Deck session and waits for the signed completion event.
+        </p>
       </div>
 
       {interaction.fields.map((field) => (
@@ -131,25 +95,12 @@ export function DeckInteractionForm({
       <div className="flex flex-col gap-2 sm:flex-row">
         <Button
           className="h-9 w-full sm:w-auto"
-          disabled={pending || checking}
+          disabled={pending}
           type="submit"
         >
-          {pending ? "Submitting..." : "Submit answer"}
-        </Button>
-        <Button
-          className="h-9 w-full sm:w-auto"
-          disabled={pending || checking}
-          onClick={checkResult}
-          type="button"
-          variant="outline"
-        >
-          {checking ? "Checking..." : "Check Deck result"}
+          {pending ? "Submitting..." : "Submit verification"}
         </Button>
       </div>
-      <p className="text-sm text-muted-foreground">
-        If you already answered this in Deck and the bill was retrieved, check
-        the Deck result to finish updating Rezlee.
-      </p>
       {message ? (
         <p className="text-sm text-muted-foreground">{message}</p>
       ) : null}

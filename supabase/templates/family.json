@@ -1,0 +1,68 @@
+[
+  {
+    "slug": "password-changed",
+    "subject": "Your Rezlee password was changed",
+    "file": "supabase/templates/password-changed.html",
+    "security": true
+  },
+  {
+    "slug": "email-address-changed",
+    "subject": "Your Rezlee email address was changed",
+    "file": "supabase/templates/email-address-changed.html",
+    "security": true
+  },
+  {
+    "slug": "phone-number-changed",
+    "subject": "Your Rezlee sign-in phone number was changed",
+    "file": "supabase/templates/phone-number-changed.html",
+    "security": true
+  },
+  {
+    "slug": "sign-in-method-linked",
+    "subject": "A sign-in method was added to your Rezlee account",
+    "file": "supabase/templates/sign-in-method-linked.html",
+    "security": true
+  },
+  {
+    "slug": "sign-in-method-removed",
+    "subject": "A sign-in method was removed from your Rezlee account",
+    "file": "supabase/templates/sign-in-method-removed.html",
+    "security": true
+  },
+  {
+    "slug": "mfa-method-added",
+    "subject": "A verification method was added to your Rezlee account",
+    "file": "supabase/templates/mfa-method-added.html",
+    "security": true
+  },
+  {
+    "slug": "mfa-method-removed",
+    "subject": "A verification method was removed from your Rezlee account",
+    "file": "supabase/templates/mfa-method-removed.html",
+    "security": true
+  },
+  {
+    "slug": "invite-user",
+    "subject": "You’re invited to Rezlee",
+    "file": "supabase/templates/invite-user.html",
+    "security": false
+  },
+  {
+    "slug": "magic-link-or-otp",
+    "subject": "Your Rezlee sign-in link",
+    "file": "supabase/templates/magic-link-or-otp.html",
+    "security": false
+  },
+  {
+    "slug": "change-email-address",
+    "subject": "Confirm your Rezlee email change",
+    "file": "supabase/templates/change-email-address.html",
+    "security": false
+  },
+  {
+    "slug": "reauthentication",
+    "subject": "Your Rezlee verification code",
+    "file": "supabase/templates/reauthentication.html",
+    "security": false
+  }
+]

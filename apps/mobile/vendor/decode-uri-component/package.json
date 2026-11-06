@@ -1,0 +1,14 @@
+{
+  "name": "decode-uri-component",
+  "version": "0.5.0-rezlee-cjs.1",
+  "private": true,
+  "description": "Unchanged upstream 0.5.0 decoder with its export adapted for legacy CommonJS callers",
+  "main": "index.cjs",
+  "license": "MIT",
+  "sideEffects": false,
+  "files": [
+    "index.cjs",
+    "LICENSE",
+    "UPSTREAM.md"
+  ]
+}

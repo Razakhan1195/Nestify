@@ -1,0 +1,48 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+import {readFile} from "node:fs/promises";
+import {randomUUID} from "node:crypto";
+import {PGlite} from "@electric-sql/pglite";
+test("AI permission fails closed, isolates accounts, gates ordinary and Gmail admission, and pauses background work on withdrawal",async()=>{
+ const db=new PGlite(),a=randomUUID(),b=randomUUID(),link=randomUUID(),lease=randomUUID();
+ try{
+  await db.exec(`create role anon;create role authenticated;create role service_role;create schema auth;create table auth.users(id uuid primary key);
+   create function auth.uid()returns uuid language sql stable as $$select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid$$;
+   create function public.rezlee_account_active(uuid)returns boolean language sql stable as $$select $1 is not null$$;
+   create function public.guard_deleting_rezlee_account()returns trigger language plpgsql as $$begin return new;end$$;
+   create table public.rezlee_ai_budget_config(singleton boolean primary key,enabled boolean,daily_requests integer,monthly_requests integer);
+   insert into public.rezlee_ai_budget_config values(true,true,100,1000);
+   create table public.rezlee_ai_reservations(user_id uuid,created_at timestamptz default now());
+   create table public.rezlee_ai_budget_windows(kind text,starts_on date,requests integer default 0,primary key(kind,starts_on));
+   create table public.gmail_memory_links(id uuid primary key,user_id uuid,status text,ongoing boolean,lease uuid,lease_until timestamptz,generation integer default 1,updated_at timestamptz default now());
+   create table public.gmail_import_ai_reservations(user_id uuid,link_id uuid,lease_id uuid);
+   create function public.rezlee_gmail_ai_capacity(uuid)returns jsonb language sql as $$select '{"allowed":true,"reason":"allowed"}'::jsonb$$;
+   grant usage on schema public,auth to authenticated,service_role;
+  `);
+  await db.query("insert into auth.users values($1),($2)",[a,b]);
+  await db.query("insert into gmail_memory_links(id,user_id,status,ongoing,lease,lease_until)values($1,$2,'active',true,$3,now()+interval '1 hour')",[link,a,lease]);
+  await db.exec(await readFile("supabase/migrations/202610130010_ai_sharing_permission.sql","utf8"));
+  const result=async(s:string,args:unknown[]=[]) => (await db.query<{v:unknown}>(s,args)).rows[0].v;
+  assert.equal(await result("select reserve_rezlee_gmail_ai($1,$2)v",[link,lease]),"unavailable");
+  await db.exec("set role authenticated");await db.query("select set_config('request.jwt.claim.sub',$1,false)",[a]);
+  assert.equal(await result("select reserve_rezlee_ai_request_v2()v"),"consent_required");
+  assert.equal((await result("select rezlee_ai_consent_status()v") as {allowed:boolean}).allowed,false);
+  await assert.rejects(db.query("select set_rezlee_ai_consent(true,'old')"),/current AI privacy/);
+  await db.query("select set_rezlee_ai_consent(true,'2026-10-13')");
+  assert.equal(await result("select reserve_rezlee_ai_request_v2()v"),"allowed");
+  await assert.rejects(db.exec("update rezlee_ai_consents set allowed=false"),/permission denied/);
+  await db.query("select set_config('request.jwt.claim.sub',$1,false)",[b]);
+  assert.equal((await db.query("select * from rezlee_ai_consents")).rows.length,0);
+  assert.equal(await result("select reserve_rezlee_ai_request_v2()v"),"consent_required");
+  await db.exec("reset role");assert.equal(await result("select reserve_rezlee_gmail_ai($1,$2)v",[link,lease]),"allowed");
+  await db.exec("set role authenticated");await db.query("select set_config('request.jwt.claim.sub',$1,false)",[a]);await db.query("select set_rezlee_ai_consent(false,'2026-10-13')");
+  assert.equal(await result("select reserve_rezlee_ai_request_v2()v"),"consent_required");
+  await db.exec("reset role");
+  assert.deepEqual((await db.query("select status,ongoing,lease,generation from gmail_memory_links")).rows[0],{status:"paused",ongoing:false,lease:null,generation:2});
+  assert.equal(await result("select reserve_rezlee_gmail_ai($1,$2)v",[link,lease]),"unavailable");
+  assert.equal(await result("select count(*)::integer v from rezlee_ai_reservations"),1);
+  assert.equal(await result("select count(*)::integer v from gmail_import_ai_reservations"),1);
+  await db.exec("set role anon");await assert.rejects(db.exec("select set_rezlee_ai_consent(true,'2026-10-13')"),/permission denied/);await db.exec("reset role");
+  await db.query("delete from auth.users where id=$1",[a]);assert.equal(await result("select count(*)::integer v from rezlee_ai_consents"),0);
+ }finally{await db.close();}
+});

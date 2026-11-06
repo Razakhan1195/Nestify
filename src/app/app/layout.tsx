@@ -38,13 +38,7 @@ export default async function AppLayout({
   const { data: home, error: homeError } = await getCurrentUserHome(user.id);
 
   if (homeError) {
-    console.error("[app:shell] home check failed", {
-      user_id: user.id,
-      message: homeError.message,
-      details: homeError.details,
-      hint: homeError.hint,
-      code: homeError.code,
-    });
+    console.error("[app:shell] home check failed");
   }
 
   if (!home) {
@@ -91,9 +85,7 @@ export default async function AppLayout({
     .limit(5);
 
   if (notificationsError) {
-    console.warn("[app:shell] notifications unavailable", {
-      message: notificationsError.message,
-    });
+    console.warn("[app:shell] notifications unavailable");
   }
 
   return (

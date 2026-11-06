@@ -1,3 +1,5 @@
+import { allowsNewDeckProvider, isDeckProviderPaused } from "./deck/gta-launch";
+import { deckAdmission } from "./deck/admission";
 import { createClient } from "@/lib/supabase/server";
 
 export const providerRegistryMigrationFile =
@@ -18,6 +20,8 @@ export type ProviderRegistryRow = {
   deck_provider_id: string | null;
   status: ProviderRegistryStatus;
   metadata: Record<string, unknown> | null;
+  connectionAvailable?: boolean;
+  deck_source_id?:string|null; deck_task_id?:string|null; deck_agent_id?:string|null;
   created_at: string;
   updated_at: string;
 };
@@ -62,7 +66,7 @@ export async function getProviderRegistry() {
   const { data, error } = await supabase
     .from("provider_registry")
     .select(
-      "id,name,utility_type,province_region,website_url,deck_provider_id,status,metadata,created_at,updated_at"
+      "id,name,utility_type,province_region,website_url,deck_provider_id,status,metadata,deck_source_id,deck_task_id,deck_agent_id,created_at,updated_at"
     )
     .order("utility_type", { ascending: true })
     .order("name", { ascending: true });
@@ -71,7 +75,7 @@ export async function getProviderRegistry() {
     throw new Error(error.message);
   }
 
-  return (data ?? []) as ProviderRegistryRow[];
+  return ((data ?? []) as ProviderRegistryRow[]).map(row=>({...row,connectionAvailable:allowsNewDeckProvider(row.id) && !isDeckProviderPaused(row.id) && deckAdmission(row).allowed}));
 }
 
 export async function getProviderRegistryById(id: string) {
@@ -79,7 +83,7 @@ export async function getProviderRegistryById(id: string) {
   const { data, error } = await supabase
     .from("provider_registry")
     .select(
-      "id,name,utility_type,province_region,website_url,deck_provider_id,status,metadata,created_at,updated_at"
+      "id,name,utility_type,province_region,website_url,deck_provider_id,status,metadata,deck_source_id,deck_task_id,deck_agent_id,created_at,updated_at"
     )
     .eq("id", id)
     .maybeSingle();
@@ -88,5 +92,5 @@ export async function getProviderRegistryById(id: string) {
     throw new Error(error.message);
   }
 
-  return data as ProviderRegistryRow | null;
+  return data ? {...data,connectionAvailable:allowsNewDeckProvider(data.id) && !isDeckProviderPaused(data.id) && deckAdmission(data).allowed} as ProviderRegistryRow : null;
 }

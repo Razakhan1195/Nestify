@@ -1,0 +1,27 @@
+{
+  "crons": [
+    {
+      "path": "/api/recalls/scheduled",
+      "schedule": "0 14 * * *"
+    },
+    {
+      "path": "/api/recalls/scheduled?receipts=1",
+      "schedule": "0 15 * * *"
+    },
+    {
+      "path": "/api/account-deletion/worker",
+      "schedule": "*/5 * * * *"
+    },
+    {
+      "path": "/api/vault/cleanup",
+      "schedule": "17 * * * *"
+    },
+    {
+      "path": "/api/deck/recover-imports",
+      "schedule": "*/5 * * * *"
+    }
+  ],
+  "regions": [
+    "yul1"
+  ]
+}

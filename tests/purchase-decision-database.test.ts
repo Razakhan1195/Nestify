@@ -1,0 +1,53 @@
+import assert from "node:assert/strict";
+import test from "node:test";
+import {readFile,readdir} from "node:fs/promises";
+import {PGlite} from "@electric-sql/pglite";
+import {randomUUID} from "node:crypto";
+import {emptyQuote} from "../apps/mobile/src/lib/quote-review";
+import {emptyPurchase} from "../apps/mobile/src/lib/purchase-decision";
+test("purchase decisions isolate owners, replay without duplication, fence stale sources and freeze on deletion",async()=>{
+ const db=new PGlite(),a=randomUUID(),b=randomUUID(),ha=randomUUID(),hb=randomUUID(),doc=randomUUID(),other=randomUUID(),id=randomUUID();
+ try{
+  await db.exec(`create role anon;create role authenticated;create role authenticator; create role service_role bypassrls;create schema auth;create schema storage;
+   create table auth.users(id uuid primary key,email text);
+   create function auth.uid() returns uuid language sql stable as $$select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid$$;
+   create table storage.buckets(id text primary key,name text,public boolean,file_size_limit bigint,allowed_mime_types text[]);
+   create table storage.objects(id uuid primary key default gen_random_uuid(),bucket_id text,name text);alter table storage.objects enable row level security;
+   create function storage.foldername(name text) returns text[] language sql immutable as $$select string_to_array(name,'/')$$;
+   grant usage on schema public,auth,storage to authenticated,service_role;`);
+  for(const file of ["supabase/schema.sql",...(await readdir("supabase/migrations")).filter(f=>f.endsWith(".sql")).sort().map(f=>"supabase/migrations/"+f)])
+   await db.exec((await readFile(file,"utf8")).replace(/create extension if not exists "pgcrypto";/g,""));
+  await db.query("insert into auth.users values($1,'a@example.invalid'),($2,'b@example.invalid')",[a,b]);
+  await db.query("insert into homes(id,user_id,nickname)values($1,$2,'A'),($3,$4,'B')",[ha,a,hb,b]);
+  await db.query("insert into documents(id,user_id,home_id,title)values($1,$2,$3,'Quote A'),($4,$5,$6,'Quote B')",[doc,a,ha,other,b,hb]);
+  const quote=emptyQuote();quote.reviewed=true;
+  await db.query("insert into quote_reviews(document_id,user_id,home_id,source_version,revision,payload) select id,user_id,home_id,updated_at,1,$1::jsonb from documents",[JSON.stringify(quote)]);
+  const stamp=(await db.query<{v:string}>("select updated_at::text v from documents where id=$1",[doc])).rows[0].v;
+  const d=emptyPurchase("compare");d.title="Water heater";d.quotes=[{documentId:doc,sourceVersion:stamp,reviewRevision:1,total:"100",allIn:true,scopeConfirmed:false}];
+  type Result={decision:{revision:number;payload:typeof d};replayed:boolean};
+  const save=async(version:number,request=randomUUID(),payload=d,user=a,home=ha)=>(await db.query<{v:Result}>("select save_rezlee_purchase($1,$2,$3,$4,$5,$6::jsonb) v",[user,home,id,version,request,JSON.stringify(payload)])).rows[0].v;
+  const req=randomUUID();assert.equal((await save(0,req)).decision.revision,1);assert.equal((await save(0,req)).replayed,true);
+  await assert.rejects(save(0,req,{...d,notes:"changed retry"}),/Retry changed/);
+  await assert.rejects(save(0),/Decision changed/);
+  await assert.rejects(save(1,randomUUID(),d,b,hb),/Decision unavailable/);
+  await assert.rejects(save(1,randomUUID(),{...d,quotes:[{...d.quotes[0],documentId:other}]}),/Quote unavailable/);
+  await db.exec("grant select on homes to authenticated;set role authenticated");
+  await db.query("select set_config('request.jwt.claim.sub',$1,false)",[b]);assert.equal((await db.query("select * from purchase_decisions")).rows.length,0);
+  await db.query("select set_config('request.jwt.claim.sub',$1,false)",[a]);assert.equal((await db.query("select * from purchase_decisions")).rows.length,1);
+  await assert.rejects(save(1),/permission denied/);
+  await assert.rejects(db.query("update purchase_decisions set revision=9"),/permission denied/);
+  await db.exec("reset role");
+  await db.query("update documents set notes='Corrected original' where id=$1",[doc]);await assert.rejects(save(1),/Quote needs review/);
+  const current=(await db.query<{v:string}>("select updated_at::text v from documents where id=$1",[doc])).rows[0].v;
+  await db.query("update quote_reviews set source_version=$1,revision=2 where document_id=$2",[current,doc]);
+  d.quotes[0]={...d.quotes[0],sourceVersion:current,reviewRevision:2};
+  assert.equal((await save(1)).decision.revision,2);
+  await db.query("delete from documents where id=$1",[doc]);await assert.rejects(save(2),/Quote unavailable/);
+  assert.equal((await db.query("select * from purchase_decisions")).rows.length,1,"Decision notes survive removed evidence, without silently verifying it");
+  d.quotes=[];assert.equal((await save(2)).decision.revision,3);
+  await db.query("insert into account_deletion_jobs(id,user_id,receipt_hash,status)values($1,$2,$3,'queued')",[randomUUID(),a,"a".repeat(64)]);
+  await assert.rejects(save(3),/Account unavailable/);
+  await assert.rejects(db.query("update purchase_decisions set payload=payload where id=$1",[id]),/Account is being deleted/);
+  await db.query("delete from auth.users where id=$1",[a]);assert.equal((await db.query("select * from purchase_decisions")).rows.length,0);
+ }finally{await db.close();}
+});

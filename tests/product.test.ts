@@ -173,6 +173,42 @@ test("manual providers and undated records do not generate setup warnings", () =
     0,
   );
 });
+test("provider failures become Needs you actions while healthy providers stay quiet", () => {
+  const provider = {
+    id: "provider",
+    name: "Internet",
+    display_name: "Bell",
+    provider_priority: 3,
+    connection_status: "sync_failed",
+    health_status: "sync_failed",
+    next_expected_bill_date: null,
+    requires_user_action: true,
+    user_action_message: "Sign in again to restore updates.",
+  };
+
+  const queue = buildActionQueue({ ...blank, providers: [provider] });
+  assert.equal(queue.length, 1);
+  assert.equal(queue[0]?.eventType, "provider_attention");
+  assert.equal(queue[0]?.sourceType, "provider");
+  assert.equal(queue[0]?.severity, "medium");
+
+  assert.equal(
+    buildActionQueue({
+      ...blank,
+      providers: [
+        {
+          ...provider,
+          connection_status: "healthy",
+          health_status: "healthy",
+          requires_user_action: false,
+          user_action_message: null,
+        },
+      ],
+    }).length,
+    0,
+  );
+});
+
 test("upcoming excludes paid and archived history and undated tasks", () => {
   const input = {
     bills: [

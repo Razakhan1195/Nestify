@@ -62,11 +62,13 @@ export function buildUpcomingItems({
   documents,
   tasks,
   today,
+  limit = 5,
 }: {
   bills: UpcomingBill[];
   documents: UpcomingDocument[];
   tasks: UpcomingTask[];
   today: Date;
+  limit?: number;
 }) {
   const billItems: UpcomingItem[] = bills
     .filter(
@@ -117,5 +119,5 @@ export function buildUpcomingItems({
 
   return [...billItems, ...taskItems, ...documentItems]
     .sort((a, b) => dateSortValue(a.date) - dateSortValue(b.date))
-    .slice(0, 5);
+    .slice(0, limit);
 }

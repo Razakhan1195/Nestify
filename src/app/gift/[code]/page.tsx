@@ -1,0 +1,13 @@
+import Link from "next/link";
+import { z } from "zod";
+import { createAdminClient } from "@/lib/supabase/admin";
+export const dynamic="force-dynamic";
+export const metadata={title:"A year of Rezlee Pro, for you",robots:{index:false,follow:false},referrer:"no-referrer"};
+async function invitationAvailable(claimBy:string,claimedAt:string|null){return Boolean(claimedAt)||Date.parse(claimBy)>Date.now();}
+export default async function GiftLanding({params}:{params:Promise<{code:string}>}){
+ const {code}=await params;
+ const valid=z.string().uuid().safeParse(code);
+ const result=valid.success?await createAdminClient().from("rezlee_gift_invitations").select("realtor_name,claim_by,revoked_at,claimed_at").eq("id",code).maybeSingle():null;
+ const gift=result?.data;const available=gift&&!gift.revoked_at&&await invitationAvailable(gift.claim_by,gift.claimed_at);
+ return <main className="min-h-screen bg-background px-6 py-10"><div className="mx-auto max-w-lg space-y-8"><Link href="/" className="text-2xl font-semibold tracking-tight">rezlee</Link><p className="text-xs font-semibold uppercase tracking-widest text-primary">A thoughtful start at home</p><h1 className="font-serif text-5xl leading-tight">{available?"A little less to manage. A year on us.":"Let’s check your invitation."}</h1>{available?<><p className="text-lg text-muted-foreground">{gift.realtor_name} has invited you to a year of Rezlee Pro.</p><section className="space-y-4 rounded-3xl bg-primary p-8 text-primary-foreground"><h2 className="text-xl font-semibold">Make yourself at home.</h2><p>Keep bills and records together. Share everyday costs and tasks. Get more help with the decisions around your home.</p><p>365 days from activation. No card required. No automatic renewal.</p></section><p>Open the invitation in Rezlee, then sign up or sign in with the email your realtor invited. We’ll link the gift automatically after your email is verified.</p><a className="block rounded-xl bg-primary px-6 py-4 text-center font-semibold text-primary-foreground" href={"rezlee://gift?code="+code}>Open my gift in Rezlee</a><p className="text-sm text-muted-foreground">If you haven’t installed Rezlee yet, install it through your available app listing or testing invitation, then reopen this link. Already have Pro? Your existing membership is protected; contact support before replacing it.</p><p className="text-sm text-muted-foreground">Your realtor cannot see your bills, documents or household activity.</p></>:<p>This link may have expired or been withdrawn. Ask your realtor for a new invitation, or contact support@rezlee.com. Your existing account is unaffected.</p>}</div></main>;
+}

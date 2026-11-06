@@ -36,15 +36,16 @@ This app is a client of the main Rezlee Next.js app's mobile-safe API:
    - `EXPO_PUBLIC_SUPABASE_URL` / `EXPO_PUBLIC_SUPABASE_ANON_KEY` - same
      values as the web app's `NEXT_PUBLIC_SUPABASE_URL` /
      `NEXT_PUBLIC_SUPABASE_ANON_KEY`.
-   - `EXPO_PUBLIC_API_URL` - where the Next.js app is running (e.g.
-     `http://localhost:3000`, a Vercel preview URL, or `https://rezlee.com`).
-2. `npm install`
-3. `npm run start` (or `npm run ios` / `npm run android` once you have a
-   simulator or device set up)
+   - Do not set `EXPO_PUBLIC_API_URL` for local device development. The
+     development client derives the Mac's LAN address from Metro and uses
+     port 3000 automatically.
+2. Start the Next.js app on port 3000.
+3. `npm install`
+4. `npm run start` for the physical-device dev client. Use
+   `npm run start:clean` when Metro needs a clean cache.
 
-This sandbox cannot run Metro, a simulator, or a physical device - the code
-above was written and typechecked here, but running and visually verifying
-it happens on your machine or in EAS.
+Local device development does not require Cloudflare, ngrok, or another
+public tunnel. The iPhone and Mac only need to be on the same local network.
 
 ## What you'll need to create before a real build/release
 
@@ -77,10 +78,9 @@ need to set each of these up yourself:
   Setup → API access).
 
 ### 4. Environment values per build profile
-`eas.json` has placeholder `EXPO_PUBLIC_API_URL` values for `preview` and
-`production` profiles - update `REPLACE_WITH_PREVIEW_URL` /
-`REPLACE_WITH_PRODUCTION_URL` once you know which deployed URL each build
-should point at.
+Preview and production builds must receive `EXPO_PUBLIC_API_URL` from the
+corresponding EAS environment. That URL must point at a deployed backend
+serving `/api/mobile/v1/*`. Local LAN auto-discovery is development-only.
 
 ### 5. App icon and splash image
 `assets/icon.png` and `assets/splash.png` are referenced in `app.json` but

@@ -1,0 +1,1 @@
+import {createGateway} from '@ai-sdk/gateway';const g=createGateway({fetch:(u,i)=>fetch(u,{...i,signal:AbortSignal.timeout(10000)})});try{const x=await g.getCredits();console.log(JSON.stringify({balance:x.balance,totalUsed:x.totalUsed}));}catch(e){console.log(JSON.stringify({errorName:e?.name,status:e?.statusCode}));}

@@ -18,6 +18,15 @@ const toneColors: Record<string, { fg: string; bg: string }> = {
   success: { fg: colors.successForeground, bg: colors.successBg },
 };
 
+function categoryIcon(category: string): keyof typeof Feather.glyphMap {
+  const value = category.toLowerCase();
+  if (value.includes("electric") || value.includes("hydro")) return "zap";
+  if (value.includes("water")) return "droplet";
+  if (value.includes("internet") || value.includes("phone")) return "wifi";
+  if (value.includes("insurance")) return "shield";
+  if (value.includes("tax") || value.includes("rent") || value.includes("mortgage")) return "home";
+  return "file-text";
+}
 type BillListRowProps = {
   bill: BillListItem;
   onPress: (bill: BillListItem) => void;
@@ -38,43 +47,45 @@ export function BillListRow({ bill, onPress }: BillListRowProps) {
         alignItems: "center",
         gap: spacing.md,
         paddingVertical: spacing.md,
-        paddingHorizontal: spacing.lg,
-        backgroundColor: colors.card,
-        borderRadius: radii.lg,
+        paddingHorizontal: spacing.md,
+        backgroundColor: pressed ? colors.surfaceSubtle : colors.surfaceRaised,
+        borderRadius: radii["2xl"],
         borderWidth: 1,
         borderColor: colors.border,
-        opacity: pressed ? 0.9 : 1,
       })}
     >
-      <View style={{ flex: 1, gap: 4 }}>
-        <Text
-          style={{ fontSize: 15, fontWeight: "600", color: colors.foreground }}
-          numberOfLines={1}
-        >
+      <View
+        style={{
+          width: 42,
+          height: 42,
+          borderRadius: radii.full,
+          alignItems: "center",
+          justifyContent: "center",
+          backgroundColor: colors.accent,
+        }}
+      >
+        <Feather name={categoryIcon(bill.category)} size={18} color={colors.primary} />
+      </View>
+      <View style={{ flex: 1, gap: 5 }}>
+        <Text style={{ fontSize: 15, fontWeight: "600", color: colors.foreground }} numberOfLines={1}>
           {bill.label}
         </Text>
-        <Text style={{ fontSize: 13, color: colors.mutedForeground }} numberOfLines={1}>
-          Due {formatDueDate(bill.dueDate)} · {bill.category}
+        <Text style={{ fontSize: 12.5, color: colors.mutedForeground }} numberOfLines={1}>
+          {bill.category} · {formatDueDate(bill.dueDate)}
         </Text>
       </View>
+
       <View style={{ alignItems: "flex-end", gap: 6 }}>
-        <Text style={{ fontSize: 15, fontWeight: "600", color: colors.foreground }}>
+        <Text style={{ fontSize: 15, fontWeight: "700", color: colors.foreground }}>
           {bill.amount === null ? "—" : formatCurrency(bill.amount)}
         </Text>
-        <View
-          style={{
-            paddingHorizontal: 8,
-            paddingVertical: 2,
-            borderRadius: radii.full,
-            backgroundColor: tone.bg,
-          }}
-        >
-          <Text style={{ fontSize: 11, fontWeight: "700", color: tone.fg }}>
+        <View style={{ paddingHorizontal: 8, paddingVertical: 3, borderRadius: radii.full, backgroundColor: tone.bg }}>
+          <Text style={{ fontSize: 10.5, fontWeight: "700", color: tone.fg }}>
             {statusLabel(bill.status)}
           </Text>
         </View>
       </View>
-      <Feather name="chevron-right" size={18} color={colors.mutedForeground} />
+      <Feather name="chevron-right" size={17} color={colors.mutedForeground} />
     </Pressable>
   );
 }

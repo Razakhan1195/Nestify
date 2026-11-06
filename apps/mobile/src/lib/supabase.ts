@@ -2,6 +2,7 @@ import "react-native-url-polyfill/auto";
 import { AppState } from "react-native";
 import { createClient } from "@supabase/supabase-js";
 import * as SecureStore from "expo-secure-store";
+import { authStorageKey } from "./auth-storage-key";
 
 const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
 const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
@@ -27,6 +28,7 @@ const secureStoreAdapter = {
 export const supabase = createClient(supabaseUrl ?? "", supabaseAnonKey ?? "", {
   auth: {
     storage: secureStoreAdapter,
+    ...(supabaseUrl ? { storageKey: authStorageKey(supabaseUrl) } : {}),
     autoRefreshToken: true,
     persistSession: true,
     detectSessionInUrl: false,
@@ -44,3 +46,6 @@ AppState.addEventListener("change", (state) => {
     supabase.auth.stopAutoRefresh();
   }
 });
+
+// The initial active state may precede listener registration.
+if (AppState.currentState === "active") supabase.auth.startAutoRefresh();

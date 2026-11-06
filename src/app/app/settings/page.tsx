@@ -80,6 +80,8 @@ export default async function SettingsPage() {
         }
       />
 
+      <SecondaryCTA asChild><Link href="/app/ai-privacy">AI privacy — manage information sharing</Link></SecondaryCTA>
+
       <ProductCard variant="hero">
         <CardContent className="grid gap-4 p-5 sm:p-6 lg:grid-cols-[1fr_auto] lg:items-center">
           <div>

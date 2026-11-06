@@ -17,10 +17,10 @@ import {
   createBillActivityEvent,
   markBillEventsHandled,
   refreshProviderConnectionIntelligence,
-  refreshBillIntelligenceForBill,
 } from "@/lib/insights/bill-intelligence";
 import { hasSupabaseEnv, missingSupabaseEnvMessage } from "@/lib/supabase/env";
 import { getCurrentUserHome } from "@/lib/homes";
+import { homeProfileSchema, homeProfileToDatabase, homeProfileValidationMessage } from "@/lib/onboarding/home-profile";
 import { isDemoEmail, seedDemoData } from "@/lib/demo/seed";
 import {
   getIssueGuidance,
@@ -36,13 +36,14 @@ import {
   homeownerOsMigrationMessage,
   isMissingSchemaError,
 } from "@/lib/schema-errors";
-import { markBillPaidForUser } from "@/lib/product/bill-mutations";
 import {
-  isBillIncomplete,
-  statusAfterBillDetailsCompleted,
-  statusForNewManualBill,
-} from "@/lib/product/rules";
-import { disconnectProvider as disconnectDeckProvider } from "@/lib/sync/provider-sync";
+  createManualBillForUser,
+  deleteManualBillForUser,
+  markBillPaidForUser,
+  updateBillDetailsForUser,
+} from "@/lib/product/bill-mutations";
+import { billDetailsSchema, manualBillSchema } from "@/lib/product/bill-input";
+import { disconnectDeckV2Provider } from "@/lib/sync/deck-v2-runtime";
 
 export type ActionState = {
   errors?: Record<string, string[] | undefined>;
@@ -60,8 +61,6 @@ const optionalDateSchema = z
     "Choose a valid date.",
   )
   .optional();
-const requiredDateSchema = optionalDateSchema.unwrap().min(1, "Choose a date.");
-
 const signupSchema = z
   .object({
     email: z.string().email("Enter a valid email address."),
@@ -87,28 +86,6 @@ const resetPasswordSchema = z
     path: ["password_confirm"],
   });
 
-const homeSchema = z.object({
-  nickname: z.string().min(1, "Enter a home nickname.").max(80),
-  street_address: z.string().max(160).optional(),
-  city: z.string().min(1, "Enter a city.").max(100),
-  province: z.string().min(1, "Enter a province.").max(80),
-  postal_code: z.string().min(1, "Enter a postal code.").max(20),
-  home_type: z.string().min(1, "Choose a home type.").max(80),
-  ownership_type: z.string().min(1, "Choose an ownership type.").max(80),
-  closing_date: optionalDateSchema,
-  approximate_year_built: z
-    .string()
-    .refine(
-      (value) =>
-        !value ||
-        (/^\d{4}$/.test(value) &&
-          Number(value) >= 1600 &&
-          Number(value) <= 2100),
-      "Enter a valid year.",
-    )
-    .optional(),
-});
-
 const providerSetupSchema = z.object({
   category_id: z.string().uuid().optional().or(z.literal("")),
   category_name: z.string().min(1),
@@ -129,33 +106,6 @@ const providerNameSchema = z.object({
   provider_name: z.string().min(1, "Enter the provider name.").max(120),
   account_number: z.string().max(80).optional(),
   notes: z.string().max(500).optional(),
-});
-
-const manualBillSchema = z.object({
-  bill_title: z.string().min(1, "Enter a bill title.").max(140),
-  category: z.string().min(1, "Choose a category.").max(80),
-  provider_id: z.string().uuid().optional().or(z.literal("")),
-  provider_name: z.string().max(120).optional(),
-  issue_date: optionalDateSchema,
-  billing_period_start: optionalDateSchema,
-  billing_period_end: optionalDateSchema,
-  amount: z
-    .string()
-    .min(1, "Enter the bill amount.")
-    .refine((value) => Number.isFinite(Number(value)), "Enter a valid amount."),
-  amount_paid: z
-    .string()
-    .optional()
-    .refine(
-      (value) => !value || Number.isFinite(Number(value)),
-      "Enter a valid amount paid.",
-    ),
-  due_date: requiredDateSchema,
-  frequency: z.string().optional(),
-  payment_status: z.enum(["unpaid", "scheduled", "paid", "overdue"]).optional(),
-  account_number: z.string().max(80).optional(),
-  reminder_date: optionalDateSchema,
-  notes: z.string().optional(),
 });
 
 const providerSyncPreferenceSchema = z.object({
@@ -265,21 +215,6 @@ const billActionSchema = z.object({
 const recordDeleteSchema = z.object({
   record_id: z.string().uuid(),
   return_path: z.string().startsWith("/").default("/app"),
-});
-
-const billDueDateSchema = z.object({
-  bill_id: z.string().uuid(),
-  name: z.string().max(140).optional(),
-  category: z.string().max(80).optional(),
-  amount: z
-    .string()
-    .refine(
-      (value) => !value || Number.isFinite(Number(value)),
-      "Enter a valid amount.",
-    )
-    .optional(),
-  due_date: requiredDateSchema,
-  return_path: z.string().startsWith("/").default("/app/bills"),
 });
 
 const maintenanceActionSchema = z.object({
@@ -395,11 +330,7 @@ async function createTimelineEvent(input: {
   });
 
   if (error) {
-    console.warn("[timeline:create] skipped timeline event", {
-      code: error.code,
-      event_type: input.eventType,
-      message: error.message,
-    });
+    console.warn("[timeline:create] skipped timeline event");
   }
 }
 
@@ -702,28 +633,19 @@ export async function createHome(
     await getCurrentUserHome(user.id);
 
   if (existingHomeError) {
-    console.error("[home:create] existing home check failed", {
-      user_id: user.id,
-      message: existingHomeError.message,
-      details: existingHomeError.details,
-      hint: existingHomeError.hint,
-      code: existingHomeError.code,
-    });
+    console.error("[home:create] existing home check failed");
 
     return {
-      message: existingHomeError.message,
+      message: "Could not check your home. Please try again.",
     };
   }
 
   if (existingHome) {
-    console.log("[home:create] duplicate create blocked", {
-      user_id: user.id,
-      home_id: existingHome.id,
-    });
+    console.log("[home:create] duplicate create blocked");
     redirect("/app");
   }
 
-  const validatedFields = homeSchema.safeParse({
+  const validatedFields = homeProfileSchema.safeParse({
     nickname: getString(formData, "nickname"),
     street_address: getString(formData, "street_address"),
     city: getString(formData, "city"),
@@ -738,57 +660,33 @@ export async function createHome(
   if (!validatedFields.success) {
     return {
       errors: validatedFields.error.flatten().fieldErrors,
-      message: "Check the highlighted fields and try again.",
+      message: homeProfileValidationMessage(validatedFields.error.flatten().fieldErrors),
     };
   }
 
   const values = validatedFields.data;
   const insertPayload = {
     user_id: user.id,
-    nickname: values.nickname,
-    street_address: values.street_address || null,
-    city: values.city || null,
-    province: values.province || null,
-    postal_code: values.postal_code || null,
-    country: "Canada",
-    home_type: values.home_type || null,
-    ownership_type: values.ownership_type || null,
-    closing_date: values.closing_date || null,
-    approximate_year_built: values.approximate_year_built
-      ? Number(values.approximate_year_built)
-      : null,
+    ...homeProfileToDatabase(values),
   };
 
-  console.log("[home:create] inserting public.homes row", {
-    user_id: user.id,
-    nickname: insertPayload.nickname,
-  });
+  console.log("[home:create] inserting public.homes row");
 
-  const { data: home, error } = await supabase
+  const { error } = await supabase
     .from("homes")
     .insert(insertPayload)
     .select("id,user_id,nickname,created_at")
     .single();
 
   if (error) {
-    console.error("[home:create] insert failed", {
-      user_id: user.id,
-      message: error.message,
-      details: error.details,
-      hint: error.hint,
-      code: error.code,
-    });
+    console.error("[home:create] insert failed");
 
     return {
       message: error.message,
     };
   }
 
-  console.log("[home:create] insert succeeded", {
-    home_id: home.id,
-    user_id: home.user_id,
-    nickname: home.nickname,
-  });
+  console.log("[home:create] insert succeeded");
 
   revalidatePath("/app");
   redirect("/app/onboarding?step=goals");
@@ -823,7 +721,7 @@ export async function updateHome(
     redirect("/app/onboarding");
   }
 
-  const validatedFields = homeSchema.safeParse({
+  const validatedFields = homeProfileSchema.safeParse({
     nickname: getString(formData, "nickname"),
     street_address: getString(formData, "street_address"),
     city: getString(formData, "city"),
@@ -838,26 +736,14 @@ export async function updateHome(
   if (!validatedFields.success) {
     return {
       errors: validatedFields.error.flatten().fieldErrors,
-      message: "Check the highlighted fields and try again.",
+      message: homeProfileValidationMessage(validatedFields.error.flatten().fieldErrors),
     };
   }
 
   const values = validatedFields.data;
   const { error } = await supabase
     .from("homes")
-    .update({
-      nickname: values.nickname,
-      street_address: values.street_address || null,
-      city: values.city || null,
-      province: values.province || null,
-      postal_code: values.postal_code || null,
-      home_type: values.home_type || null,
-      ownership_type: values.ownership_type || null,
-      closing_date: values.closing_date || null,
-      approximate_year_built: values.approximate_year_built
-        ? Number(values.approximate_year_built)
-        : null,
-    })
+    .update(homeProfileToDatabase(values))
     .eq("id", existingHome.id)
     .eq("user_id", user.id);
 
@@ -976,14 +862,14 @@ export async function addProvider(formData: FormData) {
       health_status: "needs_attention",
       sync_frequency: `${syncFrequencyDays} days`,
       sync_frequency_days: syncFrequencyDays,
-      next_scheduled_sync_at: nextScheduledSyncAt,
+      next_scheduled_sync_at: registryProvider?.connectionAvailable ? nextScheduledSyncAt : null,
       sync_status:
-        registryProvider?.status === "active"
+        registryProvider?.connectionAvailable === true
           ? "initial_sync_pending"
           : "manual_bill_available",
       requires_user_action: true,
       user_action_message:
-        registryProvider?.status === "active"
+        registryProvider?.connectionAvailable === true
           ? "Provider selected. Connect when ready to retrieve bills, due dates, PDFs, and changes automatically."
           : "This provider is saved. Automation is not fully mapped yet, so you can add bills manually while connection support is prepared.",
       data_capabilities: setup.capabilities,
@@ -1008,7 +894,7 @@ export async function addProvider(formData: FormData) {
       sync_frequency: `${syncFrequencyDays} days`,
       requires_user_action: true,
       user_action_message:
-        registryProvider?.status === "active"
+        registryProvider?.connectionAvailable === true
           ? "Provider selected. Connect when ready to retrieve bills, due dates, PDFs, and changes automatically."
           : "This provider is saved. Automation is not fully mapped yet, so you can add bills manually while connection support is prepared.",
     },
@@ -1168,10 +1054,11 @@ export async function deleteProvider(formData: FormData) {
   const provider = await requireOwnedProvider(parsed.data.provider_id, user.id);
 
   if (
-    provider.deck_connection_id &&
+    (provider.deck_credential_id || provider.deck_connection_id) &&
     provider.deck_connection_status !== "disconnected"
   ) {
-    await disconnectDeckProvider({
+    await disconnectDeckV2Provider({
+      supabase,
       providerId: provider.id,
       userId: user.id,
     });
@@ -1287,106 +1174,19 @@ export async function createManualBill(formData: FormData) {
     redirect("/app/bills?error=Enter a bill title and choose a category.");
   }
 
-  const values = parsed.data;
-  const provider = values.provider_id
-    ? await requireOwnedProvider(values.provider_id, user.id)
-    : null;
-  const amount = nullableMoney(values.amount ?? "");
-  const paymentStatus = values.payment_status ?? "unpaid";
-  const billStatus =
-    paymentStatus === "paid"
-      ? "paid"
-      : paymentStatus === "overdue"
-        ? "overdue"
-        : statusForNewManualBill(values.due_date);
+  const result = await createManualBillForUser(
+    { homeId: home.id, supabase, userId: user.id },
+    parsed.data,
+  );
 
-  const duplicateQuery = supabase
-    .from("bills")
-    .select("id")
-    .eq("user_id", user.id)
-    .eq("home_id", home.id)
-    .eq("due_date", values.due_date)
-    .eq("amount", amount);
-
-  const { data: duplicateBill } = provider
-    ? await duplicateQuery.eq("provider_id", provider.id).maybeSingle()
-    : await duplicateQuery
-        .eq("custom_provider_name", values.provider_name ?? values.bill_title)
-        .maybeSingle();
-
-  if (duplicateBill) {
-    redirectWithNotice(
-      `/app/bills?provider=${provider?.id ?? ""}#manual-bill`,
-      "A similar manual bill already exists.",
-    );
+  if (!result.ok) {
+    redirectWithNotice("/app/bills", result.message);
   }
-
-  const { data: bill, error } = await supabase
-    .from("bills")
-    .insert({
-      user_id: user.id,
-      home_id: home.id,
-      provider_id: provider?.id ?? null,
-      provider_connection_id: provider?.id ?? null,
-      custom_provider_name: provider
-        ? null
-        : nullableString(values.provider_name ?? ""),
-      name: values.bill_title,
-      amount,
-      amount_paid: nullableMoney(values.amount_paid ?? ""),
-      due_date: nullableDate(values.due_date ?? ""),
-      issue_date: nullableDate(values.issue_date ?? ""),
-      billing_period_start: nullableDate(values.billing_period_start ?? ""),
-      billing_period_end: nullableDate(values.billing_period_end ?? ""),
-      account_number_masked: nullableString(values.account_number ?? ""),
-      payment_status: paymentStatus,
-      reminder_date: nullableDate(values.reminder_date ?? ""),
-      frequency: nullableString(values.frequency ?? ""),
-      recurrence: nullableString(values.frequency ?? ""),
-      status: billStatus,
-      source: "manual",
-      notes: nullableString(values.notes ?? ""),
-      raw_data: {
-        category: values.category,
-        provider_contact: nullableString(
-          provider?.display_name ??
-            provider?.name ??
-            values.provider_name ??
-            "",
-        ),
-        manual_fallback: true,
-      },
-    })
-    .select("id")
-    .single();
-
-  if (error) {
-    redirect(`/app/bills?error=${encodeURIComponent(error.message)}`);
-  }
-
-  await createTimelineEvent({
-    userId: user.id,
-    homeId: home.id,
-    eventType: "bill_added",
-    title: "Bill added",
-    body: values.due_date
-      ? `${values.bill_title} due ${values.due_date}`
-      : values.bill_title,
-    relatedTable: "bills",
-    relatedId: bill.id,
-  });
-
-  await refreshBillIntelligenceForBill({
-    billId: bill.id,
-    homeId: home.id,
-    supabase,
-    userId: user.id,
-  });
 
   revalidatePath("/app");
   revalidatePath("/app/bills");
-  if (provider) {
-    revalidatePath(`/app/providers/${provider.id}`);
+  if (parsed.data.provider_id) {
+    revalidatePath(`/app/providers/${parsed.data.provider_id}`);
   }
   redirectWithNotice("/app/bills", "Manual bill added.");
 }
@@ -1542,94 +1342,31 @@ export async function markBillReviewed(formData: FormData) {
 
 export async function updateBillDueDate(formData: FormData) {
   const { home, supabase, user } = await requireUserAndHome();
-  const parsed = billDueDateSchema.safeParse({
+  const returnPath = getString(formData, "return_path") || "/app/bills";
+  const parsed = billDetailsSchema.safeParse({
     bill_id: getString(formData, "bill_id"),
     amount: getString(formData, "amount"),
     name: getString(formData, "name"),
     category: getString(formData, "category"),
     due_date: getString(formData, "due_date"),
-    return_path: getString(formData, "return_path") || "/app/bills",
   });
 
   if (!parsed.success) {
     redirectWithNotice("/app/bills", "Choose a due date first.");
   }
 
-  const values = parsed.data;
-  const { data: existingBill, error: existingBillError } = await supabase
-    .from("bills")
-    .select("id,name,amount,raw_data,status")
-    .eq("id", values.bill_id)
-    .eq("user_id", user.id)
-    .eq("home_id", home.id)
-    .single();
+  const result = await updateBillDetailsForUser(
+    { homeId: home.id, supabase, userId: user.id },
+    parsed.data,
+  );
 
-  if (existingBillError || !existingBill) {
-    redirectWithNotice(values.return_path, "Couldn't update. Try again.");
+  if (!result.ok) {
+    redirectWithNotice(returnPath, result.message);
   }
-
-  const nextAmount =
-    values.amount && Number.isFinite(Number(values.amount))
-      ? Number(values.amount)
-      : existingBill.amount;
-  const nextName = values.name || existingBill.name;
-  const raw =
-    existingBill.raw_data && typeof existingBill.raw_data === "object"
-      ? existingBill.raw_data
-      : {};
-  const nextRaw = values.category ? { ...raw, category: values.category } : raw;
-  const nextStatus = ["paid", "archived"].includes(existingBill.status)
-    ? existingBill.status
-    : isBillIncomplete({
-          amount: nextAmount,
-          due_date: values.due_date,
-          name: nextName,
-          raw_data: nextRaw,
-          status: null,
-        })
-      ? "incomplete"
-      : statusAfterBillDetailsCompleted(values.due_date);
-  const { error } = await supabase
-    .from("bills")
-    .update({
-      name: nextName,
-      raw_data: nextRaw,
-      amount: nextAmount,
-      due_date: values.due_date,
-      status: nextStatus,
-    })
-    .eq("id", values.bill_id)
-    .eq("user_id", user.id)
-    .eq("home_id", home.id);
-
-  if (error) {
-    redirectWithNotice(
-      values.return_path,
-      "Could not save due date. Try again.",
-    );
-  }
-
-  await markBillEventsHandled({
-    billId: values.bill_id,
-    eventTypes: ["due_date_missing"],
-    homeId: home.id,
-    supabase,
-    userId: user.id,
-  });
-
-  await createTimelineEvent({
-    userId: user.id,
-    homeId: home.id,
-    eventType: "bill_due_date_added",
-    title: "Bill due date added",
-    body: `Due ${values.due_date}`,
-    relatedTable: "bills",
-    relatedId: values.bill_id,
-  });
 
   revalidatePath("/app");
   revalidatePath("/app/bills");
-  redirectWithNotice(values.return_path, "Due date added.");
+  redirectWithNotice(returnPath, "Bill details saved.");
 }
 
 export async function deleteManualBill(formData: FormData) {
@@ -1643,50 +1380,18 @@ export async function deleteManualBill(formData: FormData) {
     redirectWithNotice("/app/bills", "That bill could not be removed.");
   }
 
-  const values = parsed.data;
-  const { data: bill, error: billError } = await supabase
-    .from("bills")
-    .select("id,name,source")
-    .eq("id", values.record_id)
-    .eq("user_id", user.id)
-    .eq("home_id", home.id)
-    .single();
+  const result = await deleteManualBillForUser(
+    { homeId: home.id, supabase, userId: user.id },
+    parsed.data.record_id,
+  );
 
-  if (billError || !bill) {
-    redirectWithNotice(values.return_path, "That bill could not be found.");
+  if (!result.ok) {
+    redirectWithNotice(parsed.data.return_path, result.message);
   }
-
-  if (bill.source !== "manual") {
-    redirectWithNotice(
-      values.return_path,
-      "Provider-synced bills are kept as home history.",
-    );
-  }
-
-  const { error } = await supabase
-    .from("bills")
-    .delete()
-    .eq("id", bill.id)
-    .eq("user_id", user.id)
-    .eq("home_id", home.id);
-
-  if (error) {
-    redirectWithNotice(values.return_path, "That bill could not be removed.");
-  }
-
-  await createTimelineEvent({
-    userId: user.id,
-    homeId: home.id,
-    eventType: "manual_bill_deleted",
-    title: "Manual bill removed",
-    body: bill.name,
-    relatedTable: "bills",
-    relatedId: bill.id,
-  });
 
   revalidatePath("/app");
   revalidatePath("/app/bills");
-  redirectWithNotice(values.return_path, "Manual bill removed.");
+  redirectWithNotice(parsed.data.return_path, "Manual bill removed.");
 }
 
 export async function completeMaintenanceTask(formData: FormData) {
@@ -1980,7 +1685,7 @@ export async function createDocumentRecord(formData: FormData) {
     storagePath = `${user.id}/${home.id}/${crypto.randomUUID()}`;
     const { error: uploadError } = await supabase.storage
       .from(DOCUMENT_BUCKET)
-      .upload(storagePath, upload, { contentType: upload.type, upsert: false });
+      .upload(storagePath, upload, { contentType: upload.type, cacheControl: "0", upsert: false });
     if (uploadError)
       redirectWithError(
         "/app/documents",

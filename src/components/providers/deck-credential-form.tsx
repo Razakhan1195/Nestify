@@ -56,7 +56,7 @@ export function DeckCredentialForm({ providerId }: DeckCredentialFormProps) {
   return (
     <form className="grid gap-3" onSubmit={onSubmit} ref={formRef}>
       <div className="grid gap-2">
-        <Label htmlFor="deck-username">Durham Water username</Label>
+        <Label htmlFor="deck-username">Provider username or email</Label>
         <Input
           autoComplete="username"
           id="deck-username"
@@ -65,7 +65,7 @@ export function DeckCredentialForm({ providerId }: DeckCredentialFormProps) {
         />
       </div>
       <div className="grid gap-2">
-        <Label htmlFor="deck-password">Durham Water password</Label>
+        <Label htmlFor="deck-password">Provider password</Label>
         <Input
           autoComplete="current-password"
           id="deck-password"

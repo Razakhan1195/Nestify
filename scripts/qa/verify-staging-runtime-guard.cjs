@@ -1,0 +1,26 @@
+'use strict';
+const assert=require('node:assert/strict');
+const {validate,verifyKeys,requiredNames}=require('../release/verify-staging-runtime.cjs');
+const key=role=>'header.'+Buffer.from(JSON.stringify({ref:'gjwvalpxnfbvryosmcbj',role})).toString('base64url')+'.fixture-signature';
+const fixture=()=>({...Object.fromEntries(requiredNames.map(k=>[k,k.endsWith('_ENABLED')||k.endsWith('_READY')||k.endsWith('_APPROVED')?'true':'fixture-value'])),NEXT_PUBLIC_SUPABASE_URL:'https://gjwvalpxnfbvryosmcbj.supabase.co',NEXT_PUBLIC_APP_URL:'https://staging.rezlee.com',NEXT_PUBLIC_SITE_URL:'https://staging.rezlee.com',NEXT_PUBLIC_SUPABASE_ANON_KEY:key('anon'),SUPABASE_SECRET_KEY:key('service_role'),DECK_MOCK_MODE:'false',REZLEE_AI_DISABLED:'false',REVENUECAT_ALLOW_SANDBOX:'true',AI_ASSISTANT_PROVIDER:'gateway',VERCEL_OIDC_TOKEN:'fixture-oidc-token',REZLEE_STORE_PRODUCTS:'monthly,annual',REZLEE_DECK_LAUNCH_PROVIDERS:'[]',GMAIL_CLIENT_ID:'fixture-client',GMAIL_CLIENT_SECRET:'fixture-secret',REZLEE_GMAIL_ENCRYPTION_KEY:Buffer.alloc(32,1).toString('base64')});
+(async()=>{
+ let count=0;const check=(name,fn)=>Promise.resolve().then(fn).then(()=>{count++;console.log('PASS '+name);});
+ await check('Complete fixture metadata accepted',()=>assert.equal(validate(fixture()).ok,true));
+ await check('Missing integration credentials rejected without echoing values',()=>{const e=fixture();delete e.REVENUECAT_SECRET_KEY;e.DECK_API_KEY='PRIVATE_TEST_SENTINEL';const result=validate(e);assert.equal(result.ok,false);assert(!JSON.stringify(result).includes('PRIVATE_TEST_SENTINEL'));});
+ await check('Production database rejected before any network call',async()=>{const e=fixture();e.NEXT_PUBLIC_SUPABASE_URL='https://eynbuhmtxkigvqoewbwi.supabase.co';let called=false;assert((await verifyKeys(e,()=>{called=true;})).length);assert.equal(called,false);});
+ await check('Privileged client key rejected',()=>{const e=fixture();e.NEXT_PUBLIC_SUPABASE_ANON_KEY=key('service_role');assert.equal(validate(e).ok,false);});
+ await check('Wrong-project JWT rejected',()=>{const e=fixture();e.SUPABASE_SECRET_KEY='h.'+Buffer.from(JSON.stringify({ref:'other-project',role:'service_role'})).toString('base64url')+'.s';assert.equal(validate(e).ok,false);});
+ await check('Missing AI auth rejected',()=>{const e=fixture();delete e.VERCEL_OIDC_TOKEN;assert.equal(validate(e).ok,false);});
+ await check('Duplicate store products rejected',()=>{const e=fixture();e.REZLEE_STORE_PRODUCTS='monthly,monthly';assert.equal(validate(e).ok,false);});
+ await check('Missing auth-context dependency blocks deployment',()=>{const e=fixture();delete e.REZLEE_APPLE_NOTIFICATIONS_ENABLED;assert.equal(validate(e).ok,false);});
+ await check('Disabled combined screen reads block deployment',()=>{const e=fixture();e.REZLEE_MOBILE_SCREEN_SNAPSHOT_ENABLED='false';assert.equal(validate(e).ok,false);});
+ await check('Disabled read optimization rejected',()=>{const e=fixture();e.REZLEE_MOBILE_READ_BUDGET_ENABLED='false';assert.equal(validate(e).ok,false);});
+ await check('Enabled Gmail requires complete configuration',()=>{const e=fixture();delete e.GMAIL_CLIENT_SECRET;assert.equal(validate(e).ok,false);});
+ await check('Empty provider policy cannot silently disable connections',()=>{const e=fixture();e.REZLEE_DECK_TESTING_ENABLED='false';assert.equal(validate(e).ok,false);});
+ await check('Malformed provider mapping rejected',()=>{const e=fixture();e.REZLEE_DECK_LAUNCH_PROVIDERS='[{"registryId":"invalid"}]';assert.equal(validate(e).ok,false);});
+ await check('Remote key rejection blocks release',async()=>assert((await verifyKeys(fixture(),async()=>({ok:false}))).length===2));
+ await check('Disabled auth provider blocks release',async()=>{const errors=await verifyKeys(fixture(),async()=>({ok:true,json:async()=>({external:{apple:true,google:false,email:true}})}));assert.equal(errors.length,2);});
+ await check('Valid key checks target staging only',async()=>{const urls=[];assert.equal((await verifyKeys(fixture(),async(url)=>{urls.push(url);return {ok:true,json:async()=>({external:{apple:true,google:true,email:true}})};})).length,0);assert(urls.every(x=>x==='https://gjwvalpxnfbvryosmcbj.supabase.co/auth/v1/settings'));});
+ await check('Network failure blocks release without error-body disclosure',async()=>{const errors=await verifyKeys(fixture(),async()=>{throw Error('PRIVATE_TEST_SENTINEL');});assert.equal(errors.length,2);assert(!JSON.stringify(errors).includes('PRIVATE_TEST_SENTINEL'));});
+ console.log(JSON.stringify({passed:count,failed:0,scope:'Synthetic build-guard boundary tests; no live credentials or integrations'}));
+})().catch(()=>{console.error('Build-guard regression failed');process.exitCode=1;});

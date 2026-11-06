@@ -1,0 +1,8 @@
+# Local credentials and native signing material never belong in backend uploads.
+.env*
+**/.env*
+**/*.p12
+**/*.pem
+**/*.mobileprovision
+apps/mobile/ios
+apps/mobile/android

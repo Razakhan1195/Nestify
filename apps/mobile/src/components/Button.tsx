@@ -1,7 +1,7 @@
 import * as Haptics from "expo-haptics";
-import { ActivityIndicator, Pressable, Text, type GestureResponderEvent } from "react-native";
+import { ActivityIndicator, Keyboard, Pressable, Text, type GestureResponderEvent } from "react-native";
 
-import { colors, radii } from "@/theme/tokens";
+import { colors, radii, typography } from "@/theme/tokens";
 
 type ButtonVariant = "primary" | "secondary";
 
@@ -21,42 +21,45 @@ export function Button({
   loading,
 }: ButtonProps) {
   const isPrimary = variant === "primary";
-  const isDisabled = disabled || loading;
+  const isDisabled = Boolean(disabled || loading);
 
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityState={{ disabled: isDisabled }}
+      accessibilityLabel={label}
+      accessibilityState={{ disabled: isDisabled, busy: Boolean(loading) }}
       disabled={isDisabled}
       onPress={(event) => {
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        Keyboard.dismiss();
+        void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
         onPress(event);
       }}
       style={({ pressed }) => ({
         minHeight: 48,
-        borderRadius: radii.md,
+        borderRadius: radii.lg,
+        flexDirection: "row",
+        gap: 10,
         alignItems: "center",
         justifyContent: "center",
         paddingHorizontal: 20,
+        paddingVertical: 12,
         backgroundColor: isPrimary ? colors.primary : colors.secondary,
-        opacity: isDisabled ? 0.6 : pressed ? 0.85 : 1,
+        opacity: disabled && !loading ? 0.6 : pressed ? 0.85 : 1,
       })}
     >
-      {loading ? (
-        <ActivityIndicator
-          color={isPrimary ? colors.primaryForeground : colors.secondaryForeground}
-        />
-      ) : (
+      {loading ? <ActivityIndicator accessible={false}
+        color={isPrimary ? colors.primaryForeground : colors.secondaryForeground} /> : null}
         <Text
           style={{
-            fontSize: 15,
+            ...typography.body,
+            textAlign: "center",
+            flexShrink: 1,
             fontWeight: "600",
             color: isPrimary ? colors.primaryForeground : colors.secondaryForeground,
           }}
         >
           {label}
         </Text>
-      )}
     </Pressable>
   );
 }

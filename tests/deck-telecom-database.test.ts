@@ -1,0 +1,47 @@
+import assert from "node:assert/strict";
+import test from "node:test";
+import {readFile,readdir} from "node:fs/promises";
+import {PGlite} from "@electric-sql/pglite";
+test("telecom durable imports enforce one active job, account identity, immutable versions, lease and disconnect fencing",async()=>{
+ const db=new PGlite();
+ const user="11111111-1111-4111-8111-111111111111",home="aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",provider="bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",lease="cccccccc-cccc-4ccc-8ccc-cccccccccccc";
+ try {
+  await db.exec(`create role anon;create role authenticated;create role authenticator; create role service_role bypassrls;
+   create schema auth;create schema storage;create table auth.users(id uuid primary key,email text);
+   create function auth.uid() returns uuid language sql stable as $$select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid$$;
+   create table storage.buckets(id text primary key,name text,public boolean,file_size_limit bigint,allowed_mime_types text[]);
+   create table storage.objects(id uuid primary key default gen_random_uuid(),bucket_id text,name text);
+   alter table storage.objects enable row level security;
+   create function storage.foldername(name text) returns text[] language sql immutable as $$select string_to_array(name,'/')$$;
+   grant usage on schema public,auth,storage to authenticated,service_role;grant all on storage.objects to authenticated;`);
+  for(const f of ["supabase/schema.sql",...(await readdir("supabase/migrations")).filter(f=>f.endsWith(".sql")).sort().map(f=>"supabase/migrations/"+f)])await db.exec((await readFile(f,"utf8")).replace(/create extension if not exists "pgcrypto";/g,""));
+  await db.exec(`insert into auth.users values('${user}','test@example.invalid');insert into homes(id,user_id,nickname)values('${home}','${user}','Home');insert into providers(id,user_id,home_id,name,deck_credential_id,connection_status)values('${provider}','${user}','${home}','Rogers','cred_test','syncing');`);
+  const start=async()=> (await db.query<{id:string}>("insert into deck_telecom_imports(user_id,home_id,provider_id,status,credential_id,phases,task_run_id,lease_token,lease_until,since_date,until_date)values($1,$2,$3,'running','cred_test','[]','trun_one',$4,now()+interval '2 minutes','2025-10-04','2026-10-04')returning id",[user,home,provider,lease])).rows[0].id;
+  const job=await start();await assert.rejects(start(),/duplicate key/);
+  const bill:Record<string,unknown>={external_bill_id:"deck-telco-account1-sept",user_id:user,provider_id:provider,name:"Rogers bill",amount:100,currency:"CAD",issue_date:"2026-09-01",due_date:"2026-09-20",status:"archived",raw_data:{record_kind:"historical"},line_items:[],detected_fees:[]};
+  const save=async(payload=bill,run="trun_one",token=lease)=>(await db.query<{id:string}>("select save_rezlee_telecom_bill($1,$2,$3,$4)id",[job,token,run,JSON.stringify(payload)])).rows[0].id;
+  const id=await save();assert.equal(await save(),id);assert.equal((await db.query("select * from deck_telecom_snapshots")).rows.length,1);
+  const second=await save({...bill,external_bill_id:"deck-telco-account2-sept"});assert.notEqual(second,id);
+  await db.query("update bills set status='paid',payment_status='paid',paid_at=now()where id=$1",[id]);
+  await db.query("update deck_telecom_imports set task_run_id='trun_two'where id=$1",[job]);
+  assert.equal(await save({...bill,amount:110},"trun_two"),id);
+  const row=(await db.query<{amount:string;status:string}>("select amount,status from bills where id=$1",[id])).rows[0];assert.equal(Number(row.amount),110);assert.equal(row.status,"paid");
+  assert.equal((await db.query("select * from deck_telecom_snapshots where bill_id=$1",[id])).rows.length,2);
+  const key="a".repeat(64);
+  const current={...bill,external_bill_id:"deck-telco-latest",issue_date:"2026-10-01",due_date:"2026-10-20",status:"upcoming",current_amount_due:70,payment_status:"partial",amount_paid:30,raw_data:{account_key:key,record_kind:"current",import_phase:"latest"}};
+  const currentId=await save(current,"trun_two");
+  await save({...current,status:"archived",current_amount_due:null,payment_status:null,raw_data:{account_key:key,record_kind:"historical",import_phase:"history"}},"trun_two");
+  const retained=(await db.query<{status:string;current_amount_due:string;payment_status:string;raw_data:{record_kind:string}}>("select status,current_amount_due,payment_status,raw_data from bills where id=$1",[currentId])).rows[0];
+  assert.equal(retained.status,"upcoming");assert.equal(Number(retained.current_amount_due),70);assert.equal(retained.payment_status,"partial");assert.equal(retained.raw_data.record_kind,"current");
+  await save({...current,payment_status:"paid",status:"paid",current_amount_due:0,amount_paid:100},"trun_two");
+  assert.equal((await db.query<{status:string}>("select status from bills where id=$1",[currentId])).rows[0].status,"paid");
+  await save({...current,external_bill_id:"deck-telco-next",issue_date:"2026-11-01",due_date:"2026-11-20"},"trun_two");
+  assert.equal((await db.query<{status:string}>("select status from bills where id=$1",[currentId])).rows[0].status,"archived");
+  await assert.rejects(save(bill,"trun_two","dddddddd-dddd-4ddd-8ddd-dddddddddddd"),/Import changed/);
+  await db.query("update providers set deck_credential_id=null,connection_status='disconnected'where id=$1",[provider]);
+  await assert.rejects(save(bill,"trun_two"),/Connection changed/);
+  await db.exec("set role authenticated");
+  await assert.rejects(db.query("select * from deck_telecom_imports"),/permission denied/);
+  await assert.rejects(save(bill,"trun_two"),/permission denied/);
+ }finally{await db.close();}
+});

@@ -40,7 +40,7 @@ const faqs = [
     question: "How is account access handled?",
     value: "privacy",
     answer:
-      "You sign in to access your household records. Account-scoped database policies restrict access to user-owned data. Provider connection options vary, and credentials are handled through the connection service rather than stored as household records.",
+      "You sign in to access your household records. Your records are protected with account access controls. Connected providers have their own secure sign-in steps; never share your passwords or verification codes with support.",
   },
 ];
 

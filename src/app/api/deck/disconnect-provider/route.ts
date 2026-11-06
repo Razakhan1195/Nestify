@@ -2,7 +2,8 @@ import { revalidatePath } from "next/cache";
 
 import { providerApiAuth } from "@/lib/security/provider-api";
 import { readBoundedJson } from "@/lib/security/request";
-import { disconnectProvider } from "@/lib/sync/provider-sync";
+import { disconnectDeckV2Provider } from "@/lib/sync/deck-v2-runtime";
+import { createClient } from "@/lib/supabase/server";
 
 export async function POST(request: Request) {
   const auth = await providerApiAuth();
@@ -24,7 +25,9 @@ export async function POST(request: Request) {
   }
 
   try {
-    const result = await disconnectProvider({
+    const supabase = await createClient();
+    const result = await disconnectDeckV2Provider({
+      supabase,
       providerId: body.providerId,
       userId: user.id,
     });

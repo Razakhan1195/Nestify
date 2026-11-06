@@ -114,9 +114,7 @@ export async function seedDemoData(
         related_table: "projects",
       },
     ]);
-  } catch (error) {
-    console.warn("[demo:seed] skipped demo seeding", {
-      message: error instanceof Error ? error.message : "unknown error",
-    });
+  } catch {
+    console.warn("[demo:seed] skipped demo seeding");
   }
 }

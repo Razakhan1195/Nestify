@@ -7,18 +7,89 @@
     "development": {
       "developmentClient": true,
       "distribution": "internal",
-      "environment": "development"
+      "environment": "development",
+      "channel": "development"
     },
     "preview": {
       "distribution": "internal",
-      "environment": "preview"
+      "environment": "preview",
+      "developmentClient": false,
+      "channel": "staging"
     },
     "production": {
       "autoIncrement": true,
-      "environment": "production"
+      "environment": "production",
+      "developmentClient": false,
+      "env": {
+        "EXPO_NO_DOTENV": "1",
+        "EXPO_PUBLIC_SOCIAL_AUTH_READY": "true",
+        "EXPO_PUBLIC_APPLE_AUTH_READY": "true",
+        "EXPO_PUBLIC_EMAIL_CODE_READY": "true"
+      },
+      "channel": "production",
+      "distribution": "store",
+      "android": {
+        "buildType": "app-bundle"
+      }
+    },
+    "staging-android": {
+      "extends": "preview",
+      "android": {
+        "buildType": "apk"
+      },
+      "env": {
+        "EXPO_NO_DOTENV": "1",
+        "EXPO_PUBLIC_SOCIAL_AUTH_READY": "true",
+        "EXPO_PUBLIC_EMAIL_CODE_READY": "true"
+      },
+      "autoIncrement": true
+    },
+    "beta": {
+      "distribution": "store",
+      "environment": "preview",
+      "autoIncrement": true,
+      "developmentClient": false,
+      "env": {
+        "EXPO_NO_DOTENV": "1",
+        "EXPO_PUBLIC_SOCIAL_AUTH_READY": "true",
+        "EXPO_PUBLIC_EMAIL_CODE_READY": "true"
+      },
+      "android": {
+        "buildType": "app-bundle"
+      },
+      "channel": "staging"
+    },
+    "apple-beta": {
+      "extends": "beta",
+      "env": {
+        "EXPO_PUBLIC_APPLE_AUTH_READY": "true"
+      }
+    },
+    "apple-staging-android": {
+      "extends": "staging-android",
+      "env": {
+        "EXPO_PUBLIC_APPLE_AUTH_READY": "true"
+      }
+    },
+    "production-candidate": {
+      "extends": "production",
+      "channel": "production-candidate",
+      "distribution": "store",
+      "android": {
+        "buildType": "app-bundle"
+      }
     }
   },
   "submit": {
-    "production": {}
+    "production": {},
+    "beta": {
+      "android": {
+        "track": "internal",
+        "releaseStatus": "draft"
+      },
+      "ios": {
+        "ascAppId": "6817197470"
+      }
+    }
   }
 }

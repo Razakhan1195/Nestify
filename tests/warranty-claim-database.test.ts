@@ -1,0 +1,41 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+import {PGlite} from "@electric-sql/pglite";
+import {readFile} from "node:fs/promises";
+import {randomUUID} from "node:crypto";
+test("warranty reading receipts isolate homes, replay safely, and cannot be completed by a mobile client",async()=>{
+ const db=new PGlite(),a=randomUUID(),b=randomUUID(),ha=randomUUID(),hb=randomUUID(),request=randomUUID();
+ try{
+  await db.exec(`create role anon;create role authenticated;create role service_role bypassrls;create schema auth;
+   create table auth.users(id uuid primary key);
+   create table homes(id uuid primary key,user_id uuid references auth.users(id) on delete cascade);
+   create function auth.uid()returns uuid language sql stable as $$select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid$$;
+   create function public.rezlee_account_active(uuid)returns boolean language sql stable as $$select $1 is not null$$;
+   create function public.guard_deleting_rezlee_account()returns trigger language plpgsql as $$begin return new;end$$;
+   grant usage on schema public,auth to authenticated,service_role;
+   insert into auth.users values('${a}'),('${b}');insert into homes values('${ha}','${a}'),('${hb}','${b}');`);
+  await db.exec(await readFile("supabase/migrations/202611020001_warranty_claim_drafts.sql","utf8"));
+  await db.exec(`set role authenticated;set request.jwt.claim.sub='${a}';`);
+  const begin=async(home=ha,hash="a".repeat(64),input={itemName:"Dishwasher"})=>(await db.query<{v:{claimed:boolean;draft:{state:string;result:unknown}}}>("select begin_rezlee_warranty_claim($1,$2,$3,$4::jsonb)v",[home,request,hash,JSON.stringify(input)])).rows[0].v;
+  assert.equal((await begin()).claimed,true);
+  assert.equal((await begin()).claimed,false);
+  assert.equal((await db.query("select * from warranty_claim_drafts")).rows.length,1);
+  await assert.rejects(begin(ha,"b".repeat(64)),/Request changed/);
+  await assert.rejects(begin(ha,"a".repeat(64),{itemName:"Changed details"}),/Request changed/);
+  await assert.rejects(begin(hb),/Home unavailable/);
+  await assert.rejects(db.query("select finish_rezlee_warranty_claim($1,$2,$3,'{}')",[a,request,"a".repeat(64)]),/permission denied/);
+  await assert.rejects(db.exec("update warranty_claim_drafts set state='ready'"),/permission denied/);
+  await db.exec(`set request.jwt.claim.sub='${b}';`);
+  assert.equal((await db.query("select * from warranty_claim_drafts")).rows.length,0);
+  assert.equal((await begin(hb)).claimed,true);
+  await db.exec("reset role;set role service_role;");
+  const finish=async(hash="a".repeat(64),value:unknown={draft:"Review before sending"})=>(await db.query<{v:boolean}>("select finish_rezlee_warranty_claim($1,$2,$3,$4::jsonb)v",[a,request,hash,JSON.stringify(value)])).rows[0].v;
+  assert.equal(await finish("b".repeat(64)),false);
+  assert.equal(await finish(),true);assert.equal(await finish(),false);
+  await db.exec(`reset role;set role authenticated;set request.jwt.claim.sub='${a}';`);
+  const replay=await begin();assert.equal(replay.claimed,false);assert.equal(replay.draft.state,"ready");assert.deepEqual(replay.draft.result,{draft:"Review before sending"});
+  await db.exec(`reset role;delete from auth.users where id='${a}';`);
+  assert.equal((await db.query("select * from warranty_claim_drafts where user_id=$1",[a])).rows.length,0);
+  await db.exec("set role anon;");await assert.rejects(db.exec("select * from warranty_claim_drafts"),/permission denied/);
+ }finally{await db.close();}
+});

@@ -4,36 +4,72 @@
   "private": true,
   "main": "expo-router/entry",
   "scripts": {
-    "start": "expo start",
-    "android": "expo start --android",
-    "ios": "expo start --ios",
+    "start": "node scripts/start-staging.mjs --go",
+    "start:clean": "node scripts/start-staging.mjs --go",
+    "android": "expo run:android",
+    "ios": "expo run:ios",
     "web": "expo start --web",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "start:staging": "node scripts/start-staging.mjs",
+    "build:android:beta": "node scripts/build-staging.mjs android",
+    "build:ios:beta": "node scripts/build-staging.mjs ios",
+    "submit:ios:beta": "node scripts/submit-ios-beta.mjs",
+    "build:android:play-beta": "node scripts/build-staging.mjs android beta",
+    "start:dev-client": "node scripts/start-staging.mjs"
   },
   "dependencies": {
     "@expo/vector-icons": "^15.0.2",
     "@react-navigation/native": "^7.3.18",
+    "@sentry/react-native": "8.30.0",
     "@supabase/supabase-js": "^2.108.2",
-    "expo": "~57.0.18",
-    "expo-constants": "~57.0.18",
-    "expo-dev-client": "~57.0.19",
+    "decode-uri-component": "file:vendor/decode-uri-component-0.5.0-rezlee-cjs.1.tgz",
+    "expo": "~57.0.30",
+    "expo-camera": "~57.0.6",
+    "expo-constants": "57.0.22",
+    "expo-crypto": "~57.0.4",
+    "expo-dev-client": "~57.0.20",
+    "expo-device": "~57.0.2",
+    "expo-document-picker": "~57.0.3",
+    "expo-file-system": "~57.0.7",
     "expo-font": "~57.0.4",
     "expo-haptics": "~57.0.3",
-    "expo-linking": "~57.0.10",
-    "expo-router": "~57.0.21",
+    "expo-image-manipulator": "~57.0.21",
+    "expo-image-picker": "~57.0.20",
+    "expo-linking": "57.0.13",
+    "expo-local-authentication": "~57.0.3",
+    "expo-notifications": "57.0.23",
+    "expo-router": "~57.0.28",
     "expo-secure-store": "~57.0.4",
-    "expo-splash-screen": "~57.0.9",
+    "expo-splash-screen": "~57.0.10",
     "expo-status-bar": "~57.0.1",
+    "expo-updates": "~57.0.26",
+    "expo-web-browser": "~57.0.3",
     "react": "19.2.3",
     "react-dom": "^19.2.3",
     "react-native": "0.86.3",
+    "react-native-keyboard-controller": "1.21.9",
+    "react-native-purchases": "10.14.0",
+    "react-native-reanimated": "4.5.1",
     "react-native-safe-area-context": "~5.7.0",
     "react-native-screens": "~4.26.0",
-    "react-native-url-polyfill": "^2.0.0"
+    "react-native-url-polyfill": "^2.0.0",
+    "react-native-webview": "13.16.1",
+    "react-native-worklets": "0.10.1"
   },
   "devDependencies": {
     "@babel/core": "^7.28.0",
     "@types/react": "~19.2.4",
+    "babel-preset-expo": "^57.0.11",
     "typescript": "~6.0.3"
+  },
+  "overrides": {
+    "decode-uri-component": "$decode-uri-component"
+  },
+  "expo": {
+    "install": {
+      "exclude": [
+        "@sentry/react-native"
+      ]
+    }
   }
 }

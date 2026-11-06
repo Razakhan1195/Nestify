@@ -43,19 +43,6 @@ function categoryNameForRegistryUtility(utilityType: string) {
   }
 }
 
-function registryStatusLabel(status: ProviderRegistryRow["status"]) {
-  switch (status) {
-    case "active":
-      return "Available";
-    case "needs_mapping":
-      return "Add manually or pilot";
-    case "coming_soon":
-      return "Coming soon";
-    case "unsupported":
-      return "Unsupported";
-  }
-}
-
 function canConnectRegistryProvider(provider: ProviderRegistryRow) {
   return provider.status !== "unsupported";
 }
@@ -174,7 +161,7 @@ export function ProviderRegistryPicker({
                             <Badge variant="secondary">Already added</Badge>
                           ) : (
                             <Badge variant={statusTone(provider.status)}>
-                              {registryStatusLabel(provider.status)}
+                              {provider.connectionAvailable ? "Available" : "Coming soon · add bills manually"}
                             </Badge>
                           )}
                         </span>
@@ -214,7 +201,7 @@ export function ProviderRegistryPicker({
             <div className="flex flex-wrap items-center gap-2">
               <p className="font-semibold">{selectedProvider.name}</p>
               <Badge variant={statusTone(selectedProvider.status)}>
-                {registryStatusLabel(selectedProvider.status)}
+                {selectedProvider.connectionAvailable ? "Available" : "Coming soon · add bills manually"}
               </Badge>
             </div>
             <p className="text-sm text-muted-foreground">

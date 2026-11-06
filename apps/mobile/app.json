@@ -14,29 +14,55 @@
       "supportsTablet": false,
       "bundleIdentifier": "com.rezlee.app",
       "infoPlist": {
-        "ITSAppUsesNonExemptEncryption": false
+        "ITSAppUsesNonExemptEncryption": false,
+        "NSFaceIDUsageDescription": "Allow Rezlee to use Face ID to unlock your household."
       }
     },
     "android": {
       "package": "com.rezlee.app",
       "adaptiveIcon": {
-        "foregroundImage": "./assets/icon.png",
-        "backgroundColor": "#F7F4EC"
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#244c40"
       }
     },
     "plugins": [
       "expo-router",
       "expo-secure-store",
+      "expo-notifications",
       [
         "expo-splash-screen",
         {
-          "image": "./assets/splash.png",
+          "image": "./assets/brand-mark.png",
           "resizeMode": "contain",
-          "backgroundColor": "#F7F4EC"
+          "backgroundColor": "#F8F7F3",
+          "imageWidth": 76
         }
       ],
       "expo-status-bar",
-      "expo-font"
+      "expo-font",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow Rezlee to choose bill and product-label photos.",
+          "cameraPermission": "Allow Rezlee to photograph bills and product labels.",
+          "microphonePermission": false
+        }
+      ],
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Allow Rezlee to scan product barcodes.",
+          "recordAudioAndroid": false,
+          "barcodeScannerEnabled": true
+        }
+      ],
+      [
+        "expo-local-authentication",
+        {
+          "faceIDPermission": "Allow Rezlee to use Face ID to unlock your household."
+        }
+      ],
+      "expo-web-browser"
     ],
     "extra": {
       "router": {},
@@ -44,6 +70,15 @@
         "projectId": "776a9268-af12-47bb-a5a9-4f22c42d474a"
       }
     },
-    "owner": "razakhan92"
+    "owner": "rezleeapps-team",
+    "runtimeVersion": {
+      "policy": "fingerprint"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/776a9268-af12-47bb-a5a9-4f22c42d474a",
+      "enabled": true,
+      "checkAutomatically": "ON_LOAD",
+      "fallbackToCacheTimeout": 0
+    }
   }
 }

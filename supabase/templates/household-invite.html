@@ -1,0 +1,69 @@
+<!doctype html>
+<html>
+  <body style="margin:0;background:#f7f4ec;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;color:#1e352b;">
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background:#f7f4ec;padding:32px 12px;">
+      <tr><td align="center">
+        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="max-width:620px;">
+          <tr><td style="padding:0 4px 18px;text-align:center;">
+            <div style="font-size:25px;font-weight:800;letter-spacing:-0.7px;color:#244a3a;">Rezlee</div>
+            <div style="margin-top:4px;font-size:12px;color:#7b847d;">Your place, under control.</div>
+          </td></tr>
+          <tr><td style="overflow:hidden;border-radius:28px;background:#ffffff;border:1px solid #d9ded5;box-shadow:0 10px 28px rgba(36,74,58,.08);">
+            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
+              <tr><td style="background:#244a3a;padding:38px 36px 34px;color:#ffffff;">
+                <table role="presentation" cellspacing="0" cellpadding="0" border="0">
+                  <tr><td style="width:58px;height:58px;border-radius:18px;background:#f7f4ec;text-align:center;vertical-align:middle;font-size:29px;color:#244a3a;">⌂</td></tr>
+                </table>
+                <div style="margin-top:22px;font-size:13px;font-weight:700;color:#bdd0c5;text-transform:uppercase;letter-spacing:.08em;">Household invitation</div>
+                <h1 style="margin:9px 0 0;font-size:31px;line-height:1.15;letter-spacing:-.7px;font-weight:750;color:#ffffff;">{{ .Data.rezlee_inviter_name }} invited you to {{ .Data.rezlee_home_name }}</h1>
+                <p style="margin:15px 0 0;max-width:500px;font-size:15px;line-height:1.6;color:#d7e0da;">Join them on Rezlee so the work of running a home can be shared instead of living in one person’s head.</p>
+              </td></tr>
+              <tr><td style="padding:30px 30px 6px;">
+                <div style="font-size:18px;font-weight:750;color:#1e352b;">What Rezlee helps you do</div>
+              </td></tr>
+              <tr><td style="padding:12px 30px 4px;">
+                <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
+                  <tr>
+                    <td width="33.33%" valign="top" style="padding:0 6px 0 0;">
+                      <div style="min-height:128px;border:1px solid #e0e4dd;border-radius:18px;padding:16px;background:#fbfaf6;">
+                        <div style="font-size:22px;">✓</div>
+                        <div style="margin-top:12px;font-size:14px;font-weight:750;color:#1e352b;">Know what’s yours</div>
+                        <div style="margin-top:6px;font-size:12px;line-height:1.5;color:#6e7770;">See the responsibilities and routines you own.</div>
+                      </div>
+                    </td>
+                    <td width="33.33%" valign="top" style="padding:0 3px;">
+                      <div style="min-height:128px;border:1px solid #e0e4dd;border-radius:18px;padding:16px;background:#fbfaf6;">
+                        <div style="font-size:22px;">↻</div>
+                        <div style="margin-top:12px;font-size:14px;font-weight:750;color:#1e352b;">Share fairly</div>
+                        <div style="margin-top:6px;font-size:12px;line-height:1.5;color:#6e7770;">Rotate recurring chores without the reminders.</div>
+                      </div>
+                    </td>
+                    <td width="33.33%" valign="top" style="padding:0 0 0 6px;">
+                      <div style="min-height:128px;border:1px solid #e0e4dd;border-radius:18px;padding:16px;background:#fbfaf6;">
+                        <div style="font-size:22px;">✦</div>
+                        <div style="margin-top:12px;font-size:14px;font-weight:750;color:#1e352b;">Ask Rezlee</div>
+                        <div style="margin-top:6px;font-size:12px;line-height:1.5;color:#6e7770;">Get practical AI help for the household and what comes next.</div>
+                      </div>
+                    </td>
+                  </tr>
+                </table>
+              </td></tr>
+              <tr><td style="padding:22px 30px 8px;">
+                <div style="border-radius:17px;background:#eef3ee;padding:16px 18px;font-size:13px;line-height:1.55;color:#59665e;">
+                  <strong style="color:#244a3a;">Your privacy stays separate.</strong> Joining shares Household and Care responsibilities. Private Bills and Vault records are not automatically shared.
+                </div>
+              </td></tr>
+              <tr><td style="padding:22px 30px 8px;text-align:center;">
+                <a href="{{ .RedirectTo }}&amp;token_hash={{ .TokenHash }}&amp;type=invite" style="display:inline-block;background:#244a3a;color:#ffffff;text-decoration:none;font-size:15px;font-weight:750;padding:15px 28px;border-radius:13px;">Join household</a>
+              </td></tr>
+              <tr><td style="padding:14px 36px 32px;text-align:center;font-size:11px;line-height:1.55;color:#8a918b;">
+                This invitation is tied to {{ .Email }}. If you weren’t expecting it, you can ignore this email.
+              </td></tr>
+            </table>
+          </td></tr>
+          <tr><td style="padding:18px 12px 0;text-align:center;font-size:11px;color:#929892;">Rezlee · Your place, under control.</td></tr>
+        </table>
+      </td></tr>
+    </table>
+  </body>
+</html>

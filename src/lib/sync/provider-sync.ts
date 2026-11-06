@@ -1,3 +1,5 @@
+import { requireLegacyDeckAdmission } from "@/lib/deck/admission";
+import { rememberDeckProvider, withAccountOperation } from "@/lib/account/operations";
 import { createDeckClient } from "@/lib/deck/client";
 import {
   mapDeckBillToBillRow,
@@ -85,6 +87,7 @@ function getProviderConnectionId(provider: ProviderRow) {
 function nextBillDate(bills: DeckBill[]) {
   return bills
     .map((bill) => bill.dueDate)
+    .filter((value): value is string => Boolean(value))
     .sort((a, b) => new Date(a).getTime() - new Date(b).getTime())[0];
 }
 
@@ -147,7 +150,6 @@ async function createProviderSyncRun(input: {
   if (error) {
     console.warn("[provider_sync_runs:create] skipped sync run", {
       code: error.code,
-      message: error.message,
     });
   }
 }
@@ -179,7 +181,6 @@ async function createNotification(input: {
   if (error) {
     console.warn("[notifications:create] skipped notification", {
       code: error.code,
-      message: error.message,
       notification_type: input.notificationType,
     });
   }
@@ -210,12 +211,11 @@ async function createTimelineEvent(input: {
     console.warn("[timeline:create] skipped timeline event", {
       code: error.code,
       event_type: input.eventType,
-      message: error.message,
     });
   }
 }
 
-export async function createProviderConnectionSession(input: {
+async function createProviderConnectionSessionImpl(input: {
   providerId: string;
   userId: string;
 }) {
@@ -274,7 +274,7 @@ export async function createProviderConnectionSession(input: {
   };
 }
 
-export async function createProviderDeckCredential(input: {
+async function createProviderDeckCredentialImpl(input: {
   providerId: string;
   userId: string;
   username: string;
@@ -284,6 +284,7 @@ export async function createProviderDeckCredential(input: {
   const provider = await requireOwnedProvider(input.providerId, input.userId);
   const setup = getProviderSetupByName(provider.name);
   const deck = createDeckClient();
+  await rememberDeckProvider(input.userId, provider.id);
   const credential = await deck.createCredential({
     providerId: provider.id,
     providerName: provider.display_name ?? provider.name,
@@ -686,7 +687,7 @@ async function finishProviderSync(input: {
   };
 }
 
-export async function syncProvider(input: {
+async function syncProviderImpl(input: {
   providerId: string;
   restart?: boolean;
   userId: string;
@@ -803,7 +804,7 @@ export async function syncProvider(input: {
   }
 }
 
-export async function submitProviderDeckInteraction(input: {
+async function submitProviderDeckInteractionImpl(input: {
   providerId: string;
   userId: string;
   values: Record<string, string>;
@@ -886,4 +887,23 @@ export async function disconnectProvider(input: {
     status: "disconnected",
     message: "Provider disconnected.",
   };
+}
+
+export async function createProviderConnectionSession(input: Parameters<typeof createProviderConnectionSessionImpl>[0]) {
+  requireLegacyDeckAdmission();
+  return withAccountOperation(input.userId, () => createProviderConnectionSessionImpl(input));
+}
+
+export async function createProviderDeckCredential(input: Parameters<typeof createProviderDeckCredentialImpl>[0]) {
+  requireLegacyDeckAdmission();
+  return withAccountOperation(input.userId, () => createProviderDeckCredentialImpl(input));
+}
+
+export async function syncProvider(input: Parameters<typeof syncProviderImpl>[0]) {
+  requireLegacyDeckAdmission();
+  return withAccountOperation(input.userId, () => syncProviderImpl(input));
+}
+
+export async function submitProviderDeckInteraction(input: Parameters<typeof submitProviderDeckInteractionImpl>[0]) {
+  return withAccountOperation(input.userId, () => submitProviderDeckInteractionImpl(input));
 }

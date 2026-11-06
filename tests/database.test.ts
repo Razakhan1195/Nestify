@@ -8,7 +8,7 @@ import { PGlite } from "@electric-sql/pglite";
 test("database migrations, tenant isolation, private storage, atomic task recurrence, and AI cap", async () => {
   const db = new PGlite();
   try {
-    await db.exec(`create role anon; create role authenticated;
+    await db.exec(`create role anon; create role authenticated; create role authenticator; create role service_role bypassrls;
       create schema auth; create schema storage;
       create table auth.users (id uuid primary key, email text);
       create function auth.uid() returns uuid language sql stable as $$ select nullif(current_setting('request.jwt.claim.sub', true), '')::uuid $$;
@@ -39,7 +39,7 @@ test("database migrations, tenant isolation, private storage, atomic task recurr
     }
     // Supabase grants are platform-owned, not part of the application's schema dump.
     const tables = await db.query<{ tablename: string }>(
-      "select tablename from pg_tables where schemaname='public' and tablename <> 'rezlee_ai_reservations'",
+      "select tablename from pg_tables where schemaname='public' and tablename not in ('rezlee_ai_reservations','care_plan_receipts','statement_read_attempts')",
     );
     for (const { tablename } of tables.rows)
       await db.exec(
@@ -119,6 +119,81 @@ test("database migrations, tenant isolation, private storage, atomic task recurr
       db.exec(`select public.complete_rezlee_task('${id}')`),
     );
     await db.exec(`set request.jwt.claim.sub='${a}'`);
+    // Care lifecycle against the real schema/functions, with isolated household fixtures.
+    const ownerMember = (await db.query<{id:string}>(`select id from public.household_members where home_id='${ha}' and linked_user_id='${a}' and role='owner' and status='active'`)).rows[0].id;
+    const guestMember = "dddddddd-dddd-4ddd-8ddd-dddddddddd02";
+    const rotation = "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee";
+    await db.exec(`insert into public.household_members(id,home_id,created_by_user_id,linked_user_id,display_name,role,status)
+      values('${guestMember}','${ha}','${a}','${b}','Guest','member','active');
+      insert into public.household_rotations(id,home_id,created_by_user_id,title) values('${rotation}','${ha}','${a}','Test cleaning');
+      insert into public.household_rotation_members(rotation_id,member_id,position) values('${rotation}','${ownerMember}',0),('${rotation}','${guestMember}',1);`);
+    const routine = await db.query<{id:string}>(`insert into public.maintenance_tasks(user_id,home_id,title,recurrence,due_date,status,assigned_member_id,rotation_id)
+      values('${a}','${ha}','Weekly cleaning lifecycle','weekly',current_date - 14,'open','${guestMember}','${rotation}') returning id`);
+    await db.exec(`set request.jwt.claim.sub='${b}'`);
+    assert.equal((await db.query(`select id from public.homes where id='${ha}'`)).rows.length,1,"active member can resolve the shared home before calling completion");
+    assert.equal((await db.query(`select id from public.maintenance_tasks where id='${routine.rows[0].id}'`)).rows.length,1,"active member can discover assigned Care tasks");
+    assert.equal((await db.query(`select id from public.bills where home_id='${ha}'`)).rows.length,0,"shared membership does not expose private bills");
+    assert.equal((await db.query(`update public.homes set nickname='Forbidden' where id='${ha}' returning id`)).rows.length,0,"member cannot edit shared home");
+    assert.equal((await db.query(`update public.maintenance_tasks set title='Forbidden' where id='${routine.rows[0].id}' returning id`)).rows.length,0,"member cannot directly edit shared task");
+    assert.equal((await db.query(`delete from public.maintenance_tasks where id='${routine.rows[0].id}' returning id`)).rows.length,0,"member cannot delete shared task");
+    await assert.rejects(db.exec(`insert into public.maintenance_tasks(user_id,home_id,title) values('${b}','${ha}','Forbidden shared insert')`),"shared home read access cannot authorize foreign-home writes");
+    const firstTurn = (await db.query<{result:{completed:boolean;next_date:string;next_task_id:string;next_assigned_member_id:string}}>(`select public.complete_rezlee_task('${routine.rows[0].id}') as result`)).rows[0].result;
+    assert.equal(firstTurn.completed,true);
+    assert.equal(firstTurn.next_assigned_member_id,ownerMember);
+    const expectedDate = (await db.query<{value:string}>("select (current_date + 7)::text as value")).rows[0].value;
+    assert.equal(firstTurn.next_date,expectedDate,"late completion creates one future occurrence, not a backlog");
+    assert.equal((await db.query<{result:{completed:boolean}}>(`select public.complete_rezlee_task('${routine.rows[0].id}') as result`)).rows[0].result.completed,false,"repeated completion cannot duplicate the next occurrence");
+    await assert.rejects(db.exec(`select public.complete_rezlee_task('${firstTurn.next_task_id}')`),"member cannot complete another person's assigned turn");
+    await db.exec(`set request.jwt.claim.sub='${a}'`);
+    const turns = await db.query<{status:string;completed_at:string|null}>(`select status,completed_at from public.maintenance_tasks where title='Weekly cleaning lifecycle' order by created_at,id`);
+    assert.equal(turns.rows.length,2);
+    assert.equal(turns.rows.filter(t=>t.status==='completed' && t.completed_at).length,1);
+    assert.equal(turns.rows.filter(t=>t.status==='open').length,1);
+    const secondTurn = (await db.query<{result:{next_assigned_member_id:string;next_task_id:string}}>(`select public.complete_rezlee_task('${firstTurn.next_task_id}') as result`)).rows[0].result;
+    assert.equal(secondTurn.next_assigned_member_id,guestMember,"rotation wraps to the next person");
+    await db.exec(`delete from public.maintenance_tasks where id='${secondTurn.next_task_id}'`);
+    assert.equal((await db.query(`select id from public.maintenance_tasks where title='Weekly cleaning lifecycle' and status='open'`)).rows.length,0,"removing the open recurring task stops future occurrences");
+    assert.equal((await db.query(`select id from public.maintenance_tasks where title='Weekly cleaning lifecycle' and status='completed'`)).rows.length,2,"removing the next occurrence preserves completed history");
+    const once = (await db.query<{id:string}>(`insert into public.maintenance_tasks(user_id,home_id,title,recurrence,status) values('${a}','${ha}','One-time lifecycle',null,'open') returning id`)).rows[0].id;
+    const onceDone = (await db.query<{result:{completed:boolean;next_date:null;next_task_id:null}}>(`select public.complete_rezlee_task('${once}') as result`)).rows[0].result;
+    assert.equal(onceDone.completed,true); assert.equal(onceDone.next_date,null); assert.equal(onceDone.next_task_id,null);
+    await assert.rejects(db.exec(`insert into public.maintenance_tasks(user_id,home_id,title,assigned_member_id) values('${b}','${hb}','Cross-home assignment','${ownerMember}')`));
+
+    // Deletion of private records/belongings stays owner-only even for a shared Care member.
+    await db.exec(`insert into public.documents(user_id,home_id,title) values('${a}','${ha}','Private deletion fixture');
+      insert into public.inventory_items(user_id,home_id,name) values('${a}','${ha}','Private item deletion fixture');
+      set request.jwt.claim.sub='${b}'`);
+    assert.equal((await db.query(`delete from public.documents where home_id='${ha}' returning id`)).rows.length,0,"shared member cannot delete private documents");
+    assert.equal((await db.query(`delete from public.inventory_items where home_id='${ha}' returning id`)).rows.length,0,"shared member cannot delete private belongings");
+    await db.exec(`set request.jwt.claim.sub='${a}'`);
+    assert.equal((await db.query(`delete from public.documents where title='Private deletion fixture' returning id`)).rows.length,1,"owner can remove their own record");
+    assert.equal((await db.query(`delete from public.inventory_items where name='Private item deletion fixture' returning id`)).rows.length,1,"owner can remove their own item");
+
+    // Atomic plan activation: replay, competing retries, changed input, rollback and access.
+    const planTasks = [{ title: "Receipt-test floors", category: "Cleaning", description: "", recurrence: "weekly", priority: "normal", due_date: "2026-10-01" }, { title: "Receipt-test kitchen", category: "Cleaning", description: "", recurrence: "daily", priority: "normal", due_date: "2026-10-02" }];
+    const savePlan = (key: string, rows: unknown = planTasks, mode = "rotate", people = [ownerMember, guestMember]) => db.query<{result:{ok:boolean;count:number;taskIds:string[]}}>(
+      "select public.save_rezlee_care_plan($1::uuid,$2::text,$3::jsonb,$4::text,$5::uuid[],'cleaning') as result",
+      [ha,key,JSON.stringify(rows),mode,`{${people.join(',')}}`],
+    );
+    const [save1,save2] = await Promise.all([savePlan("same-save-key-1"),savePlan("same-save-key-1")]);
+    assert.deepEqual(save1.rows[0].result,save2.rows[0].result,"competing retries return the committed result");
+    assert.equal(save1.rows[0].result.count,2);
+    assert.equal((await db.query("select id from public.maintenance_tasks where title like 'Receipt-test %'")).rows.length,2);
+    assert.equal((await db.query("select request_id from public.care_plan_receipts where request_id='same-save-key-1'")).rows.length,1);
+    const replay = await savePlan("same-save-key-1");
+    assert.deepEqual(replay.rows[0].result.taskIds,save1.rows[0].result.taskIds,"response lost after commit replays the same task ids");
+    await assert.rejects(savePlan("same-save-key-1",[{...planTasks[0],title:"Changed choices"}]),"a key cannot be reused with a different payload");
+    await assert.rejects(savePlan("bad-save-key-1",[{...planTasks[0],title:"Must rollback"},{...planTasks[1],due_date:"2026-02-30"}]),"invalid second task rolls back the whole transaction");
+    assert.equal((await db.query("select id from public.maintenance_tasks where title='Must rollback'")).rows.length,0);
+    assert.equal((await db.query("select request_id from public.care_plan_receipts where request_id='bad-save-key-1'")).rows.length,0);
+    await assert.rejects(savePlan("bad-rotation-key",planTasks,"rotate",[ownerMember]),"one member cannot form a rotation");
+    await assert.rejects(savePlan("bad-members-key",planTasks,"person",["ffffffff-ffff-4fff-8fff-ffffffffffff"]),"foreign or missing member fails closed");
+    await assert.rejects(db.exec("delete from public.care_plan_receipts"),"clients cannot remove duplicate protection");
+    await db.exec(`set request.jwt.claim.sub='${b}'`);
+    await assert.rejects(savePlan("member-save-key"),"shared members cannot activate owner plans");
+    assert.equal((await db.query("select * from public.care_plan_receipts")).rows.length,0,"receipts are owner-private");
+    await db.exec(`set request.jwt.claim.sub='${a}'`);
+
     const saved = await db.query<{ result: { id: string } }>(
       `select public.save_rezlee_conversation('${ha}',null,'Test',true,'[{"id":"m1","role":"user","content":"Original"}]'::jsonb) as result`,
     );
@@ -143,6 +218,7 @@ test("database migrations, tenant isolation, private storage, atomic task recurr
       ),
     );
     await db.exec(`set request.jwt.claim.sub='${a}'`);
+    await db.query("select public.set_rezlee_ai_consent(true, '2026-10-13')");
     for (let i = 0; i < 40; i++)
       assert.equal(
         (
@@ -167,6 +243,7 @@ test("database migrations, tenant isolation, private storage, atomic task recurr
       ),
     );
     await db.exec(`set request.jwt.claim.sub='${b}'`);
+    await db.query("select public.set_rezlee_ai_consent(true, '2026-10-13')");
     assert.equal(
       (
         await db.query<{ allowed: boolean }>(

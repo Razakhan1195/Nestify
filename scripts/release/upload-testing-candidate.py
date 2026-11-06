@@ -1,0 +1,21 @@
+from pathlib import Path
+from datetime import datetime,timezone
+import subprocess,json,os,re
+r=Path('/Users/razakhan/Documents/rezlee-mobile-test');o=r/'docs/checkpoints/release-config-20261021'
+cwd=Path('/Users/razakhan/Library/Application Support/Rezlee/launch-candidate-20261021/referral-mobile')
+cli=['/usr/local/bin/node','/Users/razakhan/.npm/_npx/e25a38a8cc65d08e/node_modules/eas-cli/bin/run']
+state={'at':datetime.now(timezone.utc).isoformat(),'scope':'TestFlight upload and Android internal draft only','submissions':{}}
+p=o/'testing-store-submissions.json';assert not p.exists(),'Do not duplicate uploads'
+assert json.loads((o/'staging-alias-acceptance.json').read_text())['hostedExitCode']==0
+assert subprocess.check_output(['git','rev-parse','HEAD'],cwd=cwd,text=True).strip()=='109cc7a88c8eb84cdc03296902f745d8547bd32c'
+for platform,build,number in [('ios','8888993c-5074-4737-916f-d930570e234c',64),('android','b3d5c907-ad9d-492b-8bd4-217b1f57b621',53)]:
+ env=dict(os.environ,EXPO_NO_DOTENV='1',EAS_BUILD_PROFILE='apple-beta')
+ cmd=cli+['submit','--platform',platform,'--profile','beta','--id',build,'--non-interactive','--no-wait']
+ if platform=='ios':cmd+=['--no-auto-testflight-setup','--what-to-test','Test sign-in startup, progressive Home loading, expense groups and privacy, provider connection handoff, and the redesigned one-month Pro invitation. Use staging and sandbox purchases only.']
+ q=subprocess.run(cmd,cwd=cwd,env=env,capture_output=True,text=True,timeout=180)
+ text=q.stdout+'\n'+q.stderr
+ text=re.sub(r'(?:sk_|eyJ|AIza)[A-Za-z0-9_.-]+','[REDACTED]',text)
+ (o/(platform+'-store-submit.log')).write_text(text)
+ state['submissions'][platform]={'buildId':build,'buildNumber':number,'cliExitCode':q.returncode,'outputTail':text[-6000:],'uploaded':False,'testerAvailable':False}
+ p.write_text(json.dumps(state,indent=2)+'\n')
+ print(json.dumps({'platform':platform,'buildNumber':number,'cliExitCode':q.returncode,'output':text[-6000:]}),flush=True)

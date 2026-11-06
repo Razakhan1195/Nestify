@@ -1,6 +1,8 @@
-import { validBearer } from "@/lib/security/bearer";
 import { NextResponse, type NextRequest } from "next/server";
-import { createClient } from "@supabase/supabase-js";
+
+import { validBearer } from "@/lib/security/bearer";
+import { queueDeckProviderSync } from "@/lib/sync/deck-v2-runtime";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 export async function POST(request: NextRequest) {
   const cronSecret = process.env.CRON_SECRET;
@@ -8,27 +10,22 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ message: "Unauthorized." }, { status: 401 });
   }
 
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-  if (!supabaseUrl || !serviceRoleKey) {
+  let supabase;
+  try {
+    supabase = createAdminClient();
+  } catch {
     return NextResponse.json(
-      {
-        message:
-          "Scheduled provider sync needs NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY.",
-      },
+      { message: "Scheduled provider sync is not configured." },
       { status: 501 },
     );
   }
 
-  const supabase = createClient(supabaseUrl, serviceRoleKey, {
-    auth: { persistSession: false },
-  });
-
   const { data: dueProviders, error } = await supabase
     .from("providers")
     .select("id,user_id,home_id,display_name,name,next_scheduled_sync_at")
-    .in("connection_status", ["connected", "healthy", "needs_attention"])
+    .in("connection_status", ["connected", "healthy"])
+    .eq("requires_user_action", false)
+    .not("deck_credential_id", "is", null)
     .lte("next_scheduled_sync_at", new Date().toISOString())
     .limit(20);
 
@@ -39,31 +36,50 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  for (const provider of dueProviders ?? []) {
+  const results = await Promise.allSettled(
+    (dueProviders ?? []).map((provider) =>
+      queueDeckProviderSync({
+        supabase,
+        userId: provider.user_id,
+        providerId: provider.id,
+        runType: "scheduled",
+      }),
+    ),
+  );
+
+  let queued = 0;
+  let failed = 0;
+  for (const [index, result] of results.entries()) {
+    const provider = dueProviders?.[index];
+    if (!provider) continue;
+    if (result.status === "fulfilled") {
+      queued += 1;
+      continue;
+    }
+
+    failed += 1;
     await supabase.from("sync_events").insert({
       user_id: provider.user_id,
       home_id: provider.home_id,
       provider_id: provider.id,
       source: "deck",
-      status: "scheduled",
-      message:
-        "Provider is due for refresh. Run the authenticated Deck sync worker for this provider.",
+      status: "failed",
+      message: "Scheduled provider refresh could not start.",
       metadata: { scheduledRoute: true },
     });
-
     await supabase
       .from("providers")
       .update({
-        sync_status: "scheduled_due",
-        sync_failure_reason:
-          "Scheduled refresh is queued. Deck execution runs through the authenticated provider sync adapter.",
+        sync_status: "sync_failed",
+        sync_failure_reason: "Scheduled provider refresh could not start.",
       })
       .eq("id", provider.id);
   }
 
   return NextResponse.json({
     due: dueProviders?.length ?? 0,
-    message:
-      "Scheduled sync scan complete. Due providers were marked for refresh through the Deck adapter.",
+    queued,
+    failed,
+    message: "Scheduled Deck refresh scan complete.",
   });
 }

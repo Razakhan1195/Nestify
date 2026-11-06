@@ -23,9 +23,11 @@ export async function POST(req: Request) {
   const guard = await guardAiRequest();
   if (!guard.ok) return guard.response;
 
-  let form: FormData;
+  let form: { get(name: string): unknown };
   try {
-    form = await req.formData();
+    form = (await req.formData()) as unknown as {
+      get(name: string): unknown;
+    };
   } catch {
     return Response.json({ error: "Upload a photo or PDF to scan." }, { status: 400 });
   }
@@ -74,8 +76,8 @@ export async function POST(req: Request) {
     }
     const data = await classifyDocument(part);
     return Response.json({ kind, data });
-  } catch (error) {
-    console.error("[v0] ai scan failed", { kind, error });
+  } catch {
+    console.error("[v0] ai scan failed");
     return Response.json(
       { error: "We couldn't read that one. Try a clearer photo or enter the details manually." },
       { status: 502 },

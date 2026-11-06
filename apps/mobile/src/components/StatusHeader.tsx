@@ -6,17 +6,17 @@ import { colors, radii, spacing, typography } from "@/theme/tokens";
 
 const stateLabels: Record<DashboardState, string> = {
   EMPTY: "Getting started",
-  EARLY: "Early days",
-  ACTIVE: "Active this month",
+  EARLY: "Getting set up",
+  ACTIVE: "In motion",
   ATTENTION: "Needs attention",
-  STABLE: "Up to date",
+  STABLE: "All good",
 };
 
 type StatusHeaderProps = {
   nickname: string;
   dashboardState: DashboardState;
   statusSentence: string;
-  onAddPress: () => void;
+  onAddPress?: () => void;
 };
 
 export function StatusHeader({
@@ -25,25 +25,31 @@ export function StatusHeader({
   statusSentence,
   onAddPress,
 }: StatusHeaderProps) {
+  const needsAttention = dashboardState === "ATTENTION";
   return (
     <View style={{ gap: spacing.md }}>
       <View
         style={{
           flexDirection: "row",
-          alignItems: "center",
+          alignItems: "flex-start",
           justifyContent: "space-between",
+          gap: spacing.lg,
         }}
       >
-        <View style={{ flex: 1, gap: 2 }}>
-          <Text style={[typography.label, { color: colors.mutedForeground }]}>
+        <View style={{ flex: 1, gap: spacing.xs }}>
+          <Text style={[typography.display, { color: colors.foreground }]} numberOfLines={1}>
             {nickname}
           </Text>
           <View
             style={{
+              alignSelf: "flex-start",
               flexDirection: "row",
               alignItems: "center",
               gap: 6,
-              alignSelf: "flex-start",
+              paddingHorizontal: spacing.sm,
+              paddingVertical: 5,
+              borderRadius: radii.full,
+              backgroundColor: needsAttention ? colors.criticalBg : colors.successBg,
             }}
           >
             <View
@@ -51,34 +57,42 @@ export function StatusHeader({
                 width: 6,
                 height: 6,
                 borderRadius: radii.full,
-                backgroundColor:
-                  dashboardState === "ATTENTION" ? colors.critical : colors.success,
+                backgroundColor: needsAttention ? colors.critical : colors.success,
               }}
             />
-            <Text style={{ fontSize: 13, color: colors.mutedForeground }}>
+            <Text
+              style={{
+                fontSize: 12,
+                fontWeight: "600",
+                color: needsAttention ? colors.criticalForeground : colors.successForeground,
+              }}
+            >
               {stateLabels[dashboardState]}
             </Text>
           </View>
         </View>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Add"
-          onPress={onAddPress}
-          style={({ pressed }) => ({
-            width: 40,
-            height: 40,
-            borderRadius: radii.full,
-            alignItems: "center",
-            justifyContent: "center",
-            backgroundColor: colors.primary,
-            opacity: pressed ? 0.85 : 1,
-          })}
-        >
-          <Feather name="plus" size={20} color={colors.primaryForeground} />
-        </Pressable>
+
+        {onAddPress ? (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Add to Rezlee"
+            onPress={onAddPress}
+            style={({ pressed }) => ({
+              width: 44,
+              height: 44,
+              borderRadius: radii.full,
+              alignItems: "center",
+              justifyContent: "center",
+              backgroundColor: colors.primary,
+              opacity: pressed ? 0.82 : 1,
+            })}
+          >
+            <Feather name="plus" size={20} color={colors.primaryForeground} />
+          </Pressable>
+        ) : null}
       </View>
 
-      <Text style={[typography.body, { color: colors.foreground, fontSize: 17 }]}>
+      <Text style={[typography.body, { color: colors.mutedForeground, maxWidth: 330 }]}>
         {statusSentence}
       </Text>
     </View>

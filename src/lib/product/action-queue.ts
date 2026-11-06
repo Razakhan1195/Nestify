@@ -77,6 +77,8 @@ export type ActionQueueProvider = {
   name: string;
   next_expected_bill_date: string | null;
   provider_priority: number | null;
+  requires_user_action?: boolean | null;
+  user_action_message?: string | null;
 };
 
 export type ActionQueueIssue = {
@@ -450,6 +452,41 @@ export function buildActionQueue({
   }
 
   for (const provider of providers) {
+    const label =
+      cleanLabel(provider.display_name) ??
+      cleanLabel(provider.name) ??
+      getProviderSetupByPriority(provider.provider_priority)?.name ??
+      "Provider";
+
+    const activelyUpdating = ["syncing", "connecting"].includes(provider.connection_status ?? "") && !provider.requires_user_action;
+    const providerNeedsAction = !activelyUpdating && (
+      provider.requires_user_action === true ||
+      ["needs_attention", "sync_failed"].includes(provider.health_status ?? "") ||
+      provider.connection_status === "sync_failed");
+
+    if (providerNeedsAction) {
+      const key = `provider-attention-${provider.id}`;
+      if (!isHiddenByResolution(key, resolutionMap, today)) {
+        items.push({
+          cta: "Fix connection",
+          description:
+            provider.user_action_message?.trim() ||
+            `${label} needs attention before automatic bill updates can continue.`,
+          eventType: "provider_attention",
+          href: `/app/providers/${provider.id}`,
+          id: key,
+          meta: "Connection",
+          providerId: provider.id,
+          relatedTable: "providers",
+          severity: "medium",
+          sourceId: provider.id,
+          sourceType: "provider",
+          title: `${label} needs attention`,
+        });
+      }
+      continue;
+    }
+
     const expectedInDays = daysUntil(provider.next_expected_bill_date, today);
     const isConnected = ["connected", "healthy"].includes(
       provider.connection_status ?? "",
@@ -461,11 +498,6 @@ export function buildActionQueue({
 
     const key = `missing-expected-bill-${provider.id}`;
     if (isHiddenByResolution(key, resolutionMap, today)) continue;
-    const label =
-      cleanLabel(provider.display_name) ??
-      cleanLabel(provider.name) ??
-      getProviderSetupByPriority(provider.provider_priority)?.name ??
-      "Provider";
 
     items.push({
       cta: "Sync provider",

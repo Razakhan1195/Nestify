@@ -26,7 +26,7 @@ export async function POST() {
   const knownSystems = Array.from(
     new Set(
       (items ?? [])
-        .map((item) => item.category || item.name)
+        .map((item) => [item.name, item.category].filter(Boolean).join(" · "))
         .filter((value): value is string => Boolean(value)),
     ),
   );
@@ -43,9 +43,9 @@ export async function POST() {
 
   try {
     const plan = await generateMaintenancePlan(profile);
-    return Response.json({ tasks: plan.tasks });
+    return Response.json({ tasks: plan.tasks, source: plan.source, message: plan.message });
   } catch (error) {
-    console.error("[v0] maintenance plan failed", error);
+    console.warn("[maintenance-plan] unavailable", { code: error instanceof Error ? error.name : "generation_failed" });
     return Response.json(
       { error: "We couldn't generate a plan right now. Please try again." },
       { status: 502 },

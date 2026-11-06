@@ -13,4 +13,4 @@ export function siteUrl() {
   return undefined;
 }
 export const siteDescription =
-  "Keep bills, important records, care tasks, and household details together. Rezlee shows what needs attention next, whether you rent or own.";
+  "Understand your bills, share household costs, and keep records and home care together. Rezlee brings clarity to the everyday details of Canadian homes.";
