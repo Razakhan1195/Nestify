@@ -6,12 +6,14 @@ const id = (n: number) => "00000000-0000-4000-8000-" + String(n).padStart(12, "0
 async function fixture() {
  const db = new PGlite();
  await db.exec(`create role anon; create role authenticated; create role service_role bypassrls;
- create schema auth; create table auth.users(id uuid primary key,active boolean default true);
+ create schema auth; create table auth.users(id uuid primary key,active boolean default true,email_confirmed_at timestamptz default now());
  create function auth.uid() returns uuid language sql stable as $$select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid$$;
  create function public.rezlee_account_active(p_user uuid) returns boolean language sql stable security definer as $$select coalesce((select active from auth.users where id=p_user),false)$$;
+ create function public.rezlee_session_allowed() returns boolean language sql stable as $$select coalesce(current_setting('test.session_allowed',true),'true')<>'false'$$;
  grant usage on schema public,auth to anon,authenticated,service_role;
  insert into auth.users(id) values('${id(1)}'),('${id(2)}'),('${id(3)}');`);
  await db.exec(await readFile("supabase/migrations/202611070001_customer_roadmap.sql", "utf8"));
+ await db.exec(await readFile("supabase/migrations/202611070004_roadmap_session_boundaries.sql", "utf8"));
  return db;
 }
 async function login(db: PGlite, n: number | null, role = n ? "authenticated" : "anon") {
@@ -76,6 +78,8 @@ test("admin decisions require explanation and priority, detect stale updates, an
   const row = (await db.query<{ decided_at: string; revision: number }>("select decided_at,revision from roadmap_ideas")).rows[0];
   assert.ok(row.decided_at); assert.equal(row.revision, 2);
   assert.equal((await db.query("select * from roadmap_review_events")).rows.length, 1);
+  await review(db,100,2,"public","shipped","This is now available to everyone.","next");
+  assert.equal((await db.query<{priority:string}>("select priority from roadmap_ideas")).rows[0].priority,"none");
  } finally { await db.close(); }
 });
 test("rate limits, conflicting retries, inactive accounts, filters and account deletion preserve boundaries", async () => {
@@ -92,4 +96,23 @@ test("rate limits, conflicting retries, inactive accounts, filters and account d
   await db.exec("reset role"); await db.query("delete from auth.users where id=$1", [id(1)]);
   assert.equal((await db.query("select * from roadmap_ideas")).rows.length, 0);
  } finally { await db.close(); }
+});
+
+test("revoked sessions, unverified users and deleting idea owners cannot bypass the API through RPC", async () => {
+ const db=await fixture();
+ try {
+  await login(db,1);await submit(db);await review(db);
+  await login(db,2);await db.exec("set test.session_allowed='false'");
+  await assert.rejects(submit(db,101),/Sign in required/);
+  await assert.rejects(result(db,"select rezlee_roadmap_vote($1,1) r",[id(100)]),/Sign in required/);
+  await assert.rejects(list(db,true),/Sign in required/);
+  assert.equal((await list(db)).items[0].mine,false);
+  await db.exec("reset role;set test.session_allowed='true'");
+  await db.query("update auth.users set email_confirmed_at=null where id=$1",[id(2)]);
+  await login(db,2);await assert.rejects(submit(db,101),/Sign in required/);
+  await db.exec("reset role");await db.query("update auth.users set email_confirmed_at=now() where id=$1",[id(2)]);
+  await db.query("update auth.users set active=false where id=$1",[id(1)]);
+  await login(db,2);assert.equal((await list(db)).total,0);
+  await assert.rejects(result(db,"select rezlee_roadmap_vote($1,1) r",[id(100)]),/unavailable/);
+ } finally {await db.close();}
 });
