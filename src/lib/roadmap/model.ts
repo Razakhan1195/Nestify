@@ -19,7 +19,7 @@ export type RoadmapItem = {
  visibility: "pending" | "public" | "hidden"; status: typeof roadmapStatuses[number];
  priority: "none" | "next" | "later"; response: string; decidedAt: string | null;
  createdAt: string; updatedAt: string; responseDueAt: string;
- upvotes: number; downvotes: number; score: number; myVote: -1 | 0 | 1; mine: boolean;
+ upvotes: number; downvotes: number; score: number; myVote: -1 | 0 | 1; mine: boolean; canBlock?: boolean;
 };
 export type RoadmapList = { generatedAt: string; items: RoadmapItem[]; total: number; page: number };
 export function roadmapError(code?: string) {

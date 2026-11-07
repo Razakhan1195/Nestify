@@ -3,7 +3,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { categoryLabels, roadmapStatuses, statusLabels } from "@/lib/roadmap/model";
-type Item = { id: string; title: string; description: string; category: string; visibility: string; status: string; priority: string; response: string; decided_at: string | null; created_at: string; updated_at: string; revision: number; responseDueAt: string };
+type Item = { safetyReports?: string[]; id: string; title: string; description: string; category: string; visibility: string; status: string; priority: string; response: string; decided_at: string | null; created_at: string; updated_at: string; revision: number; responseDueAt: string };
 export function RoadmapQueue() {
  const [items, setItems] = useState<Item[]>([]), [total, setTotal] = useState(0), [page, setPage] = useState(0), [view, setView] = useState("pending");
  const [now, setNow] = useState(0);
@@ -19,8 +19,8 @@ export function RoadmapQueue() {
  useEffect(() => { const c = new AbortController(); void Promise.resolve().then(() => { if (!c.signal.aborted) return load(c.signal); }); return () => c.abort(); }, [load]);
  return <main className="mx-auto max-w-4xl space-y-6 px-5 py-8">
   <Link href="/admin" className="text-sm font-semibold text-primary underline">← Daily operations</Link>
-  <header className="space-y-2"><h1 className="text-3xl font-semibold">Customer roadmap</h1><p className="text-muted-foreground">A decision and response are due within seven calendar days of each idea. Oldest unanswered ideas come first. Updates appear in the app and on the public roadmap; no email is sent.</p></header>
-  <div className="flex flex-wrap items-center gap-3"><label>Show <select disabled={busy || saving} className="ml-2 min-h-11 rounded-lg border bg-background px-3" value={view} onChange={e => { setBusy(true); setView(e.target.value); setPage(0); }}><option value="pending">Needs a decision</option><option value="all">All ideas</option></select></label><Button variant="outline" disabled={busy || saving} onClick={() => { setBusy(true); void load(); }}>Refresh</Button><span className="text-sm">{busy ? "Checking…" : error ? "Queue unavailable" : total + " ideas"}</span><Link href="/roadmap" className="text-sm font-semibold text-primary underline">View public roadmap</Link></div>
+  <header className="space-y-2"><h1 className="text-3xl font-semibold">Customer roadmap</h1><p className="text-muted-foreground">A decision and response are due within seven calendar days of each idea. Oldest unanswered ideas come first. Updates appear in the app. Review safety reports daily; hide harmful content immediately. Saving a decision resolves the current reports. No email is sent.</p></header>
+  <div className="flex flex-wrap items-center gap-3"><label>Show <select disabled={busy || saving} className="ml-2 min-h-11 rounded-lg border bg-background px-3" value={view} onChange={e => { setBusy(true); setView(e.target.value); setPage(0); }}><option value="pending">Needs a decision</option><option value="reported">Safety reports</option><option value="all">All ideas</option></select></label><Button variant="outline" disabled={busy || saving} onClick={() => { setBusy(true); void load(); }}>Refresh</Button><span className="text-sm">{busy ? "Checking…" : error ? "Queue unavailable" : total + " ideas"}</span><Link href="/roadmap" className="text-sm font-semibold text-primary underline">View public roadmap</Link></div>
   {error ? <p role="alert" className="rounded-xl border p-4">{error} Previously loaded ideas may be out of date.</p> : null}
   {!busy && !error && !items.length ? <p className="rounded-2xl border p-8">No ideas need a decision in this view.</p> : null}
   {items.map(item => <Review key={item.id + ":" + item.revision} item={item} now={now} disabled={busy || !!error || saving} onSaving={setSaving} onSaved={() => load()}/>)}
@@ -42,7 +42,7 @@ function Review({ item, now, disabled, onSaving, onSaved }: { item: Item; now: n
  }
  return <article className="space-y-4 rounded-2xl border bg-card p-5">
   <header className="space-y-2"><p className="text-xs font-semibold text-muted-foreground">{categoryLabels[item.category]} · Received {new Date(item.created_at).toLocaleString()}</p><h2 className="break-words text-xl font-semibold">{item.title}</h2><p className={"text-sm font-semibold " + (overdue ? "text-destructive" : "text-primary")}>{item.decided_at ? "Decision recorded " + new Date(item.decided_at).toLocaleString() : (overdue ? "Overdue · " : "Decision due · ") + due.toLocaleString()}</p></header>
-  <p className="whitespace-pre-wrap break-words leading-relaxed">{item.description}</p>
+  <p className="whitespace-pre-wrap break-words leading-relaxed">{item.description}</p>{item.safetyReports?.length ? <p role="status" className="rounded-lg border border-destructive p-3 text-sm">Open safety reports: {item.safetyReports.length}. Reasons: {[...new Set(item.safetyReports)].join(", ")}. Review the content and record a moderation decision.</p> : null}
   <form onSubmit={e => void save(e)} className="space-y-4 border-t pt-4">
    <fieldset disabled={disabled || busy} className="space-y-4">
     <div className="grid gap-3 sm:grid-cols-3">

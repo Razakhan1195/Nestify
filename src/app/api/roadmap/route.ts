@@ -1,3 +1,4 @@
+import { z } from "zod";
 import { authenticateMobileRequest } from "@/lib/supabase/mobile";
 import { readBoundedJson } from "@/lib/security/request";
 import { listInput, suggestionInput, voteInput, roadmapError } from "@/lib/roadmap/model";
@@ -37,7 +38,16 @@ export async function PATCH(request: Request) {
  try {
   const ctx = await context(request);
   if (ctx.error) return reply({ error: ctx.error.message }, ctx.error.status);
-  const input = voteInput.safeParse(await readBoundedJson(request, 1024).catch(() => null));
+  const body = await readBoundedJson(request, 1024).catch(() => null);
+  if (body && typeof body === "object" && "action" in body) {
+   const safety = z.object({ action: z.enum(["hide", "block", "report", "reset"]), id: z.string().uuid().optional(), reason: z.enum(["abuse", "privacy", "spam", "other"]).optional() }).refine(x => x.action === "reset" || !!x.id).refine(x => x.action !== "report" || !!x.reason).safeParse(body);
+   if (!safety.success) return reply({ error: "Choose an idea and a valid action." }, 400);
+   const d = safety.data;
+   const result = await ctx.supabase.rpc("rezlee_roadmap_safety", { p_action: d.action, p_id: d.id ?? null, p_reason: d.reason ?? null });
+   if (result.error) { const e = roadmapError(result.error.code); return reply({ error: result.error.code === "P0001" ? "You’ve reached today’s report limit. Contact support for urgent concerns." : e.error }, e.status); }
+   return reply(result.data);
+  }
+  const input = voteInput.safeParse(body);
   if (!input.success) return reply({ error: "Choose an upvote or downvote." }, 400);
   const result = await ctx.supabase.rpc("rezlee_roadmap_vote", { p_id: input.data.id, p_value: input.data.value });
   if (result.error) { const e = roadmapError(result.error.code); return reply({ error: e.error }, e.status); }

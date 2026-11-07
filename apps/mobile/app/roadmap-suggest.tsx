@@ -1,3 +1,4 @@
+import { Linking } from "react-native";
 import { useRef, useState } from "react";
 import { Redirect, useNavigation, useRouter } from "expo-router";
 import { usePreventRemove } from "expo-router/react-navigation";
@@ -52,11 +53,11 @@ function Suggestion({ userId }: { userId: string }) {
     <View style={{ gap: 10 }}><Text style={[typography.meta, { color: colors.foreground }]}>Topic</Text>{busy || uncertain ? <Text style={[typography.body, { color: colors.mutedForeground }]}>{roadmapCategories.find(c => c.value === category)?.label}</Text> : <FilterChips options={roadmapCategories} selected={category} onSelect={setCategory}/>}</View>
     <Pressable accessibilityRole="checkbox" accessibilityLabel="Allow this idea to appear publicly after review. I have left out personal information." accessibilityState={{ checked: share, disabled: busy || uncertain }} disabled={busy || uncertain} onPress={() => setShare(v => !v)} style={{ minHeight: 48, flexDirection: "row", alignItems: "flex-start", gap: 12, paddingVertical: 8 }}>
      <Feather name={share ? "check-square" : "square"} size={24} color={colors.primary}/>
-     <Text style={[typography.meta, { flex: 1, color: colors.mutedForeground }]}>I’m happy for this idea to appear publicly after review. I’ve left out names, email addresses, account numbers and private home details.</Text>
+     <Text style={[typography.meta, { flex: 1, color: colors.mutedForeground }]}>I agree to the roadmap participation rules in the Terms of use. This idea may appear publicly after review. I’ve left out personal information.</Text>
     </Pressable>
     {error ? <Text accessibilityRole="alert" style={[typography.body, { color: colors.criticalForeground }]}>{error}</Text> : null}
     <Button label={busy ? "Sending…" : uncertain ? "Retry same idea" : "Share idea"} loading={busy} disabled={!share || title.trim().length < 6 || description.trim().length < 20} onPress={() => void send()}/>
-    <Text style={[typography.caption, { color: colors.mutedForeground }]}>Title: 6–100 characters. Description: 20–2,000 characters. Your name and email won’t appear on the roadmap.</Text>
+    <Button variant="secondary" label="Read roadmap participation rules" onPress={() => void Linking.openURL("https://rezlee.com/terms")}/><Text style={[typography.caption, { color: colors.mutedForeground }]}>Title: 6–100 characters. Description: 20–2,000 characters. Your name and email won’t appear on the roadmap.</Text>
    </>}
   </FormScrollView>
  </SafeAreaView>;

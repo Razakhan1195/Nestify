@@ -9,3 +9,6 @@ apps/mobile/android
 
 # Historical local evidence and backups are not application source.
 docs/checkpoints
+
+# Store evidence is maintained locally, never deployed as app source.
+docs/store-submission-20261107

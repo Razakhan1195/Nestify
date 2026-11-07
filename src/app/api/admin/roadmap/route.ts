@@ -13,10 +13,18 @@ export async function GET(request: Request) {
  if (audit.error) return reply({ error: "The review queue is temporarily unavailable." }, 503);
  const url = new URL(request.url), page = Math.max(0, Math.min(1000, Number.parseInt(url.searchParams.get("page") ?? "0", 10) || 0));
  let query = db.from("roadmap_ideas").select("id,title,description,category,visibility,status,priority,response,decided_at,created_at,updated_at,revision", { count: "exact" });
- if (url.searchParams.get("view") !== "all") query = query.is("decided_at", null);
+ if (url.searchParams.get("view") === "reported") {
+  const reports = await db.from("roadmap_reports").select("idea_id").is("resolved_at", null).limit(1000);
+  if (reports.error) return reply({ error: "Reports couldn’t load." }, 503);
+  const ids = [...new Set(reports.data.map(x => x.idea_id))];
+  if (!ids.length) return reply({ items: [], total: 0, page });
+  query = query.in("id", ids);
+ } else if (url.searchParams.get("view") !== "all") query = query.is("decided_at", null);
  const result = await query.order("created_at").order("id").range(page * 30, page * 30 + 29);
  if (result.error) return reply({ error: "The review queue couldn’t load. This is not an empty queue." }, 503);
- return reply({ items: result.data?.map(x => ({ ...x, responseDueAt: new Date(Date.parse(x.created_at) + 7 * 86400000).toISOString() })), total: result.count, page });
+ const reports = await db.from("roadmap_reports").select("idea_id,reason").is("resolved_at", null).in("idea_id", (result.data ?? []).map(x => x.id));
+ if (reports.error) return reply({ error: "Safety report status couldn’t load." }, 503);
+ return reply({ items: result.data?.map(x => ({ ...x, safetyReports: reports.data.filter(r => r.idea_id === x.id).map(r => r.reason), responseDueAt: new Date(Date.parse(x.created_at) + 7 * 86400000).toISOString() })), total: result.count, page });
 }
 export async function PATCH(request: Request) {
  if (request.headers.get("origin") !== new URL(request.url).origin) return reply({ error: "Use the control center to update the roadmap." }, 403);

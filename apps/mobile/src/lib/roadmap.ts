@@ -15,7 +15,7 @@ export type RoadmapItem = {
  visibility: "pending" | "public" | "hidden"; status: Exclude<RoadmapStatus, "all">;
  priority: "none" | "next" | "later"; response: string; decidedAt: string | null;
  createdAt: string; updatedAt: string; responseDueAt: string;
- upvotes: number; downvotes: number; score: number; myVote: -1 | 0 | 1; mine: boolean;
+ upvotes: number; downvotes: number; score: number; myVote: -1 | 0 | 1; mine: boolean; canBlock?: boolean;
 };
 export type RoadmapList = { generatedAt: string; items: RoadmapItem[]; total: number; page: number };
 export function fetchRoadmap(userId: string, query: { mine: boolean; status: string; sort: string; search: string; page: number }) {
@@ -26,4 +26,8 @@ export function voteOnRoadmap(userId: string, id: string, value: -1 | 0 | 1) {
 }
 export function submitRoadmapIdea(userId: string, idea: { id: string; title: string; description: string; category: string; sharePublicly: true }) {
  return apiPost<{ id: string }>("/api/mobile/v1/roadmap", idea, { timeoutMs: 15000, expectedUserId: userId });
+}
+
+export function updateRoadmapSafety(userId: string, action: "hide" | "block" | "report" | "reset", id?: string, reason?: string) {
+ return apiPatch<{ ok: true }>("/api/mobile/v1/roadmap", { action, id, reason }, { timeoutMs: 12000, expectedUserId: userId });
 }

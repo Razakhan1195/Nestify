@@ -7,6 +7,7 @@ async function fixture() {
  const db = new PGlite();
  await db.exec(`create role anon; create role authenticated; create role service_role bypassrls;
  create schema auth; create table auth.users(id uuid primary key,active boolean default true,email_confirmed_at timestamptz default now());
+ create function public.guard_deleting_rezlee_account() returns trigger language plpgsql as $$begin if not public.rezlee_account_active(new.user_id) then raise exception 'Account deleting';end if;return new;end$$;
  create function auth.uid() returns uuid language sql stable as $$select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid$$;
  create function public.rezlee_account_active(p_user uuid) returns boolean language sql stable security definer as $$select coalesce((select active from auth.users where id=p_user),false)$$;
  create function public.rezlee_session_allowed() returns boolean language sql stable as $$select coalesce(current_setting('test.session_allowed',true),'true')<>'false'$$;
@@ -15,6 +16,7 @@ async function fixture() {
  await db.exec(await readFile("supabase/migrations/202611070001_customer_roadmap.sql", "utf8"));
  await db.exec(await readFile("supabase/migrations/202611070004_roadmap_session_boundaries.sql", "utf8"));
  await db.exec(await readFile("supabase/migrations/202611070005_roadmap_team_items.sql", "utf8"));
+ await db.exec(await readFile("supabase/migrations/202611070006_roadmap_safety.sql", "utf8"));
  return db;
 }
 async function login(db: PGlite, n: number | null, role = n ? "authenticated" : "anon") {
@@ -128,5 +130,42 @@ test("team-owned ideas are visible and votable without becoming customer-owned o
   await assert.rejects(db.query("insert into roadmap_ideas(id,user_id,title,description,category) values($1,null,'Fake team idea','A customer cannot impersonate the team.','other')",[id(201)]),/permission denied/);
   await db.exec("reset role");await db.query("update roadmap_ideas set visibility='hidden' where id=$1",[id(200)]);
   await login(db,1);assert.equal((await list(db)).total,0);await assert.rejects(result(db,"select rezlee_roadmap_vote($1,1) r",[id(200)]),/unavailable/);
+ }finally{await db.close();}
+});
+
+test("safety preferences are private, retry safe, hide future author ideas, reset independently of reports, and cascade on deletion", async () => {
+ const db = await fixture();
+ const safety = (action: string, idea: number | null = 100, reason: string | null = null) => result(db, "select rezlee_roadmap_safety($1,$2,$3) r", [action, idea === null ? null : id(idea), reason]);
+ try {
+  await login(db,1); await submit(db); await submit(db,101); await review(db); await review(db,101);
+  await login(db,2); await safety("block"); await safety("block"); assert.equal((await list(db)).total,0);
+  await assert.rejects(result(db,"select rezlee_roadmap_vote($1,1) r",[id(101)]),/unavailable/);
+  await login(db,3); assert.equal((await list(db)).total,2);
+  await login(db,1); await submit(db,102); await review(db,102);
+  await login(db,2); assert.equal((await list(db)).total,0); await safety("reset",null); assert.equal((await list(db)).total,3);
+  await safety("report",100,"abuse"); await safety("report",100,"abuse"); assert.equal((await list(db)).total,2);
+  await assert.rejects(db.query("select * from roadmap_reports"),/permission denied/);
+  await assert.rejects(db.query("select * from roadmap_blocked_authors"),/permission denied/);
+  await safety("reset",null); assert.equal((await list(db)).total,3);
+  await db.exec("reset role"); assert.equal((await db.query("select * from roadmap_reports")).rows.length,1);
+  await review(db,100,2,"hidden","not_planned","Removed after a safety report.");
+  await db.exec("reset role"); assert.ok((await db.query<{resolved_at:string}>("select resolved_at from roadmap_reports")).rows[0].resolved_at);
+  await login(db,2); await safety("block",101); await db.exec("reset role"); await db.query("delete from auth.users where id=$1",[id(2)]);
+  for(const table of ["roadmap_reports","roadmap_hidden_ideas","roadmap_blocked_authors"]) assert.equal((await db.query("select * from "+table)).rows.length,0);
+ } finally { await db.close(); }
+});
+test("safety RPC rejects unverified/revoked callers, private IDs, self blocking and invalid reasons; team ideas can be hidden but not author blocked", async () => {
+ const db=await fixture();
+ const safety=(action:string,n=100,reason:string|null=null)=>result(db,"select rezlee_roadmap_safety($1,$2,$3) r",[action,id(n),reason]);
+ try {
+  await login(db,1);await submit(db);await login(db,2);await assert.rejects(safety("block"),/unavailable/);
+  await review(db);await login(db,1);await assert.rejects(safety("block"),/another idea/);
+  await login(db,2);await assert.rejects(safety("report",100,"invalid"),/Choose a reason/);await assert.rejects(safety("invalid"),/Check action/);
+  await db.exec("set test.session_allowed='false'");await assert.rejects(safety("hide"),/Sign in required/);await db.exec("reset role;set test.session_allowed='true'");
+  await db.query("update auth.users set email_confirmed_at=null where id=$1",[id(2)]);await login(db,2);await assert.rejects(safety("hide"),/Sign in required/);
+  await db.exec("reset role");await db.query("update auth.users set email_confirmed_at=now() where id=$1",[id(2)]);
+  await db.query("insert into roadmap_ideas(id,title,description,category,visibility) values($1,'Team owned idea','A team owned idea can still be reported.','other','public')",[id(200)]);
+  await login(db,2);await assert.rejects(safety("block",200),/team idea/);await safety("hide",200);assert.equal((await list(db)).total,1);
+  await login(db,null);await assert.rejects(safety("hide"),/permission denied/);
  }finally{await db.close();}
 });
