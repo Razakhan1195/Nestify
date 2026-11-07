@@ -1,3 +1,4 @@
+import { useTheme } from "@/theme/useTheme";
 import { AmbientBackdrop } from "./AmbientBackdrop";
 import { FormScrollView } from "@/components/FormScrollView";
 import { Feather } from "@expo/vector-icons";
@@ -5,7 +6,7 @@ import type { ReactNode } from "react";
 import { Pressable, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { LegalLinks } from "./LegalLinks";
-import { colors, editorialType, premium, spacing, typography } from "@/theme/tokens";
+import { editorialType, spacing, typography } from "@/theme/tokens";
 
 export function SignupFrame({ stage, title, detail, busy, onBack, children }: {
   stage: "choose" | "email" | "confirm";
@@ -15,6 +16,8 @@ export function SignupFrame({ stage, title, detail, busy, onBack, children }: {
   onBack: () => void;
   children: ReactNode;
 }) {
+  const { colors, premium } = useTheme();
+
   return <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
     <View style={{ flex: 1 }} >
       <AmbientBackdrop />
@@ -24,9 +27,9 @@ export function SignupFrame({ stage, title, detail, busy, onBack, children }: {
           <Pressable accessibilityRole="button" accessibilityLabel={stage === "email" ? "Back to sign-in options" : "Back"}
             disabled={busy} accessibilityState={{ disabled: busy }} onPress={onBack}
             style={{ minWidth: 44, minHeight: 44, justifyContent: "center", opacity: busy ? 0.5 : 1 }}>
-            <Feather name="arrow-left" size={23} color={premium.ink} />
+            <Feather name="arrow-left" size={23} color={premium.brandText} />
           </Pressable>
-          <Text style={{ fontSize: 24, letterSpacing: -1, fontWeight: "600", color: premium.ink }}>rezlee</Text>
+          <Text style={{ fontSize: 24, letterSpacing: -1, fontWeight: "600", color: premium.brandText }}>rezlee</Text>
           <View style={{ width: 44 }} />
         </View>
         <View style={{ paddingTop: stage === "choose" ? 28 : 20, paddingBottom: 28, gap: 14 }}>
@@ -34,7 +37,7 @@ export function SignupFrame({ stage, title, detail, busy, onBack, children }: {
             <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: colors.primary }} />
             <Text style={[typography.label, { color: colors.primary, letterSpacing: 1.5 }]}>{stage === "confirm" ? "ONE LAST STEP" : "YOUR REZLEE ACCOUNT"}</Text>
           </View>
-          <Text accessibilityRole="header" style={[editorialType, { fontSize: stage === "choose" ? 40 : 34, lineHeight: stage === "choose" ? 46 : 40, color: premium.ink }]}>{title}</Text>
+          <Text accessibilityRole="header" style={[editorialType, { fontSize: stage === "choose" ? 40 : 34, lineHeight: stage === "choose" ? 46 : 40, color: premium.brandText }]}>{title}</Text>
           <Text style={[typography.body, { fontSize: 16, lineHeight: 24, color: colors.mutedForeground, maxWidth: 365 }]}>{detail}</Text>
         </View>
         <View style={{ gap: spacing.lg }}>{children}</View>

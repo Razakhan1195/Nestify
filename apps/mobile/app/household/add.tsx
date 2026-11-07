@@ -1,3 +1,4 @@
+import { useTheme } from "@/theme/useTheme";
 import { FormScrollView } from "@/components/FormScrollView";
 import { useRouter } from "expo-router";
 import { QuietAction } from "@/components/Brief";
@@ -11,7 +12,7 @@ import { TextField } from "@/components/TextField";
 import { Surface } from "@/components/ui/Surface";
 import { ApiError } from "@/lib/api";
 import { addHouseholdPerson } from "@/lib/household-data";
-import { colors, layout, radii, spacing, typography } from "@/theme/tokens";
+import { layout, radii, spacing, typography } from "@/theme/tokens";
 import { ScreenNavigation } from "@/components/ScreenNavigation";
 
 const relationships = ["Partner", "Family", "Roommate", "Other"] as const;
@@ -19,6 +20,8 @@ const relationships = ["Partner", "Family", "Roommate", "Other"] as const;
 type SentInvite = { name: string; email: string };
 
 export default function AddHouseholdPersonScreen() {
+  const { colors } = useTheme();
+
   const router = useRouter();
   const [name, setName] = useState("");
   const [relationship, setRelationship] = useState("Roommate");

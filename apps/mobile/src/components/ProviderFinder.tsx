@@ -1,3 +1,4 @@
+import { useTheme } from "@/theme/useTheme";
 import { JourneyHeading } from "@/components/JourneyUI";
 import { Feather } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
@@ -8,9 +9,11 @@ import { QuietAction } from "./Brief";
 import { Surface } from "./ui/Surface";
 import { fetchProviderConnections, type ProviderDirectoryEntry } from "@/lib/provider-data";
 import { findDirectoryEntries, providerServiceFilters, providerFinderResults, type ProviderServiceFilter } from "@/lib/provider-directory";
-import { colors, spacing, typography } from "@/theme/tokens";
+import { spacing, typography } from "@/theme/tokens";
 const provinces:Record<string,string>={ON:"Ontario",BC:"British Columbia",AB:"Alberta",SK:"Saskatchewan",MB:"Manitoba",QC:"Quebec",NB:"New Brunswick",NS:"Nova Scotia",PE:"Prince Edward Island",NL:"Newfoundland and Labrador",YT:"Yukon",NT:"Northwest Territories",NU:"Nunavut"};
 export function ProviderFinder() {
+  const { colors , mode: useThemeMode } = useTheme();
+
  const router=useRouter(),[entries,setEntries]=useState<ProviderDirectoryEntry[]>([]),[province,setProvince]=useState<string|null>(null);
  const [query,setQuery]=useState(""),[service,setService]=useState<ProviderServiceFilter>("All");
  const [selected,setSelected]=useState<ProviderDirectoryEntry|null>(null),[loading,setLoading]=useState(true),[failed,setFailed]=useState(false),[attempt,setAttempt]=useState(0);
@@ -39,7 +42,7 @@ export function ProviderFinder() {
   <JourneyHeading title="Who’s your bill from?" detail="Search the company on your bill—for example, your phone, internet or electricity provider. A connection can bring in available statements; uploading a bill is always an option."/>
   <View style={{flexDirection:"row",alignItems:"center",gap:8,borderWidth:1,borderColor:colors.borderStrong,borderRadius:16,paddingHorizontal:14,backgroundColor:colors.surfaceRaised}}>
    <Feather name="search" size={20} color={colors.mutedForeground}/>
-   <TextInput accessibilityLabel="Search providers across Canada" value={query} onChangeText={value=>{setQuery(value);setLimit(12);}} placeholder="Company or municipality" placeholderTextColor={colors.mutedForeground} autoCorrect={false} returnKeyType="search" onSubmitEditing={Keyboard.dismiss} style={[typography.body,{flex:1,minHeight:54,color:colors.foreground}]}/>
+   <TextInput keyboardAppearance={useThemeMode} selectionColor={colors.primary} accessibilityLabel="Search providers across Canada" value={query} onChangeText={value=>{setQuery(value);setLimit(12);}} placeholder="Company or municipality" placeholderTextColor={colors.mutedForeground} autoCorrect={false} returnKeyType="search" onSubmitEditing={Keyboard.dismiss} style={[typography.body,{flex:1,minHeight:54,color:colors.foreground}]}/>
    {query?<Pressable accessibilityRole="button" accessibilityLabel="Clear search" onPress={()=>{setQuery("");setLimit(12);}} style={{width:44,height:44,alignItems:"center",justifyContent:"center"}}><Feather name="x" size={18} color={colors.primary}/></Pressable>:null}
   </View>
   <View style={{flexDirection:"row",flexWrap:"wrap",gap:8}}>

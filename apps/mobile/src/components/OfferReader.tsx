@@ -1,3 +1,4 @@
+import { useTheme } from "@/theme/useTheme";
 import {useNavigation} from "expo-router";
 import {usePreventRemove} from "expo-router/react-navigation";
 import {useRef,useState} from 'react';
@@ -11,10 +12,12 @@ import {apiFormPost,ApiError} from '@/lib/api';
 import {prepareAttachment} from '@/lib/prepare-attachment';
 import {RECORD_PICKER_TYPES,RECORD_FILE_TYPES,uploadMimeType,uploadValidationError} from '@/lib/upload-validation';
 import {parseOfferReading,type OfferReading} from '@/lib/offer-reading';
-import {colors,typography} from '@/theme/tokens';
+import { typography } from '@/theme/tokens';
 type Attachment={uri:string;name:string;type:string;size?:number};
 const labels={monthly:'Monthly price',promoMonths:'Promotion length',afterPromo:'Price afterward',upfront:'Setup and equipment',exitFee:'Leaving your current plan',credit:'One-time credit'};
 export function OfferReader({billId,source,disabled,onBusy,onRead,onApply}:{billId:string;source:OfferReading|null;disabled:boolean;onBusy:(busy:boolean)=>void;onRead:(reading:OfferReading)=>void;onApply:()=>void}){
+  const { colors } = useTheme();
+
  const [open,setOpen]=useState(false),[text,setText]=useState(''),[file,setFile]=useState<Attachment|null>(null),[consent,setConsent]=useState(false),[error,setError]=useState(''),[reading,setReading]=useState(false);const lock=useRef(false);
  const navigation=useNavigation(),[pendingInput,setPendingInput]=useState(false);
  usePreventRemove(pendingInput&&!disabled,({data})=>Alert.alert('Leave this unread offer?','The file or text you have not read will not be kept. Saved offer details remain.',[{text:'Keep reviewing',style:'cancel'},{text:'Leave',style:'destructive',onPress:()=>navigation.dispatch(data.action)}]));

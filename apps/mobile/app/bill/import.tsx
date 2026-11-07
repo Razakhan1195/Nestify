@@ -1,3 +1,4 @@
+import { useTheme } from "@/theme/useTheme";
 import { FormScrollView } from "@/components/FormScrollView";
 import {JourneyHeading,JourneySteps,JourneyDisclosure} from "@/components/JourneyUI";
 import {prepareAttachment} from "@/lib/prepare-attachment";
@@ -29,7 +30,7 @@ import { pendingBillUpload, rememberBillUpload, forgetBillUpload } from "@/lib/b
 import { statementSuggestions, statementReviewHints, statementDuplicate, type StatementDuplicate } from "@/lib/statement-review";
 import { newVaultSaveRequestId } from "@/lib/vault-save-intent";
 import { RECORD_PICKER_TYPES, RECORD_FILE_TYPES, uploadMimeType, uploadValidationError } from "@/lib/upload-validation";
-import { colors, layout, spacing, typography } from "@/theme/tokens";
+import { layout, spacing, typography } from "@/theme/tokens";
 
 type Original = { uri: string; name: string; type: string; size?: number };
 type Saved = { ok: true; billId: string };
@@ -38,6 +39,8 @@ const endpoint = "/api/mobile/v1/bills/history/upload";
 const empty: ManualBillInput = { record_kind: "historical", bill_title: "", category: "", provider_name: "", account_number: "", amount: "", due_date: "", issue_date: "", billing_period_start: "", billing_period_end: "", notes: "" };
 
 export default function ImportStatementScreen() {
+  const { colors } = useTheme();
+
   const { session } = useAuth();
   const userId = session?.user.id;
   const [draftHome, setDraftHome] = useState<{ id: string; name: string } | null>(null);

@@ -1,9 +1,12 @@
+import { useTheme } from "@/theme/useTheme";
 import { Feather } from "@expo/vector-icons";
 import { Text, View } from "react-native";
 
-import { colors, radii } from "@/theme/tokens";
+import { radii } from "@/theme/tokens";
 
 export function CareVisual() {
+  const { colors } = useTheme();
+
   return (
     <View style={{ width: 180, height: 118, alignSelf: "center", alignItems: "center", justifyContent: "center" }}>
       <View style={{ position: "absolute", width: 118, height: 92, borderRadius: 28, backgroundColor: colors.accent, transform: [{ rotate: "-7deg" }] }} />

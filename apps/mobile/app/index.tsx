@@ -1,3 +1,4 @@
+import { useTheme } from "@/theme/useTheme";
 import { readGiftInvitation } from "@/lib/gift-invitation";
 import { hasSeenQuickGuide } from "@/lib/quick-guide";
 import {readIncomingGroupInvite} from "@/lib/expense-group-invites";
@@ -12,7 +13,7 @@ import { useAccountSwitch } from "@/auth/useAccountSwitch";
 import { RezleeLoading } from "@/components/RezleeLoading";
 import { useAuth } from "@/auth/AuthProvider";
 import { ApiError } from "@/lib/api";
-import { colors, spacing, typography } from "@/theme/tokens";
+import { spacing, typography } from "@/theme/tokens";
 
 type Destination = "/gift" | "/quick-guide" | "/onboarding" | "/(tabs)/home" | "/delete-account" | "/household/join" | "/shared/join" | "/(auth)/welcome";
 
@@ -27,6 +28,8 @@ export default function Index() {
 }
 
 function AccountEntry({ userId, email }: { userId?: string; email?: string }) {
+  const { colors } = useTheme();
+
   const account = useAccountSwitch();
   const [destination, setDestination] = useState<Destination | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -88,6 +91,8 @@ function AccountEntry({ userId, email }: { userId?: string; email?: string }) {
 }
 
 function LoadingScreen() {
+  const { colors } = useTheme();
+
   return <View style={{ flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: colors.background }}>
     <RezleeLoading />
   </View>;

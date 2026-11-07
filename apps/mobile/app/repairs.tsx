@@ -1,3 +1,4 @@
+import { useTheme } from "@/theme/useTheme";
 import { FormScrollView } from "@/components/FormScrollView";
 import {JourneyHeading,JourneySteps} from "@/components/JourneyUI";
 import * as ImagePicker from "expo-image-picker";
@@ -13,14 +14,22 @@ import {QuietAction} from "@/components/Brief";
 import {ActionCard} from "@/components/ActionCard";
 import {ScreenNavigation} from "@/components/ScreenNavigation";
 import {fetchRepairs,pendingRepair,saveRepair,repairStatus,type RepairIntake,type RepairPayload,type RepairChange,type RepairIntent} from "@/lib/repair-data";
-import {colors,layout,radii,spacing,typography} from "@/theme/tokens";
+import { layout, radii, spacing, typography } from "@/theme/tokens";
 const initial:RepairIntake={title:"",description:"",category:"other",equipment:"",context:"owner",hazard:"unsure"};
 function Field({label,value,onChange,multiline=false,maxLength=1500,disabled=false,placeholder}:{disabled?:boolean;label:string;value:string;onChange:(value:string)=>void;multiline?:boolean;maxLength?:number;placeholder?:string}){
- return <View style={{gap:8}}><Text style={[typography.section,{color:colors.foreground}]}>{label}</Text><TextInput editable={!disabled} accessibilityState={{disabled}} accessibilityLabel={label} placeholder={placeholder} placeholderTextColor={colors.mutedForeground} value={value} onChangeText={onChange} multiline={multiline} maxLength={maxLength} textAlignVertical="top" style={[typography.body,{color:colors.foreground,backgroundColor:colors.surfaceRaised,borderWidth:1,borderColor:colors.border,borderRadius:radii.lg,padding:14,minHeight:multiline?110:48}]}/></View>;
+  const { colors , mode: useThemeMode } = useTheme();
+
+ return <View style={{gap:8}}><Text style={[typography.section,{color:colors.foreground}]}>{label}</Text><TextInput keyboardAppearance={useThemeMode} selectionColor={colors.primary} editable={!disabled} accessibilityState={{disabled}} accessibilityLabel={label} placeholder={placeholder} placeholderTextColor={colors.mutedForeground} value={value} onChangeText={onChange} multiline={multiline} maxLength={maxLength} textAlignVertical="top" style={[typography.body,{color:colors.foreground,backgroundColor:colors.surfaceRaised,borderWidth:1,borderColor:colors.border,borderRadius:radii.lg,padding:14,minHeight:multiline?110:48}]}/></View>;
 }
-function Copy({children}:{children:React.ReactNode}){return <Text style={[typography.body,{color:colors.mutedForeground}]}>{children}</Text>;}
-function Panel({children,tone=colors.surfaceRaised}:{children:React.ReactNode;tone?:string}){return <View style={{padding:18,borderRadius:20,backgroundColor:tone,gap:12,borderWidth:1,borderColor:colors.border}}>{children}</View>;}
+function Copy({children}:{children:React.ReactNode}){
+  const { colors } = useTheme();
+return <Text style={[typography.body,{color:colors.mutedForeground}]}>{children}</Text>;}
+function Panel({children,tone}:{children:React.ReactNode;tone?:string}){
+  const { colors } = useTheme();
+return <View style={{padding:18,borderRadius:20,backgroundColor:tone ?? colors.surfaceRaised,gap:12,borderWidth:1,borderColor:colors.border}}>{children}</View>;}
 export default function Repairs(){
+  const { colors } = useTheme();
+
  const router=useRouter(),params=useLocalSearchParams<{id?:string;start?:string;careTaskTitle?:string}>();
  const [payload,setPayload]=useState<RepairPayload|null>(null),[loading,setLoading]=useState(true),[error,setError]=useState<string|null>(null);
  const [pending,setPending]=useState<RepairIntent|null>(null),[busy,setBusy]=useState(false),[message,setMessage]=useState<string|null>(null);
@@ -167,4 +176,6 @@ export default function Repairs(){
  </>:null}
  </FormScrollView></View></SafeAreaView>;
 }
-function Safety(){return <Panel tone={colors.criticalBg}><Text style={[typography.section,{color:colors.criticalForeground}]}>Pause troubleshooting</Text><Copy>If you suspect a gas leak, see fire or hear a CO alarm, leave the area and call emergency services from a safe location. Avoid switches or equipment near a suspected gas leak. Stay out of water near electrical equipment. If unsure, keep away and get qualified help. Do not wait for Rezlee to save or respond.</Copy></Panel>;}
+function Safety(){
+  const { colors } = useTheme();
+return <Panel tone={colors.criticalBg}><Text style={[typography.section,{color:colors.criticalForeground}]}>Pause troubleshooting</Text><Copy>If you suspect a gas leak, see fire or hear a CO alarm, leave the area and call emergency services from a safe location. Avoid switches or equipment near a suspected gas leak. Stay out of water near electrical equipment. If unsure, keep away and get qualified help. Do not wait for Rezlee to save or respond.</Copy></Panel>;}

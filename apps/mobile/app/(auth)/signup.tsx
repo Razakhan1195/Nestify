@@ -1,3 +1,4 @@
+import { useTheme } from "@/theme/useTheme";
 import { useRouter } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import { ActivityIndicator, Pressable, Text, View } from "react-native";
@@ -10,9 +11,11 @@ import { SignupFrame } from "@/components/SignupFrame";
 import { SocialSignIn } from "@/components/SocialSignIn";
 import { Button } from "@/components/Button";
 import { TextField } from "@/components/TextField";
-import { colors, typography } from "@/theme/tokens";
+import { typography } from "@/theme/tokens";
 
 export default function SignupScreen() {
+  const { colors } = useTheme();
+
   const { session, signUp, resendConfirmation } = useAuth();
   const router = useRouter();
   const locked = useRef(false);
@@ -85,7 +88,7 @@ export default function SignupScreen() {
   function goBack() {
     if (busy || locked.current) return;
     if (emailForm && !pending) { setEmailForm(false); setError(null); return; }
-    router.canGoBack() ? router.back() : router.replace("/(auth)/welcome");
+    if (router.canGoBack()) router.back(); else router.replace("/(auth)/welcome");
   }
   return <SignupFrame stage={stage} busy={busy} onBack={goBack}
     title={pending ? "Check your inbox." : emailForm ? "Make yourself at home." : "Life at home,\na little lighter."}

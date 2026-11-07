@@ -1,3 +1,6 @@
+import type { Colors, Premium } from "@/theme/tokens";
+import { useMemo as useThemeMemo } from "react";
+import { useTheme } from "@/theme/useTheme";
 import {FormScrollView} from "@/components/FormScrollView";
 import {useCallback, useRef, useState} from 'react';
 import {useFocusEffect, useRouter} from 'expo-router';
@@ -11,12 +14,15 @@ import {TextField} from '@/components/TextField';
 import {ReferralPass} from '@/components/ReferralPass';
 import {apiGet, apiPost} from '@/lib/api';
 import {loadMembership} from '@/lib/membership';
-import {colors, editorialType, premium, typography} from '@/theme/tokens';
+import { editorialType, typography } from '@/theme/tokens';
 
 type Invitation = {code:string; url:string};
 type ClaimResult = {status:'claimed'|'already_pro'|'not_new'; expiresAt?:string};
 
 export default function Rewards() {
+  const { colors, premium } = useTheme();
+  const styles = useThemeMemo(() => makeStyles(colors, premium), [colors, premium]);
+
  const router = useRouter();
  const {session} = useAuth();
  const userId = session?.user.id;
@@ -122,7 +128,7 @@ export default function Rewards() {
   </FormScrollView>
  </SafeAreaView>;
 }
-const styles = StyleSheet.create({
+const makeStyles = (colors: Colors, premium: Premium) => (StyleSheet.create({
  screen:{flex:1,backgroundColor:colors.canvas},
  content:{paddingHorizontal:24,paddingTop:18,paddingBottom:32,gap:28},
  intro:{gap:12},
@@ -146,4 +152,4 @@ const styles = StyleSheet.create({
  terms:{...typography.meta,color:colors.mutedForeground},
  household:{minHeight:44,flexDirection:'row',alignItems:'center',gap:10},
  householdText:{...typography.meta,color:colors.mutedForeground,flex:1},
-});
+}));

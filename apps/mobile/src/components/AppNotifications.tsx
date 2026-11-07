@@ -1,3 +1,4 @@
+import { useTheme } from "@/theme/useTheme";
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import { AppState, Pressable, View, Text } from "react-native";
 import { Feather } from "@expo/vector-icons";
@@ -8,7 +9,7 @@ import { fetchNotifications, openNotification, readNotification } from "@/lib/no
 import { registerPushNotifications, getInitialNotificationTarget, addNotificationTargetListener, clearNotificationResponse } from "@/lib/push-notifications";
 import { notificationNavigationReady, safeNotificationDestination, type NotificationResponseTarget } from "@/lib/notification-routing";
 import { WelcomeEmailSync } from "./WelcomeEmailSync";
-import { colors } from "@/theme/tokens";
+
 type NotificationState = { userId: string | null; unread: number; refresh: () => Promise<void> };
 const emptyNotifications = { unread: 0, refresh: async () => {} };
 const Context = createContext(emptyNotifications);
@@ -78,6 +79,8 @@ function AccountNotifications({ userId, ready, onChange }: { userId: string | nu
   return ready && userId ? <WelcomeEmailSync userId={userId} /> : null;
 }
 export function NotificationBell() {
+  const { colors } = useTheme();
+
   const { unread } = useNotifications(), router = useRouter();
   return <Pressable accessibilityRole="button" accessibilityLabel={unread ? "Notifications, " + unread + " unread" : "Notifications"} onPress={() => router.push("/notifications")} style={({ pressed }) => ({ width: 44, height: 44, alignItems: "center", justifyContent: "center", opacity: pressed ? 0.6 : 1 })}>
     <Feather name="bell" size={21} color={colors.primary} />

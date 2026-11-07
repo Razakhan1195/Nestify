@@ -1,3 +1,5 @@
+import { useMemo as useThemeMemo } from "react";
+import { useTheme } from "@/theme/useTheme";
 import {groupParams} from "@/lib/shared-expenses";
 import {useLocalSearchParams,useNavigation,useRouter} from "expo-router";
 import {usePreventRemove} from "expo-router/react-navigation";
@@ -5,17 +7,20 @@ import {useEffect,useRef,useState} from "react";
 import {Alert,Text,View} from "react-native";
 import {Feather} from "@expo/vector-icons";
 import {QuietAction} from "@/components/Brief";
-import {colors,typography} from "@/theme/tokens";
+import { typography } from "@/theme/tokens";
 import {Button} from "@/components/Button";
 import {DateField} from "@/components/DateField";
 import {TextField} from "@/components/TextField";
 import {Surface} from "@/components/ui/Surface";
-import {SharedFrame,SharedLoading,SharedNotice,sharedStyles as s,useSharedLedger} from "@/components/SharedExpenseUI";
+import {SharedFrame,SharedLoading,SharedNotice,getSharedStyles,useSharedLedger} from "@/components/SharedExpenseUI";
 import {remindSharedBalance,sharedDate,localToday,pendingSharedSave,saveSharedExpense,sharedPersonName,type SharedPayload,type SharedCommand} from "@/lib/shared-expenses";
 import {centsInput,parseCadCents,sharedMoney} from "@/lib/shared-expense-math";
 import {ApiError} from "@/lib/api";
 
 function Repayment({data,from,to,onReloadLatest}:{data:SharedPayload;from:string;to:string;onReloadLatest:()=>Promise<void>}){
+  const { colors, premium } = useTheme();
+ const s = useThemeMemo(() => getSharedStyles(colors), [colors, premium]);
+
  const router=useRouter(),navigation=useNavigation(),lock=useRef(false),attempt=useRef<SharedCommand|null>(null),pair=data.balances.find(b=>b.from===from&&b.to===to);
  const [amount,setAmount]=useState(pair?centsInput(pair.cents):""),[date,setDate]=useState(localToday()),[note,setNote]=useState(""),[error,setError]=useState<string|null>(null),[saving,setSaving]=useState(false),[saved,setSaved]=useState<string|null>(null);
  const [uncertain,setUncertain]=useState(false),[conflict,setConflict]=useState(false),[detailsOpen,setDetailsOpen]=useState(false),[reminding,setReminding]=useState(false),[reminder,setReminder]=useState<string|null>(null);

@@ -1,14 +1,19 @@
+import { useMemo as useThemeMemo } from "react";
+import { useTheme } from "@/theme/useTheme";
 import { Feather } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { Pressable, Text, View } from "react-native";
-import { taskPalette } from "@/components/HomeTaskArtwork";
+import { getTaskPalette } from "@/components/HomeTaskArtwork";
 import { startingContent, startingGoals, type StartingGoal } from "@/lib/home-start";
 import { HomeFeatureTile } from "./HomeFeatureTile";
-import { colors, homeTile, typography } from "@/theme/tokens";
+import { homeTile, typography } from "@/theme/tokens";
 
 export function StartingGoalOptions({ selected, onSelect, disabled = false }: {
   selected: StartingGoal; onSelect: (goal: StartingGoal) => void; disabled?: boolean;
 }) {
+  const { colors, premium } = useTheme();
+  const taskPalette = useThemeMemo(() => getTaskPalette(colors), [colors, premium]);
+
   return <View accessibilityRole="radiogroup" accessibilityLabel="What would help today?" style={{ gap: 10 }}>
     {startingGoals.map(goal => <Pressable key={goal} accessibilityRole="radio" accessibilityState={{ checked: selected === goal, disabled }}
       disabled={disabled} onPress={() => onSelect(goal)} style={({ pressed }) => ({ minHeight: 82, padding: 14, borderRadius: 16,
@@ -29,6 +34,9 @@ const tileContent = {
 } as const;
 
 export function TaskTile({ goal, onStart }: { goal: StartingGoal; onStart: (goal: StartingGoal) => void }) {
+  const { colors, premium } = useTheme();
+  const taskPalette = useThemeMemo(() => getTaskPalette(colors), [colors, premium]);
+
   const content = tileContent[goal];
   return <HomeFeatureTile title={content.title} detail={content.detail} action={content.action} artwork={goal} backgroundColor={taskPalette[goal].surface} onPress={()=>onStart(goal)}/>;
 }
@@ -36,6 +44,8 @@ export function TaskTile({ goal, onStart }: { goal: StartingGoal; onStart: (goal
 export function HomeStartJourney({ remaining, onStart }: {
   remaining: StartingGoal[]; onStart: (goal: StartingGoal) => void;
 }) {
+  const { colors } = useTheme();
+
   const router = useRouter();
   if (!remaining.length) return null;
   return <View style={{ gap: homeTile.groupGap }}>

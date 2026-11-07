@@ -1,3 +1,4 @@
+import { useTheme } from "@/theme/useTheme";
 import {useCallback,useLayoutEffect,useRef,useState} from "react";
 import {ActivityIndicator,FlatList,Keyboard,Pressable,Text,View,useWindowDimensions} from "react-native";
 import {SafeAreaView} from "react-native-safe-area-context";
@@ -9,13 +10,15 @@ import {TextField} from "@/components/TextField";
 import {Button} from "@/components/Button";
 import {ApiError,apiGet} from "@/lib/api";
 import {formatVaultDate} from "@/lib/vault-data";
-import {colors,layout,spacing,typography} from "@/theme/tokens";
+import { layout, spacing, typography } from "@/theme/tokens";
 type ViewKind="documents"|"items"|"warranties";
 type Cursor={time:string;id:string;kind:"document"|"item"};
 type Entry={id:string;kind:"document"|"item";title:string;detail:string;expires:string|null;created_at:string};
 type Page={rows:Entry[];total:number;nextCursor:Cursor|null;needsOnboarding?:boolean};
 const choices=[{key:"documents",label:"Records"},{key:"items",label:"Home items"},{key:"warranties",label:"Warranties"}] as const;
 export default function VaultSearchScreen(){
+  const { colors } = useTheme();
+
  const {fontScale}=useWindowDimensions();
  const params=useLocalSearchParams<{view?:string}>(),router=useRouter(),{session}=useAuth(),userId=session?.user.id;
  const [view,setView]=useState<ViewKind>(params.view==="items"||params.view==="warranties"?params.view:"documents"),[query,setQuery]=useState("");

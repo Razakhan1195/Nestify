@@ -1,3 +1,6 @@
+import type { Colors } from "@/theme/tokens";
+import { useMemo as useThemeMemo } from "react";
+import { useTheme } from "@/theme/useTheme";
 import { FormScrollView } from "@/components/FormScrollView";
 import {TelecomStatementBreakdown} from "@/components/TelecomBillInsights";
 import {BillRecordNotice} from "@/components/BillRecordNotice";
@@ -27,18 +30,20 @@ import {
   type BillListItem,
 } from "@/lib/bills-data";
 import { formatCurrency } from "@/lib/home-data";
-import { colors, radii, spacing, typography } from "@/theme/tokens";
+import { radii, spacing, typography } from "@/theme/tokens";
 import { firstStatementSummary } from "@/lib/first-statement";
 import { earlierBills, billChange, remainingForBill } from "@/lib/bill-explanation";
 import { safeBack } from "@/lib/navigation";
-const toneColors: Record<string, { fg: string; bg: string }> = {
+const makeToneColors = (colors: Colors): Record<string, { fg: string; bg: string }> => ({
   critical: { fg: colors.criticalForeground, bg: colors.criticalBg },
   warning: { fg: colors.warningForeground, bg: colors.warningBg },
   info: { fg: colors.infoForeground, bg: colors.infoBg },
   success: { fg: colors.successForeground, bg: colors.successBg },
-};
+});
 
 function DetailRow({ label, value }: { label: string; value: string }) {
+  const { colors } = useTheme();
+
   return (
     <View style={{ flexDirection: "row", justifyContent: "space-between", gap: spacing.lg, paddingVertical: spacing.md }}>
       <Text style={[typography.meta, { flex: 1, color: colors.mutedForeground }]}>{label}</Text>
@@ -56,6 +61,8 @@ function FinancialStat({
   value: string;
   emphasized?: boolean;
 }) {
+  const { colors } = useTheme();
+
   return (
     <View style={{ flex: 1, minWidth: "44%", gap: 3 }}>
       <Text style={[typography.caption, { color: colors.mutedForeground }]}>{label}</Text>
@@ -84,6 +91,9 @@ type EditFields = {
 };
 
 export default function BillDetailScreen() {
+  const { colors, premium } = useTheme();
+  const toneColors = useThemeMemo(() => makeToneColors(colors), [colors, premium]);
+
   const { id, saved } = useLocalSearchParams<{ id: string; saved?: string }>();
   const [confirmationDismissed, setConfirmationDismissed] = useState(false);
   const router = useRouter();
@@ -425,7 +435,7 @@ export default function BillDetailScreen() {
           <View style={{ alignSelf: "flex-start", paddingHorizontal: 9, paddingVertical: 4, borderRadius: radii.full, backgroundColor: tone.bg }}>
             <Text style={{ fontSize: 11, fontWeight: "700", color: tone.fg }}>{statusLabel(bill.status)}</Text>
           </View>
-          <Text style={editorial}>{bill.label}</Text>
+          <Text style={[editorial, { color: colors.foreground }]}>{bill.label}</Text>
           <Text style={[typography.body, { color: colors.mutedForeground }]}>
             {bill.isHistoricalStatement ? `Statement period: ${period ?? "Not available"}` : `Due ${formatDueDate(bill.dueDate)}`}
           </Text>

@@ -1,3 +1,4 @@
+import { useTheme } from "@/theme/useTheme";
 import { FormScrollView } from "@/components/FormScrollView";
 import {prepareAttachment} from "@/lib/prepare-attachment";
 import {energyEvidenceError} from "@/lib/energy-evidence";
@@ -27,12 +28,14 @@ import {Button} from "@/components/Button";
 import {TextField} from "@/components/TextField";
 import {DateField} from "@/components/DateField";
 import {QuietAction} from "@/components/Brief";
-import {colors,spacing,typography} from "@/theme/tokens";
+import { spacing, typography } from "@/theme/tokens";
 const endpoint="/api/mobile/v1/bills/history/upload";
 type FilePart=Pick<DocumentPicker.DocumentPickerAsset,"uri"|"name"|"mimeType"|"size">;
 const empty=emptyStatementFields;
 export default function StatementBatchScreen(){const {session}=useAuth();return <Batch key={session?.user.id??"out"} userId={session?.user.id}/>;}
 function Batch({userId}:{userId?:string}){
+  const { colors } = useTheme();
+
  const router=useRouter(),navigation=useNavigation();
  const [batch,setBatch]=useState<StatementBatch|null>(null),current=useRef<StatementBatch|null>(null);
  const [energyEnabled,setEnergyEnabled]=useState(false);

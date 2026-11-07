@@ -1,3 +1,4 @@
+import { useTheme } from "@/theme/useTheme";
 import { FormScrollView } from "@/components/FormScrollView";
 import {usePreventRemove} from "expo-router/react-navigation";
 import {JourneyHeading,JourneyPanel} from "@/components/JourneyUI";
@@ -12,9 +13,11 @@ import { Button } from "@/components/Button";
 import { QuietAction, ReadNotice } from "@/components/Brief";
 import { fetchCare, type CareTask } from "@/lib/care-data";
 import { apiPost } from "@/lib/api";
-import { colors, typography } from "@/theme/tokens";
+import { typography } from "@/theme/tokens";
 type Fields = { title: string; category: string; due_date: string; recurrence: string };
 export default function EditTask() {
+  const { colors } = useTheme();
+
   const { id } = useLocalSearchParams<{ id: string }>(), router = useRouter(), navigation=useNavigation(), lock = useRef(false);
   const [task, setTask] = useState<CareTask | null>(null), [expected, setExpected] = useState<Fields | null>(null), [values, setValues] = useState<Fields | null>(null);
   const [error, setError] = useState<string | null>(null), [busy, setBusy] = useState(false), [attempt, setAttempt] = useState(0);

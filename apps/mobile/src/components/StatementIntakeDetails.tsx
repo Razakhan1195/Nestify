@@ -1,3 +1,4 @@
+import { useTheme } from "@/theme/useTheme";
 import {EnergyEvidenceReview} from "./EnergyEvidenceReview";
 import {useState} from "react";
 import {Text,View} from "react-native";
@@ -7,9 +8,11 @@ import {DateField} from "./DateField";
 import {CollectionFilter} from "./CollectionPages";
 import {editIntakeEvidence,hasIntakeEvidence,type IntakeEvidence} from "@/lib/statement-intake-evidence";
 import {evidenceError,type StatementEvidence} from "@/lib/statement-evidence";
-import {colors,typography} from "@/theme/tokens";
+import { typography } from "@/theme/tokens";
 const labels:Record<keyof StatementEvidence,string>={previousBalance:"Previous balance",amountDue:"Amount due when issued",subtotal:"Subtotal before tax and credits",tax:"Tax",credits:"Discounts and credits",usage:"Period usage",unit:"Usage unit",reading:"Reading type",ratePlan:"Plan",discountEnds:"Discount ends"};
 export function StatementIntakeDetails({value,disabled,onChange}:{value:IntakeEvidence;disabled:boolean;onChange:(next:IntakeEvidence)=>void}){
+  const { colors } = useTheme();
+
  const [editing,setEditing]=useState(false),[sources,setSources]=useState(false);
  if(!hasIntakeEvidence(value)&&!value.edited?.length)return null;
  const change=(key:keyof StatementEvidence,v:string)=>onChange(editIntakeEvidence(value,key,v));

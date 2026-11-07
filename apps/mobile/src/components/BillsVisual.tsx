@@ -1,9 +1,12 @@
+import { useTheme } from "@/theme/useTheme";
 import { Feather } from "@expo/vector-icons";
 import { Text, View } from "react-native";
 
-import { colors, radii, spacing, typography } from "@/theme/tokens";
+import { radii, spacing, typography } from "@/theme/tokens";
 
 export function BillsIllustration() {
+  const { colors } = useTheme();
+
   return (
     <View style={{ height: 132, alignItems: "center", justifyContent: "center" }}>
       <View
@@ -60,6 +63,8 @@ const values = [
   { icon: "archive", title: "Keep proof together", body: "Bills and related records stay connected to your home history." },
 ] as const;
 export function BillsValueProps() {
+  const { colors } = useTheme();
+
   return (
     <View style={{ gap: spacing.sm }}>
       {values.map((item) => (

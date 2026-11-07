@@ -1,10 +1,13 @@
+import { useTheme } from "@/theme/useTheme";
 import { Feather } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { Pressable, Text, View } from "react-native";
 import { Surface } from "./ui/Surface";
-import { colors, spacing, typography } from "@/theme/tokens";
+import { spacing, typography } from "@/theme/tokens";
 
 export function ProviderConnectionChoices() {
+  const { colors } = useTheme();
+
   const router = useRouter();
   return <Pressable accessibilityRole="button" accessibilityLabel="Find and connect your provider" onPress={() => router.push("/provider/connect")} style={({ pressed }) => ({ opacity: pressed ? 0.75 : 1 })}>
     <Surface tone="raised" style={{ gap: spacing.md }}>

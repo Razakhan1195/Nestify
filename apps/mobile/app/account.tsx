@@ -1,3 +1,4 @@
+import { useTheme } from "@/theme/useTheme";
 import {FormScrollView} from "@/components/FormScrollView";
 import { withReadTimeout } from "@/lib/read-timeout";
 import { Redirect, useFocusEffect, useRouter } from "expo-router";
@@ -16,7 +17,7 @@ import { fetchHousehold, type HouseholdPayload } from "@/lib/household-data";
 import { loadMembership, type MembershipPayload } from "@/lib/membership";
 import { connectionSummary, fetchAccountConnections, type AccountConnections } from "@/lib/account-connections";
 import { openPublicLink } from "@/lib/public-links";
-import { colors, editorialType, typography } from "@/theme/tokens";
+import { editorialType, typography } from "@/theme/tokens";
 export default function AccountScreen() {
   const { session, isLoading } = useAuth();
   if (isLoading) return <ActivityIndicator accessibilityLabel="Loading settings" />;
@@ -24,6 +25,8 @@ export default function AccountScreen() {
   return <AccountContent key={session.user.id} userId={session.user.id} />;
 }
 function AccountContent({ userId }: { userId: string }) {
+  const { colors } = useTheme();
+
   const router = useRouter(), { session, signOut } = useAuth();
   const [household, setHousehold] = useState<HouseholdPayload | null>(null), [membership, setMembership] = useState<MembershipPayload | null>(null), [connections, setConnections] = useState<AccountConnections | null>(null);
   const [errors, setErrors] = useState<string[]>([]), [search, setSearch] = useState(""), [refreshing, setRefreshing] = useState(false), [busy, setBusy] = useState(false), [logoutError, setLogoutError] = useState(false);
@@ -51,6 +54,7 @@ function AccountContent({ userId }: { userId: string }) {
       { title: "Sharing & access", detail: "What stays private and what’s shared", icon: "users", onPress: go("/household/sharing"), keywords: "privacy permissions" },
     ] },
     { title: "Make it yours", rows: [
+      { title: "Appearance", detail: "System, light or dark", icon: "moon", onPress: go("/appearance"), keywords: "theme display dark light mode" },
       { title: "Notifications", detail: "Choose the updates you want", icon: "bell", onPress: go("/notification-settings"), keywords: "push reminders preferences" },
       { title: "Security", detail: "Verified email and device unlock", icon: "shield", onPress: go("/app-security"), keywords: "password apple google login biometric lock" },
       { title: "AI privacy", detail: "You choose what’s shared for AI help", icon: "sliders", onPress: go("/ai-privacy"), keywords: "consent data" },
@@ -61,7 +65,8 @@ function AccountContent({ userId }: { userId: string }) {
       { title: "Completed care", detail: "The things you’ve taken care of", icon: "check-circle", onPress: go("/care-history"), keywords: "history tasks chores" },
     ] },
     { title: "Here to help", rows: [
-      { title: "Help shape Rezlee", detail: "Share an idea or report a problem", icon: "message-circle", onPress: go("/feedback"), keywords: "feedback bug support" },
+      { title: "Rezlee roadmap", detail: "Share ideas, vote and see what’s next", icon: "compass", onPress: go("/roadmap"), keywords: "feedback ideas feature request upvote community" },
+      { title: "Report a problem", detail: "Private feedback for the Rezlee team", icon: "message-circle", onPress: go("/feedback"), keywords: "feedback bug support" },
       { title: "Contact us", detail: "Get help from the Rezlee team", icon: "help-circle", onPress: () => void openPublicLink("contact"), keywords: "support" },
       { title: "A note from our founder", detail: "Built in Canada. Shaped by you.", icon: "heart", onPress: go("/about-rezlee"), keywords: "about" },
     ] },

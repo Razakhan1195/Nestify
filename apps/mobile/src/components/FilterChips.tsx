@@ -1,7 +1,8 @@
+import { useTheme } from "@/theme/useTheme";
 import * as Haptics from "expo-haptics";
 import { Pressable, ScrollView, Text, View, useWindowDimensions } from "react-native";
 
-import { colors, radii, spacing } from "@/theme/tokens";
+import { radii, spacing } from "@/theme/tokens";
 
 type FilterOption<T extends string> = { value: T; label: string };
 
@@ -16,6 +17,8 @@ export function FilterChips<T extends string>({
   selected,
   onSelect,
 }: FilterChipsProps<T>) {
+  const { colors } = useTheme();
+
   const {fontScale}=useWindowDimensions();
   const wrap=fontScale>1.3;
   const Container=wrap?View:ScrollView;

@@ -1,15 +1,20 @@
+import { useMemo as useThemeMemo } from "react";
+import { useTheme } from "@/theme/useTheme";
 import {useState} from "react";
 import {Pressable,Text,View} from "react-native";
 import {Feather} from "@expo/vector-icons";
 import {Button} from "./Button";
 import {QuietAction} from "./Brief";
 import {Surface} from "./ui/Surface";
-import {SharedSheet,sharedStyles as s} from "./SharedExpenseUI";
+import {SharedSheet,getSharedStyles} from "./SharedExpenseUI";
 import {sharedPersonName,type SharedPayload,type SharedBalance} from "@/lib/shared-expenses";
 import {sharedMoney} from "@/lib/shared-expense-math";
-import {colors,typography} from "@/theme/tokens";
+import { typography } from "@/theme/tokens";
 
 export function SharedBalances({data,ready,onSelect}:{data:SharedPayload;ready:boolean;onSelect:(pair:SharedBalance)=>void}){
+  const { colors, premium } = useTheme();
+ const s = useThemeMemo(() => getSharedStyles(colors), [colors, premium]);
+
  const [choosing,setChoosing]=useState(false),[expanded,setExpanded]=useState(false);
  const self=data.people.find(p=>p.self)?.id;
  const mine=data.balances.filter(p=>p.from===self||p.to===self),others=data.balances.filter(p=>p.from!==self&&p.to!==self);

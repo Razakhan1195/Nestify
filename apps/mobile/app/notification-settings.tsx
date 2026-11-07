@@ -1,3 +1,4 @@
+import { useTheme } from "@/theme/useTheme";
 import { useCallback,useState } from "react";
 import { Redirect,useFocusEffect,useRouter } from "expo-router";
 import { ActivityIndicator,AppState,Linking,ScrollView,Switch,Text,View } from "react-native";
@@ -8,7 +9,7 @@ import { ScreenNavigation } from "@/components/ScreenNavigation";
 import { BriefHeading,QuietAction,ReadNotice } from "@/components/Brief";
 import { fetchNotificationPreferences,saveNotificationPreferences,type NotificationPreferences } from "@/lib/notification-data";
 import { registerPushNotifications } from "@/lib/push-notifications";
-import { colors,layout,spacing,typography } from "@/theme/tokens";
+import { layout, spacing, typography } from "@/theme/tokens";
 const categories=[
  {key:"shared_expenses" as const,title:"Shared expenses",detail:"Recorded payments, corrections and reminders from your household."},
  {key:"connections" as const,title:"Connection updates",detail:"Verification requests, imports ready and connections that need your help."},
@@ -17,6 +18,8 @@ const categories=[
  {key:"recalls" as const,title:"Product recalls",detail:"Potential matches for saved items when recall monitoring is enabled."},
 ];
 export default function NotificationSettings() {
+  const { colors } = useTheme();
+
  const {session,isLoading}=useAuth(),router=useRouter();
  const [canManageRecalls,setCanManageRecalls]=useState(false);
  const [prefs,setPrefs]=useState<NotificationPreferences|null>(null),[permission,setPermission]=useState(false),[busy,setBusy]=useState(false),[error,setError]=useState<string|null>(null);

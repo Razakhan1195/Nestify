@@ -1,3 +1,4 @@
+import { useTheme } from "@/theme/useTheme";
 import { ConnectionElapsed } from "./ConnectionElapsed";
 import {ConnectionBrand} from "./ConnectionBrand";
 import {ProviderBrand} from "./ProviderBrand";
@@ -8,10 +9,12 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { WebView } from "react-native-webview";
 import { Feather } from "@expo/vector-icons";
 import { Button } from "@/components/Button";
-import { colors, spacing, typography } from "@/theme/tokens";
+import { spacing, typography } from "@/theme/tokens";
 import { DECK_AUTH_ORIGIN, checkHostedAuth, completeHostedAuth, hostedInitScript, hostedMessage, isDeckAuthUrl, startHostedAuth, type HostedAuthReady, type HostedAuthState } from "@/lib/deck-hosted-auth";
 
 export function DeckHostedAuth({ registryProviderId, providerName, category = "Other service", providerId, accountNumber, historyMonths = 12, onClose, onConnected }: { registryProviderId: string; providerName: string; category?: string; providerId?: string; accountNumber?: string; historyMonths?: number; onClose: (submitted: boolean) => void; onConnected: (providerId: string) => void }) {
+  const { colors } = useTheme();
+
   const web = useRef<WebView>(null);
   const alive = useRef(true);
   const submitted = useRef(false);

@@ -1,3 +1,4 @@
+import { useTheme } from "@/theme/useTheme";
 import { RezleeLoading } from "@/components/RezleeLoading";
 import { Feather } from "@expo/vector-icons";
 import { Redirect, useRouter } from "expo-router";
@@ -9,7 +10,7 @@ import { AmbientBackdrop } from "@/components/AmbientBackdrop";
 import { ProviderBrand } from "@/components/ProviderBrand";
 import { Button } from "@/components/Button";
 import { finishQuickGuide } from "@/lib/quick-guide";
-import { colors, editorialType, typography } from "@/theme/tokens";
+import { editorialType, typography } from "@/theme/tokens";
 
 const pages = [
  { title: "Bring your bills together.", detail: "Connect a supported provider or upload a statement. Review the details, then save.", label: "ADD A BILL", note: "Connections are optional. Your bills live in Bills." },
@@ -17,6 +18,8 @@ const pages = [
  { title: "Keep it. Find it.", detail: "Add a receipt or warranty, check the details and save it to Vault.", label: "SAVE A RECORD", note: "Keep an original when you have one, or save just the useful details." },
 ];
 function GuideVisual({ step, compact }: { step:number; compact:boolean }) {
+  const { colors } = useTheme();
+
  const {fontScale}=useWindowDimensions();
  const text = { ...typography.meta, color: colors.foreground };
  return <View style={{backgroundColor:colors.card,borderWidth:1,borderColor:colors.border,borderRadius:24,padding:compact?16:22,gap:14}}>
@@ -35,6 +38,8 @@ function GuideVisual({ step, compact }: { step:number; compact:boolean }) {
  </View>;
 }
 export default function QuickGuide() {
+  const { colors } = useTheme();
+
  const {session,isLoading}=useAuth(), router=useRouter();
  const [step,setStep]=useState(0),[busy,setBusy]=useState(false),[error,setError]=useState("");
  const lock=useRef(false), scroll=useRef<ScrollView>(null);

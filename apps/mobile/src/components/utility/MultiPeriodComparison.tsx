@@ -1,9 +1,10 @@
+import { useTheme } from "@/theme/useTheme";
 import { useCallback, useState } from "react";
 import { useFocusEffect, useRouter } from "expo-router";
 import { ActivityIndicator, Pressable, Text, View } from "react-native";
 import { apiGet, ApiError } from "@/lib/api";
 import { formatCurrency } from "@/lib/home-data";
-import { colors, spacing, typography } from "@/theme/tokens";
+import { spacing, typography } from "@/theme/tokens";
 
 type Comparison = {
   considered:number; days:number; gapDays:number; confidence:string;
@@ -14,6 +15,8 @@ type Comparison = {
 };
 const labels={tou:"Time-of-Use",ulo:"Ultra-Low Overnight",tiered:"Tiered (estimate)"};
 export function MultiPeriodComparison({providerId}:{providerId:string}) {
+  const { colors } = useTheme();
+
   const router=useRouter();
   const [data,setData]=useState<Comparison|null>(null);
   const [error,setError]=useState<string|null>(null);

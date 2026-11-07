@@ -1,19 +1,24 @@
+import { useMemo as useThemeMemo } from "react";
+import { useTheme } from "@/theme/useTheme";
 import { useRouter } from "expo-router";
 import {useRef,useState} from "react";
 import {Alert,Text,View} from "react-native";
 import {Button} from "./Button";
 import {TextField} from "./TextField";
 import {QuietAction} from "./Brief";
-import {SharedNotice,sharedStyles as s} from "./SharedExpenseUI";
+import {SharedNotice,getSharedStyles} from "./SharedExpenseUI";
 import {addHouseholdPerson,removeHouseholdPerson} from "@/lib/household-data";
 import {saveSharedExpense,type SharedPerson} from "@/lib/shared-expenses";
 import {ApiError} from "@/lib/api";
-import {colors,radii} from "@/theme/tokens";
+import { radii } from "@/theme/tokens";
 
 export function expensePersonStatus(p:SharedPerson){
  return p.state==="former"?"No longer participating":p.state==="invited"?(p.inviteExpired?"Invitation expired":"Invitation pending"):p.state==="local"?"Not joined":"Joined";
 }
 export function InviteExpensePerson({person,onChange,initialOpen=false}:{person:SharedPerson;onChange:()=>Promise<unknown>;initialOpen?:boolean}){
+  const { colors, premium } = useTheme();
+ const s = useThemeMemo(() => getSharedStyles(colors), [colors, premium]);
+
  const router = useRouter();
  const [open,setOpen]=useState(initialOpen),[email,setEmail]=useState(""),[busy,setBusy]=useState(false),[error,setError]=useState<string|null>(null);
  const lock=useRef(false);
@@ -47,6 +52,9 @@ export function InviteExpensePerson({person,onChange,initialOpen=false}:{person:
  </View>;
 }
 export function AddExpensePerson({homeId,groupId,expectedUserId,onAdded,prominent=false,initialOpen=false}:{homeId:string;groupId?:string;expectedUserId?:string;onAdded:(id:string)=>Promise<unknown>;prominent?:boolean;initialOpen?:boolean}){
+  const { colors, premium } = useTheme();
+ const s = useThemeMemo(() => getSharedStyles(colors), [colors, premium]);
+
  const [open,setOpen]=useState(initialOpen),[name,setName]=useState(""),[busy,setBusy]=useState(false),[error,setError]=useState<string|null>(null);
  const lock=useRef(false);
  const [confirmedId,setConfirmedId]=useState<string|null>(null);

@@ -1,7 +1,8 @@
+import { useTheme } from "@/theme/useTheme";
 import { Feather } from "@expo/vector-icons";
 import { useState } from "react";
 import { Pressable, Text, View, useWindowDimensions } from "react-native";
-import { colors, layout, spacing, typography } from "@/theme/tokens";
+import { layout, spacing, typography } from "@/theme/tokens";
 
 export type StatementChartPoint = {
   id: string; label: string; period: string; value: number | null;
@@ -10,6 +11,8 @@ export type StatementChartPoint = {
 // Selection is by statement ID so corrected/reordered history keeps its identity.
 // Arrow controls provide full-sized alternatives to narrow monthly bars.
 export function StatementBarChart({ points, onOpen }: { points: StatementChartPoint[]; onOpen: (id: string) => void }) {
+  const { colors } = useTheme();
+
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const { width, fontScale } = useWindowDimensions();
   if (!points.length) return null;

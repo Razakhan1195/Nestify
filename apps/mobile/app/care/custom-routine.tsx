@@ -1,3 +1,4 @@
+import { useTheme } from "@/theme/useTheme";
 import { FormScrollView } from "@/components/FormScrollView";
 import { JourneyHeading, JourneySteps, JourneyDisclosure, JourneyPanel } from "@/components/JourneyUI";
 import { Feather } from "@expo/vector-icons";
@@ -18,11 +19,13 @@ import { cleaningPresets, cleaningRooms, cleaningSuggestions, suggestionTask, lo
 import { fetchCleaningRoutines, readRoutineDraft, readPendingRoutine, storeRoutineDraft, clearRoutineDraft, saveCustomRoutine, recoverRoutineSave, addCarePerson, type RoutineDraft } from "@/lib/custom-cleaning";
 import { cleaningScheduleLabel, type CleaningTaskSpec } from "@/lib/custom-cleaning-types";
 import { ApiError } from "@/lib/api";
-import { colors, typography } from "@/theme/tokens";
+import { typography } from "@/theme/tokens";
 
 const steps = ["Pick a routine", "Make it yours"];
 const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 export default function CustomCleaningRoutine() {
+  const { colors } = useTheme();
+
   const { id } = useLocalSearchParams<{ id?: string }>(), router = useRouter();
   const [draft, setDraft] = useState<RoutineDraft | null>(null), [homeId, setHomeId] = useState<string | null>(null);
   const [members, setMembers] = useState<HouseholdMember[]>([]), [loading, setLoading] = useState(true), [error, setError] = useState<string | null>(null);
@@ -113,7 +116,7 @@ export default function CustomCleaningRoutine() {
         {step===0?<>
           <CleaningArtwork height={150}/>
           <JourneyHeading title="A little less on your plate." detail="Start with a few useful jobs. Change anything, share them out, and tick them off together."/>
-          {cleaningPresets.map((preset,i)=><Pressable key={preset.id} accessibilityRole="button" accessibilityLabel={preset.title} onPress={()=>choosePreset(preset)} style={{padding:18,borderRadius:22,backgroundColor:i===0?colors.surfaceSubtle:colors.surface,flexDirection:'row',gap:14,alignItems:'center'}}><View style={{width:48,height:48,borderRadius:16,backgroundColor:i===1?'#F3E3D2':'#E4EBDD',alignItems:'center',justifyContent:'center'}}><Feather name={preset.icon} size={24} color={colors.primary}/></View><View style={{flex:1,gap:5}}><Text style={[typography.section,{color:colors.foreground}]}>{preset.title}</Text><Text style={[typography.meta,{color:colors.mutedForeground}]}>{preset.detail}</Text><Text style={[typography.caption,{color:colors.primary}]}>{preset.jobs.length} suggested jobs · edit before starting</Text></View><Feather name="arrow-right" size={20} color={colors.primary}/></Pressable>)}
+          {cleaningPresets.map((preset,i)=><Pressable key={preset.id} accessibilityRole="button" accessibilityLabel={preset.title} onPress={()=>choosePreset(preset)} style={{padding:18,borderRadius:22,backgroundColor:i===0?colors.surfaceSubtle:colors.surface,flexDirection:'row',gap:14,alignItems:'center'}}><View style={{width:48,height:48,borderRadius:16,backgroundColor:i===1?colors.routineWarm:colors.routineGreen,alignItems:'center',justifyContent:'center'}}><Feather name={preset.icon} size={24} color={colors.primary}/></View><View style={{flex:1,gap:5}}><Text style={[typography.section,{color:colors.foreground}]}>{preset.title}</Text><Text style={[typography.meta,{color:colors.mutedForeground}]}>{preset.detail}</Text><Text style={[typography.caption,{color:colors.primary}]}>{preset.jobs.length} suggested jobs · edit before starting</Text></View><Feather name="arrow-right" size={20} color={colors.primary}/></Pressable>)}
           <QuietAction label="Choose my own jobs" onPress={()=>{move(1);setPicker(true);}}/>
           {tasks.length?<QuietAction label="Continue my current choices" onPress={()=>move(1)}/>:null}
         </>:<>

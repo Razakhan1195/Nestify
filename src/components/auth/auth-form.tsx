@@ -20,6 +20,7 @@ type AuthFormProps = {
   alternateText: string;
   error?: string;
   googleNext?: string;
+  emailNext?: string;
   notice?: string;
   pendingLabel: string;
   passwordAutoComplete?: "current-password" | "new-password";
@@ -35,6 +36,7 @@ export function AuthForm({
   alternateText,
   error,
   googleNext = "/app",
+  emailNext = "/app",
   notice,
   pendingLabel,
   passwordAutoComplete = "current-password",
@@ -68,6 +70,7 @@ export function AuthForm({
           <span className="h-px bg-border" />
         </div>
         <form action={action} className="grid gap-4">
+          <input name="next" type="hidden" value={emailNext} />
           {error ? (
             <p className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
               {error}

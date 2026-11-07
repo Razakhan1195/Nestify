@@ -1,12 +1,15 @@
+import { useTheme } from "@/theme/useTheme";
 import { useCallback, useEffect, useState } from "react";
 import { ActivityIndicator, Text, View } from "react-native";
 import { useRouter } from "expo-router";
 import { Button } from "@/components/Button";
 import { Surface } from "@/components/ui/Surface";
 import { fetchBills, formatDueDate, type BillsPayload } from "@/lib/bills-data";
-import { colors, spacing, typography } from "@/theme/tokens";
+import { spacing, typography } from "@/theme/tokens";
 
 export function UtilityConnectionOutcome({ providerIds }: { providerIds?: string[] } = {}) {
+  const { colors } = useTheme();
+
   const router = useRouter();
   const [data, setData] = useState<BillsPayload | null>(null);
   const [state, setState] = useState<"loading" | "ready" | "error">("loading");

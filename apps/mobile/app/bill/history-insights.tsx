@@ -1,3 +1,4 @@
+import { useTheme } from "@/theme/useTheme";
 import { ScreenNavigation } from "@/components/ScreenNavigation";
 import { Redirect, useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import { useCallback, useRef, useState } from "react";
@@ -6,9 +7,11 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { QuietAction, ReadNotice } from "@/components/Brief";
 import { ManualHistoryInsights } from "@/components/ManualHistoryInsights";
 import { fetchBills, type BillsPayload } from "@/lib/bills-data";
-import { colors, layout, typography } from "@/theme/tokens";
+import { layout, typography } from "@/theme/tokens";
 
 export default function HistoryInsightsScreen() {
+  const { colors } = useTheme();
+
   const router = useRouter();
   const { billId, saved } = useLocalSearchParams<{ billId?: string; saved?: string }>();
   const version = useRef(0);

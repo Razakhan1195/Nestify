@@ -1,3 +1,4 @@
+import { useTheme } from "@/theme/useTheme";
 import { RezleeLoading } from "@/components/RezleeLoading";
 import { FormScrollView } from "@/components/FormScrollView";
 import { Redirect, useNavigation } from "expo-router";
@@ -12,7 +13,7 @@ import { ProfileBadge } from "@/components/ProfileUI";
 import { ScreenNavigation } from "@/components/ScreenNavigation";
 import { TextField } from "@/components/TextField";
 import { Button } from "@/components/Button";
-import { colors, layout, spacing, typography } from "@/theme/tokens";
+import { layout, spacing, typography } from "@/theme/tokens";
 export default function Appearance() {
   const { session, isLoading } = useAuth();
   if (isLoading) return <RezleeLoading />;
@@ -20,6 +21,8 @@ export default function Appearance() {
   return <AppearanceForm key={session.user.id} />;
 }
 function AppearanceForm() {
+  const { colors } = useTheme();
+
   const { session } = useAuth(), navigation = useNavigation();
   const initial = profileBadge(session?.user.user_metadata);
   const [baseline, setBaseline] = useState({ initials: initial.initials, colour: initial.colour.id });

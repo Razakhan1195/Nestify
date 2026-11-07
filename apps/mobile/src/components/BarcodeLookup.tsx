@@ -1,3 +1,4 @@
+import { useTheme } from "@/theme/useTheme";
 import { useEffect, useRef, useState } from "react";
 import { AppState, Keyboard, Linking, Pressable, Text, View } from "react-native";
 import { SafeAreaModal as Modal } from "@/components/SafeAreaModal";
@@ -9,9 +10,11 @@ import { Button } from "@/components/Button";
 import { TextField } from "@/components/TextField";
 import { Surface } from "@/components/ui/Surface";
 import { apiPost, ApiError } from "@/lib/api";
-import { colors, spacing, typography } from "@/theme/tokens";
+import { spacing, typography } from "@/theme/tokens";
 export type ProductSuggestion={name:string;brand:string;model_number:string;product_barcode:string};
 export function BarcodeLookup({onApply,onClose}:{onApply:(product:ProductSuggestion)=>void;onClose:()=>void}) {
+  const { colors } = useTheme();
+
  const {session}=useAuth(),userId=session?.user.id;
  const [barcode,setBarcode]=useState(""),[camera,setCamera]=useState<typeof import("expo-camera")|null>(null);
  const [scanning,setScanning]=useState(false),[opening,setOpening]=useState(false),[busy,setBusy]=useState(false);

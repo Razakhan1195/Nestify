@@ -1,3 +1,4 @@
+import { useTheme } from "@/theme/useTheme";
 import { Feather } from "@expo/vector-icons";
 import { useFocusEffect } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
@@ -6,7 +7,7 @@ import { QuietAction } from "@/components/Brief";
 import { apiGet, ApiError } from "@/lib/api";
 import { type HistoryBill } from "@/lib/manual-history-insights";
 import { currentOntarioRates, isPlanScenario, manualPlanScenario, ontarioPlanSources, planNames, ratesAreCurrent, type PlanScenario } from "@/lib/ontario-plan-scenario";
-import { colors, layout, radii, spacing, typography } from "@/theme/tokens";
+import { layout, radii, spacing, typography } from "@/theme/tokens";
 
 const cents = (rate: number) => (rate * 100).toLocaleString("en-CA", {maximumFractionDigits: 2}) + "¢";
 const cad = (minor: number) => new Intl.NumberFormat("en-CA", { style: "currency", currency: "CAD" }).format(minor / 100);
@@ -15,6 +16,8 @@ const torontoToday = () => new Intl.DateTimeFormat("en-CA", { timeZone: "America
 
 /** Saved-data-only disclosure. No retrieval, plan change, AI call or bill mutation. */
 export function ElectricityPlanComparison({ bill, providerId, today: suppliedToday, context }: { bill?: HistoryBill; providerId?: string; today?: string; context?: { complete: boolean; overlap: boolean } }) {
+  const { colors } = useTheme();
+
   const [open, setOpen] = useState(false), [details, setDetails] = useState(false), [switching, setSwitching] = useState(false);
   const [data, setData] = useState<PlanScenario | null>(null), [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false), [retry, setRetry] = useState(0), [today, setToday] = useState(suppliedToday ?? torontoToday());

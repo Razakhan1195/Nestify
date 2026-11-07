@@ -1,3 +1,4 @@
+import { useTheme } from "@/theme/useTheme";
 import { useEffect, useState } from "react";
 import { AccessibilityInfo, Animated, AppState, Easing, StyleSheet, View } from "react-native";
 import { useIsFocused } from "expo-router/react-navigation";
@@ -7,6 +8,7 @@ import { useIsFocused } from "expo-router/react-navigation";
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const ambientSource = require("../../assets/ambient-sage.png");
 export function AmbientBackdrop({ dark = false }: { dark?: boolean }) {
+  const { mode } = useTheme();
   const focused = useIsFocused();
   const [reduceMotion, setReduceMotion] = useState(true);
   const [active, setActive] = useState(AppState.currentState === "active");
@@ -32,7 +34,7 @@ export function AmbientBackdrop({ dark = false }: { dark?: boolean }) {
   return <View pointerEvents="none" accessible={false} accessibilityElementsHidden
     importantForAccessibility="no-hide-descendants" style={[StyleSheet.absoluteFill, { overflow: "hidden" }]}>
     <Animated.Image source={ambientSource} resizeMode="cover"
-      style={[StyleSheet.absoluteFill, { width: "100%", height: "100%", opacity: dark ? 0.075 : 0.8,
+      style={[StyleSheet.absoluteFill, { width: "100%", height: "100%", opacity: dark || mode === "dark" ? 0.075 : 0.8,
         transform: [{ scale: 1.12 }, { translateX: progress.interpolate({ inputRange: [0, 1], outputRange: [-16, 16] }) },
           { translateY: progress.interpolate({ inputRange: [0, 1], outputRange: [12, -12] }) }] }]} />
   </View>;

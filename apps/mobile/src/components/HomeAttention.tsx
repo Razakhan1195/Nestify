@@ -1,3 +1,4 @@
+import { useTheme } from "@/theme/useTheme";
 import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { Pressable, Text, View } from "react-native";
@@ -5,7 +6,7 @@ import { Pressable, Text, View } from "react-native";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { Surface } from "@/components/ui/Surface";
 import type { AttentionItem } from "@/lib/home-data";
-import { colors, severityColors, spacing, typography } from "@/theme/tokens";
+import { severityColors, spacing, typography } from "@/theme/tokens";
 
 type Props = {
   items: AttentionItem[];
@@ -23,6 +24,8 @@ const sourceIcons: Record<AttentionItem["sourceType"], keyof typeof Feather.glyp
 };
 
 export function HomeAttention({ items, totalCount, onItemPress, onViewAll }: Props) {
+  const { colors } = useTheme();
+
   const visible = items.slice(0, 3);
   if (!visible.length) return null;
 
@@ -45,7 +48,7 @@ export function HomeAttention({ items, totalCount, onItemPress, onViewAll }: Pro
         }}
       >
         {visible.map((item, index) => {
-          const tone = severityColors(item.severity);
+          const tone = severityColors(item.severity, colors);
           return (
             <Pressable
               key={item.key}

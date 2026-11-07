@@ -9,6 +9,7 @@ test("login and signup render approved Apple and Google actions on the first ren
  const work=await mkdtemp(join(tmpdir(),"rezlee-entry-ui-"));
  try {
   const stubs:Record<string,string>={
+   "@/theme/useTheme":'export const useTheme=()=>({colors:{primary:"green",foreground:"black",border:"gray",mutedForeground:"gray"}});',
    "react-native":'import React from "react";const node=tag=>({children})=>React.createElement(tag,null,children);export const View=node("div"),Text=node("span"),Pressable=node("button"),ActivityIndicator=node("progress"),Platform={OS:"ios"},Keyboard={dismiss(){}};',
    "@expo/vector-icons":'export const FontAwesome="i";',
    "./Button":'import React from "react";export const Button=({label})=>React.createElement("button",null,label);',

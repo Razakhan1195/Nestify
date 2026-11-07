@@ -1,3 +1,4 @@
+import { useTheme } from "@/theme/useTheme";
 import { FormScrollView } from "@/components/FormScrollView";
 import {CollectionPages} from "@/components/CollectionPages";
 import {QuietAction} from "@/components/Brief";
@@ -15,11 +16,17 @@ import {Surface} from "@/components/ui/Surface";
 import {apiGet,ApiError} from "@/lib/api";
 import {fetchQuote,pendingQuote,saveQuote,clearPendingQuote,type QuoteIntent} from "@/lib/quote-data";
 import {draftFromQuote,emptyQuote,quoteFields,quoteDecisions,quoteQuestions,quoteQuestionSheet,type QuoteDraft,type QuotePayload,type QuoteDecision} from "@/lib/quote-review";
-import {colors,spacing,typography} from "@/theme/tokens";
+import { spacing, typography } from "@/theme/tokens";
 type Index={homeName:string;reviews:{documentId:string;title:string;decision:QuoteDecision;readStatus:string}[];documents:{id:string;title:string}[];truncated:boolean};
-const Copy=({children}:{children:React.ReactNode})=><Text style={[typography.body,{color:colors.mutedForeground}]}>{children}</Text>;
-const Heading=({children}:{children:React.ReactNode})=><Text accessibilityRole="header" style={[typography.section,{color:colors.foreground}]}>{children}</Text>;
+const Copy=({children}:{children:React.ReactNode})=>{
+  const { colors } = useTheme();
+return (<Text style={[typography.body,{color:colors.mutedForeground}]}>{children}</Text>); };
+const Heading=({children}:{children:React.ReactNode})=>{
+  const { colors } = useTheme();
+return (<Text accessibilityRole="header" style={[typography.section,{color:colors.foreground}]}>{children}</Text>); };
 export default function Quotes(){
+  const { colors } = useTheme();
+
  const params=useLocalSearchParams<{id?:string;itemId?:string;issueId?:string}>(),id=typeof params.id==="string"?params.id:null;
  const router=useRouter(),navigation=useNavigation();
  const [index,setIndex]=useState<Index|null>(null),[data,setData]=useState<QuotePayload|null>(null);

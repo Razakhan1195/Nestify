@@ -1,3 +1,4 @@
+import { useTheme } from "@/theme/useTheme";
 import { useMemo } from "react";
 import { ProviderBrand } from "@/components/ProviderBrand";
 import {billAmountLabel} from "@/lib/provider-identity";
@@ -10,7 +11,7 @@ import type { BillsPayload } from "@/lib/bills-data";
 import { formatDueDate } from "@/lib/bills-data";
 import { localDay } from "@/lib/home-start";
 import { historyDate } from "@/lib/manual-history-insights";
-import { colors, homeTile, typography } from "@/theme/tokens";
+import { homeTile, typography } from "@/theme/tokens";
 
 type SavedBills = Exclude<BillsPayload, { needsOnboarding: true }>;
 function Brand({account}:{account:BillAccountOverview}){return <ProviderBrand provider={account.provider} category={account.categoryId}/>;}
@@ -26,6 +27,8 @@ function amount(account: BillAccountOverview) {
 }
 
 export function BillAccountInsight({ account, secondary = false }: { account: BillAccountOverview; secondary?: boolean }) {
+  const { colors } = useTheme();
+
   const router = useRouter();
   const { fontScale } = useWindowDimensions();
   const chart = account.chart.length > 1 && !secondary && fontScale <= 1.3;
@@ -50,6 +53,8 @@ export function BillAccountInsight({ account, secondary = false }: { account: Bi
 }
 
 export function HomeBillBrief({ bills, fresh = true, showAccountsLink = true, showChange = true, accounts: suppliedAccounts }: { bills: SavedBills; fresh?: boolean; showAccountsLink?: boolean; showChange?: boolean; accounts?: BillAccountOverview[] }) {
+  const { colors } = useTheme();
+
   const router = useRouter();
   const {width,fontScale}=useWindowDimensions();
   const stacked=fontScale>1.2||width<360;
@@ -105,6 +110,8 @@ export function HomeBillBrief({ bills, fresh = true, showAccountsLink = true, sh
 }
 
 export function BillsAccountList({ bills, fresh = true, showConnectionsAction = true }: { bills: SavedBills; fresh?: boolean; showConnectionsAction?: boolean }) {
+  const { colors } = useTheme();
+
   const router = useRouter(), { fontScale, width } = useWindowDimensions();
   const today = localDay();
   const accounts = useMemo(() => billAccountOverview(bills, today, fresh), [bills, today, fresh]);

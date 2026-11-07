@@ -1,12 +1,15 @@
+import { useTheme } from "@/theme/useTheme";
 import { useState } from "react";
 import { Feather } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { Pressable, Text, View } from "react-native";
 import { Button } from "./Button";
 import { QuietAction } from "./Brief";
-import { colors, typography } from "@/theme/tokens";
+import { typography } from "@/theme/tokens";
 
 export function BillGettingStarted({ firstBill = false }: { firstBill?: boolean }) {
+  const { colors } = useTheme();
+
   const [expanded, setExpanded] = useState(false);
   const router = useRouter();
   return <View style={{ padding: 18, borderRadius: 20, borderWidth: 1, borderColor: colors.borderStrong, backgroundColor: colors.surfaceRaised, gap: expanded ? 16 : 0 }}>

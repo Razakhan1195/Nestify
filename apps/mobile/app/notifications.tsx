@@ -1,3 +1,4 @@
+import { useTheme } from "@/theme/useTheme";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Redirect, useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import { ActivityIndicator, Pressable, RefreshControl, ScrollView, Text, View } from "react-native";
@@ -9,7 +10,7 @@ import { BriefHeading, QuietAction, ReadNotice } from "@/components/Brief";
 import { useNotifications } from "@/components/AppNotifications";
 import { fetchNotifications, openNotification, readNotification, readAllNotifications, type NotificationsPayload, type AppNotification } from "@/lib/notification-data";
 import { mergeNotificationItems, safeNotificationDestination } from "@/lib/notification-routing";
-import { colors, layout, spacing, typography } from "@/theme/tokens";
+import { layout, spacing, typography } from "@/theme/tokens";
 const labels = { shared_expenses: "Shared expenses", connections: "Connections", bills: "Bills", care: "Care", recalls: "Recalls" };
 const notices = {
  handled: "That update has already been handled or has expired. You can review your other updates here.",
@@ -17,6 +18,8 @@ const notices = {
  check: "We couldn’t open that update. Check your connection, then try it from your inbox."
 };
 export default function NotificationsScreen() {
+  const { colors } = useTheme();
+
  const { session, isLoading } = useAuth();
  const { notice } = useLocalSearchParams<{ notice?: string }>();
  if (isLoading) return <ActivityIndicator accessibilityLabel="Loading notifications" color={colors.primary} />;
@@ -24,6 +27,8 @@ export default function NotificationsScreen() {
  return <AccountInbox key={session.user.id + ":" + (notice ?? "")} userId={session.user.id} initialNotice={notice} />;
 }
 function AccountInbox({ userId, initialNotice }: { userId: string; initialNotice?: string }) {
+  const { colors } = useTheme();
+
  const router = useRouter(), { refresh } = useNotifications();
  const [data, setData] = useState<NotificationsPayload | null>(null), [error, setError] = useState<string | null>(null);
  const [notice, setNotice] = useState<string | null>(() => initialNotice && initialNotice in notices ? notices[initialNotice as keyof typeof notices] : null), [busy, setBusy] = useState<"refresh" | "more" | "read" | null>(null);

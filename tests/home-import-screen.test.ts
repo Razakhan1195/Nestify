@@ -37,6 +37,7 @@ function harness(file: string, imports: Record<string, unknown>) {
   const clock = { schedule: (fn: () => void) => { timers.set(++timerId, fn); return timerId as unknown as ReturnType<typeof setTimeout>; }, cancel: (id: ReturnType<typeof setTimeout>) => { timers.delete(id as unknown as number); } };
   const exports: Record<string, (props: Record<string, unknown>) => unknown> = {};
   const requireMock = (name: string): unknown => {
+    if(name === "@/theme/useTheme") return {useTheme:()=>({colors:{}})};
     if (name in imports) return imports[name];
     if (name === "react") return react;
     if (name === "react/jsx-runtime") return { jsx: (type: unknown, props: Node["props"]) => ({ type, props }), jsxs: (type: unknown, props: Node["props"]) => ({ type, props }) };

@@ -1,3 +1,4 @@
+import { useTheme } from "@/theme/useTheme";
 import { RezleeLoading } from "@/components/RezleeLoading";
 import { FormScrollView } from "@/components/FormScrollView";
 import { Redirect, useNavigation } from "expo-router";
@@ -13,7 +14,7 @@ import { ScreenNavigation } from "@/components/ScreenNavigation";
 import { Button } from "@/components/Button";
 import { TextField } from "@/components/TextField";
 import { QuietAction } from "@/components/Brief";
-import { colors, layout, spacing, typography } from "@/theme/tokens";
+import { layout, spacing, typography } from "@/theme/tokens";
 export default function HouseholdDetails() {
   const { session, isLoading } = useAuth();
   if (isLoading) return <RezleeLoading />;
@@ -21,6 +22,8 @@ export default function HouseholdDetails() {
   return <DetailsForm key={session.user.id} userId={session.user.id} />;
 }
 function DetailsForm({ userId }: { userId: string }) {
+  const { colors } = useTheme();
+
   const navigation = useNavigation(), lock = useRef(false);
   const [home, setHome] = useState<{ id: string; nickname: string; owner: boolean } | null>(null);
   const [name, setName] = useState(""), [busy, setBusy] = useState(false), [saved, setSaved] = useState(false);

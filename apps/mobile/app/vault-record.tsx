@@ -1,3 +1,4 @@
+import { useTheme } from "@/theme/useTheme";
 import { FormScrollView } from "@/components/FormScrollView";
 import {JourneyHeading,JourneyPanel,JourneySteps} from "@/components/JourneyUI";
 import {prepareAttachment} from "@/lib/prepare-attachment";
@@ -20,11 +21,13 @@ import { DateField } from "@/components/DateField";
 import { Button } from "@/components/Button";
 import { apiGet,apiFormPost,apiDelete,ApiError } from "@/lib/api";
 import { RECORD_PICKER_TYPES, RECORD_FILE_TYPES,uploadMimeType,uploadValidationError } from "@/lib/upload-validation";
-import { colors,spacing,typography,radii } from "@/theme/tokens";
+import { spacing, typography, radii } from "@/theme/tokens";
 const categories=["Receipt","Warranty","Insurance","Manual","Lease","Contract","Tax","Other"];
 type RecordAttachment=Pick<DocumentPicker.DocumentPickerAsset,"uri"|"name"|"mimeType"|"size">;
 type RecordFields={title:string;category:string;issued_on:string;expires_on:string;notes:string};
 export default function VaultRecordScreen(){
+  const { colors } = useTheme();
+
  const params=useLocalSearchParams<{id?:string;kind?:string;itemId?:string;issueId?:string}>(),router=useRouter(),navigation=useNavigation();
  const quoteMode=params.kind==="quote";
  const {session}=useAuth();

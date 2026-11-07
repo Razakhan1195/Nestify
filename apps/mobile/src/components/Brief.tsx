@@ -1,7 +1,8 @@
+import { useTheme } from "@/theme/useTheme";
 import { Feather } from "@expo/vector-icons";
 import type { ReactNode } from "react";
 import { ActivityIndicator, Keyboard, Platform, Pressable, Text, useWindowDimensions, View } from "react-native";
-import { colors, spacing, typography } from "@/theme/tokens";
+import { spacing, typography } from "@/theme/tokens";
 
 export const editorial = {
   fontFamily: Platform.OS === "ios" ? "Georgia" : "serif",
@@ -9,10 +10,11 @@ export const editorial = {
   lineHeight: 39,
   fontWeight: "400" as const,
   letterSpacing: -0.6,
-  color: colors.foreground,
 };
 
 export function PaperworkArtifact() {
+  const { colors } = useTheme();
+
   return <View accessible={false} accessibilityElementsHidden importantForAccessibility="no-hide-descendants" style={{ width: 84, height: 78 }}>
     <View style={{ position: "absolute", width: 65, height: 52, top: 20, left: 7, borderRadius: 8, backgroundColor: colors.primary, transform: [{ rotate: "-6deg" }] }} />
     <View style={{ position: "absolute", width: 29, height: 10, top: 14, left: 7, borderTopLeftRadius: 5, borderTopRightRadius: 7, backgroundColor: colors.primary, transform: [{ rotate: "-6deg" }] }} />
@@ -30,15 +32,19 @@ export function PaperworkArtifact() {
 }
 
 export function BriefHeading({ eyebrow, title, detail, children }: { eyebrow?: string; title: string; detail?: string; children?: ReactNode }) {
+  const { colors } = useTheme();
+
   return <View style={{ gap: spacing.lg }}>
     {eyebrow ? <Text style={[typography.meta, { color: colors.mutedForeground }]}>{eyebrow}</Text> : null}
-    <Text accessibilityRole="header" style={editorial}>{title}</Text>
+    <Text accessibilityRole="header" style={[editorial, { color: colors.foreground }]}>{title}</Text>
     {detail ? <Text style={[typography.body, { color: colors.mutedForeground }]}>{detail}</Text> : null}
     {children}
   </View>;
 }
 
 export function QuietAction({ label, onPress, disabled = false }: { label: string; onPress: () => void; disabled?: boolean }) {
+  const { colors } = useTheme();
+
   return <Pressable accessibilityRole="button" disabled={disabled} accessibilityState={{ disabled }} onPress={() => { Keyboard.dismiss(); onPress(); }}
     style={({ pressed }) => ({ minHeight: 44, alignSelf: "flex-start", justifyContent: "center", paddingVertical: 10, paddingHorizontal: 14, borderRadius: 12, borderWidth: 1, borderColor: colors.border, backgroundColor: pressed ? colors.accent : colors.surfaceRaised, opacity: disabled ? 0.5 : 1 })}>
     <Text style={[typography.body, { fontWeight: "600", color: colors.primary }]}>{label}</Text>
@@ -46,6 +52,8 @@ export function QuietAction({ label, onPress, disabled = false }: { label: strin
 }
 
 export function BriefRow({ title, detail, value, onPress }: { title: string; detail?: string; value?: string; onPress: () => void }) {
+  const { colors } = useTheme();
+
   const { fontScale, width } = useWindowDimensions();
   const stacked = fontScale > 1.2 || width < 350;
   return <Pressable accessibilityRole="button" onPress={() => { Keyboard.dismiss(); onPress(); }} style={({ pressed }) => ({
@@ -63,6 +71,8 @@ export function BriefRow({ title, detail, value, onPress }: { title: string; det
 }
 
 export function ReadNotice({ message, onRetry, busy = false }: { message: string; onRetry: () => void; busy?: boolean }) {
+  const { colors } = useTheme();
+
   return <View style={{ padding: spacing.lg, gap: spacing.xs, borderRadius: 12, backgroundColor: colors.surfaceSubtle }}>
     <Text accessibilityRole="alert" style={[typography.body, { color: colors.foreground }]}>{message}</Text>
     {busy ? <ActivityIndicator accessibilityLabel="Checking saved information" color={colors.primary} /> : null}

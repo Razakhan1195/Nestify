@@ -1,3 +1,4 @@
+import { useTheme } from "@/theme/useTheme";
 import {Feather} from "@expo/vector-icons";
 import {useState} from "react";
 import { KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, View } from "react-native";
@@ -7,9 +8,11 @@ import {ProviderBrand} from "./ProviderBrand";
 import {TextField} from "./TextField";
 import {accountServiceLabel} from "@/lib/saved-bill-story";
 import type {BillAccountOverview} from "@/lib/bill-account-overview";
-import {colors,typography} from "@/theme/tokens";
+import { typography } from "@/theme/tokens";
 
 export function InsightAccountPicker({accounts,selected,onSelect}:{accounts:BillAccountOverview[];selected:string|null;onSelect:(key:string)=>void}){
+  const { colors } = useTheme();
+
  const [open,setOpen]=useState(false),[query,setQuery]=useState("");
  const current=accounts.find(account=>account.key===selected);
  const base=(account:BillAccountOverview)=>[accountServiceLabel(account.category),account.accountLabel].filter(Boolean).join(" · ");

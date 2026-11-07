@@ -1,13 +1,16 @@
+import { useTheme } from "@/theme/useTheme";
 import { useEffect, useRef, useState } from "react";
 import { ActivityIndicator, Keyboard, Platform, Pressable, View, Text } from "react-native";
 import { FontAwesome } from "@expo/vector-icons";
 import { Button } from "./Button";
 import { releasedSocialProviders, socialProviders, startSocialSignIn } from "@/auth/social-auth";
-import { colors, spacing, typography } from "@/theme/tokens";
+import { spacing, typography } from "@/theme/tokens";
 
 type ProviderState = { status: "loading" | "error" | "ready"; google: boolean; apple: boolean };
 
 export function SocialSignIn({ disabled, onBusy, onError, appearance = "default" }: { disabled: boolean; onBusy: (busy: boolean) => void; onError: (error: string | null) => void; appearance?: "default" | "signup" }) {
+  const { colors } = useTheme();
+
   const [providers, setProviders] = useState<ProviderState>(() => ({ status: "loading", ...releasedSocialProviders() }));
   const [lookup, setLookup] = useState(0);
   const signingIn = useRef(false);
@@ -55,11 +58,11 @@ export function SocialSignIn({ disabled, onBusy, onError, appearance = "default"
       return <Pressable key={provider} accessibilityRole="button" accessibilityLabel={label}
         accessibilityState={{ disabled, busy: working }} disabled={disabled} onPress={() => void signIn(provider)}
         style={({ pressed }) => ({ minHeight: 56, paddingHorizontal: 18, paddingVertical: 14, borderRadius: 16,
-          backgroundColor: apple ? "#202421" : "#FFFFFF", borderWidth: 1, borderColor: apple ? "#202421" : colors.border,
+          backgroundColor: apple ? colors.socialInk : colors.socialPaper, borderWidth: 1, borderColor: apple ? colors.socialInk : colors.border,
           flexDirection: "row", alignItems: "center", gap: 12, opacity: disabled ? 0.65 : pressed ? 0.85 : 1 })}>
-        <FontAwesome name={apple ? "apple" : "google"} size={21} color={apple ? "#FFFFFF" : "#202421"} />
-        <Text style={{ flex: 1, fontSize: 16, lineHeight: 22, fontWeight: "600", textAlign: "center", color: apple ? "#FFFFFF" : "#202421" }}>{working ? "Connecting…" : label}</Text>
-        {working ? <ActivityIndicator size="small" color={apple ? "#FFFFFF" : colors.primary} /> : <View style={{ width: 21 }} />}
+        <FontAwesome name={apple ? "apple" : "google"} size={21} color={apple ? colors.socialPaper : colors.socialInk} />
+        <Text style={{ flex: 1, fontSize: 16, lineHeight: 22, fontWeight: "600", textAlign: "center", color: apple ? colors.socialPaper : colors.socialInk }}>{working ? "Connecting…" : label}</Text>
+        {working ? <ActivityIndicator size="small" color={apple ? colors.socialPaper : colors.primary} /> : <View style={{ width: 21 }} />}
       </Pressable>;
     })}{notice}</View>;
   }

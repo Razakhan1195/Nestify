@@ -8,17 +8,23 @@ const reply=(body:unknown,status=200)=>Response.json(body,{status,headers:{"Cach
 const reason=z.string().trim().min(8).max(500);
 const schema=z.discriminatedUnion("action",[
  z.object({action:z.literal("invite"),id:z.string().uuid(),email:z.string().email().max(254),realtorName:z.string().trim().min(2).max(100),order:z.string().trim().min(3).max(120),consentConfirmed:z.literal(true)}),
+ z.object({action:z.literal("revoke_invitation"),id:z.string().uuid(),reason}),
  z.object({action:z.literal("check"),userId:z.string().uuid()}),
  z.object({action:z.literal("fulfill"),id:z.string().uuid(),userId:z.string().uuid(),order:z.string().trim().min(3).max(120),reason,consentConfirmed:z.literal(true)}),
  z.object({action:z.literal("revoke"),id:z.string().uuid(),reason})
 ]);
-export async function GET(){
+export async function GET(request:Request){
  const a=await supportAccess();if(!a?.owner)return reply({error:"Operations owner access required."},403);
  try{
  await auditSupport(a.userId,"annual_gifts_read");
- const r=await createAdminClient().from("rezlee_annual_gifts").select("id,order_reference,user_id,started_at,expires_at,revoked_at,terms_version").order("started_at",{ascending:false}).limit(101);
- if(r.error)throw Error();
- return reply({generatedAt:new Date().toISOString(),enabled:process.env.REZLEE_ANNUAL_GIFTS_ENABLED==="true",gifts:r.data.slice(0,100),more:r.data.length>100});
+ const page=Math.max(0,Math.min(1000,Number.parseInt(new URL(request.url).searchParams.get("page")??"0",10)||0));
+ const db=createAdminClient();
+ const [r,invitations]=await Promise.all([
+  db.from("rezlee_annual_gifts").select("id,order_reference,user_id,started_at,expires_at,revoked_at,terms_version").order("started_at",{ascending:false}).limit(101),
+  db.from("rezlee_gift_invitations").select("id,realtor_name,recipient_email,order_reference,created_at,claim_by,claimed_at,revoked_at",{count:"exact"}).order("created_at",{ascending:false}).order("id").range(page*30,page*30+29),
+ ]);
+ if(r.error||invitations.error)throw Error();
+ return reply({generatedAt:new Date().toISOString(),enabled:process.env.REZLEE_ANNUAL_GIFTS_ENABLED==="true",gifts:r.data.slice(0,100),more:r.data.length>100,invitations:invitations.data,invitationTotal:invitations.count,invitationPage:page});
  }catch{return reply({error:"Gift records are unavailable. Do not assume fulfillment failed."},503);}
 }
 export async function POST(request:Request){
@@ -28,6 +34,11 @@ export async function POST(request:Request){
  if(!parsed.success)return reply({error:"Check the references and consent confirmation."},400);
  const b=parsed.data;
  try{
+ if(b.action==="revoke_invitation"){
+  const result=await createAdminClient().rpc("rezlee_revoke_gift_invitation",{p_actor:a.userId,p_id:b.id,p_reason:b.reason});
+  if(result.error)return reply({error:result.error.code==="PT409"?"This invitation has already been claimed. Review its gift receipt before changing access.":"Couldn’t confirm the cancellation. Refresh before retrying."},result.error.code==="PT409"?409:503);
+  return reply({invitation:result.data});
+ }
  if(b.action==="invite"){
   if(process.env.REZLEE_ANNUAL_GIFTS_ENABLED!=="true")return reply({error:"Gift invitations are not enabled."},409);
   const db=createAdminClient();

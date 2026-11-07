@@ -1,10 +1,11 @@
+import { useTheme } from "@/theme/useTheme";
 import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { Pressable, Text, View } from "react-native";
 
 import type { HomePayload } from "@/lib/home-data";
 import { formatCurrency } from "@/lib/home-data";
-import { colors, radii, spacing, typography } from "@/theme/tokens";
+import { radii, spacing, typography } from "@/theme/tokens";
 import { Surface } from "@/components/ui/Surface";
 
 type ReadyHomePayload = Exclude<HomePayload, { needsOnboarding: true }>;
@@ -15,6 +16,8 @@ type Props = {
 };
 
 export function HomeCostAnalytics({ analytics, onPress }: Props) {
+  const { colors } = useTheme();
+
   const maxAmount = Math.max(1, ...analytics.months.map((month) => month.amount));
   const change = analytics.changePercent;
   const comparison = change === null ? "First month of data" : `${change > 0 ? "+" : ""}${change}% vs last month`;

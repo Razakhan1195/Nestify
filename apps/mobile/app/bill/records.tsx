@@ -1,3 +1,4 @@
+import { useTheme } from "@/theme/useTheme";
 import {useCallback,useRef,useState} from "react";
 import {useFocusEffect,useLocalSearchParams,useRouter} from "expo-router";
 import {ActivityIndicator,Alert,Linking,Pressable,ScrollView,Text,View} from "react-native";
@@ -8,9 +9,11 @@ import {Button} from "@/components/Button";
 import {QuietAction,BriefRow} from "@/components/Brief";
 import {apiGet,apiPost,ApiError} from "@/lib/api";
 import {canCountBillOnce,recordPeriod,recordAmountLabel,recordChanges,recordMoney,recordSource,unresolvedBillCopies,type BillRecord,type BillRecordPayload} from "@/lib/bill-record-review";
-import {colors,spacing,typography} from "@/theme/tokens";
+import { spacing, typography } from "@/theme/tokens";
 export default function BillRecords(){const {billId}=useLocalSearchParams<{billId:string}>();return <Records key={billId} id={billId}/>;}
 function Records({id}:{id:string}){
+  const { colors } = useTheme();
+
  const router=useRouter(),lock=useRef(false);const [data,setData]=useState<BillRecordPayload|null>(null),[loading,setLoading]=useState(true),[busy,setBusy]=useState(false),[error,setError]=useState<string|null>(null),[success,setSuccess]=useState<string|null>(null),[other,setOther]=useState<BillRecord|null>(null),[selected,setSelected]=useState<string|null>(null),[history,setHistory]=useState(false);
  const endpoint="/api/mobile/v1/bills/"+encodeURIComponent(id)+"/records";
  const load=useCallback(async()=>{setLoading(true);setError(null);try{setData(await apiGet<BillRecordPayload>(endpoint,{timeoutMs:15000}));setOther(null);setSelected(null);}catch(e){setError(e instanceof ApiError?e.message:"Could not load statement records. Check your connection and try again.");}finally{setLoading(false);}},[endpoint]);

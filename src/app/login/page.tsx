@@ -9,6 +9,7 @@ import { AuthBrandPanel } from "@/components/auth/auth-brand-panel";
 type LoginPageProps = {
   searchParams: Promise<{
     error?: string | string[];
+    next?: string | string[];
     notice?: string | string[];
   }>;
 };
@@ -16,7 +17,7 @@ type LoginPageProps = {
 export const metadata: Metadata = { robots: { index: false, follow: false } };
 
 export default async function LoginPage({ searchParams }: LoginPageProps) {
-  const { error, notice } = await searchParams;
+  const { error, notice, next } = await searchParams;
 
   return (
     <main className="grid min-h-screen lg:grid-cols-2">
@@ -30,6 +31,8 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
         <div className="flex flex-1 items-center justify-center px-4 py-10 sm:px-6">
           <AuthForm
             action={login}
+            googleNext={typeof next === "string" ? next : "/app"}
+            emailNext={typeof next === "string" ? next : "/app"}
             alternateHref="/signup"
             alternateLabel="Sign up"
             alternateText="New to Rezlee?"

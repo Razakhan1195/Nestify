@@ -1,3 +1,4 @@
+import { useTheme } from "@/theme/useTheme";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import { Pressable, Text, View } from "react-native";
@@ -10,9 +11,11 @@ import { SocialSignIn } from "@/components/SocialSignIn";
 import { SignupFrame } from "@/components/SignupFrame";
 import { Button } from "@/components/Button";
 import { TextField } from "@/components/TextField";
-import { colors, spacing, typography } from "@/theme/tokens";
+import { spacing, typography } from "@/theme/tokens";
 
 export default function LoginScreen() {
+  const { colors } = useTheme();
+
   const { session, signIn, resendConfirmation } = useAuth();
   const router = useRouter();
   const params = useLocalSearchParams<{ email?: string; joined?: string; household?: string; recovered?: string; sessionChanged?: string }>();

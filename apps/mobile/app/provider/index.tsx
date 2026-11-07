@@ -1,3 +1,4 @@
+import { useTheme } from "@/theme/useTheme";
 import {JourneyHeading} from "@/components/JourneyUI";
 import {ProviderBrand} from "@/components/ProviderBrand";
 import {NavigationButton} from "@/components/NavigationButton";
@@ -22,7 +23,7 @@ import {
   type ProviderConnectionItem,
   type ProviderConnectionsPayload,
 } from "@/lib/provider-data";
-import { colors, layout, radii, spacing, typography } from "@/theme/tokens";
+import { layout, radii, spacing, typography } from "@/theme/tokens";
 import { safeBack } from "@/lib/navigation";
 
 function statusMeta(provider: ProviderConnectionItem) {
@@ -75,6 +76,8 @@ function ProviderRow({
   provider: ProviderConnectionItem;
   onPress: () => void;
 }) {
+  const { colors } = useTheme();
+
   const status = statusMeta(provider);
   return (
     <Pressable
@@ -108,6 +111,8 @@ function ProviderRow({
 }
 
 export default function ProviderConnectionsScreen() {
+  const { colors } = useTheme();
+
   const router = useRouter();
   const [payload, setPayload] = useState<ProviderConnectionsPayload | null>(null);
   const [error, setError] = useState<string | null>(null);

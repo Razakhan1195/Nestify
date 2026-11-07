@@ -1,3 +1,4 @@
+import { useTheme } from "@/theme/useTheme";
 import { AmbientBackdrop } from "@/components/AmbientBackdrop";
 import { useAuth } from "@/auth/AuthProvider";
 import { FormScrollView } from "@/components/FormScrollView";
@@ -8,9 +9,11 @@ import { useRouter } from "expo-router";
 import type { ReactNode } from "react";
 import { Pressable, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { colors, layout, spacing, typography } from "@/theme/tokens";
+import { layout, spacing, typography } from "@/theme/tokens";
 
 export function AuthFrame({ title, detail, children, busy = false }: { title: string; detail: string; children: ReactNode; busy?: boolean }) {
+  const { colors } = useTheme();
+
   const router = useRouter();
   const { isRestoringSession } = useAuth();
   return <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}><AmbientBackdrop/>

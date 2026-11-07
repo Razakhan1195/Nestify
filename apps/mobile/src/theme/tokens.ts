@@ -1,6 +1,54 @@
 import { Platform } from "react-native";
 
-export const colors = {
+export const lightColors = {
+  logoSurface: "#FFFFFF",
+  artBillSurface: "#F0E4CE",
+  artBillAccent: "#986C35",
+  artBillPaper: "#D9B77F",
+  artRecordSurface: "#DFE9EB",
+  artRecordAccent: "#3D6971",
+  artRecordPaper: "#A9C8CB",
+  artCareSurface: "#E3EADB",
+  artCareAccent: "#527044",
+  artCarePaper: "#B9CD9D",
+  routineWarm: "#F3E3D2",
+  routineGreen: "#E4EBDD",
+  chartTrack: "#E4D6BC",
+  attribution: "#5E5E5E",
+  exampleBillSurface: "#EFE4D0",
+  exampleChartTrack: "#E0D4BD",
+  exampleChartBar: "#AC9569",
+  reminderSurface: "#E5EEF0",
+  cleaningSurface: "#E6ECE1",
+  maintenanceSurface: "#F0E8D8",
+  artBacking: "#FFFFFF80",
+  artPaper: "#FFFDF7",
+  artBorder: "#D9DFD4",
+  artAction: "#FFFDF8B8",
+  artActionBorder: "#264D3E12",
+  assistantLayer: "#9FB9A4",
+  artRule: "#D9DFD5",
+  artHalo: "#FFFFFF55",
+  artAvatarGreen: "#D6E4D4",
+  artAvatarSand: "#ECDDBE",
+  artAvatarBlue: "#D6E4EB",
+  tileBorder: "#264D3E0D",
+  shortcutBill: "#F2E5CD",
+  shortcutRecord: "#E0E9EC",
+  chartPrevious: "#A3B8A1",
+  billBorder: "#D4DFD7",
+  signupBorder: "#DFE4DA",
+  signupLabel: "#657568",
+  signupRule: "#E8ECE5",
+  signupCare: "#E7EBDB",
+  signupRecords: "#E3E9EC",
+  signupBills: "#F0E5D4",
+  welcomeBorder: "#E1DED5",
+  welcomeRule: "#E7E7E0",
+  welcomeGreen: "#E2EADC",
+  welcomeBlue: "#DEE8EB",
+  socialInk: "#202421", socialPaper: "#FFFFFF",
+
   background: "#F8F7F3",
   canvas: "#F7F6F2",
   billSurface: "#E5ECE8",
@@ -128,7 +176,7 @@ export const shadows = {
 
 export type SeverityLevel = "high" | "medium" | "low";
 
-export function severityColors(severity: SeverityLevel) {
+export function severityColors(severity: SeverityLevel, colors: Colors = lightColors) {
   if (severity === "high") {
     return { fg: colors.criticalForeground, bg: colors.criticalBg };
   }
@@ -145,16 +193,89 @@ export const editorialType = {
   fontWeight: "400" as const,
   letterSpacing: -0.8,
 };
-export const premium = {
-  ink: "#183F33", onInk: "#FFFDF6", onInkMuted: "#D4E2D8",
+export const lightPremium = {
+  ink: "#183F33", brandText: "#183F33", onInk: "#FFFDF6", onInkMuted: "#D4E2D8",
   apricot: "#F2C7A5", apricotSurface: "#FAECE0", line: "#DFE3DB",
 };
 
 /** Selection controls share a quiet selected state; primary fills are for actions. */
-export const selectionControl = {
+export function makeSelectionControl(colors: Colors) { return {
   minHeight: 48, radius: 12, inset: 4, gap: 8,
   selectedBackground: colors.surfaceRaised,
   background: colors.surfaceSubtle,
   selectedText: colors.foreground,
   text: colors.mutedForeground,
-} as const;
+} as const; }
+
+export type Colors = { [K in keyof typeof lightColors]: string };
+export const darkColors: Colors = {
+  logoSurface: "#FFFFFF",
+  artBillSurface: "#3C3528",
+  artBillAccent: "#D9B47C",
+  artBillPaper: "#88744F",
+  artRecordSurface: "#293B40",
+  artRecordAccent: "#99CBD0",
+  artRecordPaper: "#577D82",
+  artCareSurface: "#303D2C",
+  artCareAccent: "#B3CE99",
+  artCarePaper: "#718859",
+  routineWarm: "#43382B",
+  routineGreen: "#33432F",
+  chartTrack: "#514735",
+  attribution: "#B0BCB3",
+  exampleBillSurface: "#3D3528",
+  exampleChartTrack: "#574A34",
+  exampleChartBar: "#B49D73",
+  reminderSurface: "#293B40",
+  cleaningSurface: "#2E3D31",
+  maintenanceSurface: "#3B352A",
+  artBacking: "#FFFFFF0D",
+  artPaper: "#2A332E",
+  artBorder: "#4B574D",
+  artAction: "#FFFFFF0D",
+  artActionBorder: "#FFFFFF1A",
+  assistantLayer: "#577D63",
+  artRule: "#69766B",
+  artHalo: "#FFFFFF08",
+  artAvatarGreen: "#364E3D",
+  artAvatarSand: "#51452F",
+  artAvatarBlue: "#344C57",
+  tileBorder: "#FFFFFF12",
+  shortcutBill: "#3D3528",
+  shortcutRecord: "#293B40",
+  chartPrevious: "#789C80",
+  billBorder: "#42564A",
+  signupBorder: "#455249",
+  signupLabel: "#B0BCB3",
+  signupRule: "#5E7063",
+  signupCare: "#303D2C",
+  signupRecords: "#293B40",
+  signupBills: "#3C3528",
+  welcomeBorder: "#4B574D",
+  welcomeRule: "#5E7063",
+  welcomeGreen: "#2E3D31",
+  welcomeBlue: "#293B40",
+  socialInk: "#F0F0E8", socialPaper: "#202723",
+
+  background: "#171B19", canvas: "#141816", billSurface: "#25352E",
+  foreground: "#F0F0E8", card: "#202723", cardForeground: "#F0F0E8",
+  surface: "#202723", surfaceRaised: "#2A332E", surfaceWhite: "#2A332E",
+  surfaceSubtle: "#29372E", primary: "#A9D4B8", primaryForeground: "#142A1F",
+  secondary: "#30382F", secondaryForeground: "#D1E5D5", muted: "#2B302B",
+  mutedForeground: "#B0BCB3", accent: "#34483A", accentForeground: "#DFEDDF",
+  border: "#3E4B42", borderStrong: "#6F8073", destructive: "#F5AA98",
+  success: "#A5D5AE", successForeground: "#B7E1BE", successBg: "#293F30",
+  warning: "#E2BC7E", warningForeground: "#EAC98F", warningBg: "#403626",
+  critical: "#F5AA98", criticalForeground: "#F4B6A7", criticalBg: "#472F2A",
+  info: "#A4CDE5", infoForeground: "#BDDCEF", infoBg: "#293B46",
+  overlay: "rgba(0,0,0,0.24)",
+};
+export type Premium = { [K in keyof typeof lightPremium]: string };
+export const darkPremium: Premium = {
+  ink: "#254A3C", brandText: "#A9D4B8", onInk: "#FFFDF6", onInkMuted: "#D4E2D8",
+  apricot: "#E4B992", apricotSurface: "#43372C", line: darkColors.border,
+};
+// Static exports retained for non-rendering consumers; screens use useTheme().
+export const colors = lightColors;
+export const premium = lightPremium;
+export const selectionControl = makeSelectionControl(lightColors);

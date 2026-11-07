@@ -1,3 +1,5 @@
+import { useMemo as useThemeMemo } from "react";
+import { useTheme } from "@/theme/useTheme";
 import {groupParams} from "@/lib/shared-expenses";
 import {useLocalSearchParams,useRouter} from "expo-router";
 import {useRef,useState} from "react";
@@ -7,12 +9,15 @@ import {Button} from "@/components/Button";
 import {TextField} from "@/components/TextField";
 import {QuietAction} from "@/components/Brief";
 import {Surface} from "@/components/ui/Surface";
-import {SharedFrame,SharedLoading,SharedNotice,sharedStyles as s,useSharedLedger} from "@/components/SharedExpenseUI";
+import {SharedFrame,SharedLoading,SharedNotice,getSharedStyles,useSharedLedger} from "@/components/SharedExpenseUI";
 import {saveSharedExpense,sharedDate,sharedPersonName,type ExpenseDetails,type RepaymentDetails} from "@/lib/shared-expenses";
 import {sharedMoney} from "@/lib/shared-expense-math";
-import {colors,typography} from "@/theme/tokens";
+import { typography } from "@/theme/tokens";
 import {ApiError} from "@/lib/api";
 export default function SharedExpenseDetail(){
+  const { colors, premium } = useTheme();
+ const s = useThemeMemo(() => getSharedStyles(colors), [colors, premium]);
+
  const {id,existing,saved}=useLocalSearchParams<{id:string;existing?:string;saved?:string}>(),router=useRouter(),{data,error,busy,load}=useSharedLedger(id);
  const [removing,setRemoving]=useState(false),[reason,setReason]=useState(""),[saving,setSaving]=useState(false),[failure,setFailure]=useState<string|null>(null),[history,setHistory]=useState(false);
  const lock=useRef(false),entry=data?.entries[0];

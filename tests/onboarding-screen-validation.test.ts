@@ -19,6 +19,7 @@ function screen(draft:Draft|null=null, reject?:ApiError) {
   const payload={home:null,accessRole:null,addressSearchAvailable:false,homeTypeOptions,ownershipTypeOptions,goals:[],actions:[]};
   const exports:{default?:()=>Node}={};
   const requireMock=(name:string):unknown=>{
+    if(name === "@/theme/useTheme") return {useTheme:()=>({colors:{}})};
     if(name==="react/jsx-runtime")return {jsx:(type:unknown,props:Node["props"])=>({type,props}),jsxs:(type:unknown,props:Node["props"])=>({type,props})};
     if(name==="react")return {
       useState:(initial:unknown)=>{const i=cursor++;if(!(i in state))state[i]=typeof initial==="function"?initial():initial;return [state[i],(next:unknown)=>{state[i]=typeof next==="function"?next(state[i]):next;}];},

@@ -1,3 +1,4 @@
+import { useTheme } from "@/theme/useTheme";
 import { vaultScreen } from "@/lib/screen-state";
 import { useTabScrollTop } from "@/lib/use-tab-scroll-top";
 import { CollectionIntro } from "@/components/CollectionIntro";
@@ -19,7 +20,7 @@ import { Button } from "@/components/Button";
 import { ReadNotice } from "@/components/Brief";
 import { apiGet,ApiError } from "@/lib/api";
 import { fetchVault,formatVaultDate } from "@/lib/vault-data";
-import { colors,layout,spacing,typography,premium } from "@/theme/tokens";
+import { layout, spacing, typography } from "@/theme/tokens";
 type Filter=VaultCollectionView;
 const filters=[{value:"documents",label:"Records"},{value:"items",label:"Home items"},{value:"warranties",label:"Warranties"}] as const;
 const choices=[
@@ -29,6 +30,8 @@ const choices=[
  {kind:"warranty",icon:"shield",title:"Warranty",detail:"Coverage dates and proof of purchase"},
 ] as const;
 function VaultRow({icon,title,detail,tag,onPress}:{icon:keyof typeof Feather.glyphMap;title:string;detail:string;tag?:string;onPress:()=>void}){
+  const { colors, premium } = useTheme();
+
  return <Pressable accessibilityRole="button" onPress={onPress} style={({pressed})=>({flexDirection:"row",alignItems:"center",gap:14,paddingVertical:16,paddingHorizontal:16,opacity:pressed?0.6:1,borderBottomWidth:1,borderBottomColor:premium.line})}>
   <View style={{width:40,height:40,borderRadius:12,backgroundColor:colors.surfaceSubtle,alignItems:"center",justifyContent:"center"}}><Feather name={icon} size={19} color={colors.foreground}/></View>
   <View style={{flex:1,gap:4}}>
@@ -39,6 +42,8 @@ function VaultRow({icon,title,detail,tag,onPress}:{icon:keyof typeof Feather.gly
  </Pressable>;
 }
 export default function VaultScreen(){
+  const { colors } = useTheme();
+
  const router=useRouter();
  const scroll=useRef<ScrollView>(null);
  useTabScrollTop("vault",scroll);

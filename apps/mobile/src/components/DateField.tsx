@@ -1,9 +1,10 @@
+import { useTheme } from "@/theme/useTheme";
 import { Feather } from "@expo/vector-icons";
 import { useMemo, useState } from "react";
 import { Keyboard, Pressable, ScrollView, Text, View } from "react-native";
 import { SafeAreaModal as Modal } from "@/components/SafeAreaModal";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { colors, radii, spacing, typography } from "@/theme/tokens";
+import { radii, spacing, typography } from "@/theme/tokens";
 
 type Props = { label: string; value: string; onChange: (value: string) => void; optional?: boolean; disabled?: boolean; placeholder?: string };
 const months = Array.from({length:12},(_,i)=>new Intl.DateTimeFormat("en-CA",{month:"long"}).format(new Date(2024,i,1)));
@@ -17,6 +18,8 @@ function iso(date: Date) { return [date.getFullYear(),String(date.getMonth()+1).
 function display(date: Date) { return new Intl.DateTimeFormat("en-CA",{day:"numeric",month:"long",year:"numeric"}).format(date); }
 
 export function DateField({label,value,onChange,optional=false,disabled=false,placeholder="Choose a date"}:Props) {
+  const { colors } = useTheme();
+
  const insets=useSafeAreaInsets(),selected=parseDate(value);
  const [open,setOpen]=useState(false),[month,setMonth]=useState(selected??new Date());
  const [mode,setMode]=useState<"days"|"months"|"years">("days"),[yearStart,setYearStart]=useState(2020);

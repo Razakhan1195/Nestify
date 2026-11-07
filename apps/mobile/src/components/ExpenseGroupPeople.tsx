@@ -1,3 +1,5 @@
+import { useMemo as useThemeMemo } from "react";
+import { useTheme } from "@/theme/useTheme";
 import {useEffect,useRef,useState} from "react";
 import {useRouter} from "expo-router";
 import {Alert,Share,Text,View} from "react-native";
@@ -6,12 +8,15 @@ import {TextField} from "./TextField";
 import {QuietAction} from "./Brief";
 import {Surface} from "./ui/Surface";
 import {AddExpensePerson,expensePersonStatus} from "./ExpensePeople";
-import {PersonPicker,SharedNotice,sharedStyles as s} from "./SharedExpenseUI";
+import {PersonPicker,SharedNotice,getSharedStyles} from "./SharedExpenseUI";
 import {saveGroupAction,type GroupCommand} from "@/lib/expense-groups";
 import type {SharedPayload,SharedPerson} from "@/lib/shared-expenses";
 import {ApiError} from "@/lib/api";
 
 function InviteGroupPerson({data,person,reload}:{data:SharedPayload;person:SharedPerson;reload:()=>Promise<unknown>}){
+ const { colors, premium } = useTheme();
+ const s = useThemeMemo(() => getSharedStyles(colors), [colors, premium]);
+
  const [open,setOpen]=useState(false),[email,setEmail]=useState(""),[busy,setBusy]=useState(false),[error,setError]=useState<string|null>(null);
  const lock=useRef(false),code=useRef<string|null>(null),alive=useRef(true);
  useEffect(()=>{alive.current=true;return()=>{alive.current=false;};},[]);
@@ -45,6 +50,9 @@ function InviteGroupPerson({data,person,reload}:{data:SharedPayload;person:Share
  </View>;
 }
 export function GroupPeople({data,reload}:{data:SharedPayload;reload:()=>Promise<unknown>}){
+ const { colors, premium } = useTheme();
+ const s = useThemeMemo(() => getSharedStyles(colors), [colors, premium]);
+
  const router=useRouter(),lock=useRef(false),alive=useRef(true);
  useEffect(()=>{alive.current=true;return()=>{alive.current=false;};},[]);
  const [error,setError]=useState<string|null>(null),[busy,setBusy]=useState(false),[renaming,setRenaming]=useState(false),[name,setName]=useState(data.home.name),[successor,setSuccessor]=useState("");

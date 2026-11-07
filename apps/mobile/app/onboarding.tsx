@@ -1,3 +1,4 @@
+import { useTheme } from "@/theme/useTheme";
 import { profileName } from "@/lib/profile-identity";
 import { supabase } from "@/lib/supabase";
 import { AmbientBackdrop } from "@/components/AmbientBackdrop";
@@ -29,10 +30,12 @@ import {
   type HomeProfileInput,
   type OnboardingPayload,
 } from "@/lib/onboarding-data";
-import { colors, layout, radii, spacing, typography } from "@/theme/tokens";
+import { layout, radii, spacing, typography } from "@/theme/tokens";
 
 type Step = 1 | 2;
 function Progress({ step }: { step: Step }) {
+  const { colors } = useTheme();
+
   return (
     <View style={{ flexDirection: "row", gap: spacing.sm }}>
       {[1, 2].map((value) => (
@@ -65,6 +68,8 @@ function OptionSelector({
   value: string;
   onChange: (value: string) => void;
 }) {
+  const { colors } = useTheme();
+
   return (
     <View style={{ gap: spacing.sm }}>
       <Text style={{ fontSize: 13, fontWeight: "600", color: colors.mutedForeground }}>
@@ -109,6 +114,8 @@ export default function OnboardingScreen() {
 }
 
 function AccountSetup({ userId, email }: { userId: string; email?: string }) {
+  const { colors } = useTheme();
+
   const router = useRouter();
   const { session } = useAuth();
   const [displayName,setDisplayName]=useState(()=>profileName(session?.user.user_metadata));

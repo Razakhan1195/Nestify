@@ -1,13 +1,16 @@
+import { useTheme } from "@/theme/useTheme";
 import {useCallback,useState} from "react";
 import {useFocusEffect,useRouter} from "expo-router";
 import {Feather} from "@expo/vector-icons";
 import {Pressable,Text,View} from "react-native";
 import {useAuth} from "@/auth/AuthProvider";
 import {apiGet} from "@/lib/api";
-import {colors,typography} from "@/theme/tokens";
+import { typography } from "@/theme/tokens";
 
 type Summary={checkedAt:string;itemCount:number;missingBrandCount:number;matches:{key:string;itemName:string;status:string}[]};
 export function RecallWatchSummary({itemCount,onlyActionable=false}:{itemCount:number;onlyActionable?:boolean}){
+  const { colors } = useTheme();
+
  const router=useRouter(),{session}=useAuth(),scope=session?.user.id;
  const [state,setState]=useState<{scope:string|undefined;data:Summary|null;failed:boolean}|null>(null);
  useFocusEffect(useCallback(()=>{

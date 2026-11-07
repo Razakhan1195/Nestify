@@ -1,3 +1,4 @@
+import { useTheme } from "@/theme/useTheme";
 import { useCallback, useRef, useState } from "react";
 import { useFocusEffect, useRouter } from "expo-router";
 import { ActivityIndicator, Alert, Pressable, RefreshControl, ScrollView, Text, View } from "react-native";
@@ -5,7 +6,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Button } from "@/components/Button";
 import { apiGet, apiPost, ApiError } from "@/lib/api";
 import { ScreenNavigation } from "@/components/ScreenNavigation";
-import { colors, spacing, typography } from "@/theme/tokens";
+import { spacing, typography } from "@/theme/tokens";
 
 type Connection = {
   experience?: { title: string; message: string; meterMessage: string; action?: "refresh" | "reconnect" | null; authorizationMessage?: string };
@@ -20,6 +21,8 @@ function dateLabel(value: string | null) {
   return Number.isNaN(date.getTime()) ? "Not available yet" : date.toLocaleDateString("en-CA", { year: "numeric", month: "short", day: "numeric" });
 }
 export function EzgbConnectionPanel({ providerId }: { providerId: string }) {
+  const { colors } = useTheme();
+
   const router = useRouter();
   const [data, setData] = useState<Connection | null>(null);
   const [error, setError] = useState<string | null>(null);

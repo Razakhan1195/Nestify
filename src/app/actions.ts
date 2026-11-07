@@ -418,15 +418,17 @@ function safeAuthNextPath(value: string) {
 }
 
 export async function login(formData: FormData) {
+  const next = safeAuthNextPath(getString(formData, "next") || "/app");
+  const loginPath = next === "/app" ? "/login" : `/login?next=${encodeURIComponent(next)}`;
   if (!hasSupabaseEnv()) {
-    redirectWithError("/login", missingSupabaseEnvMessage);
+    redirectWithError(loginPath, missingSupabaseEnvMessage);
   }
 
   const email = getString(formData, "email");
   const password = getString(formData, "password");
 
   if (!email || !password) {
-    redirectWithError("/login", "Enter your email and password.");
+    redirectWithError(loginPath, "Enter your email and password.");
   }
 
   const supabase = await createClient();
@@ -436,7 +438,7 @@ export async function login(formData: FormData) {
   });
 
   if (error) {
-    redirectWithError("/login", error.message);
+    redirectWithError(loginPath, error.message);
   }
 
   // Seed polished demo data for the demo account on sign-in (idempotent).
@@ -447,7 +449,7 @@ export async function login(formData: FormData) {
     }
   }
 
-  redirect("/app");
+  redirect(next);
 }
 
 export async function signup(formData: FormData) {

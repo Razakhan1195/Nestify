@@ -1,7 +1,8 @@
+import { useTheme } from "@/theme/useTheme";
 import {useState} from "react";
 import { Text, TextInput, View, type TextInputProps } from "react-native";
 
-import { colors, radii } from "@/theme/tokens";
+import { radii } from "@/theme/tokens";
 
 type TextFieldProps = TextInputProps & {
   label: string;
@@ -9,6 +10,8 @@ type TextFieldProps = TextInputProps & {
 };
 
 export function TextField({ label, error, style, ...inputProps }: TextFieldProps) {
+  const { colors , mode: useThemeMode } = useTheme();
+
   const [focused,setFocused]=useState(false);
   return (
     <View style={{ gap: 6 }}>
@@ -17,7 +20,7 @@ export function TextField({ label, error, style, ...inputProps }: TextFieldProps
       >
         {label}
       </Text>
-      <TextInput
+      <TextInput keyboardAppearance={useThemeMode} selectionColor={colors.primary}
         accessibilityLabel={label}
         accessibilityHint={error || inputProps.accessibilityHint}
         aria-invalid={Boolean(error)}

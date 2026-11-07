@@ -1,3 +1,4 @@
+import { useTheme } from "@/theme/useTheme";
 import { FormScrollView } from "@/components/FormScrollView";
 import {CareChoice} from "@/components/CleaningUI";
 import {JourneyHeading,JourneyDisclosure} from "@/components/JourneyUI";
@@ -14,7 +15,7 @@ import { pendingCareReminder, resetRemovedCareReminder } from "@/lib/care-save";
 import { TextField } from "@/components/TextField";
 import { ApiError } from "@/lib/api";
 import { createCareTask } from "@/lib/care-data";
-import { colors, layout, radii, spacing, typography } from "@/theme/tokens";
+import { layout, radii, spacing, typography } from "@/theme/tokens";
 import { usePreventRemove } from "expo-router/react-navigation";
 import { safeBack } from "@/lib/navigation";
 
@@ -28,6 +29,8 @@ const recurrenceOptions = [
 ] as const;
 
 function ChoiceChips({ values, selected, onSelect, disabled=false }: { values: readonly string[]; selected: string; onSelect: (value: string) => void; disabled?:boolean }) {
+  const { colors } = useTheme();
+
   return (
     <View style={{ flexDirection: "row", flexWrap: "wrap", gap: spacing.sm }}>
       {values.map((value) => (
@@ -44,6 +47,8 @@ function ChoiceChips({ values, selected, onSelect, disabled=false }: { values: r
   );
 }
 export default function AddCareTaskScreen() {
+  const { colors } = useTheme();
+
   const router = useRouter();
   const navigation = useNavigation();
   const saveLock = useRef(false);

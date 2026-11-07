@@ -1,11 +1,14 @@
+import { useTheme } from "@/theme/useTheme";
 import {Feather} from "@expo/vector-icons";
 import {Pressable,Text,View} from "react-native";
 import {ConnectionBrand} from "./ConnectionBrand";
 import {ProviderBrand} from "./ProviderBrand";
 import {Surface} from "./ui/Surface";
-import {colors,spacing,typography} from "@/theme/tokens";
+import { spacing, typography } from "@/theme/tokens";
 
 export function ProviderConnectionCard({kind,onPress}:{kind:"green"|"deck";onPress:()=>void}) {
+  const { colors } = useTheme();
+
  const utility=kind==="green";
  const title=utility?"Connect an Ontario utility":"Connect a bill provider";
  const names=utility?["Enbridge","Elexicon","Hydro One"]:["Bell","Rogers","TELUS"];

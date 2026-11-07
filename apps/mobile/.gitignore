@@ -11,3 +11,8 @@ web-build/
 .env
 .env.local
 expo-env.d.ts
+
+# Expo prebuild output and generated local crash-reporting configuration.
+/ios/
+/android/
+sentry.options.json

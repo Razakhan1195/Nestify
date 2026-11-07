@@ -1,11 +1,14 @@
+import { useTheme } from "@/theme/useTheme";
 import { useCallback, useState } from "react";
 import { useFocusEffect } from "expo-router";
 import { Linking, Text, View } from "react-native";
 import { apiGet } from "@/lib/api";
 import { QuietAction } from "./Brief";
-import { colors, spacing, typography } from "@/theme/tokens";
+import { spacing, typography } from "@/theme/tokens";
 type AppleStatus = { forwardingDisabled: boolean; authorizationChanged: boolean };
 export function AppleAccountNotice({ userId }: { userId: string }) {
+  const { colors } = useTheme();
+
   const [status, setStatus] = useState<AppleStatus | null>(null);
   const [error, setError] = useState(false);
   const [retry, setRetry] = useState(0);

@@ -1,3 +1,6 @@
+import type { Colors } from "@/theme/tokens";
+import { useMemo as useThemeMemo } from "react";
+import { useTheme } from "@/theme/useTheme";
 import { DetailLoading } from "@/components/DetailLoading";
 import { careScreen } from "@/lib/screen-state";
 import { maintenanceFollowUp, localCareToday } from "@/lib/care-presentation";
@@ -14,17 +17,19 @@ import { Button } from "@/components/Button";
 import { Surface } from "@/components/ui/Surface";
 import { ApiError } from "@/lib/api";
 import { completeCareTask, deleteCareTask, fetchCare, formatCareDate, formatCareRecurrence } from "@/lib/care-data";
-import { colors, layout, radii, spacing, typography } from "@/theme/tokens";
+import { layout, radii, spacing, typography } from "@/theme/tokens";
 import { safeBack } from "@/lib/navigation";
 
-const statusMeta = {
+const makeStatusMeta = (colors: Colors) => ({
   overdue: { label: "Overdue", bg: colors.criticalBg, fg: colors.criticalForeground },
   due_soon: { label: "Due soon", bg: colors.warningBg, fg: colors.warningForeground },
   upcoming: { label: "Upcoming", bg: colors.infoBg, fg: colors.infoForeground },
   completed: { label: "Completed", bg: colors.successBg, fg: colors.successForeground },
-} as const;
+} as const);
 
 function DetailRow({ label, value }: { label: string; value: string }) {
+  const { colors } = useTheme();
+
   return (
     <View style={{ flexDirection: "row", justifyContent: "space-between", gap: spacing.lg, paddingVertical: spacing.md, borderBottomWidth: 1, borderBottomColor: colors.border }}>
       <Text style={{ fontSize: 13, color: colors.mutedForeground }}>{label}</Text>
@@ -34,6 +39,9 @@ function DetailRow({ label, value }: { label: string; value: string }) {
 }
 
 export default function CareDetailScreen() {
+  const { colors, premium } = useTheme();
+  const statusMeta = useThemeMemo(() => makeStatusMeta(colors), [colors, premium]);
+
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const payload = useSyncExternalStore(careScreen.subscribe, careScreen.getSnapshot);

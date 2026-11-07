@@ -1,3 +1,4 @@
+import { useTheme } from "@/theme/useTheme";
 import { ConnectionElapsed } from "./ConnectionElapsed";
 import { importJourney } from "@/lib/import-journey";
 import { Feather } from "@expo/vector-icons";
@@ -5,8 +6,10 @@ import { Text, View } from "react-native";
 import { Button } from "@/components/Button";
 import { Surface } from "@/components/ui/Surface";
 import type { ProviderConnectionItem } from "@/lib/provider-data";
-import { colors, spacing, typography } from "@/theme/tokens";
+import { spacing, typography } from "@/theme/tokens";
 export function TelecomImportProgress({progress,onLeave,onViewBill}:{progress:NonNullable<ProviderConnectionItem["importProgress"]>;onLeave:()=>void;onViewBill?:()=>void}) {
+  const { colors } = useTheme();
+
  const { active, needsPresence, title, next } = importJourney(progress);
  return <Surface tone="subtle" style={{gap:spacing.md}}>
   <View style={{flexDirection:"row",gap:spacing.sm,alignItems:"center"}}><Feather name={progress.status==="completed"?"check-circle":"file-text"} size={22} color={colors.primary}/><Text style={[typography.section,{color:colors.foreground,flex:1}]}>{title}</Text></View>

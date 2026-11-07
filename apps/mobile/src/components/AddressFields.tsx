@@ -1,15 +1,18 @@
+import { useTheme } from "@/theme/useTheme";
 import { useEffect, useRef, useState } from "react";
 import { randomUUID } from "expo-crypto";
 import { ActivityIndicator, Pressable, Text, View } from "react-native";
 import { TextField } from "./TextField";
 import { ProvincePicker } from "./ProvincePicker";
 import { apiPost } from "@/lib/api";
-import { colors, spacing } from "@/theme/tokens";
+import { spacing } from "@/theme/tokens";
 import { formatPostalCode } from "@/lib/canadian-address";
 import type { HomeProfileErrors } from "@/lib/home-profile-validation";
 type Address = { street_address?: string; city: string; province: string; postal_code: string };
 type Suggestion = { id: string; label: string };
 export function AddressFields({ value, onChange, disabled = false, searchEnabled = false, onResolvingChange, cityOnly = false, hideLocation = false, errors = {} }: { errors?: HomeProfileErrors; cityOnly?: boolean; hideLocation?: boolean; value: Address; onChange: (address: Address) => void; disabled?: boolean; searchEnabled?: boolean; onResolvingChange?: (busy: boolean) => void }) {
+  const { colors } = useTheme();
+
   const [query, setQuery] = useState("");
   const [searching, setSearching] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -69,7 +72,7 @@ export function AddressFields({ value, onChange, disabled = false, searchEnabled
       {suggestions.map(item => <Pressable key={item.id} accessibilityRole="button" disabled={locked} onPress={() => void select(item)} style={{ minHeight: 48, padding: 14, borderBottomWidth: 1, borderBottomColor: colors.border }}>
         <Text style={{ color: colors.foreground, fontSize: 15, lineHeight: 22 }}>{item.label}</Text>
       </Pressable>)}
-      <Text numberOfLines={1} style={{ padding: 12, fontSize: 12, fontWeight: "400", color: "#5E5E5E" }}>Google Maps</Text>
+      <Text numberOfLines={1} style={{ padding: 12, fontSize: 12, fontWeight: "400", color: colors.attribution }}>Google Maps</Text>
     </View> : null}
     {notice ? <Text accessibilityLiveRegion="polite" style={{ color: colors.mutedForeground, fontSize: 13, lineHeight: 19 }}>{notice}</Text> : null}
     {!cityOnly ? <TextField error={errors.street_address} label="Street address and unit (optional)" placeholder="Unit 4, 123 Main Street" editable={!locked} maxLength={160} value={value.street_address ?? ""} onChangeText={street_address => onChange({ ...value, street_address })} autoComplete="street-address" /> : null}

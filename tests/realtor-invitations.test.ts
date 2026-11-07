@@ -24,7 +24,7 @@ async function fixture(){
  await db.exec(await readFile("supabase/migrations/202610240001_annual_gift_fulfillment.sql","utf8"));
  return db;
 }
-async function current(){const db=await fixture();await db.exec(await readFile("supabase/migrations/202610240002_close_first_thousand_offer.sql","utf8"));await db.exec(await readFile("supabase/migrations/202610240003_realtor_gift_invitations.sql","utf8"));return db;}
+async function current(){const db=await fixture();await db.exec(await readFile("supabase/migrations/202610240002_close_first_thousand_offer.sql","utf8"));await db.exec(await readFile("supabase/migrations/202610240003_realtor_gift_invitations.sql","utf8"));await db.exec(await readFile("supabase/migrations/202611070002_gift_invitation_review.sql","utf8"));return db;}
 const invite=(db:PGlite,n=100,email="person2@example.test")=>db.query("insert into rezlee_gift_invitations(id,realtor_name,recipient_email,order_reference,created_by) values($1,'Taylor Homes',$2,'ORDER-001',$3)",[id(n),email,id(1)]);
 const claim=(db:PGlite,n=100,user=2)=>db.query<{r:{realtorName:string;expires_at:string;started_at:string}}>("select rezlee_claim_gift_invitation($1,$2) r",[id(n),id(user)]);
 test("invitation activates a verified recipient once, names the realtor, and keeps retry expiry",async()=>{const db=await current();try{await invite(db);const [a,b]=await Promise.all([claim(db),claim(db)]);assert.deepEqual(a.rows,b.rows);assert.equal(a.rows[0].r.realtorName,"Taylor Homes");assert.equal(Date.parse(a.rows[0].r.expires_at)-Date.parse(a.rows[0].r.started_at),365*86400000);assert.equal((await db.query("select * from rezlee_annual_gifts")).rows.length,1);}finally{await db.close();}});
@@ -33,3 +33,15 @@ test("closed first-thousand offer preserves existing founders and reserved waitl
 test("existing Pro is protected and public roles cannot inspect invitations or grant themselves access",async()=>{const db=await current();try{await invite(db);await db.query("insert into rezlee_entitlements(user_id,source)values($1,'founder')",[id(2)]);await assert.rejects(claim(db),/Already has Pro/);assert.equal((await db.query("select * from rezlee_annual_gifts")).rows.length,0);await db.exec("set role authenticated");await assert.rejects(claim(db),/permission denied/);await assert.rejects(db.query("select * from rezlee_gift_invitations"),/permission denied/);}finally{await db.close();}});
 
 test("deleted accounts leave no invitation email and cannot transfer a claimed gift",async()=>{const db=await current();try{await invite(db);await claim(db);await db.query("delete from auth.users where id=$1",[id(2)]);const row=(await db.query<{recipient_email:string;revoked_at:string;claimed_by:null}>("select * from rezlee_gift_invitations")).rows[0];assert.equal(row.recipient_email,"deleted-account@invalid");assert.equal(row.claimed_by,null);assert.ok(row.revoked_at);}finally{await db.close();}});
+
+test("unused invitation cancellation is audited, repeatable, and cannot revoke a claimed gift",async()=>{
+ const db=await current();try{
+ await invite(db);const revoke=()=>db.query("select rezlee_revoke_gift_invitation($1,$2,'Client requested cancellation') r",[id(1),id(100)]);
+ assert.deepEqual((await revoke()).rows,(await revoke()).rows);
+ assert.equal((await db.query("select * from rezlee_gift_invitation_events")).rows.length,1);
+ await assert.rejects(claim(db),/unavailable/);
+ await invite(db,101);await claim(db,101);
+ await assert.rejects(db.query("select rezlee_revoke_gift_invitation($1,$2,'Client requested cancellation')",[id(1),id(101)]),/already claimed/);
+ await db.exec("set role authenticated");await assert.rejects(revoke(),/permission denied/);
+ }finally{await db.close();}
+});

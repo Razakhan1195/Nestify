@@ -1,3 +1,4 @@
+import { useTheme } from "@/theme/useTheme";
 import { useEffect, useState } from "react";
 import { useRouter } from "expo-router";
 import { Alert, Text } from "react-native";
@@ -6,8 +7,10 @@ import { AuthFrame } from "@/components/AuthFrame";
 import { Button } from "@/components/Button";
 import { TextField } from "@/components/TextField";
 import { emailCode, emailCodeReady } from "@/auth/email-code";
-import { colors, typography } from "@/theme/tokens";
+import { typography } from "@/theme/tokens";
 export default function EmailCode() {
+  const { colors } = useTheme();
+
   const router = useRouter();
   const [verified, setVerified] = useState(false);
   const [email, setEmail] = useState("");

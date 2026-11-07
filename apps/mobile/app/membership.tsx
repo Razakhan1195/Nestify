@@ -1,3 +1,6 @@
+import type { Colors } from "@/theme/tokens";
+import { useMemo as useThemeMemo } from "react";
+import { useTheme } from "@/theme/useTheme";
 import {withReadTimeout} from "@/lib/read-timeout";
 import * as SecureStore from "expo-secure-store";
 import {ProWelcome} from "@/components/ProWelcome";
@@ -14,9 +17,12 @@ import {ScreenNavigation} from "@/components/ScreenNavigation";
 import {Button} from "@/components/Button";
 import {getMembershipSnapshot,loadMembership,restoreMembership,type MembershipPayload} from "@/lib/membership";
 import {availablePlans,buyPlan,restorePlans} from "@/lib/store-purchases";
-import {colors,editorialType,typography} from "@/theme/tokens";
+import { editorialType, typography } from "@/theme/tokens";
 export default function MembershipScreen(){const {session,isLoading}=useAuth();if(isLoading)return <ActivityIndicator/>;if(!session)return <Redirect href="/(auth)/login"/>;return <MembershipContent key={session.user.id} userId={session.user.id}/>;}
 function MembershipContent({userId}:{userId:string}){
+  const { colors, premium } = useTheme();
+  const styles = useThemeMemo(() => makeStyles(colors), [colors, premium]);
+
  const router=useRouter();
  const [welcoming,setWelcoming]=useState(false);
  function closeWelcome(){setWelcoming(false);void acknowledgeProWelcome(userId).then(value=>{setData(value);return SecureStore.setItemAsync("rezlee-pro-welcome-v2-"+userId,"seen");}).catch(()=>{});}
@@ -140,9 +146,12 @@ function MembershipContent({userId}:{userId:string}){
  </SafeAreaView>;
 }
 function MembershipLink({label,onPress,disabled=false}:{label:string;onPress:()=>void;disabled?:boolean}){
+  const { colors, premium } = useTheme();
+  const styles = useThemeMemo(() => makeStyles(colors), [colors, premium]);
+
  return <Pressable accessibilityRole="button" accessibilityLabel={label} accessibilityState={{disabled}} disabled={disabled} onPress={onPress} style={({pressed})=>({minHeight:44,justifyContent:"center",paddingHorizontal:8,opacity:disabled?0.5:pressed?0.65:1})}><Text style={styles.linkText}>{label}</Text></Pressable>;
 }
-const styles=StyleSheet.create({
+const makeStyles = (colors: Colors) => (StyleSheet.create({
  screen:{flex:1,backgroundColor:colors.background},
  scroll:{paddingHorizontal:20,paddingTop:12,paddingBottom:32},
  content:{width:"100%",maxWidth:480,alignSelf:"center",gap:18},
@@ -175,6 +184,6 @@ const styles=StyleSheet.create({
  controls:{alignItems:"center",gap:0},
  linkText:{...typography.meta,fontWeight:"500",color:colors.mutedForeground},
  legal:{flexDirection:"row",flexWrap:"wrap",alignItems:"center",justifyContent:"center",gap:8},
-});
+}));
 
 

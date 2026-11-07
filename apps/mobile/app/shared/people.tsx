@@ -1,3 +1,5 @@
+import { useMemo as useThemeMemo } from "react";
+import { useTheme } from "@/theme/useTheme";
 import {GroupPeople} from "@/components/ExpenseGroupPeople";
 import {groupParams} from "@/lib/shared-expenses";
 import {useRouter} from "expo-router";
@@ -5,10 +7,13 @@ import {AddExpensePerson,InviteExpensePerson,expensePersonStatus} from "@/compon
 import {useRef,useState} from "react";
 import {Alert,Text,View} from "react-native";
 import {QuietAction} from "@/components/Brief";
-import {SharedFrame,SharedLoading,SharedNotice,sharedStyles as s,useSharedLedger} from "@/components/SharedExpenseUI";
+import {SharedFrame,SharedLoading,SharedNotice,getSharedStyles,useSharedLedger} from "@/components/SharedExpenseUI";
 import {saveSharedExpense} from "@/lib/shared-expenses";
 import {ApiError} from "@/lib/api";
 export default function SharedPeople(){
+ const { colors, premium } = useTheme();
+ const s = useThemeMemo(() => getSharedStyles(colors), [colors, premium]);
+
  const router=useRouter(),{data,error,busy,load}=useSharedLedger(),lock=useRef(false);
  const [failure,setFailure]=useState<string|null>(null),[saving,setSaving]=useState(false);
  async function mutate(id:string){

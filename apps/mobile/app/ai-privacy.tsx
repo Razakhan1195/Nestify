@@ -1,3 +1,4 @@
+import { useTheme } from "@/theme/useTheme";
 import {useCallback,useState} from "react";
 import {ActivityIndicator,ScrollView,Text,View} from "react-native";
 import {SafeAreaView} from "react-native-safe-area-context";
@@ -9,9 +10,11 @@ import {QuietAction} from "@/components/Brief";
 import {apiGet,apiPost,ApiError} from "@/lib/api";
 import {openPublicLink} from "@/lib/public-links";
 import {AI_SHARING_CONTROL,AI_SHARING_DESCRIPTION,AI_SHARING_TITLE,AI_SHARING_VERSION} from "@/lib/ai-sharing-policy";
-import {colors,layout,spacing,typography} from "@/theme/tokens";
+import { layout, spacing, typography } from "@/theme/tokens";
 type Choice={allowed:boolean;version:string};
 export default function AiPrivacy(){
+  const { colors } = useTheme();
+
  const {session}=useAuth(),userId=session?.user.id;
  const [choice,setChoice]=useState<Choice|null>(null),[busy,setBusy]=useState(false),[error,setError]=useState<string|null>(null),[reload,setReload]=useState(0);
  useFocusEffect(useCallback(()=>{let active=true;setChoice(null);setError(null);void apiGet<Choice>("/api/mobile/v1/account/ai-consent",{expectedUserId:userId,timeoutMs:15000}).then(c=>{if(active)setChoice(c);}).catch(()=>{if(active)setError("Could not check your AI privacy choice. Try again.");});return()=>{active=false;};},[userId,reload]));

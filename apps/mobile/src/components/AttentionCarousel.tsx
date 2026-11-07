@@ -1,9 +1,10 @@
+import { useTheme } from "@/theme/useTheme";
 import * as Haptics from "expo-haptics";
 import { useRef } from "react";
 import { Dimensions, FlatList, Pressable, Text, View } from "react-native";
 
 import type { AttentionItem } from "@/lib/home-data";
-import { colors, radii, severityColors, spacing, typography } from "@/theme/tokens";
+import { radii, severityColors, spacing, typography } from "@/theme/tokens";
 
 const CARD_WIDTH = Math.min(Dimensions.get("window").width - spacing["2xl"] * 2, 320);
 
@@ -13,6 +14,8 @@ type AttentionCarouselProps = {
 };
 
 export function AttentionCarousel({ items, onItemPress }: AttentionCarouselProps) {
+  const { colors } = useTheme();
+
   const listRef = useRef<FlatList<AttentionItem>>(null);
 
   if (!items.length) return null;
@@ -32,7 +35,7 @@ export function AttentionCarousel({ items, onItemPress }: AttentionCarouselProps
         decelerationRate="fast"
         contentContainerStyle={{ gap: spacing.md }}
         renderItem={({ item }) => {
-          const tone = severityColors(item.severity);
+          const tone = severityColors(item.severity, colors);
           return (
             <Pressable
               accessibilityRole="button"

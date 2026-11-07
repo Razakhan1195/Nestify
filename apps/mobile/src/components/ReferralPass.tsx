@@ -1,11 +1,17 @@
+import type { Colors, Premium } from "@/theme/tokens";
+import { useMemo as useThemeMemo } from "react";
+import { useTheme } from "@/theme/useTheme";
 import {ActivityIndicator, Image, StyleSheet, Text, View, useWindowDimensions} from 'react-native';
-import {colors, editorialType, premium, typography} from '@/theme/tokens';
+import { editorialType, typography } from '@/theme/tokens';
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports -- Metro bundles native image assets through static require.
 const brandMark = require('../../assets/brand-mark.png');
 
 /** A real invitation, rendered natively. Text remains selectable and scales with the phone. */
 export function ReferralPass({code, loading}: {code: string | null; loading: boolean}) {
+  const { premium, colors } = useTheme();
+  const styles = useThemeMemo(() => makeStyles(colors, premium), [colors, premium]);
+
  const {width, fontScale} = useWindowDimensions();
  const compact = width < 360 || fontScale > 1.2;
  return <View style={styles.paper}>
@@ -33,7 +39,7 @@ export function ReferralPass({code, loading}: {code: string | null; loading: boo
   <View style={styles.footer}><View style={styles.dot}/><Text style={styles.footerText}>No card needed. No automatic renewal.</Text></View>
  </View>;
 }
-const styles = StyleSheet.create({
+const makeStyles = (colors: Colors, premium: Premium) => (StyleSheet.create({
  paper: {backgroundColor:colors.secondary, borderRadius:22, padding:5},
  pass: {backgroundColor:premium.ink, borderRadius:18, padding:22, gap:30},
  brandRow: {flexDirection:'row', alignItems:'center', justifyContent:'space-between', gap:16, flexWrap:'wrap'},
@@ -52,4 +58,4 @@ const styles = StyleSheet.create({
  footer: {flexDirection:'row', alignItems:'center', justifyContent:'center', paddingHorizontal:12, paddingVertical:13, gap:7},
  dot: {width:5, height:5, borderRadius:3, backgroundColor:colors.primary},
  footerText: {...typography.caption, lineHeight:17, color:colors.secondaryForeground, flexShrink:1},
-});
+}));

@@ -1,3 +1,6 @@
+import type { Colors } from "@/theme/tokens";
+import { useMemo as useThemeMemo } from "react";
+import { useTheme } from "@/theme/useTheme";
 import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { Pressable, Text, View } from "react-native";
@@ -9,14 +12,14 @@ import {
   statusTone,
   type BillListItem,
 } from "@/lib/bills-data";
-import { colors, radii, spacing } from "@/theme/tokens";
+import { radii, spacing } from "@/theme/tokens";
 
-const toneColors: Record<string, { fg: string; bg: string }> = {
+const makeToneColors = (colors: Colors): Record<string, { fg: string; bg: string }> => ({
   critical: { fg: colors.criticalForeground, bg: colors.criticalBg },
   warning: { fg: colors.warningForeground, bg: colors.warningBg },
   info: { fg: colors.infoForeground, bg: colors.infoBg },
   success: { fg: colors.successForeground, bg: colors.successBg },
-};
+});
 
 function categoryIcon(category: string): keyof typeof Feather.glyphMap {
   const value = category.toLowerCase();
@@ -33,6 +36,9 @@ type BillListRowProps = {
 };
 
 export function BillListRow({ bill, onPress }: BillListRowProps) {
+  const { colors, premium } = useTheme();
+  const toneColors = useThemeMemo(() => makeToneColors(colors), [colors, premium]);
+
   const tone = toneColors[statusTone(bill.status)];
 
   return (

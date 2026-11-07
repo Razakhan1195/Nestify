@@ -1,3 +1,5 @@
+import { useMemo as useThemeMemo } from "react";
+import { useTheme } from "@/theme/useTheme";
 import {useEffect,useRef,useState} from "react";
 import {useLocalSearchParams,useRouter} from "expo-router";
 import {Text,View} from "react-native";
@@ -8,7 +10,7 @@ import {Button} from "@/components/Button";
 import {TextField} from "@/components/TextField";
 import {QuietAction} from "@/components/Brief";
 import {Surface} from "@/components/ui/Surface";
-import {SharedFrame,SharedLoading,SharedNotice,sharedStyles as s} from "@/components/SharedExpenseUI";
+import {SharedFrame,SharedLoading,SharedNotice,getSharedStyles} from "@/components/SharedExpenseUI";
 import {acceptExpenseGroup,fetchGroupInvitation,type GroupInvitation} from "@/lib/expense-groups";
 import {clearIncomingGroupInvite,groupInviteCode,readIncomingGroupInvite,saveIncomingGroupInvite} from "@/lib/expense-group-invites";
 import {ApiError} from "@/lib/api";
@@ -20,6 +22,9 @@ export default function JoinGroup(){
  return <AccountJoin key={session?.user.id??"signed-out"} userId={session?.user.id} email={session?.user.email} incoming={typeof code==="string"?code:undefined}/>;
 }
 function AccountJoin({userId,email,incoming}:{userId?:string;email?:string;incoming?:string}){
+ const { colors, premium } = useTheme();
+ const s = useThemeMemo(() => getSharedStyles(colors), [colors, premium]);
+
  const router=useRouter(),account=useAccountSwitch(),alive=useRef(true),lock=useRef(false);
  const [input,setInput]=useState(incoming??""),[selected,setSelected]=useState<string|null>(null),[previewResult,setPreviewResult]=useState<{key:string;value:GroupInvitation|null;error:string|null}|null>(null);
  const [initializing,setInitializing]=useState(true),[saving,setSaving]=useState(false),[error,setError]=useState<string|null>(null),[attempt,setAttempt]=useState(0);

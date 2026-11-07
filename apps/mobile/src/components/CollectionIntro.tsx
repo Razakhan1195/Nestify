@@ -1,6 +1,7 @@
+import { useTheme } from "@/theme/useTheme";
 import { Feather } from "@expo/vector-icons";
 import { Image, Pressable, Text, View, useWindowDimensions } from "react-native";
-import { colors, editorialType, typography } from "@/theme/tokens";
+import { editorialType, typography } from "@/theme/tokens";
 
 /* Static imports keep artwork bundled and available offline. */
 /* eslint-disable @typescript-eslint/no-require-imports */
@@ -20,6 +21,8 @@ export function CollectionIntro({ section, spacious = false, compact = false, ac
   section: CollectionSection; spacious?: boolean; compact?: boolean; actionLabel: string; onPress: () => void;
   disabled?: boolean; title?: string; detail?: string; eyebrow?: string;
 }) {
+  const { colors } = useTheme();
+
   const item = sections[section], { fontScale } = useWindowDimensions();
   const stacked = spacious || fontScale > 1.3;
   // Returning customers need the action, not the introductory artwork again.

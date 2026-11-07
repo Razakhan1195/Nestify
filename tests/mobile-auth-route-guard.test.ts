@@ -13,6 +13,7 @@ function load(route:string){
  const placeholder:()=>null=new Proxy(()=>null,{get:()=>placeholder});
  const exports:{default?:()=>Rendered}={};
  function requireMock(name:string){
+    if(name === "@/theme/useTheme") return {useTheme:()=>({colors:{}})};
   if(name==='react/jsx-runtime')return {jsx:(type:unknown,props:unknown)=>({type,props}),jsxs:(type:unknown,props:unknown)=>({type,props})};
   if(name==='react')return {useRef:(value:unknown)=>({current:value}),useState:(value:unknown)=>[value,()=>{}],useEffect:()=>{}};
   if(name==='expo-router')return {Redirect:'Redirect',useRouter:()=>({}),useNavigation:()=>({})};

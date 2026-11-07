@@ -1,7 +1,8 @@
+import { useTheme } from "@/theme/useTheme";
 import * as Haptics from "expo-haptics";
 import { ActivityIndicator, Keyboard, Pressable, Text, type GestureResponderEvent } from "react-native";
 
-import { colors, radii, typography } from "@/theme/tokens";
+import { radii, typography } from "@/theme/tokens";
 
 type ButtonVariant = "primary" | "secondary";
 
@@ -20,6 +21,8 @@ export function Button({
   disabled,
   loading,
 }: ButtonProps) {
+  const { colors } = useTheme();
+
   const isPrimary = variant === "primary";
   const isDisabled = Boolean(disabled || loading);
 

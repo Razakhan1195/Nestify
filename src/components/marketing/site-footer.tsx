@@ -37,6 +37,7 @@ export function SiteFooter() {
           >
             Sign in
           </Link>
+          <Link className="transition-colors hover:text-foreground" href="/roadmap">Roadmap</Link>
           {support && /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(support) ? (
             <a href={`mailto:${support}`}>Contact</a>
           ) : null}

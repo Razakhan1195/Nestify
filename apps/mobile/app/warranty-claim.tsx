@@ -1,3 +1,4 @@
+import { useTheme } from "@/theme/useTheme";
 import {useEffect,useRef,useState} from "react";
 import {ActivityIndicator,Alert,Pressable,Share,Text,View} from "react-native";
 import {SafeAreaView} from "react-native-safe-area-context";
@@ -12,18 +13,22 @@ import {TextField} from "@/components/TextField";
 import {Button} from "@/components/Button";
 import {apiGet,apiPost,ApiError} from "@/lib/api";
 import {manualWarrantyDraft,type ClaimReceipt} from "@/lib/warranty-claim";
-import {colors,spacing,typography} from "@/theme/tokens";
+import { spacing, typography } from "@/theme/tokens";
 type Entry={id:string;kind:"document"|"item";title:string;detail:string};
 type Cursor={time:string;id:string;kind:"document"|"item"};
 type Page={rows:Entry[];nextCursor:Cursor|null;needsOnboarding?:boolean};
 const endpoint="/api/mobile/v1/warranty-claims";
 export default function WarrantyClaimScreen(){
+  const { colors } = useTheme();
+
  const {session,isLoading}=useAuth();
  if(isLoading)return <ActivityIndicator color={colors.primary}/>;
  if(!session)return <Redirect href="/(auth)/login"/>;
  return <ClaimForm key={session.user.id} userId={session.user.id}/>;
 }
 function ClaimForm({userId}:{userId:string}){
+  const { colors } = useTheme();
+
  const router=useRouter(),navigation=useNavigation();
  const [item,setItem]=useState(""),[issue,setIssue]=useState(""),[query,setQuery]=useState("");
  const [rows,setRows]=useState<Entry[]>([]),[cursor,setCursor]=useState<Cursor|null>(null),[selected,setSelected]=useState<Entry[]>([]);

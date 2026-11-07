@@ -1,3 +1,4 @@
+import { useTheme } from "@/theme/useTheme";
 import { StatementBarChart } from "./StatementBarChart";
 import { ElectricityPlanComparison } from "./utility/ElectricityPlanComparison";
 import {EnergyEvidenceReview} from "./EnergyEvidenceReview";
@@ -12,7 +13,7 @@ import { buildSavedBillStory, accountServiceLabel } from "@/lib/saved-bill-story
 import { isTelecomCategory } from "@/lib/bill-review";
 import { historyDate, type HistoryAccount, type HistoryBill } from "@/lib/manual-history-insights";
 import { moneyCents } from "@/lib/statement-evidence";
-import { colors, layout, radii, spacing, typography } from "@/theme/tokens";
+import { layout, radii, spacing, typography } from "@/theme/tokens";
 
 const number = (value: number) => new Intl.NumberFormat("en-CA", { maximumFractionDigits: 2 }).format(value);
 function money(cents: number | null, currency: string) {
@@ -27,6 +28,8 @@ function changeText(value: number | null) {
   return value === null ? "No percentage baseline" : Math.abs(value) < 0.05 ? "About the same" : number(Math.abs(value)) + "% " + (value > 0 ? "higher" : "lower");
 }
 function Detail({ label, value }: { label: string; value: string }) {
+  const { colors } = useTheme();
+
   const { width, fontScale } = useWindowDimensions();
   const stacked = width < 350 || fontScale > 1.3;
   return <View style={{ flexDirection: stacked ? "column" : "row", justifyContent: "space-between", gap: spacing.xs, paddingVertical: spacing.sm }}>
@@ -35,12 +38,16 @@ function Detail({ label, value }: { label: string; value: string }) {
   </View>;
 }
 function Disclosure({ title, open, onPress }: { title: string; open: boolean; onPress: () => void }) {
+  const { colors } = useTheme();
+
   return <Pressable accessibilityRole="button" accessibilityState={{ expanded: open }} onPress={onPress} style={{ minHeight: layout.touchMin, flexDirection: "row", alignItems: "center", gap: spacing.sm }}>
     <Text style={[typography.body, { fontWeight: "600", color: colors.primary, flex: 1 }]}>{title}</Text>
     <Feather name={open ? "chevron-up" : "chevron-down"} size={18} color={colors.primary} />
   </Pressable>;
 }
 function SavedHistory({ story, currency, onOpen }: { story: ReturnType<typeof buildSavedBillStory>; currency: string; onOpen: (id: string) => void }) {
+  const { colors } = useTheme();
+
   const [metric, setMetric] = useState<"charges" | "usage">("charges");
   const [details, setDetails] = useState(false);
   const { points, unit, excluded, older, missingUsage, gapDays } = story.history;
@@ -70,6 +77,8 @@ function SavedHistory({ story, currency, onOpen }: { story: ReturnType<typeof bu
 export function SavedBillInsights({ account, complete, today, onOpen, onDetails, onAdd, onTrack, showIdentity = true }: {
   account: HistoryAccount; complete: boolean; today: string; onOpen: (id: string) => void; onDetails: (id: string, readOriginal?: boolean) => void; onAdd: (bill?: HistoryBill) => void; onTrack?: (id: string) => void; showIdentity?: boolean;
 }) {
+  const { colors } = useTheme();
+
   const [historyOpen, setHistoryOpen] = useState(false);
   const [breakdown, setBreakdown] = useState(false), [changeDetails, setChangeDetails] = useState(false), [limit, setLimit] = useState(4);
   const [opening, setOpening] = useState(false), [originalError, setOriginalError] = useState(false);

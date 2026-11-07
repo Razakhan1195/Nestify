@@ -1,3 +1,4 @@
+import { useTheme } from "@/theme/useTheme";
 import { useTabScrollTop } from "@/lib/use-tab-scroll-top";
 import { approvePhoneInvitation, openPhoneInvitation } from "@/lib/phone-invites";
 import {ScreenNavigation} from "@/components/ScreenNavigation";
@@ -12,13 +13,15 @@ import { BriefRow, QuietAction } from "@/components/Brief";
 import { Surface } from "@/components/ui/Surface";
 import { ApiError } from "@/lib/api";
 import { fetchHousehold, removeHouseholdPerson, type HouseholdMember, type HouseholdPayload } from "@/lib/household-data";
-import { colors, layout, radii, spacing, typography } from "@/theme/tokens";
+import { layout, radii, spacing, typography } from "@/theme/tokens";
 
 function initials(name: string) {
   return name.split(/\s+/).slice(0, 2).map((part) => part[0]?.toUpperCase()).join("") || "?";
 }
 
 function MemberRow({ member, onRemove, canManage }: { member: HouseholdMember; onRemove: (member: HouseholdMember) => void; canManage: boolean }) {
+  const { colors } = useTheme();
+
   const owner = member.role === "owner";
   return (
     <View style={{ flexDirection: "row", alignItems: "center", gap: spacing.md, paddingVertical: spacing.md }}>
@@ -51,6 +54,8 @@ function MemberRow({ member, onRemove, canManage }: { member: HouseholdMember; o
 }
 
 export default function HouseholdScreen({ embedded = false }: { embedded?: boolean }) {
+  const { colors } = useTheme();
+
   const router = useRouter();
   const scroll = useRef<ScrollView>(null);
   useTabScrollTop("household", scroll, embedded);

@@ -1,10 +1,13 @@
+import { useTheme } from "@/theme/useTheme";
 import { useEffect, useState } from "react";
 import { AccessibilityInfo, Animated, Easing, View } from "react-native";
-import { colors } from "@/theme/tokens";
+
 // eslint-disable-next-line @typescript-eslint/no-require-imports -- Metro bundles native image assets through static require.
 const brandMark = require("../../assets/brand-mark.png");
 
 export function RezleeLoading({ compact = false }: { compact?: boolean }) {
+  const { colors, mode } = useTheme();
+
   const [breath] = useState(() => new Animated.Value(0));
   const [reduced, setReduced] = useState(true);
   useEffect(() => {
@@ -27,6 +30,7 @@ export function RezleeLoading({ compact = false }: { compact?: boolean }) {
     style={{ alignItems: "center", justifyContent: "center", ...(compact ? {} : { flex: 1, alignSelf: "stretch", width: "100%", backgroundColor: colors.background }) }}>
     <Animated.Image source={brandMark} resizeMode="contain" style={{
       width: compact ? 32 : 76, height: compact ? 32 : 76,
+      tintColor: mode === "dark" ? colors.primary : undefined,
       opacity: breath.interpolate({ inputRange: [0, 1], outputRange: [1, 0.8] }),
       transform: [{ scale: breath.interpolate({ inputRange: [0, 1], outputRange: [1, 1.035] }) }],
     }}/>

@@ -1,10 +1,13 @@
+import { useTheme } from "@/theme/useTheme";
 import { Text, View } from "react-native";
 import { Surface } from "@/components/ui/Surface";
 import { StatementBarChart } from "@/components/StatementBarChart";
 import { formatDueDate, type UtilityInsight } from "@/lib/bills-data";
-import { colors, spacing, typography } from "@/theme/tokens";
+import { spacing, typography } from "@/theme/tokens";
 
 export function UtilityCostChart({ insight, onOpenStatement }: { insight: UtilityInsight; onOpenStatement: (id: string) => void }) {
+  const { colors } = useTheme();
+
  const points = insight.history.filter(point => typeof point.amount === "number" && Number.isFinite(point.amount));
  if (!points.length) return null;
  const currency = insight.currency ?? "CAD";

@@ -1,3 +1,4 @@
+import { useTheme } from "@/theme/useTheme";
 import { TelecomBillInsights } from "./TelecomBillInsights";
 import { SavedBillInsights } from "./SavedBillInsights";
 import {analyzeManualHistory,manualHistoryAccounts,historyIssueCopy} from "@/lib/manual-history-insights";
@@ -12,9 +13,11 @@ import {selectedInsightAccount} from "@/lib/collection-navigation";
 import type {BillsPayload} from "@/lib/bills-data";
 import {localDay} from "@/lib/home-start";
 import {explainStatement} from "@/lib/statement-evidence";
-import {colors,typography} from "@/theme/tokens";
+import { typography } from "@/theme/tokens";
 
 export function BillInsights({bills,fresh}:{bills:Exclude<BillsPayload,{needsOnboarding:true}>;fresh:boolean}){
+  const { colors } = useTheme();
+
  const router=useRouter(),accounts=billAccountOverview(bills,localDay(),fresh);
  const [selected,setSelected]=useState<string|null>(()=>accounts[0]?.key??null);
  const account=selectedInsightAccount(accounts,selected);

@@ -1,3 +1,4 @@
+import { useTheme } from "@/theme/useTheme";
 import { FormScrollView } from "@/components/FormScrollView";
 import {ProviderBrand} from "@/components/ProviderBrand";
 import { TelecomImportProgress } from "@/components/TelecomImportProgress";
@@ -24,7 +25,7 @@ import {
   type ProviderInteraction,
   type ProviderInteractionField,
 } from "@/lib/provider-data";
-import { colors, layout, radii, spacing, typography } from "@/theme/tokens";
+import { layout, radii, spacing, typography } from "@/theme/tokens";
 import { safeBack } from "@/lib/navigation";
 import { EzgbConnectionPanel } from "@/components/utility/EzgbConnectionPanel";
 
@@ -266,6 +267,8 @@ function ProgressRow({
   detail: string;
   state: ProgressState;
 }) {
+  const { colors } = useTheme();
+
   return (
     <View style={{ flexDirection: "row", gap: spacing.md, alignItems: "flex-start" }}>
       <View
@@ -314,6 +317,8 @@ function ProgressRow({
 }
 
 export default function ProviderDetailScreen() {
+  const { colors } = useTheme();
+
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const [provider, setProvider] = useState<ProviderConnectionItem | null>(null);

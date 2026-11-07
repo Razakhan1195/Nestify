@@ -1,3 +1,4 @@
+import { useTheme } from "@/theme/useTheme";
 import { useRef, useState } from "react";
 import { Feather } from "@expo/vector-icons";
 import { ScrollView, Text, View } from "react-native";
@@ -7,9 +8,11 @@ import { Button } from "./Button";
 import { CleaningArtwork } from "./CleaningUI";
 import type { Membership } from "@/lib/membership-types";
 import { proWelcomeCopy } from "@/lib/membership-welcome";
-import { colors, editorialType, typography } from "@/theme/tokens";
+import { editorialType, typography } from "@/theme/tokens";
 
 export function ProWelcomeContent({membership}:{membership:Membership}) {
+  const { colors } = useTheme();
+
  const copy=proWelcomeCopy(membership);
  return <>        <CleaningArtwork height={170} />
         <View style={{ gap: 9 }}>
@@ -34,6 +37,8 @@ export function ProWelcome({membership,visible,onClose,onPostpone}:{membership:M
  return visible?<PresentedProWelcome membership={membership} onClose={onClose} onPostpone={onPostpone}/>:null;
 }
 function PresentedProWelcome({membership,onClose,onPostpone}:{membership:Membership;onClose:()=>void;onPostpone:()=>void}) {
+  const { colors } = useTheme();
+
  const shown=useRef(false),[ready,setReady]=useState(false);
  return <Modal visible={true} animationType="slide" presentationStyle="fullScreen"
   onShow={()=>{shown.current=true;setReady(true);}}

@@ -1,3 +1,4 @@
+import { useTheme } from "@/theme/useTheme";
 import { useState } from "react";
 import { Linking, Pressable, Text, useWindowDimensions, View } from "react-native";
 import { Feather } from "@expo/vector-icons";
@@ -11,9 +12,11 @@ import { StatementBarChart } from "./StatementBarChart";
 import { apiGet, ApiError } from "@/lib/api";
 import { formatDueDate } from "@/lib/bills-data";
 import { analyzeTelecom, telecomBreakdown, telecomMoney, type TelecomInsightBill } from "@/lib/telecom-insights";
-import { colors, spacing, typography } from "@/theme/tokens";
+import { spacing, typography } from "@/theme/tokens";
 
 function ChargeRow({label,value,strong=false}:{label:string;value:string;strong?:boolean}) {
+  const { colors } = useTheme();
+
  const {width,fontScale} = useWindowDimensions(), stack=width<350||fontScale>1.3;
  return <View style={{flexDirection:stack?"column":"row",gap:6,justifyContent:"space-between",paddingVertical:6}}>
   <Text style={[typography.body,{flex:stack?undefined:1,color:colors.foreground,fontWeight:strong?"600":"400"}]}>{label}</Text>
@@ -21,9 +24,13 @@ function ChargeRow({label,value,strong=false}:{label:string;value:string;strong?
  </View>;
 }
 function Heading({children}:{children:string}) {
+  const { colors } = useTheme();
+
  return <Text accessibilityRole="header" style={[typography.section,{color:colors.foreground}]}>{children}</Text>;
 }
 export function TelecomStatementBreakdown({bill}:{bill:TelecomInsightBill}) {
+  const { colors } = useTheme();
+
  const [expanded,setExpanded]=useState(false), breakdown=telecomBreakdown(bill);
  const money=(n:number)=>telecomMoney(n,bill.currency), details=bill.telecomDetails;
  return <View style={{gap:8}}>
@@ -50,6 +57,8 @@ export function TelecomStatementBreakdown({bill}:{bill:TelecomInsightBill}) {
 }
 
 export function TelecomBillInsights({bills,billId,today,complete,onOpen,showIdentity=true}:{bills:TelecomInsightBill[];billId:string;today:string;complete:boolean;onOpen:(id:string)=>void;showIdentity?:boolean}) {
+  const { colors } = useTheme();
+
  const router=useRouter(),story=analyzeTelecom(bills,billId,today,complete),latest=story.latest;
  const [detailsOpen,setDetailsOpen]=useState(false),[opening,setOpening]=useState(false),[error,setError]=useState<string|null>(null);
  if(!latest) return <Text style={[typography.body,{color:colors.mutedForeground}]}>This account’s saved statement is unavailable. Return to Bills to choose an account.</Text>;

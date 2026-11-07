@@ -1,3 +1,4 @@
+import { useTheme } from "@/theme/useTheme";
 import { safeBack } from "@/lib/navigation";
 import { FormScrollView } from "@/components/FormScrollView";
 import { useAuth } from "@/auth/AuthProvider";
@@ -9,9 +10,11 @@ import { passwordRecovery } from "@/auth/recovery-client";
 import { Button } from "@/components/Button";
 import { ScreenNavigation } from "@/components/ScreenNavigation";
 import { TextField } from "@/components/TextField";
-import { colors, spacing, typography } from "@/theme/tokens";
+import { spacing, typography } from "@/theme/tokens";
 
 export default function ForgotPasswordScreen() {
+  const { colors } = useTheme();
+
   const router = useRouter();
   const { session } = useAuth();
   const params = useLocalSearchParams<{ email?: string }>();

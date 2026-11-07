@@ -1,8 +1,9 @@
+import { useTheme } from "@/theme/useTheme";
 import { Feather } from "@expo/vector-icons";
 import { Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-import { colors, spacing, typography } from "@/theme/tokens";
+import { spacing, typography } from "@/theme/tokens";
 
 type ComingSoonScreenProps = {
   title: string;
@@ -17,6 +18,8 @@ export function ComingSoonScreen({
   icon,
   note,
 }: ComingSoonScreenProps) {
+  const { colors } = useTheme();
+
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
       <View style={{ padding: spacing["2xl"], gap: spacing.sm }}>

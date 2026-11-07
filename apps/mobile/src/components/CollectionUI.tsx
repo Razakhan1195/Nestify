@@ -1,11 +1,14 @@
+import { useTheme } from "@/theme/useTheme";
 import { useRef, useState } from "react";
 import { Feather } from "@expo/vector-icons";
 import { ActivityIndicator, Pressable, ScrollView, Text, TextInput, View } from "react-native";
 import { SafeAreaModal as Modal } from "@/components/SafeAreaModal";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { colors, editorialType, layout, radii, spacing, typography } from "@/theme/tokens";
+import { editorialType, layout, radii, spacing, typography } from "@/theme/tokens";
 
 export function CollectionToolbar({ title, description, label, onAdd }: { title?:string; description: string; label?: string; onAdd?: () => void }) {
+  const { colors } = useTheme();
+
  return <View style={{gap:spacing.sm}}>
   <View style={{flexDirection:"row",alignItems:"center",gap:spacing.md}}>
    {title?<Text accessibilityRole="header" style={[editorialType,{fontSize:34,lineHeight:41,color:colors.foreground,flex:1}]}>{title}</Text>:<Text style={[typography.body,{color:colors.mutedForeground,flex:1}]}>{description}</Text>}
@@ -19,6 +22,8 @@ export function CollectionToolbar({ title, description, label, onAdd }: { title?
 
 type AddChoice = { key: string; title: string; detail: string; icon: keyof typeof Feather.glyphMap; onPress: () => void };
 export function CollectionAddSheet({ title, visible, onClose, choices }: { title: string; visible: boolean; onClose: () => void; choices: AddChoice[] }) {
+  const { colors } = useTheme();
+
  return <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
   <View style={{flex:1,justifyContent:"flex-end",backgroundColor:"rgba(0,0,0,0.3)"}}>
    <Pressable accessibilityRole="button" accessibilityLabel="Close add menu" onPress={onClose} style={{flex:1}}/>
@@ -40,11 +45,13 @@ export function CollectionAddSheet({ title, visible, onClose, choices }: { title
 }
 
 export function CollectionSearch({value,onChangeText,placeholder,label}:{value:string;onChangeText:(value:string)=>void;placeholder:string;label:string}) {
+  const { colors , mode: useThemeMode } = useTheme();
+
  const input=useRef<TextInput>(null);
  const [focused,setFocused]=useState(false);
  return <View style={{flexDirection:"row",alignItems:"center",gap:10,paddingLeft:14,paddingRight:4,borderWidth:1,borderColor:focused?colors.primary:colors.border,borderRadius:radii.lg,backgroundColor:colors.surfaceRaised}}>
   <Feather accessible={false} name="search" size={18} color={colors.mutedForeground}/>
-  <TextInput ref={input} autoCapitalize="none" autoCorrect={false} returnKeyType="search" onFocus={()=>setFocused(true)} onBlur={()=>setFocused(false)} accessibilityLabel={label} placeholder={placeholder} placeholderTextColor={colors.mutedForeground} value={value} onChangeText={onChangeText} style={[typography.body,{flex:1,minHeight:48,paddingVertical:12,color:colors.foreground}]}/>
+  <TextInput keyboardAppearance={useThemeMode} selectionColor={colors.primary} ref={input} autoCapitalize="none" autoCorrect={false} returnKeyType="search" onFocus={()=>setFocused(true)} onBlur={()=>setFocused(false)} accessibilityLabel={label} placeholder={placeholder} placeholderTextColor={colors.mutedForeground} value={value} onChangeText={onChangeText} style={[typography.body,{flex:1,minHeight:48,paddingVertical:12,color:colors.foreground}]}/>
   {value?<Pressable accessibilityRole="button" accessibilityLabel="Clear search" onPress={()=>{onChangeText("");input.current?.focus();}} style={{width:44,minHeight:44,alignItems:"center",justifyContent:"center"}}><Feather accessible={false} name="x" size={18} color={colors.mutedForeground}/></Pressable>:<View style={{width:10}}/>}
  </View>;
 }
@@ -53,6 +60,8 @@ export function CollectionSearch({value,onChangeText,placeholder,label}:{value:s
 /** Keep the collection identifiable while its first request is pending.
  * Static placeholders avoid shimmer and honour reduced-motion preferences. */
 export function CollectionLoading({ title, description, label }: { title: string; description: string; label: string }) {
+  const { colors } = useTheme();
+
  return <View style={{paddingHorizontal:layout.screenHorizontal,paddingTop:layout.screenTop,gap:layout.sectionGap}}>
   <CollectionToolbar title={title} description={description}/>
   <View accessible accessibilityLabel={label} accessibilityState={{busy:true}} style={{flexDirection:"row",alignItems:"center",gap:10}}>

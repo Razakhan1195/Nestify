@@ -1,3 +1,4 @@
+import { useTheme } from "@/theme/useTheme";
 import { FormScrollView } from "@/components/FormScrollView";
 import {JourneyHeading,JourneyPanel,JourneyEntry,JourneyDisclosure} from "@/components/JourneyUI";
 import {useCallback,useEffect,useRef,useState} from "react";
@@ -14,16 +15,24 @@ import {apiGet,ApiError} from "@/lib/api";
 import {pendingPurchase,clearPendingPurchase,savePurchase,type PurchaseIntent} from "@/lib/purchase-data";
 import {emptyPurchase,purchaseKinds,compatibilitySummary,replacementComparison,purchaseMoney,type PurchaseKind,type PurchaseDraft,type PurchaseIndex,type PurchaseSource,type PurchaseRow} from "@/lib/purchase-decision";
 import {QuoteComparison} from "@/components/QuoteComparison";
-import {colors,spacing,typography} from "@/theme/tokens";
-const Copy=({children}:{children:React.ReactNode})=><Text style={[typography.body,{color:colors.mutedForeground}]}>{children}</Text>;
-const Heading=({children}:{children:React.ReactNode})=><Text accessibilityRole="header" style={[typography.section,{color:colors.foreground}]}>{children}</Text>;
-function Check({label,value,onChange,disabled}:{label:string;value:boolean;onChange:()=>void;disabled:boolean}){return <Pressable accessibilityRole="checkbox" accessibilityLabel={label} accessibilityState={{checked:value,disabled}} onPress={onChange} disabled={disabled} style={{minHeight:48,padding:14,borderRadius:14,borderWidth:1,borderColor:value?colors.primary:colors.border,backgroundColor:value?colors.surfaceSubtle:colors.surface,flexDirection:"row",gap:10,opacity:disabled?0.5:1}}><Text accessible={false} style={{color:colors.primary}}>{value?"✓":"○"}</Text><Text style={[typography.body,{color:colors.foreground,flex:1}]}>{label}</Text></Pressable>;}
+import { spacing, typography } from "@/theme/tokens";
+const Copy=({children}:{children:React.ReactNode})=>{
+  const { colors } = useTheme();
+return (<Text style={[typography.body,{color:colors.mutedForeground}]}>{children}</Text>); };
+const Heading=({children}:{children:React.ReactNode})=>{
+  const { colors } = useTheme();
+return (<Text accessibilityRole="header" style={[typography.section,{color:colors.foreground}]}>{children}</Text>); };
+function Check({label,value,onChange,disabled}:{label:string;value:boolean;onChange:()=>void;disabled:boolean}){
+  const { colors } = useTheme();
+return <Pressable accessibilityRole="checkbox" accessibilityLabel={label} accessibilityState={{checked:value,disabled}} onPress={onChange} disabled={disabled} style={{minHeight:48,padding:14,borderRadius:14,borderWidth:1,borderColor:value?colors.primary:colors.border,backgroundColor:value?colors.surfaceSubtle:colors.surface,flexDirection:"row",gap:10,opacity:disabled?0.5:1}}><Text accessible={false} style={{color:colors.primary}}>{value?"✓":"○"}</Text><Text style={[typography.body,{color:colors.foreground,flex:1}]}>{label}</Text></Pressable>;}
 const decisionIntros:Record<PurchaseKind,{title:string;detail:string;icon:"layers"|"check-circle"|"tool"}>={
  compare:{title:"A clearer choice between quotes.",detail:"Two estimates for a repair or home project? Check parts, labour, exclusions and warranty, then keep the questions you want answered.",icon:"layers"},
  compatibility:{title:"Check the fit before you buy.",detail:"Match exact models and requirements against the references you have.",icon:"check-circle"},
  replace:{title:"Repair it, or start fresh?",detail:"Put the complete costs, condition and coverage beside each other.",icon:"tool"},
 };
 export default function PurchaseDecision(){
+  const { colors } = useTheme();
+
  const params=useLocalSearchParams<{id?:string;kind?:string}>(),router=useRouter(),navigation=useNavigation();
  const routeId=typeof params.id==="string"?params.id:null;
  const kind=typeof params.kind==="string"&&params.kind in purchaseKinds?params.kind as PurchaseKind:null;

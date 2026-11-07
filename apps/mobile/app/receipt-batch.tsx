@@ -1,3 +1,4 @@
+import { useTheme } from "@/theme/useTheme";
 import { FormScrollView } from "@/components/FormScrollView";
 import {JourneyHeading} from "@/components/JourneyUI";
 import {CollectionAddSheet} from "@/components/CollectionUI";
@@ -22,12 +23,14 @@ import {Button} from "@/components/Button";
 import {TextField} from "@/components/TextField";
 import {DateField} from "@/components/DateField";
 import {QuietAction,BriefRow} from "@/components/Brief";
-import {colors,spacing,typography} from "@/theme/tokens";
+import { spacing, typography } from "@/theme/tokens";
 const endpoint="/api/mobile/v1/vault/records";
 type FilePart=Pick<DocumentPicker.DocumentPickerAsset,"uri"|"name"|"mimeType"|"size">;
 const empty:ReceiptFields={title:"",category:"Receipt",issued_on:"",expires_on:"",notes:""};
 export default function ReceiptBatchScreen(){const {session}=useAuth();return <Batch key={session?.user.id??"out"} userId={session?.user.id}/>;}
 function Batch({userId}:{userId?:string}){
+  const { colors } = useTheme();
+
  const router=useRouter(),navigation=useNavigation();
  const [batch,setBatch]=useState<ReceiptBatch|null>(null),current=useRef<ReceiptBatch|null>(null);
  const [home,setHome]=useState<{id:string;name:string}|null>(null),[available,setAvailable]=useState(false),[ai,setAi]=useState(false);

@@ -1,9 +1,10 @@
+import { useTheme } from "@/theme/useTheme";
 import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { Pressable, Text, View } from "react-native";
 
 import type { UpcomingItem } from "@/lib/home-data";
-import { colors, radii, spacing, typography } from "@/theme/tokens";
+import { radii, spacing, typography } from "@/theme/tokens";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 
 type Props = { items: UpcomingItem[]; onItemPress: (item: UpcomingItem) => void };
@@ -24,6 +25,8 @@ function dateBadge(value: string) {
 }
 
 export function HomeNextUp({ items, onItemPress }: Props) {
+  const { colors } = useTheme();
+
   const visibleItems = items.slice(0, 4);
   if (!visibleItems.length) return null;
   return (

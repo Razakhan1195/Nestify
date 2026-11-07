@@ -1,3 +1,4 @@
+import { useTheme } from "@/theme/useTheme";
 import { ConnectionElapsed } from "@/components/ConnectionElapsed";
 import { UtilityAttemptRemoval } from "@/components/UtilityAttemptRemoval";
 import { ezgbSystemBrowserAvailable, startEzgbBrowser, canResumeEzgbBrowserConnection, resumeEzgbBrowserConnection, checkEzgbExistingConnection } from "@/lib/ezgb-browser";
@@ -34,7 +35,7 @@ import {
   type EzgbAuthorizationPayload,
   type EzgbSyncPayload,
 } from "@/lib/ezgb-data";
-import { colors, layout, spacing, typography } from "@/theme/tokens";
+import { layout, spacing, typography } from "@/theme/tokens";
 import { safeBack } from "@/lib/navigation";
 
 type Stage =
@@ -61,6 +62,8 @@ export default function EzgbConnectionScreen() {
   return <EzgbConnectionFlow key={JSON.stringify([session?.user.id, resume, utilityName, job, returnHome])}/>;
 }
 function EzgbConnectionFlow() {
+  const { colors } = useTheme();
+
   const router = useRouter();
   const { resume, utilityName, job, returnHome } = useLocalSearchParams<{ resume?: string; utilityName?: string; job?: string; returnHome?: string }>();
   const [authorization, setAuthorization] =

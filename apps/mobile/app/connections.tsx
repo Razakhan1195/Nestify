@@ -1,3 +1,4 @@
+import { useTheme } from "@/theme/useTheme";
 import { useCallback, useRef, useState } from "react";
 import { Redirect, useFocusEffect, useRouter } from "expo-router";
 import { ActivityIndicator, RefreshControl, ScrollView, Text, View } from "react-native";
@@ -8,7 +9,7 @@ import { SettingsRow, SettingsSection } from "@/components/SettingsUI";
 import { ReadNotice } from "@/components/Brief";
 import { Button } from "@/components/Button";
 import { fetchAccountConnections, type AccountConnections } from "@/lib/account-connections";
-import { colors, editorialType, typography } from "@/theme/tokens";
+import { editorialType, typography } from "@/theme/tokens";
 export default function ConnectionsScreen() {
   const { session, isLoading } = useAuth();
   if (isLoading) return <ActivityIndicator />;
@@ -16,6 +17,8 @@ export default function ConnectionsScreen() {
   return <ConnectionsContent key={session.user.id} userId={session.user.id} />;
 }
 function ConnectionsContent({ userId }: { userId: string }) {
+  const { colors } = useTheme();
+
   const { session } = useAuth(), router = useRouter();
   const [data, setData] = useState<AccountConnections | null>(null), [error, setError] = useState(false), [loading, setLoading] = useState(true);
   const request = useRef(0);

@@ -1,3 +1,4 @@
+import { useTheme } from "@/theme/useTheme";
 import { FormScrollView } from "@/components/FormScrollView";
 import { useAuth } from "@/auth/AuthProvider";
 import { ConnectionIntroduction } from "@/components/ConnectionIntroduction";
@@ -25,7 +26,7 @@ import {
   providerCategories,
   type ProviderCatalogItem,
 } from "@/lib/provider-data";
-import { colors, layout, radii, spacing, typography } from "@/theme/tokens";
+import { layout, radii, spacing, typography } from "@/theme/tokens";
 import { safeBack } from "@/lib/navigation";
 
 function selectedTelecom(catalog: ProviderCatalogItem[],id:string|null) { return catalog.some(item=>item.id===id&&item.telecomHistory); }
@@ -47,6 +48,8 @@ export default function DeckProviderScreen() {
   return <DeckProviderFlow key={JSON.stringify([session?.user.id, providerId, registryProviderId])}/>;
 }
 function DeckProviderFlow() {
+  const { colors , mode: useThemeMode } = useTheme();
+
   const router = useRouter();
   const mounted=useRef(true);
   useEffect(()=>{mounted.current=true;return()=>{mounted.current=false;};},[]);
@@ -398,7 +401,7 @@ function DeckProviderFlow() {
                 }}
               >
                 <Feather name="search" size={17} color={colors.mutedForeground} />
-                <TextInput
+                <TextInput keyboardAppearance={useThemeMode} selectionColor={colors.primary}
                   value={providerSearch}
                   onChangeText={setProviderSearch}
                   placeholder="Search Bell, Rogers, Durham Water..."

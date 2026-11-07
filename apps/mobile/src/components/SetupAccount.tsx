@@ -1,5 +1,6 @@
+import { useTheme } from "@/theme/useTheme";
 import { Pressable, Text, View } from "react-native";
-import { colors, layout, spacing, typography } from "@/theme/tokens";
+import { layout, spacing, typography } from "@/theme/tokens";
 
 type Props = {
   email?: string;
@@ -10,6 +11,8 @@ type Props = {
 };
 
 export function SetupAccount({ email, busy, disabled = false, error, onSwitch }: Props) {
+  const { colors } = useTheme();
+
   return <View style={{ alignSelf: "stretch", gap: spacing.xs }}>
     <Text style={[typography.caption, { color: colors.mutedForeground }]}>Signed in{email ? " as" : " to Rezlee"}</Text>
     {email ? <Text selectable style={[typography.meta, { color: colors.foreground }]}>{email}</Text> : null}

@@ -1,6 +1,7 @@
+import { useTheme } from "@/theme/useTheme";
 import { Text, View } from "react-native";
 
-import { colors, spacing, typography } from "@/theme/tokens";
+import { spacing, typography } from "@/theme/tokens";
 
 type SectionHeaderProps = {
   title: string;
@@ -9,6 +10,8 @@ type SectionHeaderProps = {
 };
 
 export function SectionHeader({ title, eyebrow, detail }: SectionHeaderProps) {
+  const { colors } = useTheme();
+
   return (
     <View style={{ gap: spacing.xs }}>
       {eyebrow ? (

@@ -1,8 +1,11 @@
+import { useTheme } from "@/theme/useTheme";
 import { Text, View, useWindowDimensions } from "react-native";
 import { Button } from "./Button";
-import { colors, radii, spacing, typography } from "@/theme/tokens";
+import { radii, spacing, typography } from "@/theme/tokens";
 
 function SharedReceiptArt() {
+  const { colors } = useTheme();
+
   return <View accessible={false} importantForAccessibility="no-hide-descendants" style={{ width: 84, height: 88, justifyContent: "center", alignItems: "center" }}>
     <View style={{ width: 62, height: 76, borderRadius: 8, backgroundColor: colors.surfaceRaised, padding: 10, transform: [{ rotate: "8deg" }], gap: 7 }}>
       <View style={{ width: 26, height: 4, borderRadius: 2, backgroundColor: colors.primary }} />
@@ -14,6 +17,8 @@ function SharedReceiptArt() {
 }
 
 export function SharedStartCard({ ready, hasEntries, onAdd, compact = false }: { compact?: boolean; ready: boolean; hasEntries: boolean; onAdd: () => void }) {
+  const { colors } = useTheme();
+
   const { fontScale } = useWindowDimensions();
   return <View style={{ backgroundColor: colors.surfaceSubtle, padding: spacing.lg, borderRadius: radii.xl, gap: spacing.md }}>
     <View style={{ flexDirection: "row", alignItems: "center", gap: spacing.sm }}>

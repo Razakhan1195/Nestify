@@ -1,3 +1,4 @@
+import { useTheme } from "@/theme/useTheme";
 import { ActionFeedback } from "@/components/ActionFeedback";
 import { FormScrollView } from "@/components/FormScrollView";
 import { useCallback, useRef, useState } from "react";
@@ -13,13 +14,15 @@ import { Button } from "@/components/Button";
 import { TextField } from "@/components/TextField";
 import { apiGet, apiPatch, ApiError } from "@/lib/api";
 import { billEnquiryDraft, billReview, isTelecomCategory, reviewStatuses, statusLabels, type BillReviewAction, type ReviewStatus } from "@/lib/bill-review";
-import { colors, editorialType, premium, spacing, typography } from "@/theme/tokens";
+import { editorialType, spacing, typography } from "@/theme/tokens";
 type Payload = { readOnly?:boolean;canReviewEvidence?:boolean;source?:string;providerId?:string|null;outcomeKind?:"agreed_amount"|"usage_change"|null;category: string; id: string; title: string; version: string; baseline: string; changed: boolean; action: BillReviewAction | null; analysis: ReturnType<typeof billReview> };
 export default function Review() {
  const { billId } = useLocalSearchParams<{ billId: string }>(), { session } = useAuth();
  return <ReviewContent key={(session?.user.id ?? "") + billId} id={billId} />;
 }
 function ReviewContent({ id }: { id: string }) {
+  const { colors, premium } = useTheme();
+
  const router = useRouter(), navigation = useNavigation(), lock = useRef(false), dirtyRef = useRef(false), request = useRef(0);
  const [data, setData] = useState<Payload | null>(null), [draft, setDraft] = useState(""), [notes, setNotes] = useState(""), [status, setStatus] = useState<ReviewStatus>("planned");
  const [showStatuses, setShowStatuses] = useState(false), [showAction, setShowAction] = useState(false), [showFacts, setShowFacts] = useState(false);

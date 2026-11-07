@@ -1,3 +1,4 @@
+import { useTheme } from "@/theme/useTheme";
 import { useState } from "react";
 import { Feather } from "@expo/vector-icons";
 import { Pressable, Text, View } from "react-native";
@@ -5,11 +6,13 @@ import { useRouter } from "expo-router";
 import { UtilitySnapshotCard } from "@/components/UtilitySnapshotCard";
 import { utilityChoices } from "@/lib/utility-choices";
 import type { SnapshotBill, SnapshotUtility } from "@/lib/utility-snapshot";
-import { colors, typography } from "@/theme/tokens";
+import { typography } from "@/theme/tokens";
 
 export function UtilityOverview({ bills, utilities, compact = false }: {
   bills: SnapshotBill[]; utilities: SnapshotUtility[]; compact?: boolean;
 }) {
+  const { colors } = useTheme();
+
   const router = useRouter();
   const choices = utilityChoices(bills, utilities);
   const [choosing, setChoosing] = useState(false);

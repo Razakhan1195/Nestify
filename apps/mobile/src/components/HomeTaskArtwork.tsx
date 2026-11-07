@@ -1,17 +1,23 @@
+import type { Colors } from "@/theme/tokens";
+import { useMemo as useThemeMemo } from "react";
+import { useTheme } from "@/theme/useTheme";
 import { Feather } from "@expo/vector-icons";
 import { View } from "react-native";
 import type { StartingGoal } from "@/lib/home-start";
-import { colors } from "@/theme/tokens";
 
-export const taskPalette = {
-  bills: { surface: "#F0E4CE", accent: "#986C35", paper: "#D9B77F" },
-  records: { surface: "#DFE9EB", accent: "#3D6971", paper: "#A9C8CB" },
-  care: { surface: "#E3EADB", accent: "#527044", paper: "#B9CD9D" },
-} as const;
+
+export const getTaskPalette = (colors: Colors) => ({
+  bills: { surface: colors.artBillSurface, accent: colors.artBillAccent, paper: colors.artBillPaper },
+  records: { surface: colors.artRecordSurface, accent: colors.artRecordAccent, paper: colors.artRecordPaper },
+  care: { surface: colors.artCareSurface, accent: colors.artCareAccent, paper: colors.artCarePaper },
+} as const);
 
 // Original paper constructions: a statement, a tabbed folder and a task planner.
 // Decorative only; numbers and charts belong to the customer's actual content.
 export function HomeTaskArtwork({ goal, small = false }: { goal: StartingGoal; small?: boolean }) {
+  const { colors, premium } = useTheme();
+  const taskPalette = useThemeMemo(() => getTaskPalette(colors), [colors, premium]);
+
   const palette = taskPalette[goal];
   return <View accessible={false} accessibilityElementsHidden importantForAccessibility="no-hide-descendants"
     style={{ width: small ? 74 : 112, height: small ? 65 : 98, justifyContent: "center", alignItems: "center" }}>
@@ -29,7 +35,7 @@ export function HomeTaskArtwork({ goal, small = false }: { goal: StartingGoal; s
         </View>
       </> : <>
         <View style={{ position: "absolute", left: 18, top: 16, width: 63, height: 73, borderRadius: 6, backgroundColor: palette.paper, transform: [{ rotate: "-13deg" }] }} />
-        <View style={{ position: "absolute", left: 36, top: 5, width: 62, height: 78, borderRadius: 6, borderWidth: 1, borderColor: "#FFFFFF", backgroundColor: colors.surfaceRaised, transform: [{ rotate: "8deg" }], padding: 10, gap: 7 }}>
+        <View style={{ position: "absolute", left: 36, top: 5, width: 62, height: 78, borderRadius: 6, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surfaceRaised, transform: [{ rotate: "8deg" }], padding: 10, gap: 7 }}>
           <View style={{ height: 15, flexDirection: "row", gap: 4, alignItems: "center" }}>
             <View style={{ width: 15, height: 15, borderRadius: goal === "bills" ? 8 : 3, backgroundColor: palette.paper }} />
             <View style={{ width: 21, height: 3, backgroundColor: palette.accent, opacity: 0.55 }} />

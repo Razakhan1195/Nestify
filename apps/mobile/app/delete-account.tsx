@@ -1,3 +1,4 @@
+import { useTheme } from "@/theme/useTheme";
 import { FormScrollView } from "@/components/FormScrollView";
 import { confirmAccountPassword } from "@/auth/confirm-password";
 import { inventoryCreateStore } from "@/lib/inventory-create";
@@ -20,13 +21,15 @@ import { TextField } from "@/components/TextField";
 import { supabase } from "@/lib/supabase";
 import { ApiError } from "@/lib/api";
 import { clearDeletionReceipt, deletionPreview, deletionStatus, prepareDeletionReceipt, readDeletionReceipt, submitDeletion, type DeletionPreview, type DeletionReceipt, type DeletionStatus } from "@/lib/account-deletion";
-import { colors, layout, spacing, typography } from "@/theme/tokens";
+import { layout, spacing, typography } from "@/theme/tokens";
 
 export default function DeleteAccount() {
   const { session } = useAuth();
   return <DeleteAccountFlow key={session?.user.id ?? "signed-out"}/>;
 }
 function DeleteAccountFlow() {
+  const { colors } = useTheme();
+
   const router = useRouter();
   const { session } = useAuth();
   const [preview, setPreview] = useState<DeletionPreview | null>(null);

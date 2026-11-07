@@ -1,3 +1,4 @@
+import { useTheme } from "@/theme/useTheme";
 import { RezleeLoading } from "@/components/RezleeLoading";
 import { FormScrollView } from "@/components/FormScrollView";
 import { useRef, useState } from "react";
@@ -14,7 +15,7 @@ import { ScreenNavigation } from "@/components/ScreenNavigation";
 import { SettingsRow, SettingsSection } from "@/components/SettingsUI";
 import { Button } from "@/components/Button";
 import { TextField } from "@/components/TextField";
-import { colors, typography } from "@/theme/tokens";
+import { typography } from "@/theme/tokens";
 export default function ProfileScreen() {
   const { session, isLoading } = useAuth();
   if (isLoading) return <RezleeLoading />;
@@ -22,6 +23,8 @@ export default function ProfileScreen() {
   return <ProfileForm key={session.user.id} userId={session.user.id} />;
 }
 function ProfileForm({ userId }: { userId: string }) {
+  const { colors } = useTheme();
+
   const { session } = useAuth(), router = useRouter(), navigation = useNavigation();
   const [baseline, setBaseline] = useState(profileName(session?.user.user_metadata)), [name, setName] = useState(baseline), [busy, setBusy] = useState(false), [error, setError] = useState(""), [saved, setSaved] = useState(false);
   const lock = useRef(false), dirty = name !== baseline;

@@ -1,3 +1,4 @@
+import { useTheme } from "@/theme/useTheme";
 import { Redirect, useRouter } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import { Pressable, ScrollView, Text, View, useWindowDimensions } from "react-native";
@@ -6,7 +7,7 @@ import { useAuth } from "@/auth/AuthProvider";
 import { BillExamplePreview } from "@/components/BillExamplePreview";
 import { Button } from "@/components/Button";
 import { WelcomeArtwork, type WelcomeKind } from "@/components/WelcomeArtwork";
-import { colors, layout, spacing, typography } from "@/theme/tokens";
+import { layout, spacing, typography } from "@/theme/tokens";
 
 const slides: { kind: WelcomeKind; title: string; detail: string; label: string }[] = [
   { kind: "bills", title: "Your bills.\nNow making sense.", detail: "Keep bills together, see what changed and know what to check next. Start with one statement.", label: "Bills" },
@@ -16,6 +17,8 @@ const slides: { kind: WelcomeKind; title: string; detail: string; label: string 
 ];
 
 export default function WelcomeScreen() {
+  const { colors } = useTheme();
+
   const { session } = useAuth();
   const router = useRouter();
   const { width, height, fontScale } = useWindowDimensions();

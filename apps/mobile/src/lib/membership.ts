@@ -25,7 +25,7 @@ export function subscribeMembership(userId: string, listener: (value: Membership
 }
 export function loadMembership(userId: string, force = false) {
   const epoch = screenEpoch(), key = `${epoch}:${userId}`;
-  const existing = pending.get(key); if (existing) return existing;
+  const existing = pending.get(key); if (existing && !force) return existing;
   const current = getMembershipSnapshot(userId);
   if (!force && current && snapshot && Date.now() - snapshot.checkedAt < 15_000) return Promise.resolve(current);
   const requestRevision = ++revision;

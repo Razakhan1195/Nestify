@@ -183,10 +183,10 @@ export async function apiPost<T>(
 
 }
 
-export async function apiPatch<T>(path: string, body?: unknown, options?: { timeoutMs?: number }): Promise<T> {
+export async function apiPatch<T>(path: string, body?: unknown, options?: { timeoutMs?: number; expectedUserId?: string }): Promise<T> {
   const epoch = screenEpoch();
   if (!apiUrl) throw new ApiError("EXPO_PUBLIC_API_URL is not configured.", 500);
-  const accessToken = await getAccessToken();
+  const accessToken = await getAccessToken(options?.expectedUserId);
   assertCurrentRequest(epoch);
   const controller = options?.timeoutMs ? new AbortController() : null;
   const timeout = controller ? setTimeout(() => controller.abort(), options?.timeoutMs) : null;

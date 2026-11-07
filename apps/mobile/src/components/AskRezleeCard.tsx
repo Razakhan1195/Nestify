@@ -1,15 +1,18 @@
+import { useTheme } from "@/theme/useTheme";
 import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { Pressable, Text, View } from "react-native";
 
 import { askRezleeSuggestions } from "@/lib/assistant-data";
-import { colors, radii, shadows, spacing, typography } from "@/theme/tokens";
+import { radii, shadows, spacing, typography } from "@/theme/tokens";
 
 type Props = {
   onOpen: (prompt?: string) => void;
 };
 
 export function AskRezleeCard({ onOpen }: Props) {
+  const { colors } = useTheme();
+
   return (
     <View style={{ gap: spacing.md }}>
       <Pressable
@@ -49,11 +52,11 @@ export function AskRezleeCard({ onOpen }: Props) {
               </View>
             </View>
             <View style={{ flex: 1, gap: 4 }}>
-              <Text style={[typography.label, { color: "rgba(250,247,239,0.7)" }]}>Ask Rezlee</Text>
+              <Text style={[typography.label, { color: colors.primaryForeground }]}>Ask Rezlee</Text>
               <Text style={{ fontSize: 20, lineHeight: 25, fontWeight: "700", color: colors.primaryForeground }}>
                 Ask anything about your place
               </Text>
-              <Text style={[typography.meta, { color: "rgba(250,247,239,0.72)" }]}>Bills, upkeep, warranties, costs, repairs and what needs attention.</Text>
+              <Text style={[typography.meta, { color: colors.primaryForeground }]}>Bills, upkeep, warranties, costs, repairs and what needs attention.</Text>
             </View>
             <Feather name="arrow-up-right" size={20} color={colors.primaryForeground} />
           </View>

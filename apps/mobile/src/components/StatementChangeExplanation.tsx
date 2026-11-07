@@ -1,8 +1,9 @@
+import { useTheme } from "@/theme/useTheme";
 import { Text, View } from "react-native";
 import { QuietAction } from "@/components/Brief";
 import { changeGuidance, type explainStatementChange } from "@/lib/statement-change";
 import type { HistoryBill } from "@/lib/manual-history-insights";
-import { colors, typography } from "@/theme/tokens";
+import { typography } from "@/theme/tokens";
 
 type Explanation = NonNullable<ReturnType<typeof explainStatementChange>>;
 function money(minor: number, currency: string, signed = false) {
@@ -14,6 +15,8 @@ function period(start: string, end: string) {
   return `${format(start)} – ${format(end)}`;
 }
 function Line({ label, value, strong = false }: { label: string; value: string; strong?: boolean }) {
+  const { colors } = useTheme();
+
   return <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 16, paddingVertical: 9, borderBottomWidth: 1, borderBottomColor: colors.border }}>
     <Text style={[typography.body, { color: colors.foreground, flex: 1, fontWeight: strong ? "600" : "400" }]}>{label}</Text>
     <Text style={[typography.body, { color: colors.foreground, maxWidth: "48%", textAlign: "right", fontWeight: strong ? "600" : "400" }]}>{value}</Text>
@@ -22,6 +25,8 @@ function Line({ label, value, strong = false }: { label: string; value: string; 
 export function StatementChangeExplanation({ explanation: e, onOpen, onAdd }: {
   explanation: Explanation; onOpen: (id: string) => void; onAdd: (bill?: HistoryBill) => void;
 }) {
+  const { colors } = useTheme();
+
   const currency = e.latest.bill.currency;
   const guidance = changeGuidance[e.next];
   const count = new Intl.NumberFormat("en-CA", { maximumFractionDigits: 2 });

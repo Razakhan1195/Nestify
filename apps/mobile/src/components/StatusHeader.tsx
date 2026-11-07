@@ -1,8 +1,9 @@
+import { useTheme } from "@/theme/useTheme";
 import { Feather } from "@expo/vector-icons";
 import { Pressable, Text, View } from "react-native";
 
 import type { DashboardState } from "@/lib/home-data";
-import { colors, radii, spacing, typography } from "@/theme/tokens";
+import { radii, spacing, typography } from "@/theme/tokens";
 
 const stateLabels: Record<DashboardState, string> = {
   EMPTY: "Getting started",
@@ -25,6 +26,8 @@ export function StatusHeader({
   statusSentence,
   onAddPress,
 }: StatusHeaderProps) {
+  const { colors } = useTheme();
+
   const needsAttention = dashboardState === "ATTENTION";
   return (
     <View style={{ gap: spacing.md }}>

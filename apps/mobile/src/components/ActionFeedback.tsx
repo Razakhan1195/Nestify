@@ -1,11 +1,14 @@
+import { useTheme } from "@/theme/useTheme";
 import { Pressable, ScrollView, Text, View } from "react-native";
 import { Feather } from "@expo/vector-icons";
-import { colors, typography } from "@/theme/tokens";
+import { typography } from "@/theme/tokens";
 
 /** A screen footer: never covers a control or inserts content above a scrolled list. */
 export function ActionFeedback({ message, actionLabel, onAction, onClose, busy = false }: {
   message: string; actionLabel?: string; onAction?: () => void; onClose?: () => void; busy?: boolean;
 }) {
+  const { colors } = useTheme();
+
   return <View style={{ maxHeight: "35%", borderTopWidth: 1, borderTopColor: colors.border, backgroundColor: colors.surfaceRaised, paddingHorizontal: 16, paddingVertical: 8 }}>
     <View style={{ flexDirection: "row", alignItems: "flex-start", gap: 8 }}>
       <ScrollView style={{ flex: 1 }} contentContainerStyle={{ gap: 4 }} keyboardShouldPersistTaps="handled">

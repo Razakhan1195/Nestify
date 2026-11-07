@@ -1,10 +1,11 @@
+import { useTheme } from "@/theme/useTheme";
 import { Feather } from "@expo/vector-icons";
 import { Text, View } from "react-native";
 
 import { Surface } from "@/components/ui/Surface";
 import { formatCurrency } from "@/lib/home-data";
 import type { UtilityIntelligencePayload } from "@/lib/utility-intelligence";
-import { colors, radii, spacing, typography } from "@/theme/tokens";
+import { radii, spacing, typography } from "@/theme/tokens";
 
 function planLabel(plan: "tou" | "ulo" | "tiered") {
   if (plan === "tou") return "Time-of-Use";
@@ -35,6 +36,8 @@ function Stat({
   value: string;
   detail?: string;
 }) {
+  const { colors } = useTheme();
+
   return (
     <View
       style={{
@@ -67,6 +70,8 @@ export function UtilityUsageIntelligence({
 }: {
   data: UtilityIntelligencePayload;
 }) {
+  const { colors } = useTheme();
+
   const comparison = data.usage.ratePlanComparison;
   const currentPlan = comparison.currentPlan as "tou" | "ulo" | "tiered" | null;
   const currentIsCheapest =

@@ -1,12 +1,15 @@
+import { useTheme } from "@/theme/useTheme";
 import { useRef, useState } from "react";
 import { Alert, Text, View } from "react-native";
 import { Button } from "@/components/Button";
 import { cancelEzgbCheck } from "@/lib/ezgb-data";
-import { colors, typography } from "@/theme/tokens";
+import { typography } from "@/theme/tokens";
 
 export function UtilityAttemptRemoval({ jobId, active, onStart, onRemoved, onFailure }: {
   jobId: string; active: boolean; onStart?: () => void; onRemoved: () => void; onFailure?: () => void;
 }) {
+  const { colors } = useTheme();
+
   const pending = useRef(false);
   const [busy, setBusy] = useState(false), [error, setError] = useState<string | null>(null);
   async function remove() {

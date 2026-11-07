@@ -1,12 +1,15 @@
+import { useTheme } from "@/theme/useTheme";
 import { useCallback, useState } from "react";
 import { useFocusEffect, useRouter } from "expo-router";
 import { Linking, Pressable, Switch, Text, View } from "react-native";
 import { Surface } from "@/components/ui/Surface";
 import { apiGet, apiPost, ApiError } from "@/lib/api";
 import { registerPushNotifications } from "@/lib/push-notifications";
-import { colors, spacing, typography } from "@/theme/tokens";
+import { spacing, typography } from "@/theme/tokens";
 type Preferences={enabled:boolean;push_enabled:boolean;schedulerActive:boolean;last_checked_at:string|null;last_error:string|null};
 export function RecallPreferences() {
+  const { colors } = useTheme();
+
  const router=useRouter();
  const [prefs,setPrefs]=useState<Preferences|null>(null);
  const [busy,setBusy]=useState(false);

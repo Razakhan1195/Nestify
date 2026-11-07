@@ -1,3 +1,4 @@
+import { useTheme } from "@/theme/useTheme";
 import {InsightStat} from "@/components/BillInsightPrimitives";
 import {ProviderBrand} from "@/components/ProviderBrand";
 import { UtilityCostChart } from "@/components/utility/UtilityCostChart";
@@ -36,7 +37,7 @@ import {
   fetchUtilityIntelligence,
   type UtilityIntelligencePayload,
 } from "@/lib/utility-intelligence";
-import { colors, layout, radii, spacing, typography } from "@/theme/tokens";
+import { layout, radii, spacing, typography } from "@/theme/tokens";
 
 const GREEN_BUTTON_INFO =
   "https://www.ontario.ca/page/lower-your-energy-bills-green-button";
@@ -48,6 +49,8 @@ function deltaCopy(value: number | null, noun: string) {
 }
 
 function UsageTrend({ insight }: { insight: UtilityInsight }) {
+  const { colors } = useTheme();
+
   const points = insight.history.filter((point) => point.dailyUsageIndex !== null && point.dailyUsageIndex !== undefined);
   if (!points.length) return null;
 
@@ -90,6 +93,8 @@ function UsageTrend({ insight }: { insight: UtilityInsight }) {
   );
 }
 export default function UtilityIntelligenceScreen() {
+  const { colors } = useTheme();
+
   const { fontScale } = useWindowDimensions();
   const router = useRouter();
   const { providerId } = useLocalSearchParams<{ providerId: string }>();

@@ -1,6 +1,9 @@
+import type { Colors } from "@/theme/tokens";
+import { useMemo as useThemeMemo } from "react";
+import { useTheme } from "@/theme/useTheme";
 import { Feather } from "@expo/vector-icons";
 import { Image, Text, View, useWindowDimensions, type ImageSourcePropType, type ViewStyle } from "react-native";
-import { colors } from "@/theme/tokens";
+
 
 export type WelcomeKind = "bills" | "help" | "records" | "shared";
 // Metro requires literal static asset paths for offline native bundling.
@@ -16,25 +19,33 @@ export const marks = {
   depot: require("../../assets/welcome/home-depot.png"),
 };
 /* eslint-enable @typescript-eslint/no-require-imports */
-const paper: ViewStyle = {
-  position: "absolute", backgroundColor: "#FFFFFF", borderRadius: 7,
-  borderWidth: 1, borderColor: "#E1DED5", padding: 17,
+const makePaper = (colors: Colors): ViewStyle => ({
+  position: "absolute", backgroundColor: colors.surfaceRaised, borderRadius: 7,
+  borderWidth: 1, borderColor: colors.welcomeBorder, padding: 17,
   shadowColor: "#23372D", shadowOffset: { width: 0, height: 7 }, shadowOpacity: 0.09, shadowRadius: 12, elevation: 3,
-};
+});
 function Mark({ source, width, height }: { source: ImageSourcePropType; width: number; height: number }) {
-  return <Image alt="" accessible={false} source={source} resizeMode="contain" style={{ width, height }} />;
+  const { colors } = useTheme();
+  return <Image alt="" accessible={false} source={source} resizeMode="contain" style={{ width, height, backgroundColor: colors.logoSurface, borderRadius: 3 }} />;
 }
 function Rule({ width = "100%" }: { width?: number | "100%" }) {
-  return <View style={{ width, height: 1, backgroundColor: "#E7E7E0", marginVertical: 10 }} />;
+  const { colors } = useTheme();
+
+  return <View style={{ width, height: 1, backgroundColor: colors.welcomeRule, marginVertical: 10 }} />;
 }
 function Label({ children, muted = false }: { children: string; muted?: boolean }) {
+  const { colors } = useTheme();
+
   return <Text allowFontScaling={false} style={{ fontSize: muted ? 11 : 14, lineHeight: muted ? 16 : 19, color: muted ? colors.mutedForeground : colors.foreground, fontWeight: muted ? "400" : "600" }}>{children}</Text>;
 }
 
 function BillScene() {
+  const { colors, premium } = useTheme();
+  const paper = useThemeMemo(() => makePaper(colors), [colors, premium]);
+
   return <>
-    <View style={{ position: "absolute", left: 13, top: 27, width: 288, height: 221, borderRadius: 28, backgroundColor: "#EFE4D0", transform: [{ rotate: "-5deg" }] }} />
-    <View style={{ position: "absolute", right: 7, top: 7, padding: 10, backgroundColor: "#FFFFFF", borderRadius: 8, borderWidth: 1, borderColor: "#E1DED5", transform: [{ rotate: "6deg" }] }}>
+    <View style={{ position: "absolute", left: 13, top: 27, width: 288, height: 221, borderRadius: 28, backgroundColor: colors.exampleBillSurface, transform: [{ rotate: "-5deg" }] }} />
+    <View style={{ position: "absolute", right: 7, top: 7, padding: 10, backgroundColor: colors.surfaceRaised, borderRadius: 8, borderWidth: 1, borderColor: colors.welcomeBorder, transform: [{ rotate: "6deg" }] }}>
       <Mark source={marks.hydro} width={103} height={45} />
     </View>
     <View style={[paper, { left: 10, top: 31, width: 190, height: 199, transform: [{ rotate: "-8deg" }] }]}>
@@ -58,8 +69,11 @@ function BillScene() {
 }
 
 function HelpScene() {
+  const { colors, premium } = useTheme();
+  const paper = useThemeMemo(() => makePaper(colors), [colors, premium]);
+
   return <>
-    <View style={{ position: "absolute", left: 12, top: 21, width: 294, height: 235, borderRadius: 28, backgroundColor: "#E2EADC", transform: [{ rotate: "-3deg" }] }} />
+    <View style={{ position: "absolute", left: 12, top: 21, width: 294, height: 235, borderRadius: 28, backgroundColor: colors.welcomeGreen, transform: [{ rotate: "-3deg" }] }} />
     <View style={{ position: "absolute", left: 23, top: 15, flexDirection: "row", alignItems: "center", gap: 9 }}>
       <View style={{ width: 32, height: 32, borderRadius: 11, backgroundColor: colors.primary, alignItems: "center", justifyContent: "center" }}><Text allowFontScaling={false} style={{ color: colors.primaryForeground, fontSize: 22, fontWeight: "600" }}>r</Text></View>
       <Text allowFontScaling={false} style={{ fontSize: 15, fontWeight: "600", color: colors.foreground }}>Ask Rezlee</Text>
@@ -74,8 +88,11 @@ function HelpScene() {
 }
 
 function RecordScene() {
+  const { colors, premium } = useTheme();
+  const paper = useThemeMemo(() => makePaper(colors), [colors, premium]);
+
   return <>
-    <View style={{ position: "absolute", left: 12, top: 28, width: 295, height: 216, borderRadius: 28, backgroundColor: "#DEE8EB", transform: [{ rotate: "4deg" }] }} />
+    <View style={{ position: "absolute", left: 12, top: 28, width: 295, height: 216, borderRadius: 28, backgroundColor: colors.welcomeBlue, transform: [{ rotate: "4deg" }] }} />
     <View style={[paper, { left: 150, top: 11, width: 147, height: 207, transform: [{ rotate: "8deg" }] }]}>
       <Mark source={marks.depot} width={48} height={48} />
       <Rule />
@@ -97,8 +114,11 @@ function RecordScene() {
 }
 
 function SharedScene() {
+  const { colors, premium } = useTheme();
+  const paper = useThemeMemo(() => makePaper(colors), [colors, premium]);
+
   return <>
-    <View style={{ position: "absolute", left: 10, top: 22, width: 298, height: 232, borderRadius: 28, backgroundColor: "#E2EADC", transform: [{ rotate: "-3deg" }] }} />
+    <View style={{ position: "absolute", left: 10, top: 22, width: 298, height: 232, borderRadius: 28, backgroundColor: colors.welcomeGreen, transform: [{ rotate: "-3deg" }] }} />
     <View style={[paper, { left: 65, top: 9, width: 209, height: 200, transform: [{ rotate: "6deg" }] }]}>
       <Label>WEEKEND GROCERIES</Label><Rule /><Label muted>Paid by Maya</Label>
       <Text allowFontScaling={false} style={{ fontSize: 36, fontWeight: "600", letterSpacing: -1, color: colors.foreground, marginTop: 8 }}>$120.00</Text>
@@ -122,6 +142,8 @@ const captions = { shared: "Example expense · CAD · No money transfers", bills
 // Illustrative compositions, not interactive controls or customer data.
 // Marks retain their actual colours/aspect ratios and are bundled for offline startup.
 export function WelcomeArtwork({ kind, compact }: { kind: WelcomeKind; compact: boolean }) {
+  const { colors } = useTheme();
+
   const { width } = useWindowDimensions();
   const size = Math.min(width - 60, compact ? 288 : 330);
   const scale = size / 320;

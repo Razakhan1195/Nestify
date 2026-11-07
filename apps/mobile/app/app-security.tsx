@@ -1,3 +1,4 @@
+import { useTheme } from "@/theme/useTheme";
 import { RezleeLoading } from "@/components/RezleeLoading";
 import { Redirect, useRouter } from "expo-router";
 import { ScrollView, Text, View, useWindowDimensions } from "react-native";
@@ -9,8 +10,10 @@ import { BriefRow } from "@/components/Brief";
 import { ProfileGroup } from "@/components/ProfileUI";
 import { Surface } from "@/components/ui/Surface";
 import { ScreenNavigation } from "@/components/ScreenNavigation";
-import { colors, layout, spacing, typography } from "@/theme/tokens";
+import { layout, spacing, typography } from "@/theme/tokens";
 export default function AppSecurity() {
+  const { colors } = useTheme();
+
   const router = useRouter(), { session, isLoading } = useAuth();
   const { state, label, available, detail, change } = useAppLock();
   const { fontScale } = useWindowDimensions();

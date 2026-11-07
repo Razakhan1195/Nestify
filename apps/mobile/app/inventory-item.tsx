@@ -1,3 +1,4 @@
+import { useTheme } from "@/theme/useTheme";
 import { FormScrollView } from "@/components/FormScrollView";
 import {JourneyHeading,JourneyPanel} from "@/components/JourneyUI";
 import {useAuth} from "@/auth/AuthProvider";
@@ -20,7 +21,7 @@ import { TextField } from "@/components/TextField";
 import { Button } from "@/components/Button";
 import { apiGet, apiPost, apiFormPost, apiDelete, ApiError } from "@/lib/api";
 import { PHOTO_TYPES, uploadMimeType, uploadValidationError } from "@/lib/upload-validation";
-import { colors, spacing, typography } from "@/theme/tokens";
+import { spacing, typography } from "@/theme/tokens";
 const empty = { name: "", brand: "", model_number: "", serial_number: "", room_or_area: "", category: "", product_barcode: "", warranty_expires_on: "" };
 type Fields = typeof empty;
 export default function InventoryItemScreen() {
@@ -29,6 +30,8 @@ export default function InventoryItemScreen() {
   return <InventoryItemForm key={(session?.user.id??"signed-out")+":"+(params.id??"new")} />;
 }
 function InventoryItemForm() {
+  const { colors } = useTheme();
+
   const params = useLocalSearchParams<{ id?: string }>();
   const id = typeof params.id === "string" ? params.id : undefined;
   const {session}=useAuth();

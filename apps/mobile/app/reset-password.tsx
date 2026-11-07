@@ -1,3 +1,4 @@
+import { useTheme } from "@/theme/useTheme";
 import { FormScrollView } from "@/components/FormScrollView";
 import { useNavigation, useRouter } from "expo-router";
 import { usePreventRemove } from "expo-router/react-navigation";
@@ -9,9 +10,11 @@ import { Button } from "@/components/Button";
 import { ScreenNavigation } from "@/components/ScreenNavigation";
 import { TextField } from "@/components/TextField";
 import { supabase } from "@/lib/supabase";
-import { colors, spacing, typography } from "@/theme/tokens";
+import { spacing, typography } from "@/theme/tokens";
 
 export default function ResetPasswordScreen() {
+  const { colors } = useTheme();
+
   const router = useRouter(), navigation = useNavigation();
   const recovery = useSyncExternalStore(passwordRecovery.subscribe, passwordRecovery.snapshot, passwordRecovery.snapshot);
   const [password, setPassword] = useState(""), [confirm, setConfirm] = useState("");

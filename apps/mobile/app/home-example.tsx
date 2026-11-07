@@ -1,14 +1,19 @@
+import { useMemo as useThemeMemo } from "react";
+import { useTheme } from "@/theme/useTheme";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { ScrollView, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuth } from "@/auth/AuthProvider";
 import { Button } from "@/components/Button";
 import { ScreenNavigation } from "@/components/ScreenNavigation";
-import { HomeTaskArtwork, taskPalette } from "@/components/HomeTaskArtwork";
+import { HomeTaskArtwork, getTaskPalette } from "@/components/HomeTaskArtwork";
 import { exampleStatements, isStartingGoal, startingContent, startingHistory } from "@/lib/home-start";
-import { colors, layout, typography } from "@/theme/tokens";
+import { layout, typography } from "@/theme/tokens";
 
 export default function HomeExampleScreen() {
+  const { colors, premium } = useTheme();
+  const taskPalette = useThemeMemo(() => getTaskPalette(colors), [colors, premium]);
+
   const router = useRouter();
   const { session, isLoading } = useAuth();
   const params = useLocalSearchParams<{ goal?: string }>();
@@ -29,7 +34,7 @@ export default function HomeExampleScreen() {
           <View accessible accessibilityLabel="Average daily charges: April 3 Canadian dollars, May 3 Canadian dollars, June 3 dollars 60 cents." style={{ gap: 10 }}>
             {[...history.analysis.window].reverse().map((period, index) => <View key={period.bill.id} style={{ gap: 5 }}>
               <View style={{ flexDirection: "row", gap: 12 }}><Text style={[typography.meta, { flex: 1, color: colors.foreground }]}>{["April", "May", "June"][index]}</Text><Text style={[typography.meta, { color: colors.foreground }]}>${(period.dailyMinor / 100).toFixed(2)} / day</Text></View>
-              <View style={{ height: 8, borderRadius: 4, backgroundColor: "#E4D6BC" }}><View style={{ height: 8, borderRadius: 4, width: `${period.dailyMinor / 360 * 100}%`, backgroundColor: index === 2 ? colors.primary : taskPalette.bills.accent }} /></View>
+              <View style={{ height: 8, borderRadius: 4, backgroundColor: colors.chartTrack }}><View style={{ height: 8, borderRadius: 4, width: `${period.dailyMinor / 360 * 100}%`, backgroundColor: index === 2 ? colors.primary : taskPalette.bills.accent }} /></View>
             </View>)}
           </View>
           <Text style={[typography.caption, { color: colors.mutedForeground }]}>Based on 3 completed statements. Different period lengths are accounted for.</Text>

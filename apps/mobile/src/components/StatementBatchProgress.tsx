@@ -1,16 +1,19 @@
+import { useTheme } from "@/theme/useTheme";
 import { statementReadLabel } from "@/lib/statement-reading";
 import { Feather } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { Pressable, Text, View } from "react-native";
 import { batchCounts, type StatementBatch, type StatementBatchItem } from "@/lib/statement-batch-core";
 import { batchAccountResults, batchResultDestination, nextBatchItem } from "@/lib/statement-batch-journey";
-import { colors, spacing, typography } from "@/theme/tokens";
+import { spacing, typography } from "@/theme/tokens";
 import { Button } from "./Button";
 const statusText = { review: "Ready to review", submitting: "Check save status", needs_file: "Choose original to finish", saved: "Saved", duplicate: "Already saved", blocked: "Review save issue", skipped: "Skipped · can restore" };
 
 export function StatementBatchProgress({ batch, selected, disabled, onChoose }: {
   batch: StatementBatch; selected: string | null; disabled: boolean; onChoose: (item: StatementBatchItem) => void;
 }) {
+  const { colors } = useTheme();
+
   const counts = batchCounts(batch), next = nextBatchItem(batch);
   return <View style={{ gap: spacing.md }}>
     <View style={{ gap: spacing.xs }}>
@@ -34,6 +37,8 @@ export function StatementBatchProgress({ batch, selected, disabled, onChoose }: 
 }
 
 export function StatementBatchResults({ batch, disabled }: { batch: StatementBatch; disabled: boolean }) {
+  const { colors } = useTheme();
+
   const router = useRouter(), accounts = batchAccountResults(batch);
   if (!accounts.length) return null;
   return <View style={{ gap: spacing.sm }}>

@@ -1,10 +1,13 @@
+import { useTheme } from "@/theme/useTheme";
 import { Feather } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { Pressable, Text, useWindowDimensions, View } from "react-native";
-import { colors, homeTile, typography } from "@/theme/tokens";
+import { homeTile, typography } from "@/theme/tokens";
 
 // An ongoing tool, not a setup milestone. Opening it never sends a model request.
 export function HomeAssistantTile({ owner }: { owner: boolean }) {
+  const { colors } = useTheme();
+
   const router = useRouter();
   const { fontScale } = useWindowDimensions();
   const detail = owner ? "Talk through a repair, plan a household task or understand a bill."
@@ -19,7 +22,7 @@ export function HomeAssistantTile({ owner }: { owner: boolean }) {
         <Text style={[typography.meta, { color: colors.primaryForeground }]}>{detail}</Text>
       </View>
       {fontScale <= 1.3 ? <View accessible={false} accessibilityElementsHidden importantForAccessibility="no-hide-descendants" style={{ width: 58, height: 60 }}>
-        <View style={{ position: "absolute", left: 0, top: 4, width: 43, height: 38, borderRadius: 12, backgroundColor: "#9FB9A4", transform: [{ rotate: "-12deg" }] }} />
+        <View style={{ position: "absolute", left: 0, top: 4, width: 43, height: 38, borderRadius: 12, backgroundColor: colors.assistantLayer, transform: [{ rotate: "-12deg" }] }} />
         <View style={{ position: "absolute", right: 0, bottom: 0, width: 43, height: 42, borderRadius: 12, borderBottomRightRadius: 3, backgroundColor: colors.primaryForeground, transform: [{ rotate: "8deg" }], alignItems: "center", justifyContent: "center" }}>
           <Feather name="home" size={23} color={colors.primary} />
         </View>

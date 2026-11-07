@@ -1,9 +1,12 @@
+import type { Colors } from "@/theme/tokens";
+import { useMemo as useThemeMemo } from "react";
+import { useTheme } from "@/theme/useTheme";
 import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { Pressable, Text, View } from "react-native";
 
 import type { HomePayload } from "@/lib/home-data";
-import { colors, radii, spacing, typography } from "@/theme/tokens";
+import { radii, spacing, typography } from "@/theme/tokens";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 
 type ReadyHomePayload = Exclude<HomePayload, { needsOnboarding: true }>;
@@ -14,13 +17,16 @@ type Props = {
   onPress: (notice: Notice) => void;
 };
 
-const toneMeta = {
+const makeToneMeta = (colors: Colors) => ({
   positive: { bg: colors.successBg, fg: colors.successForeground },
   neutral: { bg: colors.infoBg, fg: colors.infoForeground },
   warning: { bg: colors.warningBg, fg: colors.warningForeground },
-};
+});
 
 export function HomeNotices({ notices, onPress }: Props) {
+  const { colors, premium } = useTheme();
+  const toneMeta = useThemeMemo(() => makeToneMeta(colors), [colors, premium]);
+
   if (!notices.length) return null;
   return (
     <View style={{ gap: spacing.md }}>

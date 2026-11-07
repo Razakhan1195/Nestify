@@ -1,15 +1,24 @@
+import { useTheme } from "@/theme/useTheme";
 import {useState} from "react";
 import {Keyboard,Pressable,Text,View,useWindowDimensions} from "react-native";
 import {Button} from "@/components/Button";
 import {TextField} from "@/components/TextField";
 import {JourneyDisclosure,JourneyPanel} from "@/components/JourneyUI";
-import {colors,typography} from "@/theme/tokens";
+import { typography } from "@/theme/tokens";
 import {comparePurchase,comparisonTopics,currentPurchaseQuote,purchaseMoney,type PurchaseDraft,type PurchaseSource} from "@/lib/purchase-decision";
-const Copy=({children}:{children:React.ReactNode})=><Text style={[typography.body,{color:colors.mutedForeground}]}>{children}</Text>;
-const Heading=({children}:{children:React.ReactNode})=><Text accessibilityRole="header" style={[typography.section,{color:colors.foreground}]}>{children}</Text>;
-function Check({label,checked,disabled,onPress}:{label:string;checked:boolean;disabled:boolean;onPress:()=>void}){return <Pressable accessibilityRole="checkbox" accessibilityLabel={label} accessibilityState={{checked,disabled}} disabled={disabled} onPress={onPress} style={{flexDirection:"row",gap:12,minHeight:48,paddingVertical:12}}><Text style={[typography.body,{color:colors.primary}]}>{checked?"✓":"○"}</Text><Text style={[typography.body,{flex:1,color:colors.foreground}]}>{label}</Text></Pressable>;}
+const Copy=({children}:{children:React.ReactNode})=>{
+  const { colors } = useTheme();
+return (<Text style={[typography.body,{color:colors.mutedForeground}]}>{children}</Text>); };
+const Heading=({children}:{children:React.ReactNode})=>{
+  const { colors } = useTheme();
+return (<Text accessibilityRole="header" style={[typography.section,{color:colors.foreground}]}>{children}</Text>); };
+function Check({label,checked,disabled,onPress}:{label:string;checked:boolean;disabled:boolean;onPress:()=>void}){
+  const { colors } = useTheme();
+return <Pressable accessibilityRole="checkbox" accessibilityLabel={label} accessibilityState={{checked,disabled}} disabled={disabled} onPress={onPress} style={{flexDirection:"row",gap:12,minHeight:48,paddingVertical:12}}><Text style={[typography.body,{color:colors.primary}]}>{checked?"✓":"○"}</Text><Text style={[typography.body,{flex:1,color:colors.foreground}]}>{label}</Text></Pressable>;}
 type Props={draft:PurchaseDraft;sources:PurchaseSource[];disabled:boolean;change:(patch:Partial<PurchaseDraft>)=>void;selectSource:(source:PurchaseSource)=>void;openQuotes:(id?:string)=>void;onStepChange:()=>void};
 export function QuoteComparison({draft,sources,disabled,change,selectSource,openQuotes,onStepChange}:Props){
+  const { colors } = useTheme();
+
  const {fontScale}=useWindowDimensions();
  const [step,setStep]=useState(0),[query,setQuery]=useState(""),[details,setDetails]=useState(false);
  const labels=["Choose","Compare","Decide"],result=comparePurchase(draft,sources),topics=comparisonTopics(draft,sources);

@@ -1,3 +1,4 @@
+import { useTheme } from "@/theme/useTheme";
 import { FormScrollView } from "@/components/FormScrollView";
 import {OfferReader} from "@/components/OfferReader";
 import {mergeOfferReading,validOfferSources,type OfferReading} from "@/lib/offer-reading";
@@ -15,9 +16,11 @@ import {Button} from "@/components/Button";
 import {TextField} from "@/components/TextField";
 import {QuietAction} from "@/components/Brief";
 import {offerDefaults,priceWrittenOffer,type WrittenOffer} from "@/lib/bill-review";
-import {colors,spacing,typography} from "@/theme/tokens";
+import { spacing, typography } from "@/theme/tokens";
 export default function Offers(){const {billId}=useLocalSearchParams<{billId:string}>();const {session}=useAuth();return <OfferContent key={(session?.user.id??"")+billId} billId={billId}/>;}
 function OfferContent({billId}:{billId:string}){
+  const { colors } = useTheme();
+
  const nav=useNavigation(),lock=useRef(false);
  const [selected,setSelected]=useState<"first"|"second">("first"),[help,setHelp]=useState(false);
  const [version,setVersion]=useState<string|null>(null),[loading,setLoading]=useState(true),[busy,setBusy]=useState(false),[error,setError]=useState<string|null>(null),[saved,setSaved]=useState(false);

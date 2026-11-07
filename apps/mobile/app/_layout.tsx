@@ -1,3 +1,7 @@
+import { useEffect } from "react";
+import { ThemeProvider, DarkTheme, DefaultTheme } from "expo-router";
+import * as SystemUI from "expo-system-ui";
+import { useTheme } from "@/theme/useTheme";
 import "@/lib/crash-reporting";
 export { ScreenErrorBoundary as ErrorBoundary } from "@/components/ScreenErrorBoundary";
 import { AppNotifications } from "@/components/AppNotifications";
@@ -8,16 +12,25 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { AppLockProvider, AppLockScreen } from "@/auth/AppLockProvider";
 import { AuthProvider } from "@/auth/AuthProvider";
-import { colors } from "@/theme/tokens";
+
 
 export default function RootLayout() {
+  const { colors, mode } = useTheme();
+  useEffect(() => { void SystemUI.setBackgroundColorAsync(colors.background).catch(() => {}); }, [colors.background]);
+  const navigationTheme = { ...(mode === "dark" ? DarkTheme : DefaultTheme), colors: {
+    ...(mode === "dark" ? DarkTheme : DefaultTheme).colors,
+    background: colors.background, card: colors.surfaceRaised, text: colors.foreground,
+    border: colors.border, primary: colors.primary, notification: colors.critical,
+  } };
+
   return (
-    <SafeAreaProvider>
+    <ThemeProvider value={navigationTheme}>
+    <SafeAreaProvider style={{ backgroundColor: colors.background }}>
       <KeyboardProvider>
       <AuthProvider>
         <AppLockProvider>
         <AppNotifications>
-        <StatusBar style="dark" />
+        <StatusBar style={mode === "dark" ? "light" : "dark"} />
         <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.background } }}
           screenLayout={({ children, route }) => <AppLockScreen publicRoute={["index", "(auth)", "auth-return"].includes(route.name)}>{children}</AppLockScreen>}>
           <Stack.Screen name="index" />
@@ -70,6 +83,7 @@ export default function RootLayout() {
       </AuthProvider>
     </KeyboardProvider>
     </SafeAreaProvider>
+    </ThemeProvider>
   );
 }
 

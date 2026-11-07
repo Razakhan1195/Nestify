@@ -1,3 +1,5 @@
+import { useMemo as useThemeMemo } from "react";
+import { useTheme } from "@/theme/useTheme";
 import {groupParams} from "@/lib/shared-expenses";
 import {AddExpensePerson} from "@/components/ExpensePeople";
 import {Surface} from "@/components/ui/Surface";
@@ -9,13 +11,16 @@ import {Button} from "@/components/Button";
 import {sharedLedgerStage,sharedEntryContext} from "@/lib/shared-ledger-presentation";
 import {BriefRow,QuietAction} from "@/components/Brief";
 import {SharedBalances} from "@/components/SharedBalances";
-import {SharedFrame,SharedLoading,SharedNotice,sharedStyles as s,useSharedLedger} from "@/components/SharedExpenseUI";
+import {SharedFrame,SharedLoading,SharedNotice,getSharedStyles,useSharedLedger} from "@/components/SharedExpenseUI";
 import {fetchSharedExpenses,pendingSharedSave,saveSharedExpense,sharedDate,type PendingSharedSave} from "@/lib/shared-expenses";
 import {sharedMoney} from "@/lib/shared-expense-math";
-import {colors,typography} from "@/theme/tokens";
+import { typography } from "@/theme/tokens";
 import {ApiError} from "@/lib/api";
 
 export default function SharedExpenses({embedded=false,inline=false}:{embedded?:boolean;inline?:boolean}){
+  const { colors, premium } = useTheme();
+ const s = useThemeMemo(() => getSharedStyles(colors), [colors, premium]);
+
  const router=useRouter(),{data,setData,error,busy,load}=useSharedLedger();
  const [activityFilter,setActivityFilter]=useState<"all"|"expense"|"repayment">("all");
  const [checkedPending,setCheckedPending]=useState(false);

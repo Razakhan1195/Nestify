@@ -1,10 +1,11 @@
+import { useTheme } from "@/theme/useTheme";
 import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { Pressable, Text, View } from "react-native";
 
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import type { HomePayload } from "@/lib/home-data";
-import { colors, radii, spacing, typography } from "@/theme/tokens";
+import { radii, spacing, typography } from "@/theme/tokens";
 
 type ReadyHome = Exclude<HomePayload, { needsOnboarding: true }>;
 type TodayItem = ReadyHome["todayCare"][number];
@@ -18,6 +19,8 @@ type Props = {
 };
 
 export function HomeToday({ items, busyId, onComplete, onOpenItem, onOpenCare }: Props) {
+  const { colors } = useTheme();
+
   if (!items.length) return null;
 
   return (

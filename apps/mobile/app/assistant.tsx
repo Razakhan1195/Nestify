@@ -1,3 +1,4 @@
+import { useTheme } from "@/theme/useTheme";
 import { fetchHome } from "@/lib/home-data";
 import { contextualHomeQuestions } from "@/lib/home-outcome-brief";
 import { QuietAction } from "@/components/Brief";
@@ -23,7 +24,7 @@ import {
   askRezlee,
   type AssistantMessage,
 } from "@/lib/assistant-data";
-import { colors, radii, spacing, typography } from "@/theme/tokens";
+import { radii, spacing, typography } from "@/theme/tokens";
 function makeMessage(role: AssistantMessage["role"], text: string): AssistantMessage {
   return {
     id: `${role}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
@@ -33,6 +34,8 @@ function makeMessage(role: AssistantMessage["role"], text: string): AssistantMes
 }
 
 export default function AssistantScreen() {
+  const { colors , mode: useThemeMode } = useTheme();
+
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { q } = useLocalSearchParams<{ q?: string }>();
@@ -235,7 +238,7 @@ export default function AssistantScreen() {
           }}
         >
           <View style={{ flexDirection: "row", alignItems: "flex-end", gap: spacing.sm, borderRadius: radii["2xl"], backgroundColor: colors.surfaceRaised, borderWidth: 1, borderColor: colors.border, padding: 6 }}>
-            <TextInput
+            <TextInput keyboardAppearance={useThemeMode} selectionColor={colors.primary}
               accessibilityLabel="Your question for Rezlee"
               value={input}
               onChangeText={setInput}

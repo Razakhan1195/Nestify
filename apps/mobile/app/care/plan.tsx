@@ -1,3 +1,6 @@
+import type { Colors } from "@/theme/tokens";
+import { useMemo as useThemeMemo } from "react";
+import { useTheme } from "@/theme/useTheme";
 import {FormScrollView} from "@/components/FormScrollView";
 import {JourneyHeading} from "@/components/JourneyUI";
 import { Feather } from "@expo/vector-icons";
@@ -13,14 +16,17 @@ import { TextField } from "@/components/TextField";
 import { ApiError } from "@/lib/api";
 import { fetchCarePlanContext, generateCarePlan, saveCarePlan, formatCareDate, formatCareRecurrence, type CarePlanTask, type CarePlanPreferences, type CarePlanContext } from "@/lib/care-data";
 import { readMaintenanceDraft, writeMaintenanceDraft, clearMaintenanceDraft, type MaintenanceDraft } from "@/lib/maintenance-draft";
-import { colors, radii, spacing, typography } from "@/theme/tokens";
+import { radii, spacing, typography } from "@/theme/tokens";
 import { safeBack } from "@/lib/navigation";
 
 const responsibilities = [{id:"self",label:"I arrange upkeep"},{id:"landlord",label:"My landlord handles repairs"},{id:"building",label:"Building management helps"}] as const;
 const intervals = [{id:"",label:"One time"},{id:"monthly",label:"Monthly"},{id:"quarterly",label:"Every 3 months"},{id:"biannual",label:"Every 6 months"},{id:"annual",label:"Yearly"}];
-const card = {padding:spacing.lg,borderRadius:radii["2xl"],backgroundColor:colors.surfaceRaised,gap:spacing.md};
+const makeCard = (colors: Colors) => ({padding:spacing.lg,borderRadius:radii["2xl"],backgroundColor:colors.surfaceRaised,gap:spacing.md});
 function firstDate() { const d=new Date(); d.setDate(d.getDate()+7); return [d.getFullYear(),String(d.getMonth()+1).padStart(2,"0"),String(d.getDate()).padStart(2,"0")].join("-"); }
 export default function CarePlanScreen() {
+  const { colors, premium } = useTheme();
+  const card = useThemeMemo(() => makeCard(colors), [colors, premium]);
+
   const router=useRouter(), busy=useRef(false), draftWrites=useRef(Promise.resolve()), saved=useRef(false);
   const latestDraft=useRef<{homeId:string;draft:MaintenanceDraft}|null>(null);
   const [context,setContext]=useState<CarePlanContext|null>(null);

@@ -1,3 +1,4 @@
+import { useTheme } from "@/theme/useTheme";
 import { RezleeLoading } from "@/components/RezleeLoading";
 import {FormScrollView} from "@/components/FormScrollView";
 import {useRef,useState} from "react";
@@ -9,9 +10,11 @@ import {ScreenNavigation} from "@/components/ScreenNavigation";
 import {Button} from "@/components/Button";
 import {TextField} from "@/components/TextField";
 import {apiPost,ApiError} from "@/lib/api";
-import {colors,typography} from "@/theme/tokens";
+import { typography } from "@/theme/tokens";
 export default function ClaimMembership(){const {session,isLoading}=useAuth();if(isLoading)return <RezleeLoading/>;if(!session)return <Redirect href="/(auth)/login"/>;return <Claim key={session.user.id} userId={session.user.id}/>;}
 function Claim({userId}:{userId:string}){
+  const { colors } = useTheme();
+
  const router=useRouter(),lock=useRef(false);
  const [email,setEmail]=useState(""),[code,setCode]=useState(""),[id,setId]=useState<string|null>(null),[message,setMessage]=useState(""),[busy,setBusy]=useState(false);
  async function submit(confirm:boolean){

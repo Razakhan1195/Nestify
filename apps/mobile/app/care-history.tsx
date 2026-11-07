@@ -1,3 +1,4 @@
+import { useTheme } from "@/theme/useTheme";
 import { useCallback, useRef, useState } from "react";
 import { useFocusEffect, useRouter } from "expo-router";
 import { ActivityIndicator, FlatList, Text, View } from "react-native";
@@ -5,8 +6,10 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { BriefRow, QuietAction, ReadNotice } from "@/components/Brief";
 import { ScreenNavigation } from "@/components/ScreenNavigation";
 import { fetchCare, type CareTask } from "@/lib/care-data";
-import { colors, layout, spacing, typography } from "@/theme/tokens";
+import { layout, spacing, typography } from "@/theme/tokens";
 export default function CareHistory() {
+  const { colors } = useTheme();
+
   const router = useRouter();
   const [tasks, setTasks] = useState<CareTask[] | null>(null), [error, setError] = useState(false);
   const request = useRef(0);

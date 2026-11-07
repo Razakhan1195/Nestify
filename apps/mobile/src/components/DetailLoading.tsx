@@ -1,6 +1,9 @@
+import { useTheme } from "@/theme/useTheme";
 import { ActivityIndicator, Text, View } from "react-native";
-import { colors, layout, typography } from "@/theme/tokens";
+import { layout, typography } from "@/theme/tokens";
 export function DetailLoading({ label }: { label: string }) {
+  const { colors } = useTheme();
+
   return <View style={{padding:layout.screenHorizontal,gap:24}}>
     <View accessible accessibilityLabel={label} accessibilityState={{busy:true}} style={{flexDirection:"row",gap:10,alignItems:"center"}}><ActivityIndicator accessible={false} color={colors.primary}/><Text style={[typography.body,{color:colors.mutedForeground}]}>{label}</Text></View>
     <View accessibilityElementsHidden importantForAccessibility="no-hide-descendants" style={{gap:12}}>

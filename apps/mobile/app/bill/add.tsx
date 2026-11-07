@@ -1,3 +1,4 @@
+import { useTheme } from "@/theme/useTheme";
 import { FormScrollView } from "@/components/FormScrollView";
 import {EmailImportEntry,useEmailImport} from "@/components/EmailImportEntry";
 import {prepareAttachment} from "@/lib/prepare-attachment";
@@ -20,7 +21,7 @@ import { Surface } from "@/components/ui/Surface";
 import { ApiError } from "@/lib/api";
 import { SCAN_FILE_TYPES, uploadMimeType, uploadValidationError } from "@/lib/upload-validation";
 import { createBillRequest, fetchBillCapabilities, scanBillRequest, type ManualBillInput } from "@/lib/bills-data";
-import { colors, editorialType, layout, premium, radii, spacing, typography } from "@/theme/tokens";
+import { editorialType, layout, radii, spacing, typography } from "@/theme/tokens";
 import { safeBack } from "@/lib/navigation";
 
 type Mode = "choose" | "scan" | "manual";
@@ -82,6 +83,8 @@ function ChoiceCard({
   badge?: string;
   onPress: () => void;
 }) {
+  const { colors } = useTheme();
+
   return (
     <Pressable
       accessibilityRole="button"
@@ -104,6 +107,8 @@ function ChoiceCard({
 }
 
 export default function AddBillScreen() {
+  const { colors, premium } = useTheme();
+
   const router = useRouter();
   const emailImport=useEmailImport();
   const navigation = useNavigation();

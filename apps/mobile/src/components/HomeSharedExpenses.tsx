@@ -1,3 +1,4 @@
+import { useTheme } from "@/theme/useTheme";
 import { Feather } from "@expo/vector-icons";
 import { useFocusEffect, useRouter } from "expo-router";
 import { useCallback, useRef, useState } from "react";
@@ -8,9 +9,11 @@ import { fetchSharedExpenses } from "@/lib/shared-expenses";
 import type { SharedPayload } from "@/lib/shared-expense-types";
 import { sharedLedgerStage } from "@/lib/shared-ledger-presentation";
 import { sharedMoney } from "@/lib/shared-expense-math";
-import { colors, homeTile, typography } from "@/theme/tokens";
+import { homeTile, typography } from "@/theme/tokens";
 
 export function HomeSharedExpenses({ homeId }: { homeId: string }) {
+  const { colors } = useTheme();
+
   const router = useRouter(), request = useRef(0);
   const [data, setData] = useState<SharedPayload | null>(null);
   const [busy, setBusy] = useState(true), [failed, setFailed] = useState(false);

@@ -1,3 +1,4 @@
+import { useTheme } from "@/theme/useTheme";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import { ActivityIndicator, ScrollView, Text } from "react-native";
@@ -6,13 +7,15 @@ import { useAuth } from "@/auth/AuthProvider";
 import { Button } from "@/components/Button";
 import { QuietAction } from "@/components/Brief";
 import { checkPhoneInvitation, saveIncomingPhoneInvite, readIncomingPhoneInvite, clearIncomingPhoneInvite, type PhoneInvitationState } from "@/lib/phone-invites";
-import { colors, typography } from "@/theme/tokens";
+import { typography } from "@/theme/tokens";
 export default function JoinHousehold() {
   const { session } = useAuth();
   const { token } = useLocalSearchParams<{ token?: string }>();
   return <JoinInvitation key={(session?.user.id ?? "signed-out") + ":" + (token ?? "saved")} />;
 }
 function JoinInvitation() {
+  const { colors } = useTheme();
+
   const { token: parameter } = useLocalSearchParams<{ token?: string }>();
   const { session } = useAuth(), router = useRouter();
   const lock = useRef(false), mounted = useRef(true);

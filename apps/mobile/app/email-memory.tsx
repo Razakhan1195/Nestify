@@ -1,3 +1,4 @@
+import { useTheme } from "@/theme/useTheme";
 import { FormScrollView } from "@/components/FormScrollView";
 import {JourneyHeading} from "@/components/JourneyUI";
 import { useCallback, useRef, useState } from "react";
@@ -15,7 +16,7 @@ import { DateField } from "@/components/DateField";
 import { apiGet, apiPost, apiPatch, apiDelete, ApiError, renewApiSession } from "@/lib/api";
 import { newVaultSaveRequestId } from "@/lib/vault-save-intent";
 import { savedBillDestination } from "@/lib/collection-navigation";
-import { colors, spacing, typography } from "@/theme/tokens";
+import { spacing, typography } from "@/theme/tokens";
 
 const endpoint="/api/mobile/v1/email-memory";
 type Fields={title:string;category:string;issued_on:string;expires_on:string;notes:string};
@@ -26,6 +27,8 @@ type Payload={jobs:Job[];homeId:string;homeName:string};
 type Capability={enabled:boolean;reading:boolean;gmail?:boolean;homeId:string;homeName:string};
 const categoryNames:Record<string,string>={utility_bill:"Bill details",service_invoice:"Service record",receipt:"Purchase record",warranty:"Warranty"};
 export default function EmailMemoryScreen(){
+  const { colors } = useTheme();
+
  const params=useLocalSearchParams<{id?:string}>();
  const router=useRouter(),navigation=useNavigation();
  const [cap,setCap]=useState<Capability|null>(null),[jobs,setJobs]=useState<Job[]>([]),[loading,setLoading]=useState(true);

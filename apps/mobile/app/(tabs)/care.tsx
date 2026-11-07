@@ -1,3 +1,6 @@
+import type { Colors } from "@/theme/tokens";
+import { useMemo as useThemeMemo } from "react";
+import { useTheme } from "@/theme/useTheme";
 import { CareFeedback } from "@/components/CareFeedback";
 import { careScreen } from "@/lib/screen-state";
 import { useTabScrollTop } from "@/lib/use-tab-scroll-top";
@@ -27,15 +30,18 @@ import {
   type CareFilter,
   type CareTask,
 } from "@/lib/care-data";
-import { colors, layout, radii, spacing, typography } from "@/theme/tokens";
+import { layout, radii, spacing, typography } from "@/theme/tokens";
 
-const statusMeta = {
+const makeStatusMeta = (colors: Colors) => ({
   overdue: { label: "Overdue", bg: colors.criticalBg, fg: colors.criticalForeground },
   due_soon: { label: "Due soon", bg: colors.warningBg, fg: colors.warningForeground },
   upcoming: { label: "Upcoming", bg: colors.infoBg, fg: colors.infoForeground },
   completed: { label: "Completed", bg: colors.successBg, fg: colors.successForeground },
-} as const;
+} as const);
 function CareRow({ error, task, onComplete, onOpen, busy, blocked, canComplete }: { error?: string; blocked: boolean; canComplete: boolean; busy: boolean; task: CareTask; onComplete: (task: CareTask) => void; onOpen: (task: CareTask) => void }) {
+  const { colors, premium } = useTheme();
+  const statusMeta = useThemeMemo(() => makeStatusMeta(colors), [colors, premium]);
+
   const meta = statusMeta[task.displayStatus];
   const done = task.displayStatus === "completed";
   return (
@@ -79,6 +85,9 @@ function CareRow({ error, task, onComplete, onOpen, busy, blocked, canComplete }
   );
 }
 export default function CareScreen() {
+  const { colors, premium } = useTheme();
+  const statusMeta = useThemeMemo(() => makeStatusMeta(colors), [colors, premium]);
+
   const router = useRouter();
   const scroll = useRef<FlatList<CareTask>>(null);
   useTabScrollTop("care", scroll);

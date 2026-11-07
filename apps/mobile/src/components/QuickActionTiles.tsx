@@ -1,8 +1,9 @@
+import { useTheme } from "@/theme/useTheme";
 import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { Pressable, Text, View } from "react-native";
 
-import { colors, radii, spacing, typography } from "@/theme/tokens";
+import { radii, spacing, typography } from "@/theme/tokens";
 
 type QuickAction = {
   key: string;
@@ -22,6 +23,8 @@ type QuickActionTilesProps = {
 };
 
 export function QuickActionTiles({ onActionPress }: QuickActionTilesProps) {
+  const { colors } = useTheme();
+
   return (
     <View style={{ gap: spacing.sm }}>
       <Text style={[typography.label, { color: colors.mutedForeground }]}>

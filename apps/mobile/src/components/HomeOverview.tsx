@@ -1,3 +1,6 @@
+import type { Colors } from "@/theme/tokens";
+import { useMemo as useThemeMemo } from "react";
+import { useTheme } from "@/theme/useTheme";
 import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { Pressable, Text, View } from "react-native";
@@ -6,7 +9,7 @@ import { SectionHeader } from "@/components/ui/SectionHeader";
 import { Surface } from "@/components/ui/Surface";
 import type { ActivityItem, HomePayload } from "@/lib/home-data";
 import { formatCurrency } from "@/lib/home-data";
-import { colors, radii, spacing, typography } from "@/theme/tokens";
+import { radii, spacing, typography } from "@/theme/tokens";
 
 type ReadyHome = Exclude<HomePayload, { needsOnboarding: true }>;
 type Notice = ReadyHome["notices"][number];
@@ -27,6 +30,8 @@ function SnapshotMetric({
   detail: string;
   onPress: () => void;
 }) {
+  const { colors } = useTheme();
+
   return (
     <Pressable
       accessibilityRole="button"
@@ -45,11 +50,11 @@ function SnapshotMetric({
   );
 }
 
-const noticeTone = {
+const makeNoticeTone = (colors: Colors) => ({
   positive: { bg: colors.successBg, fg: colors.successForeground },
   neutral: { bg: colors.infoBg, fg: colors.infoForeground },
   warning: { bg: colors.warningBg, fg: colors.warningForeground },
-} as const;
+} as const);
 
 export function HomeSnapshot({
   analytics,
@@ -68,6 +73,9 @@ export function HomeSnapshot({
   onVaultPress: () => void;
   onNoticePress: (notice: Notice) => void;
 }) {
+  const { colors, premium } = useTheme();
+  const noticeTone = useThemeMemo(() => makeNoticeTone(colors), [colors, premium]);
+
 
   return (
     <View style={{ gap: spacing.md }}>
@@ -166,6 +174,8 @@ export function HomeRecentActivity({
   items: ActivityItem[];
   onItemPress: (item: ActivityItem) => void;
 }) {
+  const { colors } = useTheme();
+
   const visible = items.slice(0, 3);
   if (!visible.length) return null;
   return (
@@ -209,6 +219,8 @@ function QuickAction({
   detail: string;
   onPress: () => void;
 }) {
+  const { colors } = useTheme();
+
   return (
     <Pressable accessibilityRole="button" onPress={() => tap(onPress)}
       style={({ pressed }) => ({

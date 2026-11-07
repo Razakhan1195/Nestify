@@ -1,3 +1,4 @@
+import { useTheme } from "@/theme/useTheme";
 import { safeBack } from "@/lib/navigation";
 import { FormScrollView } from "@/components/FormScrollView";
 import {JourneyHeading,JourneyPanel,JourneySteps,JourneyDisclosure} from "@/components/JourneyUI";
@@ -17,7 +18,7 @@ import {TextField} from "@/components/TextField";
 import {DateField} from "@/components/DateField";
 import {apiGet,apiPatch,apiPost,ApiError} from "@/lib/api";
 import {evidenceDefaults,evidenceError,explainStatement,type StatementEvidence} from "@/lib/statement-evidence";
-import {colors,spacing,typography} from "@/theme/tokens";
+import { spacing, typography } from "@/theme/tokens";
 type Reading={enabled:boolean;attempt:{status:string;result:StatementSuggestions|null}|null};
 type Payload={id:string;title:string;amount:number|null;category:string;periodStart:string|null;periodEnd:string|null;version:string;hasOriginal:boolean;fields:StatementEvidence;reviewedAt:string|null;needsReview:boolean;statementReaderSupported?:boolean;energyEvidenceSupported?:boolean;energy?:EnergyEvidence|null;energyNeedsReview?:boolean};
 export default function StatementDetails(){
@@ -26,6 +27,8 @@ export default function StatementDetails(){
  return <Details key={(session?.user.id??"signed-out")+":"+billId} id={billId} signedIn={Boolean(session)} readingFirst={intent==="read"}/>;
 }
 function Details({id,signedIn,readingFirst}:{id:string;signedIn:boolean;readingFirst:boolean}){
+  const { colors } = useTheme();
+
  const navigation=useNavigation(),router=useRouter(),lock=useRef(false);
  const [energy,setEnergy]=useState<EnergyEvidence|null>(null),[energyTouched,setEnergyTouched]=useState(false);
  const [data,setData]=useState<Payload|null>(null),[fields,setFields]=useState({...evidenceDefaults});

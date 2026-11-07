@@ -1,3 +1,4 @@
+import { useTheme } from "@/theme/useTheme";
 import { Feather } from "@expo/vector-icons";
 import { JourneyHeading, JourneyPanel } from "@/components/JourneyUI";
 import { CleaningFeature } from "@/components/CleaningUI";
@@ -10,8 +11,10 @@ import { ReadNotice, QuietAction } from "@/components/Brief";
 import { Button } from "@/components/Button";
 import { fetchCleaningRoutines, saveCustomRoutine, readPendingRoutine, recoverRoutineSave } from "@/lib/custom-cleaning";
 import { cleaningScheduleLabel, type CleaningRoutine } from "@/lib/custom-cleaning-types";
-import { colors, typography } from "@/theme/tokens";
+import { typography } from "@/theme/tokens";
 export default function CleaningRoutines() {
+  const { colors } = useTheme();
+
   const router=useRouter(),params=useLocalSearchParams<{saved?:string}>();
   const [data,setData]=useState<Awaited<ReturnType<typeof fetchCleaningRoutines>>|null>(null),[error,setError]=useState<string|null>(null),[busy,setBusy]=useState(false),[pending,setPending]=useState(false);
   const [showStopped,setShowStopped]=useState(false);

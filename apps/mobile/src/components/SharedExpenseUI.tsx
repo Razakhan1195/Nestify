@@ -1,3 +1,5 @@
+import type { Colors } from "@/theme/tokens";
+import { useTheme } from "@/theme/useTheme";
 import { AmbientBackdrop } from "./AmbientBackdrop";
 import { FormScrollView } from "@/components/FormScrollView";
 import { Feather } from "@expo/vector-icons";
@@ -9,11 +11,13 @@ import { SafeAreaModal as Modal } from "@/components/SafeAreaModal";
 import {SafeAreaView} from "react-native-safe-area-context";
 import {ScreenNavigation} from "./ScreenNavigation";
 import {QuietAction} from "./Brief";
-import {colors,layout,radii,spacing,typography} from "@/theme/tokens";
+import { layout, radii, spacing, typography } from "@/theme/tokens";
 import {ApiError} from "@/lib/api";
 import {fetchSharedExpenses,type SharedPayload,type SharedPerson} from "@/lib/shared-expenses";
 
 export function SharedFrame({title,children,disabled=false,embedded=false,inline=false,fallback="/shared"}:{title:string;children:ReactNode;disabled?:boolean;embedded?:boolean;inline?:boolean;fallback?:string}){
+  const { colors } = useTheme();
+
  const {groupId}=useLocalSearchParams<{groupId?:string}>();
  const scopedFallback=fallback==="/shared"&&typeof groupId==="string"?"/shared?groupId="+encodeURIComponent(groupId):fallback;
  if(inline)return <View style={{gap:24}}>{children}</View>;
@@ -26,11 +30,15 @@ export function SharedFrame({title,children,disabled=false,embedded=false,inline
  </SafeAreaView>;
 }
 export function SharedNotice({message,onRetry,busy=false}:{message:string;onRetry?:()=>void;busy?:boolean}){
+  const { colors } = useTheme();
+
  return <View accessibilityLiveRegion="polite" style={{backgroundColor:colors.warningBg,borderRadius:radii.lg,padding:16,gap:8}}>
  <Text style={[typography.body,{color:colors.warningForeground}]}>{message}</Text>
  {onRetry?<QuietAction label={busy?"Checking…":"Try again"} disabled={busy} onPress={onRetry}/>:null}</View>;
 }
-export function SharedLoading(){return <ActivityIndicator color={colors.primary} accessibilityLabel="Loading shared expenses"/>;}
+export function SharedLoading(){
+  const { colors } = useTheme();
+return <ActivityIndicator color={colors.primary} accessibilityLabel="Loading shared expenses"/>;}
 export function useSharedLedger(id?:string){
  const {groupId:rawGroupId}=useLocalSearchParams<{groupId?:string}>();
  const groupId=typeof rawGroupId==="string"?rawGroupId:undefined;
@@ -59,6 +67,8 @@ export function useSharedLedger(id?:string){
 
 /** Reusable, dismissible editing sheet. Closing preserves the form's current choices. */
 export function SharedSheet({title,visible,onClose,children,disabled=false}:{title:string;visible:boolean;onClose:()=>void;children:ReactNode;disabled?:boolean}){
+  const { colors } = useTheme();
+
  return <Modal visible={visible} transparent animationType="slide" onRequestClose={()=>{if(!disabled)onClose();}}>
   <KeyboardAvoidingView behavior={Platform.OS==="ios"?"padding":undefined} style={{flex:1,backgroundColor:"rgba(0,0,0,0.3)",justifyContent:"flex-end"}}>
    <Pressable accessibilityRole="button" accessibilityLabel="Close without leaving expense" disabled={disabled} onPress={onClose} style={{flex:1}}/>
@@ -73,6 +83,8 @@ export function SharedSheet({title,visible,onClose,children,disabled=false}:{tit
 }
 
 export function PersonPicker({label,people,value,onChange,disabled=false}:{label:string;people:SharedPerson[];value:string;onChange:(id:string)=>void;disabled?:boolean}){
+  const { colors } = useTheme();
+
  const [open,setOpen]=useState(false);const selected=people.find(p=>p.id===value);
  return <View style={{gap:6}}>
   <Text style={[typography.meta,{fontWeight:"600",color:colors.mutedForeground}]}>{label}</Text>
@@ -95,4 +107,4 @@ export function PersonPicker({label,people,value,onChange,disabled=false}:{label
   </Modal>
  </View>;
 }
-export const sharedStyles={label:{...typography.meta,color:colors.mutedForeground},body:{...typography.body,color:colors.foreground},heading:{...typography.title,color:colors.foreground},row:{paddingVertical:spacing.lg,borderBottomWidth:1,borderBottomColor:colors.border}} as const;
+export const getSharedStyles = (colors: Colors) => ({label:{...typography.meta,color:colors.mutedForeground},body:{...typography.body,color:colors.foreground},heading:{...typography.title,color:colors.foreground},row:{paddingVertical:spacing.lg,borderBottomWidth:1,borderBottomColor:colors.border}} as const);

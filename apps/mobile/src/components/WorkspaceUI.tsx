@@ -1,3 +1,4 @@
+import { useTheme } from "@/theme/useTheme";
 import { profileName } from "@/lib/profile-identity";
 import { useMembership } from "@/lib/use-membership";
 import { NotificationBell } from "@/components/AppNotifications";
@@ -9,9 +10,11 @@ import { Pressable, ScrollView, Text, View, useWindowDimensions, type ViewStyle 
 import { SafeAreaModal as Modal } from "@/components/SafeAreaModal";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuth } from "@/auth/AuthProvider";
-import { colors, editorialType, homeTile, layout, spacing, typography } from "@/theme/tokens";
+import { editorialType, homeTile, layout, spacing, typography } from "@/theme/tokens";
 
 export function ActionControl({ label, icon, onPress }: { label: string; icon?: keyof typeof Feather.glyphMap; onPress: () => void }) {
+  const { colors } = useTheme();
+
   return <Pressable accessibilityRole="button" onPress={onPress} style={({ pressed }) => ({ minHeight: 44, paddingHorizontal: 13, paddingVertical: 10, borderRadius: 12, borderWidth: 1, borderColor: colors.border, backgroundColor: pressed ? colors.accent : colors.surfaceRaised, flexDirection: "row", alignItems: "center", gap: 7 })}>
     {icon ? <Feather name={icon} size={17} color={colors.primary} /> : null}
     <Text style={[typography.meta, { color: colors.primary, fontWeight: "600", flexShrink: 1 }]}>{label}</Text>
@@ -19,6 +22,8 @@ export function ActionControl({ label, icon, onPress }: { label: string; icon?: 
 }
 /** One compact navigation bar across tabs. Screen titles belong to scrolling content. */
 export function TabHeader({ title, showAssistant = true }: { title: string; showAssistant?: boolean }) {
+  const { colors } = useTheme();
+
  const router=useRouter(),{session}=useAuth();
  const membership=useMembership(title==="Home");
  const pro=membership?.enabled&&membership.membership?.plan==="pro";
@@ -34,6 +39,8 @@ export function TabHeader({ title, showAssistant = true }: { title: string; show
 }
 
 export function HomeGreeting({household}:{household?:string;canInvite?:boolean}) {
+  const { colors } = useTheme();
+
  const router=useRouter(),{session}=useAuth();
  const name=profileName(session?.user.user_metadata);
  return <View style={{gap:spacing.xs}}>
@@ -46,6 +53,8 @@ export function HomeGreeting({household}:{household?:string;canInvite?:boolean})
 }
 
 export function HomeQuickActions({ onBill, onRecord, onReminder, onSplit }: { onBill: () => void; onRecord: () => void; onReminder: () => void; onSplit: () => void }) {
+  const { colors } = useTheme();
+
   const { width, fontScale } = useWindowDimensions();
   const stacked = fontScale > 1.3;
   const items = [
@@ -62,12 +71,16 @@ export function HomeQuickActions({ onBill, onRecord, onReminder, onSplit }: { on
   </View>;
 }
 export function SectionHeading({ title, action, onPress }: { title: string; action?: string; onPress?: () => void }) {
+  const { colors } = useTheme();
+
   return <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12, minHeight: 44 }}>
     <Text accessibilityRole="header" style={[typography.section, { color: colors.foreground, flex: 1 }]}>{title}</Text>
     {action && onPress ? <Pressable accessibilityRole="button" onPress={onPress} style={{ minHeight: 44, justifyContent: "center", maxWidth: "45%" }}><Text style={[typography.meta, { fontWeight: "600", color: colors.primary }]}>{action}</Text></Pressable> : null}
   </View>;
 }
 export function DestinationTile({ title, detail, action, icon, onPress, children, style }: { title: string; detail: string; action: string; icon: keyof typeof Feather.glyphMap; onPress: () => void; children?: ReactNode; style?: ViewStyle }) {
+  const { colors } = useTheme();
+
   return <Pressable accessibilityRole="button" accessibilityLabel={`${title}. ${detail}. ${action}`} onPress={onPress} style={({ pressed }) => ({ borderRadius: 18, padding: 20, backgroundColor: pressed ? colors.accent : colors.surfaceSubtle, gap: 10, ...style })}>
     <View style={{ flexDirection: "row", alignItems: "center", gap: 14 }}>
       {children ?? <View style={{ width: 44, height: 44, borderRadius: 14, backgroundColor: colors.surfaceRaised, alignItems: "center", justifyContent: "center" }}><Feather name={icon} size={23} color={colors.primary} /></View>}
@@ -77,6 +90,8 @@ export function DestinationTile({ title, detail, action, icon, onPress, children
   </Pressable>;
 }
 export function AddHomeMenu() {
+  const { colors } = useTheme();
+
   const [open, setOpen] = useState(false);
   const router = useRouter();
   return <>
@@ -99,7 +114,9 @@ export function AddHomeMenu() {
 
 
 export function HomeSection({ children, tone = "plain" }: { children: ReactNode; tone?: "plain" | "bills" | "attention" }) {
- return <View style={{backgroundColor:tone==="attention"?colors.warningBg:tone==="bills"?colors.billSurface:colors.surfaceRaised,borderRadius:homeTile.radius,padding:homeTile.padding,gap:4,borderWidth:1,borderColor:tone==="bills"?"#D4DFD7":colors.border}}>{children}</View>;
+  const { colors } = useTheme();
+
+ return <View style={{backgroundColor:tone==="attention"?colors.warningBg:tone==="bills"?colors.billSurface:colors.surfaceRaised,borderRadius:homeTile.radius,padding:homeTile.padding,gap:4,borderWidth:1,borderColor:tone==="bills"?colors.billBorder:colors.border}}>{children}</View>;
 }
 
 

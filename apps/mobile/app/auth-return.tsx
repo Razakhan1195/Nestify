@@ -1,3 +1,4 @@
+import { useTheme } from "@/theme/useTheme";
 import { useEffect, useState } from "react";
 import * as Linking from "expo-linking";
 import { useRouter } from "expo-router";
@@ -5,8 +6,10 @@ import { Text, View } from "react-native";
 import { cancelSocialSignIn, completeSocialSignIn } from "@/auth/social-auth";
 import { RezleeLoading } from "@/components/RezleeLoading";
 import { Button } from "@/components/Button";
-import { colors, spacing, typography } from "@/theme/tokens";
+import { spacing, typography } from "@/theme/tokens";
 export default function AuthReturn() {
+  const { colors } = useTheme();
+
   const callback = Linking.useLinkingURL();
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);

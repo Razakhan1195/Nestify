@@ -1,3 +1,4 @@
+import { useTheme } from "@/theme/useTheme";
 import { FormScrollView } from "@/components/FormScrollView";
 import {JourneyHeading,JourneyPanel,JourneySteps} from "@/components/JourneyUI";
 import { useAuth } from "@/auth/AuthProvider";
@@ -14,7 +15,7 @@ import { TextField } from "@/components/TextField";
 import { DateField } from "@/components/DateField";
 import { apiGet, apiPatch, ApiError } from "@/lib/api";
 import { comparableOutcomeStatements, sameBillTargetDetails, outcomeHasComparison, type BillOutcomeKind, type BillTarget, type OutcomeStatement, type evaluateBillTarget } from "@/lib/bill-outcome";
-import { colors, editorialType, spacing, typography } from "@/theme/tokens";
+import { editorialType, spacing, typography } from "@/theme/tokens";
 
 type Payload = { kind?: BillOutcomeKind; baselineActive?: boolean; version: string; baseline: OutcomeStatement; evidence: OutcomeStatement | null; candidateCount: number; baselineChanged: boolean; target: BillTarget | null; result: ReturnType<typeof evaluateBillTarget> | null; candidates: OutcomeStatement[]; coverageComplete: boolean };
 type Fields = Pick<BillTarget, "kind" | "title" | "expectedAmount" | "effectiveDate" | "cost" | "notes" | "state" | "evidenceBillId" | "snoozedUntil">;
@@ -27,6 +28,8 @@ function fieldsOf(target: BillTarget | null, kind: BillOutcomeKind = "agreed_amo
   return { kind: target.kind ?? kind, title, expectedAmount, effectiveDate, cost, notes, state, evidenceBillId, snoozedUntil };
 }
 function Confirmation({label,checked,disabled,onPress}:{label:string;checked:boolean;disabled:boolean;onPress:()=>void}) {
+  const { colors } = useTheme();
+
   return <Pressable accessibilityRole="checkbox" accessibilityLabel={label} accessibilityState={{checked,disabled}} disabled={disabled} onPress={onPress} style={{minHeight:48,justifyContent:"center",paddingVertical:8}}><Text style={[typography.body,{color:colors.primary}]}>{checked ? "✓ " : "○ "}{label}</Text></Pressable>;
 }
 export default function OutcomeScreen() {
@@ -35,6 +38,8 @@ export default function OutcomeScreen() {
   return <Outcome key={(session?.user.id??"signed-out")+":"+billId} id={billId} />;
 }
 function Outcome({ id }: { id: string }) {
+  const { colors } = useTheme();
+
   const router = useRouter(), navigation = useNavigation();
   const [data, setData] = useState<Payload | null>(null), [fields, setFields] = useState<Fields>({ ...defaults });
   const [loading, setLoading] = useState(true), [busy, setBusy] = useState(false), [dirty, setDirty] = useState(false);

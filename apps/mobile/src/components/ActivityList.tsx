@@ -1,7 +1,8 @@
+import { useTheme } from "@/theme/useTheme";
 import { Text, View } from "react-native";
 
 import type { ActivityItem } from "@/lib/home-data";
-import { colors, radii, spacing, typography } from "@/theme/tokens";
+import { radii, spacing, typography } from "@/theme/tokens";
 
 type ActivityListProps = {
   items: ActivityItem[];
@@ -18,6 +19,8 @@ function timeAgo(value: string) {
 }
 
 export function ActivityList({ items }: ActivityListProps) {
+  const { colors } = useTheme();
+
   if (!items.length) return null;
 
   return (

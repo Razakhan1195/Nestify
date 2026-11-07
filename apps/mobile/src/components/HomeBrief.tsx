@@ -1,3 +1,4 @@
+import { useTheme } from "@/theme/useTheme";
 import { AmbientBackdrop } from "./AmbientBackdrop";
 import { useAuth } from "@/auth/AuthProvider";
 import { useReviewedBillChanges } from "@/lib/use-reviewed-bill-changes";
@@ -10,12 +11,14 @@ import type { HomePayload } from "@/lib/home-data";
 import type { BillAccountOverview } from "@/lib/bill-account-overview";
 import { buildHomeBrief } from "@/lib/home-outcome-brief";
 import { startingContent, type StartingGoal } from "@/lib/home-start";
-import { colors, editorialType, premium, typography } from "@/theme/tokens";
+import { editorialType, typography } from "@/theme/tokens";
 
 export function HomeBrief({ home, accounts, failed, loading, updating = false, careDueCount = 0, providerBusy, startingGoal = "bills" }: {
   home: Exclude<HomePayload, { needsOnboarding: true }>; accounts: BillAccountOverview[];
   failed: boolean; loading: boolean; updating?: boolean; careDueCount?: number; providerBusy: boolean; startingGoal?: StartingGoal;
 }) {
+  const { colors, premium } = useTheme();
+
   const router = useRouter(), { session } = useAuth();
   const reviews = useReviewedBillChanges(session?.user.id ?? null, home.home.id);
   const [reviewPresentation, setReviewPresentation] = useState<string | null>(null);

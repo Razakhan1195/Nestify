@@ -1,3 +1,4 @@
+import { useTheme } from "@/theme/useTheme";
 import {useEffect,useRef,useState} from "react";
 import {useRouter,useLocalSearchParams} from "expo-router";
 import {usePreventRemove} from "expo-router/react-navigation";
@@ -11,7 +12,7 @@ import {RECORD_FILE_TYPES,uploadMimeType,uploadValidationError} from "@/lib/uplo
 import {ScreenNavigation} from "@/components/ScreenNavigation";
 import {Button} from "@/components/Button";
 import {QuietAction} from "@/components/Brief";
-import {colors,spacing,typography} from "@/theme/tokens";
+import { spacing, typography } from "@/theme/tokens";
 type Recovery={fields:{id?:string;title:string;category:string;issued_on:string;expires_on:string;notes:string};fileName:string|null;expectedVersion:string|null;status:string;documentId:string};
 const endpoint="/api/mobile/v1/vault/records";
 export default function VaultSaveResume(){
@@ -19,6 +20,8 @@ export default function VaultSaveResume(){
  return <VaultSaveResumeForAccount key={session?.user.id??"signed-out"}/>;
 }
 function VaultSaveResumeForAccount(){
+  const { colors } = useTheme();
+
  const {session}=useAuth(),router=useRouter(),userId=session?.user.id;
  const params=useLocalSearchParams<{requestId?:string}>();
  const explicit=typeof params.requestId==="string"&&/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i.test(params.requestId)?params.requestId:null;

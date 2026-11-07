@@ -1,11 +1,14 @@
+import { useTheme } from "@/theme/useTheme";
 import { useState } from "react";
 import { Feather } from "@expo/vector-icons";
 import { Pressable, ScrollView, Text, View } from "react-native";
 import { SafeAreaModal as Modal } from "@/components/SafeAreaModal";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { provinces } from "@/lib/canadian-address";
-import { colors, layout, radii, spacing, typography } from "@/theme/tokens";
+import { layout, radii, spacing, typography } from "@/theme/tokens";
 export function ProvincePicker({ value, onChange, disabled = false, error }: { value: string; onChange: (value: string) => void; disabled?: boolean; error?: string }) {
+  const { colors } = useTheme();
+
   const [open, setOpen] = useState(false);
   return <View style={{ gap: 6 }}>
     <Text style={{ fontSize: 13, fontWeight: "600", color: colors.mutedForeground }}>Province or territory</Text>

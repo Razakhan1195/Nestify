@@ -1,11 +1,14 @@
+import { useTheme } from "@/theme/useTheme";
 import {useCallback,useState} from "react";
 import {useFocusEffect,useRouter} from "expo-router";
 import {View,Text} from "react-native";
 import {QuietAction} from "./Brief";
 import {apiGet} from "@/lib/api";
 import {unresolvedBillCopies,type BillRecordPayload} from "@/lib/bill-record-review";
-import {colors,spacing,typography} from "@/theme/tokens";
+import { spacing, typography } from "@/theme/tokens";
 export function BillRecordNotice({billId}:{billId:string}){
+  const { colors } = useTheme();
+
  const router=useRouter();const [data,setData]=useState<BillRecordPayload|null>(null),[failed,setFailed]=useState(false),[retry,setRetry]=useState(0);
  // Retry intentionally restarts this focused lookup without changing the bill.
  // eslint-disable-next-line react-hooks/exhaustive-deps

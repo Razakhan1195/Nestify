@@ -1,3 +1,4 @@
+import { useTheme } from "@/theme/useTheme";
 import { ActionFeedback } from "@/components/ActionFeedback";
 import { CareFeedback } from "@/components/CareFeedback";
 import { QuietAction, ReadNotice } from "@/components/Brief";
@@ -25,13 +26,7 @@ import {
   fetchNeedsYou, dismissAttention, restoreAttention, type AttentionDismissal,
   type NeedsYouSection, type NeedsYouPayload,
 } from "@/lib/needs-you-data";
-import {
-  colors,
-  layout,
-  severityColors,
-  spacing,
-  typography,
-} from "@/theme/tokens";
+import { layout, severityColors, spacing, typography } from "@/theme/tokens";
 
 const sourceIcons: Record<
   AttentionItem["sourceType"],
@@ -51,7 +46,9 @@ function ActionRow({
   item: AttentionItem;
   onPress: () => void; onDismiss: () => void; busy: boolean;
 }) {
-  const tone = severityColors(item.severity);
+  const { colors } = useTheme();
+
+  const tone = severityColors(item.severity, colors);
 
   return (
     <View><Pressable
@@ -121,6 +118,8 @@ function ActionRow({
 }
 
 function SectionHeading({ section }: { section: NeedsYouSection }) {
+  const { colors } = useTheme();
+
   return (
     <View
       style={{
@@ -159,6 +158,8 @@ export default function NeedsYouScreen() {
 }
 
 function NeedsYouContent({ careOnly }: { careOnly: boolean }) {
+  const { colors } = useTheme();
+
   const router = useRouter();
   const { session } = useAuth();
   const request = useRef(0), saving = useRef(false);

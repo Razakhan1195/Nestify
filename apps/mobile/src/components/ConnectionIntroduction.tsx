@@ -1,8 +1,9 @@
+import { useTheme } from "@/theme/useTheme";
 import {JourneyHeading} from "@/components/JourneyUI";
 import { Feather } from "@expo/vector-icons";
 import { Text, View } from "react-native";
 import { Surface } from "@/components/ui/Surface";
-import { colors, radii, spacing, typography } from "@/theme/tokens";
+import { radii, spacing, typography } from "@/theme/tokens";
 
 type Step = { title: string; detail: string };
 type Props = {
@@ -15,6 +16,8 @@ type Props = {
 
 /** Presentation only: viewing an introduction never starts authorization. */
 export function ConnectionIntroduction({ title, description, steps, access, accessNote }: Props) {
+  const { colors } = useTheme();
+
   return <View style={{ gap: spacing.xl }}>
     <JourneyHeading title={title} detail={description}/>
     <Surface tone="subtle" style={{ gap: spacing.lg }}>

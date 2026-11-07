@@ -1,3 +1,4 @@
+import { useTheme } from "@/theme/useTheme";
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import { AppState, Text, View } from "react-native";
 import { SafeAreaModal as Modal } from "@/components/SafeAreaModal";
@@ -10,10 +11,12 @@ import { authenticateBiometric, biometricCapability } from "./biometrics";
 import { Button } from "@/components/Button";
 import { RezleeLoading } from "@/components/RezleeLoading";
 import { supabase } from "@/lib/supabase";
-import { colors, spacing, typography } from "@/theme/tokens";
+import { spacing, typography } from "@/theme/tokens";
 type Context = { screenAccess: boolean; shield: boolean; cover: ReactNode; userId: string | null; state: LockState; label: string; available: boolean; detail: string; change: (enabled: boolean) => Promise<void> };
 const LockContext = createContext<Context | null>(null);
 export function AppLockProvider({ children }: { children: ReactNode }) {
+  const { colors } = useTheme();
+
   const { session, isLoading, recentSignIn } = useAuth();
   const userId = session?.user.id ?? null;
   const [state, setState] = useState<LockState>({ userId: null, ready: false, enabled: false, locked: true, busy: false, error: null });
@@ -103,6 +106,8 @@ export function useAppLock() {
 
 /** Gate account content without removing Expo Router's root navigator. */
 export function AppLockScreen({ children, publicRoute = false }: { children: ReactNode; publicRoute?: boolean }) {
+  const { colors } = useTheme();
+
   const { screenAccess, shield, cover, userId } = useAppLock();
   return <View style={{ flex: 1, backgroundColor: colors.background }}>
     {/* Public navigators must remain mounted while a session is established.

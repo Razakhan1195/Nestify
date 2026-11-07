@@ -1,8 +1,9 @@
+import { useTheme } from "@/theme/useTheme";
 import { Feather } from "@expo/vector-icons";
 import { Text, View } from "react-native";
 
 import type { HomePayload } from "@/lib/home-data";
-import { colors, radii, spacing, typography } from "@/theme/tokens";
+import { radii, spacing, typography } from "@/theme/tokens";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 
 type ReadyHomePayload = Exclude<HomePayload, { needsOnboarding: true }>;
@@ -18,6 +19,8 @@ const meta: Record<ReadinessItem["id"], { title: string; detail: string; icon: k
 };
 
 export function HomeReadiness({ readiness }: Props) {
+  const { colors } = useTheme();
+
   if (!readiness.showSetup) return null;
   const progress = readiness.completeCount / readiness.totalCount;
 

@@ -1,8 +1,9 @@
+import { useTheme } from "@/theme/useTheme";
 import { Feather } from "@expo/vector-icons";
 import { Pressable, Text, View } from "react-native";
 
 import type { HomePayload } from "@/lib/home-data";
-import { colors, spacing, typography } from "@/theme/tokens";
+import { spacing, typography } from "@/theme/tokens";
 
 type ReadyHomePayload = Exclude<HomePayload, { needsOnboarding: true }>;
 type Props = {
@@ -13,6 +14,8 @@ type Props = {
 };
 
 export function HomePulseHero({ nickname, household, onHouseholdPress, onSettingsPress }: Props) {
+  const { colors } = useTheme();
+
   const today = new Intl.DateTimeFormat("en-CA", { weekday: "long", month: "short", day: "numeric" }).format(new Date());
 
   return (

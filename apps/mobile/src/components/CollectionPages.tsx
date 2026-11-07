@@ -1,13 +1,16 @@
+import { useTheme } from "@/theme/useTheme";
 import {useEffect,useLayoutEffect,useMemo,useRef,useState,type ReactNode} from "react";
 import { AccessibilityInfo, Animated, PanResponder, Pressable, ScrollView, Text, View, useWindowDimensions } from "react-native";
 import { SafeAreaModal as Modal } from "@/components/SafeAreaModal";
 import {SafeAreaView} from "react-native-safe-area-context";
 import {Feather} from "@expo/vector-icons";
-import {colors,layout,selectionControl,typography} from "@/theme/tokens";
+import { layout, typography } from "@/theme/tokens";
 import {collectionSwipeTarget,isCollectionSwipe} from "@/lib/collection-swipe";
 
 type Option<T extends string>={value:T;label:string};
 export function CollectionPages<T extends string>({options,selected,onSelect,label,renderPage}:{options:readonly Option<T>[];selected:T;onSelect:(value:T)=>void;label:string;renderPage:(value:T)=>ReactNode}){
+  const { colors, selectionControl } = useTheme();
+
  const {width:windowWidth,fontScale}=useWindowDimensions();
  const vertical=fontScale>1.3;
  const [width,setWidth]=useState(Math.max(1,windowWidth-layout.screenHorizontal*2));
@@ -26,7 +29,7 @@ export function CollectionPages<T extends string>({options,selected,onSelect,lab
    Animated.timing(underline,{toValue:index*(width-selectionControl.inset*2)/options.length,duration:180,useNativeDriver:true}),
    Animated.timing(pageOffset,{toValue:0,duration:180,useNativeDriver:true}),
   ]).start();
- },[index,width,reduced,options.length,underline,pageOffset]);
+ },[index,width,reduced,options.length,underline,pageOffset,selectionControl.inset]);
  const gesture=useMemo(()=>PanResponder.create({
   onMoveShouldSetPanResponder:(_,state)=>isCollectionSwipe(state.dx,state.dy,state.numberActiveTouches),
   onPanResponderMove:(_,state)=>{if(!reduced)pageOffset.setValue(Math.max(-28,Math.min(28,state.dx*0.12)));},
@@ -56,6 +59,8 @@ export function CollectionPages<T extends string>({options,selected,onSelect,lab
  </View>;
 }
 export function CollectionFilter<T extends string>({label,options,selected,onSelect}:{label:string;options:readonly Option<T>[];selected:T;onSelect:(value:T)=>void}){
+  const { colors } = useTheme();
+
  const [open,setOpen]=useState(false);
  return <>
   <Pressable accessibilityRole="button" accessibilityLabel={label+". "+(options.find(o=>o.value===selected)?.label??"Choose")} accessibilityState={{expanded:open}} onPress={()=>setOpen(true)} style={{minHeight:44,flexDirection:"row",alignItems:"center",gap:6,paddingRight:12}}>

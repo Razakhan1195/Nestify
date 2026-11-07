@@ -1,3 +1,4 @@
+import { useTheme } from "@/theme/useTheme";
 import { useState } from "react";
 import { Feather } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
@@ -5,7 +6,7 @@ import { Pressable, ScrollView, Text, View } from "react-native";
 import { SafeAreaModal as Modal } from "@/components/SafeAreaModal";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Button } from "./Button";
-import { colors, editorialType, premium, typography } from "@/theme/tokens";
+import { editorialType, typography } from "@/theme/tokens";
 
 type Job = { id: string; title: string; detail: string; input: string; result: string; action: string; route: string; icon: keyof typeof Feather.glyphMap };
 const jobs: Job[] = [
@@ -15,6 +16,8 @@ const jobs: Job[] = [
   { id: "care", title: "Take a task off your mind", detail: "Give it a date and a place to come back to.", input: "Something your household needs to do or remember.", result: "A task in Care with its timing and progress kept together. Household members can use shared tasks according to their access.", action: "Create a task", route: "/care/add", icon: "check-circle" },
 ];
 export function HomeHelp({ hasBills = null }: { hasBills?: boolean | null }) {
+  const { colors, premium } = useTheme();
+
   const router = useRouter();
   const [selected, setSelected] = useState<Job | null>(null);
   const [open, setOpen] = useState(false);

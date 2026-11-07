@@ -1,13 +1,16 @@
+import { useTheme } from "@/theme/useTheme";
 import { Text, View } from "react-native";
 
 import type { UpcomingItem } from "@/lib/home-data";
-import { colors, radii, spacing, typography } from "@/theme/tokens";
+import { radii, spacing, typography } from "@/theme/tokens";
 
 type UpcomingListProps = {
   items: UpcomingItem[];
 };
 
 export function UpcomingList({ items }: UpcomingListProps) {
+  const { colors } = useTheme();
+
   if (!items.length) return null;
 
   return (

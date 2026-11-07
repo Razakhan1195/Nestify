@@ -1,3 +1,4 @@
+import { useTheme } from "@/theme/useTheme";
 import { SavedBillInsights } from "@/components/SavedBillInsights";
 import { accountServiceLabel } from "@/lib/saved-bill-story";
 import { useRouter } from "expo-router";
@@ -6,9 +7,11 @@ import { Feather } from "@expo/vector-icons";
 import { Pressable, Text, View } from "react-native";
 import { QuietAction } from "@/components/Brief";
 import { manualHistoryAccounts, type HistoryBill } from "@/lib/manual-history-insights";
-import { colors, typography } from "@/theme/tokens";
+import { typography } from "@/theme/tokens";
 
 export function ManualHistoryInsights({ bills, complete, today, initialBillId, onOpen, onAdd, onTrack }: { bills: HistoryBill[]; complete: boolean; today: string; initialBillId?: string; onOpen: (id: string) => void; onAdd: (bill?: HistoryBill) => void; onTrack: (id: string) => void }) {
+  const { colors } = useTheme();
+
   const router = useRouter();
   const accounts = manualHistoryAccounts(bills);
   const [selectedKey, setSelectedKey] = useState<string | null>(null);

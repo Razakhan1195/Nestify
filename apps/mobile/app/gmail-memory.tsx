@@ -1,3 +1,4 @@
+import { useTheme } from "@/theme/useTheme";
 import {FormScrollView} from "@/components/FormScrollView";
 import { useAuth } from "@/auth/AuthProvider";
 import { ConnectionIntroduction } from "@/components/ConnectionIntroduction";
@@ -16,7 +17,7 @@ import { apiGet,apiPost,ApiError } from "@/lib/api";
 import { connectGmail } from "@/lib/gmail-connection";
 import { openPublicLink } from "@/lib/public-links";
 import { safeBack } from "@/lib/navigation";
-import { colors,spacing,typography,layout } from "@/theme/tokens";
+import { spacing, typography, layout } from "@/theme/tokens";
 const endpoint="/api/mobile/v1/gmail-memory";
 const categories=[["utility_bill","Bills"],["service_invoice","Service invoices"],["receipt","Home purchases"],["warranty","Warranties"]] as const;
 type Work={phase:string;processed:number;proposed:number;ignored:number;failed:number;count:number;capReached:boolean;after:number;before:number;mode:string};
@@ -26,6 +27,8 @@ export default function GmailMemoryScreen(){
  return <GmailMemory key={session?.user.id??"signed-out"}/>;
 }
 function GmailMemory(){
+  const { colors } = useTheme();
+
  const router=useRouter(),[data,setData]=useState<Data|null>(null),[error,setError]=useState<string|null>(null),[notice,setNotice]=useState<string|null>(null),[busy,setBusy]=useState(false);
  const [checkedAt,setCheckedAt]=useState(()=>Date.now());
  const [details,setDetails]=useState(false),[settings,setSettings]=useState(false),[selected,setSelected]=useState<string[]>(categories.map(c=>c[0])),[excluded,setExcluded]=useState("");

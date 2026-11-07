@@ -1,3 +1,4 @@
+import { useTheme } from "@/theme/useTheme";
 import { createImportReadLoop, utilitySavedBillsChanged } from "@/lib/import-refresh";
 import { useAuth } from "@/auth/AuthProvider";
 import { UtilityAttemptRemoval } from "@/components/UtilityAttemptRemoval";
@@ -8,7 +9,7 @@ import { ActivityIndicator, AppState, Pressable, Text, View } from "react-native
 import { fetchEzgbSyncStatus, type EzgbSyncPayload } from "@/lib/ezgb-data";
 import { ezgbBillsAvailable, ezgbProgress } from "@/lib/ezgb-progress";
 import { ReadNotice } from "@/components/Brief";
-import { colors, typography } from "@/theme/tokens";
+import { typography } from "@/theme/tokens";
 
 type ProgressProps = { hasAccounts: boolean; accountsLoaded: boolean; onComplete: () => void | Promise<void> };
 export function HomeUtilityProgress(props: ProgressProps) {
@@ -16,6 +17,8 @@ export function HomeUtilityProgress(props: ProgressProps) {
   return session ? <UtilityProgress key={session.user.id} {...props} /> : null;
 }
 function UtilityProgress({ hasAccounts, accountsLoaded, onComplete }: ProgressProps) {
+  const { colors } = useTheme();
+
   const readVersion = useRef(0);
   const previousJob = useRef<EzgbSyncPayload | null>(null);
   const router = useRouter(), completed = useRef<string | null>(null), completion = useRef(onComplete);

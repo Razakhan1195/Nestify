@@ -1,3 +1,4 @@
+import { useTheme } from "@/theme/useTheme";
 import { useEffect, useState } from "react";
 import * as Linking from "expo-linking";
 import { useRouter } from "expo-router";
@@ -6,9 +7,11 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { finishEzgbBrowser } from "@/lib/ezgb-browser";
 import { RezleeLoading } from "@/components/RezleeLoading";
 import { Button } from "@/components/Button";
-import { colors, spacing, typography } from "@/theme/tokens";
+import { spacing, typography } from "@/theme/tokens";
 
 export default function EzgbReturn() {
+  const { colors } = useTheme();
+
   const callback = Linking.useLinkingURL();
   const router = useRouter();
   const [retry, setRetry] = useState(0);

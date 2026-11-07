@@ -1,10 +1,13 @@
+import { useTheme } from "@/theme/useTheme";
 import { Feather } from "@expo/vector-icons";
 import { Pressable, Text, View } from "react-native";
-import { colors, typography } from "@/theme/tokens";
+import { typography } from "@/theme/tokens";
 import type { UtilitySnapshot } from "@/lib/utility-snapshot";
 
 const date = (s: string) => new Intl.DateTimeFormat("en-CA", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" }).format(new Date(s + "T12:00:00Z"));
 export function UtilitySnapshotCard({ snapshot: s, onPress, compact = false, accountLabel = null, statementOnly = false }: { snapshot: UtilitySnapshot; onPress: () => void; compact?: boolean; accountLabel?: string | null; statementOnly?: boolean }) {
+  const { colors } = useTheme();
+
   const money = (n: number) => new Intl.NumberFormat("en-CA", { style: "currency", currency: s.currency }).format(n);
   const max = Math.max(...s.points.map(p => p.amount), 1);
   const chart = s.points.length > 1;
@@ -14,7 +17,7 @@ export function UtilitySnapshotCard({ snapshot: s, onPress, compact = false, acc
     <View style={{ gap: 4 }}><Text style={[typography.display, { color: colors.foreground, fontVariant: ["tabular-nums"] }]}>{money(s.latest.amount)}</Text><Text style={[typography.meta, { color: colors.mutedForeground }]}>{date(s.latest.start)} – {date(s.latest.end)}</Text></View>
     {chart ? <View accessible accessibilityLabel={s.points.map(p => `Period ending ${date(p.end)}: ${money(p.amount)}`).join(". ")} style={{ gap: 8 }}>
       <View style={{ height: compact ? 76 : 96, flexDirection: "row", gap: 9, alignItems: "flex-end" }}>
-        {s.points.map((p, i) => <View key={p.id} style={{ flex: 1, height: "100%", justifyContent: "flex-end", gap: 7 }}><View style={{ height: p.amount === 0 ? 1 : Math.max(3, p.amount / max * (compact ? 50 : 70)), borderTopLeftRadius: 5, borderTopRightRadius: 5, backgroundColor: i === s.points.length - 1 ? colors.primary : "#A3B8A1" }} /><Text style={{ fontSize: 10, color: colors.mutedForeground, textAlign: "center" }}>{new Intl.DateTimeFormat("en-CA", { month: "short", year: "2-digit", timeZone: "UTC" }).format(new Date(p.end + "T12:00:00Z"))}</Text></View>)}
+        {s.points.map((p, i) => <View key={p.id} style={{ flex: 1, height: "100%", justifyContent: "flex-end", gap: 7 }}><View style={{ height: p.amount === 0 ? 1 : Math.max(3, p.amount / max * (compact ? 50 : 70)), borderTopLeftRadius: 5, borderTopRightRadius: 5, backgroundColor: i === s.points.length - 1 ? colors.primary : colors.chartPrevious }} /><Text style={{ fontSize: 10, color: colors.mutedForeground, textAlign: "center" }}>{new Intl.DateTimeFormat("en-CA", { month: "short", year: "2-digit", timeZone: "UTC" }).format(new Date(p.end + "T12:00:00Z"))}</Text></View>)}
       </View>
       <Text style={[typography.caption, { color: colors.mutedForeground }]}>{s.points.length} saved periods · statement amounts</Text>
     </View> : null}

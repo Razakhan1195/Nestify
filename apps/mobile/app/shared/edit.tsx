@@ -1,3 +1,5 @@
+import { useMemo as useThemeMemo } from "react";
+import { useTheme } from "@/theme/useTheme";
 import {groupParams} from "@/lib/shared-expenses";
 import {Feather} from "@expo/vector-icons";
 import {useFocusEffect,useLocalSearchParams,useNavigation,useRouter} from "expo-router";
@@ -9,15 +11,18 @@ import {DateField} from "@/components/DateField";
 import {TextField} from "@/components/TextField";
 import {QuietAction} from "@/components/Brief";
 import {Surface} from "@/components/ui/Surface";
-import {PersonPicker,SharedFrame,SharedLoading,SharedNotice,SharedSheet,sharedStyles as s,useSharedLedger} from "@/components/SharedExpenseUI";
+import {PersonPicker,SharedFrame,SharedLoading,SharedNotice,SharedSheet,getSharedStyles,useSharedLedger} from "@/components/SharedExpenseUI";
 import {fetchSharedBillSource,localToday,pendingSharedSave,saveSharedExpense,type ExpenseDetails,type SharedPayload,type SharedBillSource,type SharedCommand} from "@/lib/shared-expenses";
 import {centsInput,equalExpenseShares,parseCadCents,sharedMoney,sumShares} from "@/lib/shared-expense-math";
 import {AddExpensePerson,expensePersonStatus} from "@/components/ExpensePeople";
 import {initialExpenseParticipants,hasSharedParticipants,expenseParticipantSummary} from "@/lib/shared-expense-participants";
 import {ApiError} from "@/lib/api";
-import {colors,typography} from "@/theme/tokens";
+import { typography } from "@/theme/tokens";
 
 function ExpenseForm({data,id,source,reload,onReloadLatest,unavailable=false}:{data:SharedPayload;id?:string;source?:SharedBillSource;reload:()=>Promise<unknown>;onReloadLatest:()=>Promise<void>;unavailable?:boolean}){
+  const { colors, premium } = useTheme();
+ const s = useThemeMemo(() => getSharedStyles(colors), [colors, premium]);
+
  const router=useRouter(),navigation=useNavigation(),lock=useRef(false),attempt=useRef<SharedCommand|null>(null);
  const [splitOpen,setSplitOpen]=useState(false),[extrasOpen,setExtrasOpen]=useState(false);
  const [original]=useState(()=>id?data.entries.find(e=>e.id===id):null);
@@ -117,6 +122,9 @@ function ExpenseForm({data,id,source,reload,onReloadLatest,unavailable=false}:{d
 }
 
 export default function EditSharedExpense(){
+ const { colors, premium } = useTheme();
+ const s = useThemeMemo(() => getSharedStyles(colors), [colors, premium]);
+
  const {id,billId,groupId}=useLocalSearchParams<{id?:string;billId?:string;groupId?:string}>(),router=useRouter(),{data,error,busy,load}=useSharedLedger(id);
  const [formVersion,setFormVersion]=useState(0);
  const [source,setSource]=useState<SharedBillSource|null>(null),[sourceError,setSourceError]=useState<string|null>(null);

@@ -1,3 +1,4 @@
+import { useTheme } from "@/theme/useTheme";
 import {useState} from "react";
 import {useRouter} from "expo-router";
 import {Text,View} from "react-native";
@@ -6,9 +7,11 @@ import type {BillsPayload} from "@/lib/bills-data";
 import {formatDueDate} from "@/lib/bills-data";
 import {homeBillAccounts} from "@/lib/home-bill-accounts";
 import {localDay} from "@/lib/home-start";
-import {colors,typography} from "@/theme/tokens";
+import { typography } from "@/theme/tokens";
 
 export function HomeBillAccounts({bills}:{bills:Exclude<BillsPayload,{needsOnboarding:true}>}){
+  const { colors } = useTheme();
+
  const router=useRouter(),[expanded,setExpanded]=useState(false);
  const accounts=homeBillAccounts(bills.bills,bills.historyCoverage?.complete===true,localDay());
  if(!accounts.length)return null;

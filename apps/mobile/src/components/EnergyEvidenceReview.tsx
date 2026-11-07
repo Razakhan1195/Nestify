@@ -1,3 +1,4 @@
+import { useTheme } from "@/theme/useTheme";
 import { useState } from "react";
 import { Pressable, Text, View } from "react-native";
 import { Feather } from "@expo/vector-icons";
@@ -6,9 +7,11 @@ import { CollectionFilter } from "./CollectionPages";
 import { TextField } from "./TextField";
 import { energyEvidenceError, energyKinds, energyKindLabels, energyBands, energyBandLabels, energyUnits, energyRateUnits, energyLineDescription, type EnergyEvidence, type EnergyLine } from "@/lib/energy-evidence";
 import { moneyCents } from "@/lib/statement-evidence";
-import { colors, layout, spacing, typography } from "@/theme/tokens";
+import { layout, spacing, typography } from "@/theme/tokens";
 const money = (value: string) => { const cents = moneyCents(value); return cents === null ? "Amount not recorded" : new Intl.NumberFormat("en-CA", { style: "currency", currency: "CAD" }).format(cents / 100); };
 export function EnergyEvidenceReview({ value, disabled = false, onChange }: { value: EnergyEvidence; disabled?: boolean; onChange?: (next: EnergyEvidence) => void }) {
+  const { colors } = useTheme();
+
   const [open, setOpen] = useState(false), [selected, setSelected] = useState<number | null>(null), [excerpt, setExcerpt] = useState<number | null>(null);
   const error = energyEvidenceError(value);
   const update = (index: number, key: keyof EnergyLine, text: string) => onChange?.({ ...value, lines: value.lines.map((row, i) => i === index ? { ...row, [key]: text, quote: "" } : row) });

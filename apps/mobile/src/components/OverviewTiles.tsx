@@ -1,7 +1,8 @@
+import { useTheme } from "@/theme/useTheme";
 import { Text, View } from "react-native";
 
 import { formatCurrency } from "@/lib/home-data";
-import { colors, radii, spacing, typography } from "@/theme/tokens";
+import { radii, spacing, typography } from "@/theme/tokens";
 
 type OverviewTilesProps = {
   overview: {
@@ -13,6 +14,8 @@ type OverviewTilesProps = {
 };
 
 export function OverviewTiles({ overview }: OverviewTilesProps) {
+  const { colors } = useTheme();
+
   const tiles = [
     { label: "Known cost", value: formatCurrency(overview.knownCostThisMonth), detail: "this month" },
     { label: "Due soon", value: String(overview.billsDueSoonCount), detail: "bills in 14 days" },

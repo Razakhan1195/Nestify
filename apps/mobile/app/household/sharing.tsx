@@ -1,11 +1,14 @@
+import { useTheme } from "@/theme/useTheme";
 import { Text, ScrollView } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { ScreenNavigation } from "@/components/ScreenNavigation";
 import { ProfileGroup } from "@/components/ProfileUI";
 import { BriefRow } from "@/components/Brief";
-import { colors, layout, spacing, typography } from "@/theme/tokens";
+import { layout, spacing, typography } from "@/theme/tokens";
 export default function Sharing() {
+  const { colors } = useTheme();
+
   const router = useRouter();
   return <SafeAreaView edges={["left", "right", "bottom"]} style={{ flex: 1, backgroundColor: colors.background }}>
     <ScreenNavigation title="Sharing and privacy" fallback="/household" />

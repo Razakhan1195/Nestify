@@ -1,3 +1,5 @@
+import { useMemo as useThemeMemo } from "react";
+import { useTheme } from "@/theme/useTheme";
 import {useCallback,useEffect,useRef,useState} from "react";
 import {Redirect,useFocusEffect,useRouter} from "expo-router";
 import {Pressable,Text,View} from "react-native";
@@ -6,12 +8,12 @@ import {Button} from "@/components/Button";
 import {TextField} from "@/components/TextField";
 import {QuietAction} from "@/components/Brief";
 import {Surface} from "@/components/ui/Surface";
-import {SharedFrame,SharedLoading,SharedNotice,sharedStyles as s} from "@/components/SharedExpenseUI";
+import {SharedFrame,SharedLoading,SharedNotice,getSharedStyles} from "@/components/SharedExpenseUI";
 import {fetchExpenseGroups,pendingGroupAction,retryGroupAction,saveGroupAction,type ExpenseGroup,type PendingGroupAction} from "@/lib/expense-groups";
 import {sharedMoney} from "@/lib/shared-expense-math";
 import {ApiError} from "@/lib/api";
 import {Feather} from "@expo/vector-icons";
-import {colors,typography} from "@/theme/tokens";
+import { typography } from "@/theme/tokens";
 
 export default function Groups(){
  const {session,isLoading}=useAuth();
@@ -20,6 +22,9 @@ export default function Groups(){
  return <AccountGroups key={session.user.id} userId={session.user.id}/>;
 }
 function AccountGroups({userId}:{userId:string}){
+  const { colors, premium } = useTheme();
+ const s = useThemeMemo(() => getSharedStyles(colors), [colors, premium]);
+
  const router=useRouter(),version=useRef(0),lock=useRef(false),alive=useRef(true);
  const [ready,setReady]=useState(false),[hasHome,setHasHome]=useState<boolean|null>(null);
  const [groups,setGroups]=useState<ExpenseGroup[]>([]),[busy,setBusy]=useState(true),[saving,setSaving]=useState(false),[error,setError]=useState<string|null>(null);

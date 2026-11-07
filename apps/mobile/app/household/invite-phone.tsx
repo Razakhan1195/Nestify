@@ -1,3 +1,4 @@
+import { useTheme } from "@/theme/useTheme";
 import { FormScrollView } from "@/components/FormScrollView";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useRef, useState } from "react";
@@ -9,12 +10,14 @@ import { TextField } from "@/components/TextField";
 import { ScreenNavigation } from "@/components/ScreenNavigation";
 import { QuietAction } from "@/components/Brief";
 import { createPhoneInvitation, pendingPhoneInvitation, normalizeInvitePhone, openPhoneInvitation, type PhoneInviteInput } from "@/lib/phone-invites";
-import { colors, typography } from "@/theme/tokens";
+import { typography } from "@/theme/tokens";
 export default function InviteByPhone() {
   const { session } = useAuth();
   return <InviteForm key={session?.user.id ?? "signed-out"} ownerId={session?.user.id} />;
 }
 function InviteForm({ ownerId }: { ownerId?: string }) {
+  const { colors } = useTheme();
+
   const params = useLocalSearchParams<{ name?: string; personId?: string }>(), router = useRouter();
   const [name, setName] = useState(params.name ?? ""), [phone, setPhone] = useState("");
   const [member, setMember] = useState<string | null>(null), [busy, setBusy] = useState(false), [error, setError] = useState<string | null>(null), [opened, setOpened] = useState(false);

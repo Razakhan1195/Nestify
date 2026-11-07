@@ -1,3 +1,4 @@
+import { useTheme } from "@/theme/useTheme";
 import { createSerializedImportRefresh } from "@/lib/import-refresh";
 import { useHomeImportRefresh } from "@/lib/use-home-import-refresh";
 import { screenEpoch } from "@/lib/screen-state";
@@ -34,9 +35,11 @@ import { homeTaskStates, remainingHomeTasks, type HomeTaskStates } from "@/lib/h
 import { loadHomeSources } from "@/lib/home-source-loading";
 import { fetchBills } from "@/lib/bills-data";
 import { fetchHome } from "@/lib/home-data";
-import { colors, layout, typography } from "@/theme/tokens";
+import { layout, typography } from "@/theme/tokens";
 
 export default function HomeScreen() {
+  const { colors } = useTheme();
+
   const router = useRouter();
   const focused=useIsFocused();
   const [welcomeUser,setWelcomeUser]=useState<string|null>(null);

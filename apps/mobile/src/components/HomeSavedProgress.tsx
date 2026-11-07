@@ -1,3 +1,4 @@
+import { useTheme } from "@/theme/useTheme";
 import { Feather } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { Text, View } from "react-native";
@@ -6,11 +7,13 @@ import type { BillsPayload } from "@/lib/bills-data";
 import { formatDueDate } from "@/lib/bills-data";
 import { HomeBillAccounts } from "@/components/HomeBillAccounts";
 import { manualHistoryAccounts } from "@/lib/manual-history-insights";
-import { colors, typography } from "@/theme/tokens";
+import { typography } from "@/theme/tokens";
 
 export type StarterSavedItem = { title: string; detail: string; href: string; kind: "records" | "care" };
 type SavedBills = Exclude<BillsPayload, { needsOnboarding: true }>;
 export function HomeSavedProgress({ bills, items, stale }: { bills: SavedBills | null; items: StarterSavedItem[]; stale: boolean }) {
+  const { colors } = useTheme();
+
   const router = useRouter();
   if (stale || (!items.length && (!bills || !bills.bills.length))) return null;
   return <View style={{ gap: 16 }}>
@@ -24,6 +27,8 @@ export function HomeSavedProgress({ bills, items, stale }: { bills: SavedBills |
 }
 
 function HomeBillProgress({ bills }: { bills: SavedBills | null }) {
+  const { colors } = useTheme();
+
   const router = useRouter();
   if (!bills) return null;
   if (manualHistoryAccounts(bills.bills).length) return <HomeBillAccounts bills={bills}/>;

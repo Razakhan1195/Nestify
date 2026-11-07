@@ -1,3 +1,4 @@
+import { useTheme } from "@/theme/useTheme";
 import {useIsFocused} from "expo-router/react-navigation";
 import {useEffect,useRef,useState} from "react";
 import { Platform, ScrollView, Text, View } from "react-native";
@@ -11,8 +12,10 @@ import {acknowledgeProWelcome} from "@/lib/membership";
 import {useMembershipState} from "@/lib/use-membership";
 import {ProWelcomeContent} from "./ProWelcome";
 import {nextWelcomeStep,canAcknowledgeWelcome,welcomeAllowsNextTask,type WelcomeStep} from "@/lib/welcome-flow";
-import {colors,spacing,typography} from "@/theme/tokens";
-export function FounderMessage(){return <View style={{gap:spacing.lg}}>
+import { spacing, typography } from "@/theme/tokens";
+export function FounderMessage(){
+  const { colors } = useTheme();
+return <View style={{gap:spacing.lg}}>
  <Text style={[typography.label,{color:colors.primary}]}>A note from our founder</Text>
  <Text accessibilityRole="header" style={[typography.heading,{color:colors.foreground}]}>Built in Canada.{"\n"}Shaped by you.</Text>
  <Text style={[typography.body,{color:colors.foreground}]}>Home comes with a lot to keep track of. We’re building Rezlee to take some of that weight off your shoulders—with useful technology that helps you spend less time on life admin.</Text>
@@ -27,6 +30,8 @@ export function FounderWelcome({onReady}:{onReady?:(userId:string)=>void}){
  return focused&&session?.user.id?<AccountWelcome key={session.user.id} userId={session.user.id} onReady={onReady}/>:null;
 }
 function AccountWelcome({userId,onReady}:{userId:string;onReady?:(userId:string)=>void}){
+  const { colors } = useTheme();
+
  const focused=useIsFocused();
  const membershipState=useMembershipState(),data=membershipState.data,m=data?.membership;
  const [local,setLocal]=useState<{pro:boolean;founder:boolean}|null>(null);

@@ -1,3 +1,4 @@
+import { useTheme } from "@/theme/useTheme";
 import { Feather } from "@expo/vector-icons";
 import { Redirect, Tabs } from "expo-router";
 import { useEffect, useState } from "react";
@@ -13,9 +14,11 @@ import { ReadNotice } from "@/components/Brief";
 import { fetchOnboarding } from "@/lib/onboarding-data";
 import { ApiError } from "@/lib/api";
 import { emitTabPress } from "@/lib/tab-events";
-import { colors } from "@/theme/tokens";
+
 const icons: Record<string, keyof typeof Feather.glyphMap> = { home: "home", bills: "file-text", vault: "archive", care: "check-square", household: "users" };
 export default function TabsLayout() {
+  const { colors } = useTheme();
+
   const { session, isLoading } = useAuth();
   const account = useAccountSwitch();
   const insets = useSafeAreaInsets();

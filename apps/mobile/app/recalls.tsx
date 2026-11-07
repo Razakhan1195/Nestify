@@ -1,3 +1,4 @@
+import { useTheme } from "@/theme/useTheme";
 import { useCallback, useState } from "react";
 import { useFocusEffect, useRouter, useLocalSearchParams } from "expo-router";
 import { ActivityIndicator, Alert, Linking, Pressable, ScrollView, Text, View } from "react-native";
@@ -6,10 +7,12 @@ import { Button } from "@/components/Button";
 import { Surface } from "@/components/ui/Surface";
 import { apiGet, apiPost, ApiError } from "@/lib/api";
 import { ScreenNavigation } from "@/components/ScreenNavigation";
-import { colors, spacing, typography } from "@/theme/tokens";
+import { spacing, typography } from "@/theme/tokens";
 type Match = { key: string; itemId: string; itemName: string; reason: string; status: string; recall: { id: string; title: string; product: string; url: string; issue: string; action: string; updated: string } };
 type Payload = { checkedAt: string; itemCount: number; missingBrandCount: number; matches: Match[] };
 export default function RecallsScreen() {
+  const { colors } = useTheme();
+
   const router = useRouter();
   const params = useLocalSearchParams<{ itemId?: string; saved?: string }>();
   const itemId = typeof params.itemId === "string" ? params.itemId : undefined;

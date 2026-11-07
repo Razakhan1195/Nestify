@@ -1,3 +1,4 @@
+import { useTheme } from "@/theme/useTheme";
 import { billsScreen } from "@/lib/screen-state";
 import { BillGettingStarted } from "@/components/BillGettingStarted";
 import { useTabScrollTop } from "@/lib/use-tab-scroll-top";
@@ -27,10 +28,12 @@ import { SectionHeading } from "@/components/WorkspaceUI";
 import { fetchBills, formatDueDate, billFilters, type BillFilterValue, type BillListItem } from "@/lib/bills-data";
 import { BillsAccountList } from "@/components/BillAccountBrief";
 import { ApiError } from "@/lib/api";
-import { colors, layout, typography } from "@/theme/tokens";
+import { layout, typography } from "@/theme/tokens";
 
 const views = [{value:"insights",label:"Insights"},{value:"accounts",label:"Accounts"},{value:"shared",label:"Expenses"}] as const;
 export default function BillsScreen({historyOnly=false}:{historyOnly?:boolean}={}) {
+  const { colors } = useTheme();
+
   const router = useRouter();
   const scroll = useRef<ScrollView>(null);
   useTabScrollTop("bills", scroll, !historyOnly);
