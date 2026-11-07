@@ -1,5 +1,7 @@
 # Customer roadmap and realtor gifting release
 
+**Superseded web access policy:** Customer web access was retired later on 7 November. See [customer-web-retirement-20261107.md](customer-web-retirement-20261107.md). /roadmap now opens the mobile app; the web board and customer browser login are no longer available.
+
 Updated 7 November 2026. Backend deployed; iOS 0.1.0 (83) available for internal TestFlight testing. Android 0.1.0 (67) built and inspected; its Google Play upload is pending because the connected Mac is locked. No public store release or store-review submission.
 
 ## Customer experience
