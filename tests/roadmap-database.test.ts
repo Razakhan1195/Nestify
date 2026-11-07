@@ -14,6 +14,7 @@ async function fixture() {
  insert into auth.users(id) values('${id(1)}'),('${id(2)}'),('${id(3)}');`);
  await db.exec(await readFile("supabase/migrations/202611070001_customer_roadmap.sql", "utf8"));
  await db.exec(await readFile("supabase/migrations/202611070004_roadmap_session_boundaries.sql", "utf8"));
+ await db.exec(await readFile("supabase/migrations/202611070005_roadmap_team_items.sql", "utf8"));
  return db;
 }
 async function login(db: PGlite, n: number | null, role = n ? "authenticated" : "anon") {
@@ -115,4 +116,17 @@ test("revoked sessions, unverified users and deleting idea owners cannot bypass 
   await login(db,2);assert.equal((await list(db)).total,0);
   await assert.rejects(result(db,"select rezlee_roadmap_vote($1,1) r",[id(100)]),/unavailable/);
  } finally {await db.close();}
+});
+
+test("team-owned ideas are visible and votable without becoming customer-owned or bypassing moderation", async () => {
+ const db=await fixture();
+ try {
+  await db.query("insert into roadmap_ideas(id,user_id,title,description,category,visibility) values($1,null,'Shared household budgets','Set monthly household spending targets together.','household','public')",[id(200)]);
+  await login(db,1);const board=await list(db);assert.equal(board.total,1);assert.equal(board.items[0].mine,false);assert.equal((await list(db,true)).total,0);
+  assert.equal((await result<{score:number}>(db,"select rezlee_roadmap_vote($1,1) r",[id(200)])).score,1);
+  assert.equal((await result<{score:number}>(db,"select rezlee_roadmap_vote($1,0) r",[id(200)])).score,0);
+  await assert.rejects(db.query("insert into roadmap_ideas(id,user_id,title,description,category) values($1,null,'Fake team idea','A customer cannot impersonate the team.','other')",[id(201)]),/permission denied/);
+  await db.exec("reset role");await db.query("update roadmap_ideas set visibility='hidden' where id=$1",[id(200)]);
+  await login(db,1);assert.equal((await list(db)).total,0);await assert.rejects(result(db,"select rezlee_roadmap_vote($1,1) r",[id(200)]),/unavailable/);
+ }finally{await db.close();}
 });

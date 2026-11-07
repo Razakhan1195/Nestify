@@ -1,0 +1,110 @@
+[
+  {
+    "id": "1c4855d8-09a8-569c-b5b8-a9ad04a74d92",
+    "title": "Gmail bill import",
+    "description": "Find supported bills in your connected Gmail account and bring their details and originals into Rezlee.",
+    "category": "bills",
+    "status": "in_progress",
+    "priority": "none",
+    "response": "The import flow is built. Verification and launch checks are being completed before customer access is enabled."
+  },
+  {
+    "id": "5dc9e9d3-ee6f-5ed5-a6ce-6281d6f0c5a9",
+    "title": "Pay bills in Rezlee",
+    "description": "Pay supported household bills from the app and keep payment status alongside each bill.",
+    "category": "bills",
+    "status": "under_review",
+    "priority": "none",
+    "response": "We’re assessing this idea before committing to a build. Supported billers, payment partners and customer protections need to be worked through."
+  },
+  {
+    "id": "dfe681ab-4deb-5e73-aa1d-6f6d2ad7cb43",
+    "title": "Rezlee card",
+    "description": "A card for everyday household spending, with purchases organised alongside your bills and shared costs.",
+    "category": "household",
+    "status": "under_review",
+    "priority": "none",
+    "response": "A proposed feature, not an available card. Issuing partners, eligibility, costs and protections would need to be established first."
+  },
+  {
+    "id": "6133a3f6-7024-5675-8bac-81866498ea6e",
+    "title": "Split one payment across multiple cards",
+    "description": "Use more than one card to cover a single eligible bill or purchase, choosing the amount charged to each.",
+    "category": "bills",
+    "status": "under_review",
+    "priority": "none",
+    "response": "We need to establish what merchants and payment partners can support. There is no committed launch date."
+  },
+  {
+    "id": "a8ed2a62-c0c4-5dbe-a7a2-ea42752bfd74",
+    "title": "Split actual payments with roommates",
+    "description": "Let each roommate pay their share toward a household bill, with a clear view of what is paid and outstanding.",
+    "category": "household",
+    "status": "under_review",
+    "priority": "none",
+    "response": "This would go beyond tracking who owes whom. Current shared expenses record balances and repayments; they do not move money."
+  },
+  {
+    "id": "6d0ed93a-4ccb-5aae-aca7-d05c2ae5685d",
+    "title": "More bill-provider connections",
+    "description": "Connect more electricity, gas, water and telecom accounts so fewer bills need to be added manually.",
+    "category": "bills",
+    "status": "under_review",
+    "priority": "none",
+    "response": "Existing supported connections remain available. Votes and provider requests will help us choose which connections to add next."
+  },
+  {
+    "id": "3458c4b4-7e81-5d7f-9b7a-fd42d7a46865",
+    "title": "Shared household budgets",
+    "description": "Set monthly spending targets together and see how household bills and shared expenses compare with the budget.",
+    "category": "household",
+    "status": "under_review",
+    "priority": "none",
+    "response": "We’re gathering interest before choosing the first budgeting tools to build. Tell us which spending categories matter most."
+  },
+  {
+    "id": "fd41c825-322d-5e69-a4c0-4b0790a6f088",
+    "title": "Contract renewal and price-change alerts",
+    "description": "Get a heads-up before a bill contract renews or a promotional price ends, using dates saved in Rezlee.",
+    "category": "bills",
+    "status": "under_review",
+    "priority": "none",
+    "response": "A proposed extension to bill tracking. We need to make clear which dates come from a statement and which you confirm yourself."
+  },
+  {
+    "id": "415228df-2c2c-56fd-90c3-706cda7535e2",
+    "title": "Household maintenance calendar",
+    "description": "See upcoming upkeep, recurring tasks and household assignments together in a calendar view.",
+    "category": "care",
+    "status": "under_review",
+    "priority": "none",
+    "response": "Care tasks and routines are already available. This idea adds a shared calendar view to make planning ahead easier."
+  },
+  {
+    "id": "1bca279c-4f93-5ae8-a631-5eceee55f7f4",
+    "title": "Shared expense groups",
+    "description": "Keep separate balances for roommates, family or trips, with flexible splits and recorded repayments.",
+    "category": "household",
+    "status": "shipped",
+    "priority": "none",
+    "response": "Available in the app: Shared expenses → View expense groups. Rezlee tracks amounts owed; it does not transfer money."
+  },
+  {
+    "id": "14cdfb1e-181e-5583-9ef1-de597fdb1460",
+    "title": "Realtor welcome-home gifts",
+    "description": "Realtors can give clients a year of Rezlee Pro, activated through an invitation to the client’s verified email.",
+    "category": "realtors",
+    "status": "shipped",
+    "priority": "none",
+    "response": "Available through the Rezlee team. The gift year starts when claimed, with no automatic renewal or access to the client’s private records."
+  },
+  {
+    "id": "e767bb12-3b08-53dd-b0ff-8ad97aac474a",
+    "title": "Dark mode",
+    "description": "Choose a light or dark appearance, or let Rezlee follow your phone’s setting.",
+    "category": "other",
+    "status": "shipped",
+    "priority": "none",
+    "response": "Available in Settings → Appearance, including the roadmap and everyday household screens."
+  }
+]
