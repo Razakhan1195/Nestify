@@ -51,7 +51,7 @@ export function Hero() {
             last, with a clear view of what needs you next.
           </p>
           <Button asChild size="lg" className="mt-8 h-12 px-6">
-            <Link href="/signup">
+            <Link href="/open">
               Bring your place together <ArrowRight className="size-4" />
             </Link>
           </Button>

@@ -1,20 +1,13 @@
 import { authenticateMobileRequest } from "@/lib/supabase/mobile";
-import { createClient } from "@/lib/supabase/server";
 import { readBoundedJson } from "@/lib/security/request";
 import { listInput, suggestionInput, voteInput, roadmapError } from "@/lib/roadmap/model";
 
 export const dynamic = "force-dynamic";
 const reply = (body: unknown, status = 200) => Response.json(body, { status, headers: { "Cache-Control": "private, no-store" } });
-async function context(request: Request, write = false) {
+async function context(request: Request) {
  if (request.headers.has("authorization")) return authenticateMobileRequest(request);
- if (write && request.headers.get("origin") !== new URL(request.url).origin)
-  return { error: { status: 403, message: "Open Rezlee to make this change." } };
- const supabase = await createClient();
- if (write) {
-  const { data: { user }, error } = await supabase.auth.getUser();
-  if (error || !user || !user.email_confirmed_at) return { error: { status: 401, message: "Sign in with a verified account to share ideas and vote." } };
- }
- return { error: undefined, supabase };
+ return { error: { status: 410, message: "Open the Rezlee mobile app to view the roadmap, share ideas and vote." } };
+
 }
 export async function GET(request: Request) {
  const input = listInput.safeParse(Object.fromEntries(new URL(request.url).searchParams));
@@ -30,7 +23,7 @@ export async function GET(request: Request) {
 }
 export async function POST(request: Request) {
  try {
-  const ctx = await context(request, true);
+  const ctx = await context(request);
   if (ctx.error) return reply({ error: ctx.error.message }, ctx.error.status);
   const input = suggestionInput.safeParse(await readBoundedJson(request, 12000).catch(() => null));
   if (!input.success) return reply({ error: "Add a title (6–100 characters), a description (20–2,000 characters), and confirm public sharing." }, 400);
@@ -42,7 +35,7 @@ export async function POST(request: Request) {
 }
 export async function PATCH(request: Request) {
  try {
-  const ctx = await context(request, true);
+  const ctx = await context(request);
   if (ctx.error) return reply({ error: ctx.error.message }, ctx.error.status);
   const input = voteInput.safeParse(await readBoundedJson(request, 1024).catch(() => null));
   if (!input.success) return reply({ error: "Choose an upvote or downvote." }, 400);

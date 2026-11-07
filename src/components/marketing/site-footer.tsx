@@ -33,9 +33,9 @@ export function SiteFooter() {
           </Link>
           <Link
             className="transition-colors hover:text-foreground"
-            href="/login"
+            href="/open"
           >
-            Sign in
+            Open the app
           </Link>
           <Link className="transition-colors hover:text-foreground" href="/roadmap">Roadmap</Link>
           {support && /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(support) ? (

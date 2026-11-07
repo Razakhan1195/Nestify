@@ -90,7 +90,7 @@ export function FeatureGrid() {
           </p>
           <Link
             className="mt-6 inline-flex min-h-11 items-center gap-2 text-sm font-semibold text-primary"
-            href="/signup"
+            href="/open"
           >
             Start with your place <ArrowUpRight className="size-4" />
           </Link>

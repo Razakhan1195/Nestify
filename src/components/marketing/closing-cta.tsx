@@ -15,7 +15,7 @@ export function ClosingCta() {
           </p>
         </div>
         <Button asChild size="lg" className="h-12 shrink-0">
-          <Link href="/signup">
+          <Link href="/open">
             Get started <ArrowRight className="size-4" />
           </Link>
         </Button>

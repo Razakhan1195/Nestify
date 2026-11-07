@@ -1,8 +1,14 @@
-import { type NextRequest } from "next/server";
+import { retiredCustomerPath } from "@/lib/customer-web";
+import { NextResponse, type NextRequest } from "next/server";
 
 import { updateSession } from "@/lib/supabase/proxy";
 
 export async function middleware(request: NextRequest) {
+  // Retire old sessions and saved URLs before any customer page or action runs.
+  if (request.headers.has("next-action") || retiredCustomerPath(request.nextUrl.pathname)) {
+    if (request.method !== "GET" && request.method !== "HEAD") return NextResponse.json({ error: "Continue in the Rezlee mobile app." }, { status: 410, headers: { "Cache-Control": "no-store" } });
+    return NextResponse.redirect(new URL("/open#", request.url), { status: 307, headers: { "Cache-Control": "no-store", "Referrer-Policy": "no-referrer" } });
+  }
   return await updateSession(request);
 }
 

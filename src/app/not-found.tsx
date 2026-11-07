@@ -15,7 +15,7 @@ export default function NotFound() {
         This link may have moved, or the record may no longer be available.
       </p>
       <Button asChild className="w-fit">
-        <Link href="/app">Open dashboard</Link>
+        <Link href="/open">Open Rezlee</Link>
       </Button>
     </main>
   );
