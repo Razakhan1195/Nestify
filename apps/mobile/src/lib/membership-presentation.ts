@@ -13,7 +13,7 @@ export const membershipComparison = [
   { feature: "Saved bills, originals & home records", free: "Included", pro: "Included" },
   { feature: "Shared routines, assignments & recurring reminders", free: "Included", pro: "Included" },
   { feature: "AI bill scans", free: "3 / month", pro: "No monthly bill-count limit" },
-  { feature: "Supported provider & Gmail imports", free: "Manual uploads", pro: "Connect & retrieve" },
+  { feature: "Supported provider imports", free: "Manual uploads", pro: "Connect & retrieve" },
   { feature: "Other AI help around your home", free: "3 requests / month", pro: "50 requests / month" },
   { feature: "Quote, compatibility & repair-or-replace decisions", free: "—", pro: "Included" },
   { feature: "Pro benefits for your household", free: "—", pro: "Included" },

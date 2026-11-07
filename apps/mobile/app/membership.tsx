@@ -61,7 +61,7 @@ function MembershipContent({userId}:{userId:string}){
  const benefits=showPro?[
   "Everything in Rezlee",
   "Unlimited bill scans",
-  "Provider & Gmail imports",
+  "Supported provider imports",
   "50 AI requests each month",
   "Quote, compatibility & repair decisions",
   "Pro benefits for your household",
@@ -128,7 +128,7 @@ function MembershipContent({userId}:{userId:string}){
       <Text style={styles.smallPrint}>Both plans include saved bills, originals, home records, basic bill insights and shared household routines. Set recurring jobs, assign them to family or roommates, take turns, and track completion—free with Rezlee. Manual entry stays available.</Text>
       <Text style={styles.smallPrint}>Rezlee includes 3 AI bill scans and 3 other AI requests each month. Pro has no monthly bill-count limit and includes 50 other AI requests each month. Allowances reset each calendar month. Failed bill-reading attempts are returned to your allowance.</Text>
       <Text style={styles.smallPrint}>Pro includes quote comparison, compatibility checks and repair-versus-replace help, within the AI allowance.</Text>
-      <Text style={styles.smallPrint}>Provider availability varies. Connections retrieve up to six months of available history when you request an import. Automatic scheduled provider retrieval and bill payments are not included at launch.</Text>
+      <Text style={styles.smallPrint}>Provider availability varies. Connections retrieve up to six months of available history when you request an import. Gmail import is not available yet. Automatic scheduled provider retrieval and bill payments are not included at launch.</Text>
       <Text style={styles.smallPrint}>Your saved records stay accessible if Pro ends.</Text>
      </View>:null}
     </View>
