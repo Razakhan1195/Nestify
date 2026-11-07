@@ -1,3 +1,4 @@
+import { spendModelId } from "./independent-input";
 import type { LanguageModelMiddleware } from "ai";
 import type { LanguageModelV3Usage } from "@ai-sdk/provider";
 export const spendFeatures = ["assistant", "document", "repair", "gmail", "quote", "maintenance"] as const;
@@ -30,7 +31,7 @@ export function spendMiddleware(reserve: () => Promise<SpendReservation>): Langu
   };
   return { specificationVersion: "v3",
     transformParams: async ({ params, model }) => {
-      if (!ALLOWED_SPEND_MODELS.has(model.modelId) || params.tools?.length) throw new Error("This AI operation is not available.");
+      if (!ALLOWED_SPEND_MODELS.has(spendModelId(model.provider, model.modelId)) || params.tools?.length) throw new Error("This AI operation is not available.");
       // Model routing overrides could charge an unreviewed model while settling at the original model's rate.
       if (params.providerOptions?.gateway?.models || params.providerOptions?.openrouter?.models) throw new Error("This AI operation is not available.");
       for (const message of params.prompt) {

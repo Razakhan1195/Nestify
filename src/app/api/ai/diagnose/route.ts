@@ -59,7 +59,7 @@ export async function POST(req: Request) {
   }
 
   try {
-    const data = await diagnoseRepair({ description, location, file });
+    const data = await diagnoseRepair({ description, location, file }, "independent");
     return Response.json({ data });
   } catch {
     console.error("[v0] ai diagnose failed");

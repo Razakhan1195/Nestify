@@ -1,7 +1,7 @@
 import type { LanguageModelMiddleware } from "ai";
 
 /** Saved records and conversation history can contain Gmail-derived data.
- * Enforce the same privacy restrictions for every model call, regardless of source.
+ * Keep saved, mixed and unknown-origin context on the protected route.
  * Provider credentials and unverified direct-provider fallbacks cannot bypass this boundary.
  */
 export function privateAiMiddleware(): LanguageModelMiddleware {

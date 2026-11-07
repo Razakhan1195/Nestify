@@ -27,12 +27,12 @@ export async function POST(request: Request) {
       return reserveAiRequest(auth.supabase, kind === "bill_history" ? "statement-reading" : undefined, kind === "bill" || kind === "bill_history" ? "document" : "assistant");
     },
     async extract(kind, part) {
-      if (kind === "receipt") return extractReceipt(part);
-      if (kind === "bill") return extractBill(part);
-      if (kind === "bill_history") return extractBillHistory(part);
-      if (kind === "appliance") return extractAppliance(part);
-      if (kind === "warranty") return extractWarranty(part);
-      return classifyDocument(part);
+      if (kind === "receipt") return extractReceipt(part, "independent");
+      if (kind === "bill") return extractBill(part, "independent");
+      if (kind === "bill_history") return extractBillHistory(part, "independent");
+      if (kind === "appliance") return extractAppliance(part, "independent");
+      if (kind === "warranty") return extractWarranty(part, "independent");
+      return classifyDocument(part, "independent");
     },
   });
 }

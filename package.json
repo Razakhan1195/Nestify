@@ -17,6 +17,7 @@
   "dependencies": {
     "@ai-sdk/gateway": "^3.0.133",
     "@ai-sdk/google": "^3.0.83",
+    "@ai-sdk/openai": "3.0.138",
     "@ai-sdk/react": "^3.0.210",
     "@radix-ui/react-accordion": "^1.2.14",
     "@supabase/ssr": "^0.12.0",
