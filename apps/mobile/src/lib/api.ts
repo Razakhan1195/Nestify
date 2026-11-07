@@ -52,6 +52,20 @@ export class ApiError extends Error {
   }
 }
 
+function transportFailure(error: unknown, mutation: boolean): unknown {
+  if (error instanceof ApiError) return error;
+  const message = error instanceof Error ? error.message : "";
+  // Expo native fetch rejects with Error/UnexpectedException, not TypeError.
+  if (error instanceof TypeError || /fetch failed|network request failed|failed to fetch|networkerror|could not connect to the server|internet connection appears to be offline/i.test(message)) {
+    return new ApiError(mutation ? "Could not confirm the save. Check your connection and try again." : "Connection unavailable. Check your internet connection and try again.", 0);
+  }
+  return error;
+}
+async function transportFetch(input: string, init?: RequestInit): Promise<Response> {
+  try { return await fetch(input, init); }
+  catch (error) { throw transportFailure(error, !!init?.method && init.method !== "GET"); }
+}
+
 /**
  * Typed fetch wrapper for the Rezlee mobile-safe API contract
  * (`/api/mobile/v1/*` on the Next.js app). Attaches the current Supabase
@@ -119,7 +133,7 @@ export async function apiGet<T>(path: string, options?: { timeoutMs?: number; ex
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), timeoutMs);
     try {
-      const response = await fetch(`${apiUrl}${path}`, {
+      const response = await transportFetch(`${apiUrl}${path}`, {
         headers: { Authorization: `Bearer ${accessToken}`, Accept: "application/json" },
         signal: controller.signal,
       });
@@ -156,7 +170,7 @@ export async function apiPost<T>(
     : null;
 
   try {
-    const response = await fetch(`${apiUrl}${path}`, {
+    const response = await transportFetch(`${apiUrl}${path}`, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${accessToken}`,
@@ -191,7 +205,7 @@ export async function apiPatch<T>(path: string, body?: unknown, options?: { time
   const controller = options?.timeoutMs ? new AbortController() : null;
   const timeout = controller ? setTimeout(() => controller.abort(), options?.timeoutMs) : null;
   try {
-    const response = await fetch(`${apiUrl}${path}`, {
+    const response = await transportFetch(`${apiUrl}${path}`, {
       method: "PATCH",
       headers: { Authorization: `Bearer ${accessToken}`, Accept: "application/json", "Content-Type": "application/json" },
       body: body ? JSON.stringify(body) : undefined, signal: controller?.signal,
@@ -212,7 +226,7 @@ export async function apiDelete<T>(path: string): Promise<T> {
   if (!apiUrl) throw new ApiError("EXPO_PUBLIC_API_URL is not configured.", 500);
   const accessToken = await getAccessToken();
   assertCurrentRequest(epoch);
-  const response = await fetch(`${apiUrl}${path}`, {
+  const response = await transportFetch(`${apiUrl}${path}`, {
     method: "DELETE",
     headers: { Authorization: `Bearer ${accessToken}`, Accept: "application/json" },
   });
@@ -244,7 +258,7 @@ export async function apiFormPost<T>(path: string, body: FormData, options?: { t
     return result;
   } catch (error) {
     if (controller?.signal.aborted) throw new ApiError("The upload took too long to confirm. Please try again.", 408);
-    throw error;
+    throw transportFailure(error, true);
   } finally { if (timeout) clearTimeout(timeout); }
 }
 
@@ -254,7 +268,7 @@ export async function apiDeletionReceipt<T>(receipt: { requestId: string; receip
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 15_000);
   try {
-    const response = await fetch(`${apiUrl}/api/mobile/v1/account/deletion/status`, {
+    const response = await transportFetch(`${apiUrl}/api/mobile/v1/account/deletion/status`, {
       method: "POST", headers: { "Content-Type": "application/json", Accept: "application/json" },
       body: JSON.stringify(receipt), signal: controller.signal,
     });

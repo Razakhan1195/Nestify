@@ -66,3 +66,24 @@ test("notification cleanup cannot act on a replacement account",async()=>{
   assert.deepEqual(h.module.qa.updates,[]);assert.equal(h.module.qa.clears,0);
  }finally{await h.close();}
 });
+
+test("native Expo connection failures show useful guidance without replaying requests or leaking native details", async()=>{
+ const h=await bundle('export*from '+JSON.stringify(resolve("apps/mobile/src/lib/api.ts"))+';',{
+  "@/lib/supabase":'export const supabase={auth:{getSession:async()=>({data:{session:{access_token:"qa",user:{id:"qa"}}}})}};',
+  "expo-router":'export const router={replace:()=>{},push:()=>{}};',"expo-constants":'export default {};',
+  "./ai-sharing":'export const requireAiSharing=async()=>{};',"./multipart-request":'export const multipartRequest=async()=>{throw new Error("fetch failed: UnexpectedException: Could not connect to the server. (at ExpoModulesCore/Promise.swift:56)")};',
+ });
+ const original=globalThis.fetch;
+ try {
+  let calls=0;
+  globalThis.fetch=async()=>{calls++;throw new Error("fetch failed: UnexpectedException: Could not connect to the server. (at ExpoModulesCore/Promise.swift:56)");};
+  for(const method of ["apiGet","apiPost","apiPatch","apiDelete"]){
+   const before=calls;
+   await assert.rejects(h.module[method]("/api/mobile/v1/roadmap",{}),(error:unknown)=>{
+    const e=error as {status:number;message:string};assert.equal(e.status,0);assert.match(e.message,/connection/i);assert.doesNotMatch(e.message,/UnexpectedException|Promise.swift|fetch failed/);return true;
+   });assert.equal(calls,before+1,"Connection failure must never replay a mutation");
+  }
+  globalThis.fetch=async()=>new Response(JSON.stringify({error:"This invitation belongs to another account."}),{status:403,headers:{"Content-Type":"application/json"}});
+  await assert.rejects(h.module.apiPatch("/api/mobile/v1/roadmap",{}),{status:403,message:"This invitation belongs to another account."});
+ } finally {globalThis.fetch=original;await h.close();}
+});
