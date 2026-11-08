@@ -16,7 +16,8 @@ import {useAuth} from "@/auth/AuthProvider";
 import {ScreenNavigation} from "@/components/ScreenNavigation";
 import {Button} from "@/components/Button";
 import {getMembershipSnapshot,loadMembership,restoreMembership,type MembershipPayload} from "@/lib/membership";
-import {availablePlans,buyPlan,restorePlans} from "@/lib/store-purchases";
+import {availablePlans,buyPlan,restorePlans,managePlans} from "@/lib/store-purchases";
+import {storePurchaseFailure,type StorePurchaseFailure} from "@/lib/store-purchase-error";
 import { editorialType, typography } from "@/theme/tokens";
 export default function MembershipScreen(){const {session,isLoading}=useAuth();if(isLoading)return <ActivityIndicator/>;if(!session)return <Redirect href="/(auth)/login"/>;return <MembershipContent key={session.user.id} userId={session.user.id}/>;}
 function MembershipContent({userId}:{userId:string}){
@@ -26,7 +27,7 @@ function MembershipContent({userId}:{userId:string}){
  const router=useRouter();
  const [welcoming,setWelcoming]=useState(false);
  function closeWelcome(){setWelcoming(false);void acknowledgeProWelcome(userId).then(value=>{setData(value);return SecureStore.setItemAsync("rezlee-pro-welcome-v2-"+userId,"seen");}).catch(()=>{});}
- const [data,setData]=useState<MembershipPayload|null>(()=>getMembershipSnapshot(userId)),[packages,setPackages]=useState<PurchasesPackage[]>([]),[error,setError]=useState(""),[busy,setBusy]=useState(false),[notice,setNotice]=useState("");
+ const [data,setData]=useState<MembershipPayload|null>(()=>getMembershipSnapshot(userId)),[packages,setPackages]=useState<PurchasesPackage[]>([]),[error,setError]=useState(""),[purchaseError,setPurchaseError]=useState<StorePurchaseFailure|null>(null),[busy,setBusy]=useState(false),[notice,setNotice]=useState("");
  const [plansState,setPlansState]=useState<"idle"|"loading"|"ready"|"empty"|"error">("idle");
  const [selectedPlan,setSelectedPlan]=useState<"free"|"pro"|null>(null),[detailsOpen,setDetailsOpen]=useState(false);
  const version=useRef(0),lock=useRef(false),mounted=useRef(true);
@@ -44,11 +45,11 @@ function MembershipContent({userId}:{userId:string}){
  },[userId]);
  useFocusEffect(useCallback(()=>{void load();return()=>{version.current++;};},[load]));
  async function purchase(plan?:PurchasesPackage){
- if(lock.current)return;lock.current=true;setBusy(true);setError("");setNotice("");const v=version.current;
+ if(lock.current)return;lock.current=true;setBusy(true);setError("");setPurchaseError(null);setNotice("");const v=version.current;
  try{
  if(plan){const current=await loadMembership(userId,true);if(!current.purchasesAvailable)throw Error("Purchases are unavailable.");if(current.membership?.plan==="pro"){setData(current);return;}await buyPlan(userId,plan,current.storeProductIds??[]);}else await restorePlans(userId);
  const r=await restoreMembership(userId);if(v===version.current){setData(r);if(r.membership?.plan==="pro"&&!r.membership.proWelcomeSeen)setWelcoming(true);setNotice(r.membership?.plan==="pro"?"Your Pro access is ready.":"The store hasn’t confirmed active Pro access yet. Try Restore purchases again; don’t buy a second time.");}
- }catch(e){if(v===version.current&&!(e&&typeof e==="object"&&"userCancelled" in e&&e.userCancelled))setError("We couldn’t confirm the store result. Use Restore purchases before buying again.");}
+ }catch(e){if(v===version.current&&!(e&&typeof e==="object"&&"userCancelled" in e&&e.userCancelled))setPurchaseError(storePurchaseFailure(e));}
  finally{lock.current=false;if(mounted.current){setBusy(false);if(v!==version.current)void load();}}
  }
  const m=data?.membership, presentation=membershipPresentation(data);
@@ -76,7 +77,12 @@ function MembershipContent({userId}:{userId:string}){
   "3 AI requests each month",
  ];
  const openLink=(url:string)=>void Linking.openURL(url).catch(()=>setNotice("We couldn’t open that link. Please try again."));
- const manageStore=()=>openLink(Platform.OS==="ios"?"https://apps.apple.com/account/subscriptions":"https://play.google.com/store/account/subscriptions");
+ async function manageStore(){
+  if(lock.current)return;lock.current=true;setBusy(true);setNotice("");
+  try{await managePlans(userId);}
+  catch{if(mounted.current)setNotice(Platform.OS==="ios"?"Open iPhone Settings, tap your name, then Subscriptions to manage your plan.":"Open Google Play, tap your profile, then Payments & subscriptions to manage your plan.");}
+  finally{lock.current=false;if(mounted.current){setBusy(false);void load();}}
+ }
  return <SafeAreaView edges={["left","right","bottom"]} style={styles.screen}>
   {m?<ProWelcome membership={m} visible={welcoming&&m.plan==="pro"} onClose={closeWelcome} onPostpone={()=>setWelcoming(false)}/>:null}
   <ScreenNavigation title="Your membership" fallback="/account"/>
@@ -109,16 +115,18 @@ function MembershipContent({userId}:{userId:string}){
       :ownsPro?<View style={styles.currentPlan}><Text style={styles.currentPlanText}>Included with your Pro membership</Text></View>
       :showPro?<View style={{gap:10}}>
        {!data?.purchasesAvailable?<Text style={styles.priceNote}>Purchases are not available yet. You can continue using Rezlee.</Text>
+        :purchaseError?<Text style={styles.priceNote}>Follow the recovery step below before trying another purchase.</Text>
         :plansState==="loading"?<View accessibilityLiveRegion="polite" style={{gap:8}}><ActivityIndicator accessibilityLabel="Loading subscription plans"/><Text style={styles.priceNote}>Getting prices from your app store…</Text></View>
         :plansState==="ready"&&!error?packages.map(p=><Button key={p.identifier} disabled={busy} label={p.packageType==="ANNUAL"?"Choose yearly · "+priceLabel(p)+" / year":"Choose monthly · "+priceLabel(p)+" / month"} onPress={()=>void purchase(p)}/>)
         :<View style={{gap:10}}><Text accessibilityRole="alert" style={styles.priceNote}>{plansState==="empty"?"Your app store hasn’t returned the subscription plans yet. Please try again.":"We couldn’t load subscription prices. Check your connection and try again."}</Text><Button label="Reload plans" disabled={busy} onPress={()=>void load()}/></View>}
       </View>:null}
      {current&&!showPro?<Button label="Explore Rezlee Pro" disabled={busy} onPress={()=>setSelectedPlan("pro")}/>:null}
-     {ownsPro&&current&&m?.source==="store"&&!m?.household?<Button variant="secondary" label="Manage subscription" disabled={busy} onPress={manageStore}/>:null}
+     {ownsPro&&current&&m?.source==="store"&&!m?.household?<Button variant="secondary" label="Manage subscription" disabled={busy} onPress={()=>void manageStore()}/>:null}
      {showPro&&!ownsPro?<Text style={styles.smallPrint}>Subscriptions renew automatically unless cancelled. Your store confirms the billing period, total and taxes before purchase.</Text>:null}
     </View>
     {m?.plan==="pro"&&m.expiresAt&&!m.lifetime?<Text style={styles.smallPrint}>Current access through {new Date(m.expiresAt).toLocaleDateString()}. {m.household?"This access is shared by your household.":m.source==="store"?"Manage renewal in your app store.":"No automatic renewal."}</Text>:null}
     {error?<View style={{gap:10}}><Text accessibilityRole="alert" style={{color:colors.criticalForeground}}>{error}</Text><Button label="Try again" disabled={busy} onPress={()=>void load()}/></View>:null}
+    {purchaseError?<View style={{gap:10}}><Text accessibilityRole="alert" style={{color:colors.criticalForeground}}>{purchaseError.message}</Text><Button label={purchaseError.kind==="account"?"Open settings":"Restore purchases"} disabled={busy} onPress={()=>purchaseError.kind==="account"?router.dismissTo("/settings"):void purchase()}/></View>:null}
     {!data&&!error?<ActivityIndicator accessibilityLabel="Checking your membership"/>:null}
     {busy?<ActivityIndicator accessibilityLabel="Waiting for purchase confirmation"/>:null}
     {notice?<Text accessibilityLiveRegion="polite" style={styles.priceNote}>{notice}</Text>:null}
@@ -135,7 +143,7 @@ function MembershipContent({userId}:{userId:string}){
     {presentation.lifetime?<Text style={styles.smallPrint}>Previously subscribed through a store? Cancel that subscription to prevent future renewals. Your lifetime Pro access stays with this account.</Text>:null}
     <View style={styles.controls}>
      {(data?.restoreAvailable??data?.purchasesAvailable)?<MembershipLink label="Restore purchases" disabled={busy} onPress={()=>void purchase()}/>:null}
-     <MembershipLink label="Manage store subscriptions" disabled={busy} onPress={manageStore}/>
+     <MembershipLink label="Manage store subscriptions" disabled={busy} onPress={()=>void manageStore()}/>
      {!presentation.lifetime?<MembershipLink label="Claim my waitlist membership" disabled={busy} onPress={()=>router.push("/claim-membership")}/>:null}
      {ownsPro?<MembershipLink label="Read your Pro welcome" onPress={()=>setWelcoming(true)}/>:null}
      <MembershipLink label="Refresh membership" disabled={busy} onPress={()=>void load()}/>

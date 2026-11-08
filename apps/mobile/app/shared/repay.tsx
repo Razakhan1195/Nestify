@@ -46,7 +46,7 @@ function Repayment({data,from,to,onReloadLatest}:{data:SharedPayload;from:string
   catch(e){setError(e instanceof ApiError?e.message:"Could not confirm the reminder. Try again.");}
   finally{lock.current=false;setReminding(false);}
  }
- if(!pair||!canRecord)return <><SharedNotice message={!pair?"There is no outstanding balance between these people. Return to Shared expenses to see the latest balances.":"You can record repayments you sent or received. The household owner can also record them."}/><Button label="Back to balances" variant="secondary" onPress={()=>router.replace({pathname:"/shared",params:groupParams(data)})}/></>;
+ if(!pair||!canRecord)return <><SharedNotice message={!pair?"There is no outstanding balance between these people. Return to Shared expenses to see the latest balances.":"You can record repayments you sent or received. The household owner can also record them."}/><Button label="Back to balances" variant="secondary" onPress={()=>router.dismissTo({pathname:"/shared",params:groupParams(data)})}/></>;
  return <>
   <Surface tone="subtle" style={{gap:12}}>
    <View style={{flexDirection:"row",gap:12,alignItems:"center"}}><View style={{width:48,height:48,borderRadius:24,backgroundColor:colors.accent,alignItems:"center",justifyContent:"center"}}><Feather name="user" size={24} color={colors.primary}/></View><View style={{flex:1,gap:4}}><Text style={s.label}>{outgoing?"Settle with":incoming?"Payment from":"Record payment"}</Text><Text style={s.heading}>{outgoing||incoming?other?.name:sharedPersonName(data.people,from)+" → "+sharedPersonName(data.people,to)}</Text></View></View>

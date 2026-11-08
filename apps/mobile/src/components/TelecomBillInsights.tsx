@@ -73,7 +73,7 @@ export function TelecomBillInsights({bills,billId,today,complete,onOpen,showIden
  const latest3=values.slice(0,3).reduce((sum,n)=>sum+n,0),previous3=values.slice(3,6).reduce((sum,n)=>sum+n,0);
  const recentDelta=values.length>=6&&previous3>0?Math.round((latest3/previous3-1)*100):null;
  const stats=[
-  {label:"STATEMENT AVERAGE",value:values.length?money(total/values.length):"—",detail:values.length+" amounts in the latest "+recent.length+" saved statements"},
+  {label:"STATEMENT AVERAGE",value:values.length?money(total/values.length):"—",detail:values.length+" "+(values.length===1?"amount":"amounts")+" in the latest "+recent.length+" saved "+(recent.length===1?"statement":"statements")},
   {label:"STATEMENT TOTAL",value:values.length?money(total):"—",detail:"Saved statement amounts; not annual spending"},
   {label:"HIGHEST BILL",value:highest!==null?money(highest):"—",detail:highestRows.length>1?"Same amount on "+highestRows.length+" statements":highestRows[0]?.issueDate?formatDueDate(highestRows[0].issueDate):"Not enough history"},
   {label:"RECENT AMOUNTS",value:recentDelta===null?"Not enough history":recentDelta===0?"About the same":Math.abs(recentDelta)+"% "+(recentDelta>0?"up":"down"),detail:"Last 3 vs previous 3 statements; periods may differ"},
@@ -100,7 +100,7 @@ export function TelecomBillInsights({bills,billId,today,complete,onOpen,showIden
      <Text accessibilityRole="header" style={[typography.heading,{color:colors.foreground}]}>{provider}</Text>
      <View style={{flexDirection:"row",flexWrap:"wrap",gap:7,alignItems:"center"}}>
       <View style={{borderRadius:100,backgroundColor:colors.successBg,paddingHorizontal:9,paddingVertical:4}}><Text style={{fontSize:10,fontWeight:"800",color:colors.successForeground}}>SAVED PROVIDER BILLS</Text></View>
-      <Text style={[typography.caption,{color:colors.mutedForeground}]}>{story.rows.length} statements</Text>
+      <Text style={[typography.caption,{color:colors.mutedForeground}]}>{story.rows.length} {story.rows.length===1?"statement":"statements"}</Text>
      </View>
     </View>
    </View>:null}
@@ -123,7 +123,7 @@ export function TelecomBillInsights({bills,billId,today,complete,onOpen,showIden
   </Surface>
   <View style={{flexDirection:"row",flexWrap:"wrap",gap:spacing.sm}}>{stats.map(stat=><InsightStat key={stat.label} {...stat}/>)}</View>
   <View style={{gap:spacing.md}}>
-   <View style={{gap:spacing.xs}}><Heading>Bill trend</Heading><Text style={[typography.caption,{color:colors.mutedForeground}]}>{story.chart.length} saved amounts · Tap a bar to explore</Text></View>
+   <View style={{gap:spacing.xs}}><Heading>Bill trend</Heading><Text style={[typography.caption,{color:colors.mutedForeground}]}>{story.chart.length} saved {story.chart.length===1?"amount":"amounts"} · Tap a bar to explore</Text></View>
    {story.chart.length?<Surface tone="subtle" style={{gap:spacing.md}}>
     <StatementBarChart points={story.chart.map(p=>({id:p.id,label:new Intl.DateTimeFormat("en-CA",{month:"short",year:"2-digit",timeZone:"UTC"}).format(new Date(p.date+"T12:00:00Z")),period:"Issued "+formatDueDate(p.date),value:p.amount,formattedValue:money(p.amount)+" "+latest.currency,detail:latest.telecomDetails?"Statement total including tax · payment status is separate":"Recorded statement amount"}))} onOpen={onOpen}/>
    </Surface>:<Surface tone="subtle"><Text style={[typography.body,{color:colors.mutedForeground}]}>A comparable history isn’t available yet. Your saved statements remain below.</Text></Surface>}

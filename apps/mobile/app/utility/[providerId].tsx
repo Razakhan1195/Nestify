@@ -304,7 +304,7 @@ export default function UtilityIntelligenceScreen() {
           <InsightStat
             label="STATEMENT AVERAGE"
             value={insight.trailing12Average === null ? "—" : statementMoney(insight.trailing12Average)}
-            detail={`${insight.amountStatementCount ?? Math.min(12, insight.statementCount)} amounts available in the latest ${Math.min(12, insight.statementCount)} saved statements`}
+            detail={`${insight.amountStatementCount ?? Math.min(12, insight.statementCount)} ${(insight.amountStatementCount ?? Math.min(12, insight.statementCount)) === 1 ? "amount" : "amounts"} available in the latest ${Math.min(12, insight.statementCount)} saved ${insight.statementCount === 1 ? "statement" : "statements"}`}
           />
           <InsightStat
             label="STATEMENT TOTAL"

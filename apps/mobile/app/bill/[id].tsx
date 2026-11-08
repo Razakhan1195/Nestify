@@ -296,8 +296,8 @@ export default function BillDetailScreen() {
       : null;
   const partialPayment = bill.paymentStatus === "partial" || (paidAmount ?? 0) > 0;
   const scheduledCopy = bill.autopayScheduledDate
-    ? `${formatCurrency(scheduledAmount ?? 0)} is scheduled for ${formatDueDate(bill.autopayScheduledDate)}.`
-    : `${formatCurrency(scheduledAmount ?? 0)} is recorded as scheduled.`;
+    ? `${formatCurrency(scheduledAmount ?? 0, bill.currency)} is scheduled for ${formatDueDate(bill.autopayScheduledDate)}.`
+    : `${formatCurrency(scheduledAmount ?? 0, bill.currency)} is recorded as scheduled.`;
 
   const paymentState = (() => {
     if (bill.isHistoricalStatement) return {
@@ -341,7 +341,7 @@ export default function BillDetailScreen() {
           title: "Overdue · partially paid",
           body:
             remainingAmount !== null
-              ? `${formatCurrency(remainingAmount)} still appears to be outstanding.`
+              ? `${formatCurrency(remainingAmount, bill.currency)} still appears to be outstanding.`
               : "Rezlee has a partial payment recorded, but this bill is still overdue.",
           tone: "critical" as const,
         };
@@ -352,7 +352,7 @@ export default function BillDetailScreen() {
         title: "Payment appears overdue",
         body:
           remainingAmount !== null
-            ? `${formatCurrency(remainingAmount)} still appears to be outstanding.`
+            ? `${formatCurrency(remainingAmount, bill.currency)} still appears to be outstanding.`
             : "Rezlee does not have a paid or scheduled payment recorded for this bill.",
         tone: "critical" as const,
       };
@@ -365,9 +365,9 @@ export default function BillDetailScreen() {
           ? "Partially paid · payment scheduled"
           : "Partially paid",
         body: hasConfirmedScheduledPayment
-          ? `${remainingAmount !== null ? `${formatCurrency(remainingAmount)} remains. ` : ""}${scheduledCopy}`
+          ? `${remainingAmount !== null ? `${formatCurrency(remainingAmount, bill.currency)} remains. ` : ""}${scheduledCopy}`
           : remainingAmount !== null
-            ? `${formatCurrency(remainingAmount)} still appears to be outstanding.`
+            ? `${formatCurrency(remainingAmount, bill.currency)} still appears to be outstanding.`
             : "Rezlee has a partial payment recorded for this bill.",
         tone: "warning" as const,
       };
@@ -405,7 +405,7 @@ export default function BillDetailScreen() {
       title: dueTitle,
       body:
         remainingAmount !== null
-          ? `${formatCurrency(remainingAmount)} currently appears to be outstanding.`
+          ? `${formatCurrency(remainingAmount, bill.currency)} currently appears to be outstanding.`
           : "Rezlee does not have a payment recorded for this bill yet.",
       tone: bill.status === "due_soon" || daysUntilDue === 0 ? ("warning" as const) : ("info" as const),
     };
@@ -451,19 +451,19 @@ export default function BillDetailScreen() {
           <View style={{ flexDirection: "row", flexWrap: "wrap", gap: spacing.xl }}>
             <FinancialStat
               label="Billed"
-              value={billedAmount === null ? "—" : formatCurrency(billedAmount)}
+              value={billedAmount === null ? "—" : formatCurrency(billedAmount, bill.currency)}
             />
             <FinancialStat
               label="Paid"
-              value={bill.isHistoricalStatement ? "Not confirmed" : paidAmount === null ? "—" : formatCurrency(paidAmount)}
+              value={bill.isHistoricalStatement ? "Not confirmed" : paidAmount === null ? "—" : formatCurrency(paidAmount, bill.currency)}
             />
             <FinancialStat
               label="Remaining"
-              value={bill.isHistoricalStatement ? "Not confirmed" : remainingAmount === null ? "—" : formatCurrency(remainingAmount)}
+              value={bill.isHistoricalStatement ? "Not confirmed" : remainingAmount === null ? "—" : formatCurrency(remainingAmount, bill.currency)}
               emphasized
             />
             {scheduledAmount !== null && scheduledAmount > 0 ? (
-              <FinancialStat label="Scheduled" value={formatCurrency(scheduledAmount)} />
+              <FinancialStat label="Scheduled" value={formatCurrency(scheduledAmount, bill.currency)} />
             ) : null}
           </View>
         </Surface>}
@@ -519,7 +519,7 @@ export default function BillDetailScreen() {
 
         {change ? <View style={{ gap: spacing.sm }}>
           <Text style={[typography.section, { color: colors.foreground }]}>What changed</Text>
-          <Text style={[typography.body, { color: colors.foreground }]}>{change.difference === 0 ? "The statement amount is unchanged." : `The statement is ${formatCurrency(Math.abs(change.difference))} ${change.difference > 0 ? "higher" : "lower"} than the earlier saved statement.`}</Text>
+          <Text style={[typography.body, { color: colors.foreground }]}>{change.difference === 0 ? "The statement amount is unchanged." : `The statement is ${formatCurrency(Math.abs(change.difference), bill.currency)} ${change.difference > 0 ? "higher" : "lower"} than the earlier saved statement.`}</Text>
           {change.currentDays && change.previousDays ? <Text style={[typography.body, { color: colors.mutedForeground }]}>{change.currentDays} days in this period, compared with {change.previousDays} in the earlier saved statement.</Text> : null}
           <Text style={[typography.caption, { color: colors.mutedForeground }]}>These are recorded differences. They do not establish whether usage, prices or other charges caused the change.</Text>
           <Pressable accessibilityRole="button" onPress={() => router.push(`/bill/${change.previousId}`)} style={{ minHeight: 44, justifyContent: "center" }}><Text style={{ color: colors.primary }}>View earlier statement</Text></Pressable>
@@ -530,7 +530,7 @@ export default function BillDetailScreen() {
           <Text style={[typography.section, { color: colors.foreground }]}>Understand this statement</Text>
           {firstStatement?.days ? <Text style={[typography.body, { color: colors.foreground }]}>This saved period covers {firstStatement.days} {firstStatement.days === 1 ? "day" : "days"}.</Text> : null}
           {firstStatement?.dailyCents !== null && firstStatement?.dailyCents !== undefined ? <>
-            <Text style={[typography.body, { color: colors.foreground }]}>{formatCurrency(firstStatement.dailyCents / 100)} per day in recorded period charges.</Text>
+            <Text style={[typography.body, { color: colors.foreground }]}>{formatCurrency(firstStatement.dailyCents / 100, bill.currency)} per day in recorded period charges.</Text>
             <Text style={[typography.caption, { color: colors.mutedForeground }]}>An average of the saved total, including tax and any fixed charges. This is not a unit rate, measured daily usage or a savings estimate.</Text>
           </> : null}
           {firstStatement ? <Text style={[typography.body, { color: colors.mutedForeground }]}>{firstStatement.nextCheck}</Text> : null}
@@ -644,7 +644,7 @@ export default function BillDetailScreen() {
                           {index === 0 ? "This statement" : formatDueDate(item.billingPeriodEnd ?? item.issueDate ?? item.dueDate)}
                         </Text>
                         <Text style={{ fontSize: 13, fontWeight: "700", color: colors.foreground }}>
-                          {item.amount == null ? "—" : formatCurrency(item.amount)}
+                          {item.amount == null ? "—" : formatCurrency(item.amount, item.currency)}
                         </Text>
                       </View>
                       <View style={{ height: 5, borderRadius: 3, backgroundColor: colors.border, overflow: "hidden" }}>

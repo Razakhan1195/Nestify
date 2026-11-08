@@ -116,7 +116,7 @@ export default function CarePlanScreen() {
       <Text style={[typography.caption,{color:colors.foreground,fontWeight:"600"}]}>{label}</Text>
     </Pressable>;
   }
-  return <SafeAreaView edges={["left","right","bottom"]} style={{flex:1,backgroundColor:colors.background}}>
+  return <SafeAreaView edges={["top","left","right","bottom"]} style={{flex:1,backgroundColor:colors.background}}>
     <FormScrollView contentInsetAdjustmentBehavior="never" automaticallyAdjustContentInsets={false} keyboardDismissMode="on-drag" keyboardShouldPersistTaps="handled" contentContainerStyle={{padding:spacing.xl,paddingBottom:spacing["4xl"],gap:spacing.xl}}>
       <View style={{flexDirection:"row",alignItems:"center",gap:spacing.md}}>
         <NavigationButton label="Close" close disabled={saving} onPress={()=>safeBack(router,"/(tabs)/care")}/>

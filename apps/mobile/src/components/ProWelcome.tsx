@@ -22,7 +22,7 @@ export function ProWelcomeContent({membership}:{membership:Membership}) {
         </View>
         <View style={{ gap: 18 }}>
           {([
-            ["file-text", "Make sense of your bills", "Unlimited bill scans, with imports from supported providers and Gmail."],
+            ["file-text", "Make sense of your bills", "Unlimited bill scans and imports from supported providers."],
             ["message-circle", "Get help before you spend", "Compare quotes, check compatibility and weigh repair against replacement. 50 AI requests each month."],
             ["home", "Bring your household along", "Pro benefits extend to your household. Shared routines and recurring tasks are free for everyone."],
           ] as const).map(([icon, title, detail]) => <View key={title} style={{ flexDirection: "row", gap: 12 }}>

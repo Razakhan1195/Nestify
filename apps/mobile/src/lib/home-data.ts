@@ -110,10 +110,4 @@ export function fetchHome(force = true) {
   return homeScreen.load(() => apiGet<HomePayload>("/api/mobile/v1/home?availability=1").then(value => value.needsOnboarding ? value : {...value, attentionItems: value.attentionItems.map(presentAttentionItem)}), force);
 }
 
-export function formatCurrency(amount: number) {
-  return new Intl.NumberFormat("en-CA", {
-    currency: "CAD",
-    maximumFractionDigits: 0,
-    style: "currency",
-  }).format(amount);
-}
+export { formatCurrency } from "./format-currency";

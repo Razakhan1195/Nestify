@@ -1,4 +1,4 @@
-import {Platform} from "react-native";
+import {Linking,Platform} from "react-native";
 import Constants from "expo-constants";
 import {supabase} from "./supabase";
 import {eligibleStorePlan} from "./store-product-policy";
@@ -42,3 +42,15 @@ export const restorePlans=(userId:string)=>exclusive(async()=>{
  const purchases=await connect(userId);await purchases.restorePurchases();await checkUser(userId);
 });
 
+
+
+// Present Apple's native sheet first, including when testing with a sandbox account.
+// The store website remains a fallback for older builds and non-Apple platforms.
+export const managePlans=(userId:string)=>exclusive(async()=>{
+ await checkUser(userId);
+ if(Platform.OS==="ios"){
+  try{const purchases=await connect(userId);await purchases.showManageSubscriptions();return;}
+  catch{await checkUser(userId);}
+ }
+ await Linking.openURL(Platform.OS==="ios"?"https://apps.apple.com/account/subscriptions":"https://play.google.com/store/account/subscriptions");
+});

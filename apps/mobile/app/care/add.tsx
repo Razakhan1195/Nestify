@@ -110,7 +110,7 @@ export default function AddCareTaskScreen() {
   }
 
   return (
-    <SafeAreaView edges={["left","right","bottom"]} style={{ flex: 1, backgroundColor: colors.background }}>
+    <SafeAreaView edges={["top","left","right","bottom"]} style={{ flex: 1, backgroundColor: colors.background }}>
       <View  style={{ flex: 1 }}>
         <FormScrollView contentInsetAdjustmentBehavior="never" automaticallyAdjustContentInsets={false} keyboardDismissMode="on-drag" keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingHorizontal: layout.screenHorizontal, paddingVertical: spacing.xl, gap: spacing.xl }}>
           <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>

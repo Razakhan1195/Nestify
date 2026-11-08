@@ -42,7 +42,7 @@ export default function SharedExpenseDetail(){
     <Text style={s.body}>{entry.kind==="expense"?"Paid by "+name(entry.details.paidBy):name(entry.details.from)+" → "+name(entry.details.to)}</Text>
     <Text style={s.label}>{sharedDate(entry.details.happenedOn)}</Text>
    </Surface>
-   {entry.kind==="repayment"&&saved==="1"?<Button label="Back to balances" onPress={()=>router.replace({pathname:"/shared",params:groupParams(data)})}/>:null}
+   {entry.kind==="repayment"&&saved==="1"?<Button label="Back to balances" onPress={()=>router.dismissTo({pathname:"/shared",params:groupParams(data)})}/>:null}
    {entry.kind==="expense"?<View>
     <Text accessibilityRole="header" style={[typography.section,{color:colors.foreground}]}>Shares</Text>
     {entry.details.shares.map(share=><View key={share.personId} style={[s.row,{flexDirection:"row",gap:16}]}><View style={{flex:1}}><Text style={s.body}>{name(share.personId)}</Text>{data.people.find(p=>p.id===share.personId)?.state==="former"?<Text style={s.label}>Former participant · history retained</Text>:null}</View><Text style={s.body}>{sharedMoney(share.cents)}</Text></View>)}
@@ -76,7 +76,7 @@ export default function SharedExpenseDetail(){
     }):null}
     {history&&data.moreChanges?<Text style={s.label}>Showing the latest 20 changes.</Text>:null}
    </View>
-   {!(entry.kind==="repayment"&&saved==="1")?<Button label="Back to balances" variant="secondary" onPress={()=>router.replace({pathname:"/shared",params:groupParams(data)})}/>:null}
+   {!(entry.kind==="repayment"&&saved==="1")?<Button label="Back to balances" variant="secondary" onPress={()=>router.dismissTo({pathname:"/shared",params:groupParams(data)})}/>:null}
   </>:null}
  </SharedFrame>;
 }
