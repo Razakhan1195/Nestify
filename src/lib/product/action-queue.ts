@@ -410,13 +410,15 @@ export function buildActionQueue({
       description:
         dueInDays < 0
           ? `${task.title} is past due.`
-          : `${task.title} is due in ${dueInDays} day${dueInDays === 1 ? "" : "s"}.`,
+          : dueInDays === 0
+            ? `${task.title} is due today.`
+            : `${task.title} is due in ${dueInDays} day${dueInDays === 1 ? "" : "s"}.`,
       eventType: "maintenance_due",
       href: "/app/maintenance",
       id: key,
       meta: "Care",
       relatedTable: "maintenance_tasks",
-      severity: dueInDays < 0 ? "high" : "low",
+      severity: dueInDays <= 0 ? "high" : dueInDays <= 7 ? "medium" : "low",
       sourceId: task.id,
       sourceType: "care",
       taskId: task.id,

@@ -181,7 +181,7 @@ export async function GET(request: Request) {
     if (!result) return NextResponse.json({ needsOnboarding: true });
     const queue = result.queue.map(mobileItem);
     const sections = [
-      { key: "now", title: "Now", detail: "Overdue or blocking", items: queue.filter(item => item.severity === "high") },
+      { key: "now", title: "Now", detail: "Due today, overdue or blocking", items: queue.filter(item => item.severity === "high") },
       { key: "soon", title: "Soon", detail: "Worth handling next", items: queue.filter(item => item.severity === "medium") },
       { key: "later", title: "Later", detail: "Keep on your radar", items: queue.filter(item => item.severity === "low") },
     ].filter(section => section.items.length);
