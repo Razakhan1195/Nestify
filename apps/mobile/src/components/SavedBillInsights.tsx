@@ -1,10 +1,11 @@
+import { openSavedOriginal } from "@/lib/open-saved-original";
 import { useTheme } from "@/theme/useTheme";
 import { StatementBarChart } from "./StatementBarChart";
 import { ElectricityPlanComparison } from "./utility/ElectricityPlanComparison";
 import {EnergyEvidenceReview} from "./EnergyEvidenceReview";
 import {energyKindLabels} from "@/lib/energy-evidence";
 import { useRef, useState } from "react";
-import { ActivityIndicator, Linking, Pressable, Text, View, useWindowDimensions } from "react-native";
+import { ActivityIndicator, Pressable, Text, View, useWindowDimensions } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { BriefRow, QuietAction } from "@/components/Brief";
 import { SectionHeading } from "@/components/WorkspaceUI";
@@ -88,7 +89,7 @@ export function SavedBillInsights({ account, complete, today, onOpen, onDetails,
   async function openOriginal() {
     if (originalLock.current) return;
     originalLock.current = true; setOpening(true); setOriginalError(false);
-    try { const result = await apiGet<{ url: string }>("/api/mobile/v1/bills/" + encodeURIComponent(bill.id) + "/original"); await Linking.openURL(result.url); }
+    try { const result = await apiGet<{ url: string }>("/api/mobile/v1/bills/" + encodeURIComponent(bill.id) + "/original"); await openSavedOriginal(result.url); }
     catch { setOriginalError(true); }
     finally { originalLock.current = false; setOpening(false); }
   }

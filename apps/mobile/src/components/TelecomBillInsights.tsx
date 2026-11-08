@@ -1,6 +1,7 @@
+import { openSavedOriginal } from "@/lib/open-saved-original";
 import { useTheme } from "@/theme/useTheme";
 import { useState } from "react";
-import { Linking, Pressable, Text, useWindowDimensions, View } from "react-native";
+import { Pressable, Text, useWindowDimensions, View } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { QuietAction } from "./Brief";
 import { useRouter } from "expo-router";
@@ -88,7 +89,7 @@ export function TelecomBillInsights({bills,billId,today,complete,onOpen,showIden
  ].join(" ");
  async function openOriginal(){
   if(opening||!latest)return;setOpening(true);setError(null);
-  try{const result=await apiGet<{url:string}>(`/api/mobile/v1/bills/${latest.id}/original`,{timeoutMs:15000});await Linking.openURL(result.url);}
+  try{const result=await apiGet<{url:string}>(`/api/mobile/v1/bills/${latest.id}/original`,{timeoutMs:15000});await openSavedOriginal(result.url);}
   catch(e){setError(e instanceof ApiError?e.message:"Could not open the original. Try again.");}
   finally{setOpening(false);}
  }

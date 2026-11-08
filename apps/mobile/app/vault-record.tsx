@@ -1,3 +1,4 @@
+import { openSavedOriginal } from "@/lib/open-saved-original";
 import { useTheme } from "@/theme/useTheme";
 import { FormScrollView } from "@/components/FormScrollView";
 import {JourneyHeading,JourneyPanel,JourneySteps} from "@/components/JourneyUI";
@@ -132,7 +133,7 @@ export default function VaultRecordScreen(){
   Alert.alert("Read this document?", "This sends the original to Rezlee’s AI service. Suggestions replace the title, dates and notes. Review before saving.",[{text:"Cancel",style:"cancel"},{text:"Read document",onPress:()=>void readDocument()}]);
  }
  async function openFile(){
-  try{const r=await apiGet<{url:string}>("/api/mobile/v1/vault/records?id="+id+"&file=1");await Linking.openURL(r.url);}
+  try{const r=await apiGet<{url:string}>("/api/mobile/v1/vault/records?id="+id+"&file=1");await openSavedOriginal(r.url);}
   catch(e){setError(e instanceof ApiError?e.message:"Could not open attachment.");}
  }
  async function remove(){

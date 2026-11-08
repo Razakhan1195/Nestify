@@ -1,7 +1,8 @@
+import { openSavedOriginal } from "@/lib/open-saved-original";
 import { useTheme } from "@/theme/useTheme";
 import {useCallback,useRef,useState} from "react";
 import {useFocusEffect,useLocalSearchParams,useRouter} from "expo-router";
-import {ActivityIndicator,Alert,Linking,Pressable,ScrollView,Text,View} from "react-native";
+import {ActivityIndicator,Alert,Pressable,ScrollView,Text,View} from "react-native";
 import {SafeAreaView} from "react-native-safe-area-context";
 import {ScreenNavigation} from "@/components/ScreenNavigation";
 import {Surface} from "@/components/ui/Surface";
@@ -18,8 +19,8 @@ function Records({id}:{id:string}){
  const endpoint="/api/mobile/v1/bills/"+encodeURIComponent(id)+"/records";
  const load=useCallback(async()=>{setLoading(true);setError(null);try{setData(await apiGet<BillRecordPayload>(endpoint,{timeoutMs:15000}));setOther(null);setSelected(null);}catch(e){setError(e instanceof ApiError?e.message:"Could not load statement records. Check your connection and try again.");}finally{setLoading(false);}},[endpoint]);
  useFocusEffect(useCallback(()=>{void load();},[load]));
- async function original(b:BillRecord){if(lock.current)return;lock.current=true;setBusy(true);setError(null);try{const r=await apiGet<{url:string}>("/api/mobile/v1/bills/"+b.id+"/original",{timeoutMs:15000});await Linking.openURL(r.url);}catch(e){setError(e instanceof ApiError?e.message:"Could not open the original. Try again.");}finally{lock.current=false;setBusy(false);}}
- async function earlierOriginal(documentId:string){if(lock.current)return;lock.current=true;setBusy(true);setError(null);try{const r=await apiGet<{url:string}>("/api/mobile/v1/vault/records?id="+encodeURIComponent(documentId)+"&file=1",{timeoutMs:15000});await Linking.openURL(r.url);}catch(e){setError(e instanceof ApiError?e.message:"The earlier original is unavailable. It may have been removed from Vault.");}finally{lock.current=false;setBusy(false);}}
+ async function original(b:BillRecord){if(lock.current)return;lock.current=true;setBusy(true);setError(null);try{const r=await apiGet<{url:string}>("/api/mobile/v1/bills/"+b.id+"/original",{timeoutMs:15000});await openSavedOriginal(r.url);}catch(e){setError(e instanceof ApiError?e.message:"Could not open the original. Try again.");}finally{lock.current=false;setBusy(false);}}
+ async function earlierOriginal(documentId:string){if(lock.current)return;lock.current=true;setBusy(true);setError(null);try{const r=await apiGet<{url:string}>("/api/mobile/v1/vault/records?id="+encodeURIComponent(documentId)+"&file=1",{timeoutMs:15000});await openSavedOriginal(r.url);}catch(e){setError(e instanceof ApiError?e.message:"The earlier original is unavailable. It may have been removed from Vault.");}finally{lock.current=false;setBusy(false);}}
  async function save(selectedId:string|null){if(!data||!other||lock.current)return;lock.current=true;setBusy(true);setError(null);try{await apiPost(endpoint,{otherId:other.id,fingerprint:data.bill.fingerprint,otherFingerprint:other.fingerprint,selectedId},{timeoutMs:20000});setSuccess(selectedId?"Choice saved. Only your selected record counts in bill history. Both originals are kept.":"Both records kept. Nothing was combined.");await load();}catch(e){setError(e instanceof ApiError?e.message:"Could not confirm this choice. Reload to check before retrying.");}finally{lock.current=false;setBusy(false);}}
  function choose(b:BillRecord){setOther(b);setSelected(null);setSuccess(null);setError(null);}
  const text=(value:string)=><Text style={[typography.body,{color:colors.mutedForeground}]}>{value}</Text>;

@@ -1,3 +1,4 @@
+import { openSavedOriginal } from "@/lib/open-saved-original";
 import { useTheme } from "@/theme/useTheme";
 import { safeBack } from "@/lib/navigation";
 import { FormScrollView } from "@/components/FormScrollView";
@@ -8,7 +9,7 @@ import {fillEmptyStatementFields,type StatementSuggestions} from "@/lib/statemen
 import {useCallback,useEffect,useRef,useState} from "react";
 import {useLocalSearchParams,useNavigation,useFocusEffect,useRouter} from "expo-router";
 import {usePreventRemove} from "expo-router/react-navigation";
-import { ActivityIndicator, Alert, AppState, Linking, Text, View } from "react-native";
+import { ActivityIndicator, Alert, AppState, Text, View } from "react-native";
 import {SafeAreaView} from "react-native-safe-area-context";
 import {useAuth} from "@/auth/AuthProvider";
 import {ScreenNavigation} from "@/components/ScreenNavigation";
@@ -87,7 +88,7 @@ function Details({id,signedIn,readingFirst}:{id:string;signedIn:boolean;readingF
  }
  async function original(){
   if(lock.current)return;lock.current=true;setBusy(true);setError(null);
-  try{const result=await apiGet<{url:string}>("/api/mobile/v1/bills/"+encodeURIComponent(id)+"/original",{timeoutMs:15000});await Linking.openURL(result.url);}
+  try{const result=await apiGet<{url:string}>("/api/mobile/v1/bills/"+encodeURIComponent(id)+"/original",{timeoutMs:15000});await openSavedOriginal(result.url);}
   catch(e){setError(e instanceof ApiError?e.message:"Could not open the original. Try again.");}
   finally{lock.current=false;setBusy(false);}
  }

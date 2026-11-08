@@ -1,3 +1,4 @@
+import { openSavedOriginal } from "@/lib/open-saved-original";
 import { useTheme } from "@/theme/useTheme";
 import { FormScrollView } from "@/components/FormScrollView";
 import {CollectionPages} from "@/components/CollectionPages";
@@ -6,7 +7,7 @@ import {JourneyHeading,JourneyPanel,JourneyEntry} from "@/components/JourneyUI";
 import {useCallback,useEffect,useRef,useState} from "react";
 import {useFocusEffect,useLocalSearchParams,useNavigation,useRouter} from "expo-router";
 import {usePreventRemove} from "expo-router/react-navigation";
-import { ActivityIndicator, Alert, Linking, Pressable, Text, View } from "react-native";
+import { ActivityIndicator, Alert, Pressable, Text, View } from "react-native";
 import {SafeAreaView} from "react-native-safe-area-context";
 import {randomUUID} from "expo-crypto";
 import {ScreenNavigation} from "@/components/ScreenNavigation";
@@ -98,7 +99,7 @@ export default function Quotes(){
  async function openOriginal(){
   if(!data)return;
   if(!data.document.hasFile){setDetails(v=>!v);return;}
-  try{const r=await apiGet<{url:string}>("/api/mobile/v1/vault/records?id="+data.document.id+"&file=1");await Linking.openURL(r.url);}
+  try{const r=await apiGet<{url:string}>("/api/mobile/v1/vault/records?id="+data.document.id+"&file=1");await openSavedOriginal(r.url);}
   catch(e){setError(e instanceof Error?e.message:"Could not open the original.");}
  }
  function reload(){

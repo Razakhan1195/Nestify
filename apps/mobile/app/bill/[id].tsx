@@ -1,3 +1,4 @@
+import { openSavedOriginal } from "@/lib/open-saved-original";
 import type { Colors } from "@/theme/tokens";
 import { useMemo as useThemeMemo } from "react";
 import { useTheme } from "@/theme/useTheme";
@@ -11,7 +12,7 @@ import * as Haptics from "expo-haptics";
 import { useFocusEffect, useLocalSearchParams, useNavigation, useRouter } from "expo-router";
 import { usePreventRemove } from "expo-router/react-navigation";
 import { useCallback, useRef, useState } from "react";
-import { ActivityIndicator, Alert, Linking, Pressable, Text, View } from "react-native";
+import { ActivityIndicator, Alert, Pressable, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { Button } from "@/components/Button";
@@ -206,7 +207,7 @@ export default function BillDetailScreen() {
     setOpeningOriginal(true); setActionError(null);
     try {
       const result = await apiGet<{ url: string }>(`/api/mobile/v1/bills/${bill.id}/original`, { timeoutMs: 15000 });
-      await Linking.openURL(result.url);
+      await openSavedOriginal(result.url);
     } catch (e) { setActionError(e instanceof ApiError ? e.message : "Could not open the original. Try again."); }
     finally { setOpeningOriginal(false); }
   }
