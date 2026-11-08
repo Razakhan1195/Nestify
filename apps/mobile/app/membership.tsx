@@ -9,7 +9,7 @@ import {Feather} from "@expo/vector-icons";
 import {membershipPresentation} from "@/lib/membership-presentation";
 import {useCallback,useEffect,useRef,useState} from "react";
 import {Redirect,useFocusEffect,useRouter} from "expo-router";
-import {ActivityIndicator,Linking,Platform,Pressable,ScrollView,StyleSheet,Text,View} from "react-native";
+import {ActivityIndicator,AppState,Linking,Platform,Pressable,ScrollView,StyleSheet,Text,View} from "react-native";
 import {SafeAreaView} from "react-native-safe-area-context";
 import type {PurchasesPackage} from "react-native-purchases";
 import {useAuth} from "@/auth/AuthProvider";
@@ -43,7 +43,18 @@ function MembershipContent({userId}:{userId:string}){
  try{const p=await withReadTimeout(availablePlans(userId,r.storeProductIds??[]));if(active()){setPackages(p);setPlansState(p.length?"ready":"empty");}}
  catch{if(active())setPlansState("error");}
  },[userId]);
- useFocusEffect(useCallback(()=>{void load();return()=>{version.current++;};},[load]));
+ useFocusEffect(useCallback(()=>{
+  void load();
+  let previousState=AppState.currentState;
+  const subscription=AppState.addEventListener("change",nextState=>{
+   const returning=nextState==="active"&&previousState!=="active";
+   previousState=nextState;
+   // External store screens do not blur this route. Refresh when the app returns;
+   // an in-flight purchase or native management sheet performs its own refresh.
+   if(returning&&!lock.current)void load();
+  });
+  return()=>{subscription.remove();version.current++;};
+ },[load]));
  async function purchase(plan?:PurchasesPackage){
  if(lock.current)return;lock.current=true;setBusy(true);setError("");setPurchaseError(null);setNotice("");const v=version.current;
  try{
