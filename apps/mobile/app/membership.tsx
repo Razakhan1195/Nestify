@@ -129,7 +129,7 @@ function MembershipContent({userId}:{userId:string}){
         :purchaseError?<Text style={styles.priceNote}>Follow the recovery step below before trying another purchase.</Text>
         :plansState==="loading"?<View accessibilityLiveRegion="polite" style={{gap:8}}><ActivityIndicator accessibilityLabel="Loading subscription plans"/><Text style={styles.priceNote}>Getting prices from your app store…</Text></View>
         :plansState==="ready"&&!error?packages.map(p=><Button key={p.identifier} disabled={busy} label={p.packageType==="ANNUAL"?"Choose yearly · "+priceLabel(p)+" / year":"Choose monthly · "+priceLabel(p)+" / month"} onPress={()=>void purchase(p)}/>)
-        :<View style={{gap:10}}><Text accessibilityRole="alert" style={styles.priceNote}>{plansState==="empty"?"Your app store hasn’t returned the subscription plans yet. Please try again.":"We couldn’t load subscription prices. Check your connection and try again."}</Text><Button label="Reload plans" disabled={busy} onPress={()=>void load()}/></View>}
+        :<View style={{gap:10}}><Text accessibilityRole="alert" style={styles.priceNote}>{plansState==="empty"?"CAD plans aren’t available from your app store right now. Rezlee subscriptions require a Canadian store account.":"We couldn’t load subscription prices. Check your connection and try again."}</Text><Button label="Reload plans" disabled={busy} onPress={()=>void load()}/></View>}
       </View>:null}
      {current&&!showPro?<Button label="Explore Rezlee Pro" disabled={busy} onPress={()=>setSelectedPlan("pro")}/>:null}
      {ownsPro&&current&&m?.source==="store"&&!m?.household?<Button variant="secondary" label="Manage subscription" disabled={busy} onPress={()=>void manageStore()}/>:null}
