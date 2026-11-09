@@ -1,9 +1,11 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import {purchasePlan} from "../apps/mobile/src/lib/store-trial-policy";
-type PurchasesPackage=Parameters<typeof purchasePlan>[0];
-type SubscriptionOption=NonNullable<PurchasesPackage["product"]["subscriptionOptions"]>[number];
+import {createRequire} from "node:module";
+// Load mobile code at test runtime: the backend build intentionally does not install native SDKs.
+type PurchasesPackage={identifier:string;packageType:string;product:{identifier:string;currencyCode:string;price:number;subscriptionPeriod:string;introPrice:unknown;subscriptionOptions:unknown[]}};
+type SubscriptionOption=Record<string,unknown>;
+const {purchasePlan}=createRequire(import.meta.url)("../apps/mobile/src/lib/store-trial-policy.ts") as {purchasePlan:(plan:PurchasesPackage,platform:string,approved:readonly string[],status?:number)=>{trial:boolean;subscriptionOptionId?:string}|null};
 const product="com.rezlee.pro.monthly:monthly",approved=[product,"com.rezlee.pro.annual:annual"];
 function phase(price=7990000,period="P1M",currency="CAD",recurrence=1){return {price:{amountMicros:price,currencyCode:currency,formatted:"$7.99"},billingPeriod:{iso8601:period},recurrenceMode:recurrence,billingCycleCount:recurrence===1?0:1};}
 function option(trial=false){const phases=trial?[phase(0,"P7D","CAD",2),phase()]:[phase()];return {id:trial?"monthly:seven-day-trial":"monthly",storeProductId:product,isBasePlan:!trial,isPrepaid:false,installmentsInfo:null,pricingPhases:phases,fullPricePhase:structuredClone(phases.at(-1)),freePhase:trial?structuredClone(phases[0]):null} as unknown as SubscriptionOption;}
