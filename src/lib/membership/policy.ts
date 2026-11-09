@@ -13,7 +13,7 @@ export function proFeatureForRequest(path:string,method:string):typeof PRO_FEATU
 }
 export function parseStoreEntitlement(value:unknown,products:Set<string>,allowSandbox:boolean,now=Date.now(),expectedUserId?:string){
  if(!value||typeof value!=="object")throw Error("Invalid subscription response");
- const body=value as {subscriber?:{original_app_user_id?:string;entitlements?:Record<string,{product_identifier?:string;expires_date?:string|null;grace_period_expires_date?:string|null}>;subscriptions?:Record<string,{is_sandbox?:boolean;store?:string;refunded_at?:string|null}>}};
+ const body=value as {subscriber?:{original_app_user_id?:string;entitlements?:Record<string,{product_identifier?:string;expires_date?:string|null;grace_period_expires_date?:string|null}>;subscriptions?:Record<string,{is_sandbox?:boolean;store?:string;refunded_at?:string|null;grace_period_expires_date?:string|null}>}};
  const subscriber=body.subscriber;
  if(!subscriber||!subscriber.entitlements||!subscriber.subscriptions)throw Error("Invalid subscription response");
  if(expectedUserId&&subscriber.original_app_user_id&&/^[0-9a-f-]{36}$/i.test(subscriber.original_app_user_id)&&subscriber.original_app_user_id!==expectedUserId)throw Error("Purchase belongs to a different Rezlee account");
@@ -26,7 +26,8 @@ export function parseStoreEntitlement(value:unknown,products:Set<string>,allowSa
  if(subscription.refunded_at)return null;
  const expiry=Date.parse(e.expires_date??"");
  if(!Number.isFinite(expiry))throw Error("Missing subscription expiry");
- const grace=e.grace_period_expires_date?Date.parse(e.grace_period_expires_date):0;
+ const graceDate=e.grace_period_expires_date??subscription.grace_period_expires_date;
+ const grace=graceDate?Date.parse(graceDate):0;
  if(!Number.isFinite(grace))throw Error("Invalid grace period");
  const end=Math.max(expiry,grace);
  return end>now?{expiresAt:new Date(end).toISOString(),productId:e.product_identifier}:null;

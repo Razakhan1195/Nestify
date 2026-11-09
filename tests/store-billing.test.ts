@@ -27,3 +27,11 @@ test("Billing display never overwrites founder, household, promotional or expire
  assert.match(storeBillingPresentation(m,Date.parse(expiry)+1)??"",/^$/);
  const cancelled={...m,storeBilling:{...m.storeBilling!,autoRenew:false,renewsAt:null}};assert.match(storeBillingPresentation(cancelled,now)!,/Trial cancelled/);
 });
+
+test("Store-reported grace is recognized even when expiry includes the grace extension",()=>{
+ const b=body(),s=b.subscriber.subscriptions.monthly;
+ Object.assign(s,{grace_period_expires_date:expiry,billing_issues_detected_at:new Date(now).toISOString(),period_type:"normal"});
+ assert.equal(parseStoreBilling(b,products,true,now)?.status,"grace");assert.equal(parseStoreBilling(b,products,true,now)?.renewsAt,null);
+ b.subscriber.entitlements.rezlee_pro.expires_date="2026-11-08T00:00:00Z";
+ assert.equal(parseStoreEntitlement(b,products,true,now)?.expiresAt,new Date(expiry).toISOString());
+});
