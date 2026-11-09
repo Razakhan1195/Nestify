@@ -16,6 +16,7 @@ async function fixture(){
  `);
  await db.exec(await readFile("supabase/migrations/202610160001_memberships_and_support.sql","utf8"));
  await db.exec(await readFile("supabase/migrations/202610160002_store_sync.sql","utf8"));
+ await db.exec(await readFile("supabase/migrations/202611090001_store_trial_billing.sql","utf8"));
  await db.exec("create function public.rezlee_waitlist_limit(text,integer,integer) returns boolean language sql as $$select true$$;");
  await db.exec(await readFile("supabase/migrations/202610160003_waitlist_claims.sql","utf8"));
  await db.exec(await readFile("supabase/migrations/202610160004_allowance_recovery.sql","utf8"));
@@ -144,5 +145,21 @@ test("already activated members still redeem a reserved waitlist promise exactly
  assert.equal((await db.query("select * from rezlee_waitlist_redemptions where user_id=$1",[id(1)])).rows.length,1);
  assert.equal((await db.query("select * from rezlee_entitlements where user_id=$1 and source='founder'",[id(1)])).rows.length,1);
  assert.equal((await db.query<{activated:number}>("select activated from rezlee_membership_campaign")).rows[0].activated,1000);
+ }finally{await db.close();}
+});
+
+test("Trial metadata and access commit atomically; stale leases and refunds cannot revoke other grants",async()=>{
+ const db=await fixture();try{
+ const lease=id(90);await db.query("insert into rezlee_store_sync(user_id,lease_id,lease_until)values($1,$2,now()+interval '1 minute')",[id(1),lease]);
+ const apply=(l:string,meta:object)=>db.query("select rezlee_apply_store_billing_sync($1,$2,now()+interval '7 days','monthly',$3)",[id(1),l,JSON.stringify(meta)]);
+ await apply(lease,{status:"trial"});await apply(lease,{status:"trial"});assert.equal((await db.query("select * from rezlee_entitlements where user_id=$1",[id(1)])).rows.length,1);
+ await assert.rejects(apply(id(91),{status:"active"}),/expired/);
+ assert.equal((await db.query<{billing:{status:string}}>("select billing from rezlee_store_sync")).rows[0].billing.status,"trial");
+ await apply(lease,{status:"active"});assert.equal((await db.query<{billing:{status:string}}>("select billing from rezlee_store_sync")).rows[0].billing.status,"active");
+ await db.query("insert into rezlee_entitlements(user_id,source)values($1,'founder')",[id(1)]);
+ await db.query("select rezlee_apply_store_billing_sync($1,$2,null,null,null)",[id(1),lease]);
+ assert.equal((await db.query<{billing:unknown}>("select billing from rezlee_store_sync")).rows[0].billing,null);
+ assert.equal((await db.query("select * from rezlee_entitlements where user_id=$1 and source='founder'",[id(1)])).rows.length,1);
+ await db.exec("set role authenticated");await assert.rejects(apply(lease,{status:"trial"}),/permission denied/);
  }finally{await db.close();}
 });

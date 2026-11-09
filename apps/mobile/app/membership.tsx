@@ -6,12 +6,13 @@ import * as SecureStore from "expo-secure-store";
 import {ProWelcome} from "@/components/ProWelcome";
 import {acknowledgeProWelcome} from "@/lib/membership";
 import {Feather} from "@expo/vector-icons";
+import {storeBillingPresentation} from "@/lib/store-billing-presentation";
 import {membershipPresentation} from "@/lib/membership-presentation";
 import {useCallback,useEffect,useRef,useState} from "react";
 import {Redirect,useFocusEffect,useRouter} from "expo-router";
 import {ActivityIndicator,AppState,Linking,Platform,Pressable,ScrollView,StyleSheet,Text,View} from "react-native";
 import {SafeAreaView} from "react-native-safe-area-context";
-import type {PurchasesPackage} from "react-native-purchases";
+import type {StorePurchasePlan} from "@/lib/store-purchases";
 import {useAuth} from "@/auth/AuthProvider";
 import {ScreenNavigation} from "@/components/ScreenNavigation";
 import {Button} from "@/components/Button";
@@ -27,7 +28,7 @@ function MembershipContent({userId}:{userId:string}){
  const router=useRouter();
  const [welcoming,setWelcoming]=useState(false);
  function closeWelcome(){setWelcoming(false);void acknowledgeProWelcome(userId).then(value=>{setData(value);return SecureStore.setItemAsync("rezlee-pro-welcome-v2-"+userId,"seen");}).catch(()=>{});}
- const [data,setData]=useState<MembershipPayload|null>(()=>getMembershipSnapshot(userId)),[packages,setPackages]=useState<PurchasesPackage[]>([]),[error,setError]=useState(""),[purchaseError,setPurchaseError]=useState<StorePurchaseFailure|null>(null),[busy,setBusy]=useState(false),[notice,setNotice]=useState("");
+ const [data,setData]=useState<MembershipPayload|null>(()=>getMembershipSnapshot(userId)),[packages,setPackages]=useState<StorePurchasePlan[]>([]),[error,setError]=useState(""),[purchaseError,setPurchaseError]=useState<StorePurchaseFailure|null>(null),[busy,setBusy]=useState(false),[notice,setNotice]=useState("");
  const [plansState,setPlansState]=useState<"idle"|"loading"|"ready"|"empty"|"error">("idle");
  const [selectedPlan,setSelectedPlan]=useState<"free"|"pro"|null>(null),[detailsOpen,setDetailsOpen]=useState(false);
  const version=useRef(0),lock=useRef(false),mounted=useRef(true);
@@ -55,7 +56,7 @@ function MembershipContent({userId}:{userId:string}){
   });
   return()=>{subscription.remove();version.current++;};
  },[load]));
- async function purchase(plan?:PurchasesPackage){
+ async function purchase(plan?:StorePurchasePlan){
  if(lock.current)return;lock.current=true;setBusy(true);setError("");setPurchaseError(null);setNotice("");const v=version.current;
  try{
  if(plan){const current=await loadMembership(userId,true);if(!current.purchasesAvailable)throw Error("Purchases are unavailable.");if(current.membership?.plan==="pro"){setData(current);return;}await buyPlan(userId,plan,current.storeProductIds??[]);}else await restorePlans(userId);
@@ -67,9 +68,10 @@ function MembershipContent({userId}:{userId:string}){
  const confirmed=!!data&&(!data.enabled||!!m), selected=selectedPlan??m?.plan??"pro", showPro=selected==="pro";
  const current=confirmed&&selected===(m?.plan??"free"), ownsPro=confirmed&&m?.plan==="pro";
  const monthly=packages.find(p=>p.packageType==="MONTHLY"),annual=packages.find(p=>p.packageType==="ANNUAL");
- const priceLabel=(p:PurchasesPackage)=>`${p.product.priceString} ${p.product.currencyCode}`;
- const storePrice=monthly?`${priceLabel(monthly)} / month`:annual?`${priceLabel(annual)} / year`:"$7.99 CAD / month";
- const storeDetail=monthly&&annual?`Or ${priceLabel(annual)} / year. Your store confirms the total.`:monthly||annual?"Your store confirms the billing period and total.":"Canadian pricing: $80 CAD / year. Your store confirms your price.";
+ const priceLabel=(p:StorePurchasePlan)=>`${p.product.priceString} ${p.product.currencyCode}`;
+ const trial=monthly?.trial===true;
+ const storePrice=trial?"7 days free":monthly?`${priceLabel(monthly)} / month`:annual?`${priceLabel(annual)} / year`:"$7.99 CAD / month";
+ const storeDetail=trial&&monthly?`Then ${priceLabel(monthly)} / month. Cancel before the trial ends to avoid being charged.`:monthly&&annual?`Or ${priceLabel(annual)} / year. Your store confirms the total.`:monthly||annual?"Your store confirms the billing period and total.":"Canadian pricing: $80 CAD / year. Your store confirms your price.";
  const benefits=showPro?[
   "Everything in Rezlee",
   "Unlimited bill scans",
@@ -115,7 +117,7 @@ function MembershipContent({userId}:{userId:string}){
      </View>
      <View style={styles.priceBlock}>
       <Text style={styles.price}>{!showPro?"Free":presentation.lifetime?"Yours for life":ownsPro&&m?.household?"Included with your household":ownsPro?"More help at home.":storePrice}</Text>
-      <Text style={styles.priceNote}>{!showPro?"Your everyday home base.":presentation.lifetime?presentation.detail:ownsPro&&m?.household?"Pro access is shared by your household.":ownsPro&&m?.source==="referral"?"A gift from a friend. No automatic renewal.":ownsPro?"Your Pro access is active.":storeDetail}</Text>
+      <Text style={styles.priceNote}>{!showPro?"Your everyday home base.":presentation.lifetime?presentation.detail:ownsPro&&m?.household?"Pro access is shared by your household.":ownsPro&&m?.source==="referral"?"A gift from a friend. No automatic renewal.":ownsPro?(storeBillingPresentation(m)??"Your Pro access is active."):storeDetail}</Text>
      </View>
      <View style={styles.benefits}>
       {benefits.map(benefit=><View key={benefit} style={styles.benefit}><Feather name="check" size={17} color={colors.primary}/><Text style={styles.benefitText}>{benefit}</Text></View>)}
@@ -128,12 +130,12 @@ function MembershipContent({userId}:{userId:string}){
        {!data?.purchasesAvailable?<Text style={styles.priceNote}>Purchases are not available yet. You can continue using Rezlee.</Text>
         :purchaseError?<Text style={styles.priceNote}>Follow the recovery step below before trying another purchase.</Text>
         :plansState==="loading"?<View accessibilityLiveRegion="polite" style={{gap:8}}><ActivityIndicator accessibilityLabel="Loading subscription plans"/><Text style={styles.priceNote}>Getting prices from your app store…</Text></View>
-        :plansState==="ready"&&!error?packages.map(p=><Button key={p.identifier} disabled={busy} label={p.packageType==="ANNUAL"?"Choose yearly · "+priceLabel(p)+" / year":"Choose monthly · "+priceLabel(p)+" / month"} onPress={()=>void purchase(p)}/>)
+        :plansState==="ready"&&!error?packages.map(p=><Button key={p.identifier} disabled={busy} label={p.packageType==="ANNUAL"?"Choose yearly · "+priceLabel(p)+" / year":p.trial?"Start 7-day free trial":"Choose monthly · "+priceLabel(p)+" / month"} onPress={()=>void purchase(p)}/>)
         :<View style={{gap:10}}><Text accessibilityRole="alert" style={styles.priceNote}>{plansState==="empty"?"CAD plans aren’t available from your app store right now. Rezlee subscriptions require a Canadian store account.":"We couldn’t load subscription prices. Check your connection and try again."}</Text><Button label="Reload plans" disabled={busy} onPress={()=>void load()}/></View>}
       </View>:null}
      {current&&!showPro?<Button label="Explore Rezlee Pro" disabled={busy} onPress={()=>setSelectedPlan("pro")}/>:null}
      {ownsPro&&current&&m?.source==="store"&&!m?.household?<Button variant="secondary" label="Manage subscription" disabled={busy} onPress={()=>void manageStore()}/>:null}
-     {showPro&&!ownsPro?<Text style={styles.smallPrint}>Subscriptions renew automatically unless cancelled. Your store confirms the billing period, total and taxes before purchase.</Text>:null}
+     {showPro&&!ownsPro?<Text style={styles.smallPrint}>{trial?"The monthly plan starts with 7 days free for eligible new subscribers, then renews at CAD $7.99/month unless cancelled. Cancel in your app store before the trial ends to avoid being charged. The yearly plan has no trial.":"Subscriptions renew automatically unless cancelled. Trial eligibility and any introductory offer are confirmed by your store."} Your store confirms the billing period, total and applicable taxes before purchase.</Text>:null}
     </View>
     {m?.plan==="pro"&&m.expiresAt&&!m.lifetime?<Text style={styles.smallPrint}>Current access through {new Date(m.expiresAt).toLocaleDateString()}. {m.household?"This access is shared by your household.":m.source==="store"?"Manage renewal in your app store.":"No automatic renewal."}</Text>:null}
     {error?<View style={{gap:10}}><Text accessibilityRole="alert" style={{color:colors.criticalForeground}}>{error}</Text><Button label="Try again" disabled={busy} onPress={()=>void load()}/></View>:null}

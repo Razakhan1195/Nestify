@@ -2,6 +2,7 @@ import "server-only";
 import {randomUUID} from "node:crypto";
 import {createAdminClient} from "@/lib/supabase/admin";
 import {readBoundedJson} from "@/lib/security/request";
+import {parseStoreBilling} from "./store-billing";
 import {parseStoreEntitlement} from "./policy";
 export function storeProductIds(){return (process.env.REZLEE_STORE_PRODUCTS??"").split(",").map(x=>x.trim()).filter(Boolean);}
 export function storeConfigured(){
@@ -37,7 +38,8 @@ export async function syncStoreMembership(userId:string,source:"customer"|"webho
  const data:unknown=await readBoundedJson(response,512*1024);
  const allowSandbox=await storeSandboxAllowedFor(userId);
  const subscription=parseStoreEntitlement(data,new Set((process.env.REZLEE_STORE_PRODUCTS??"").split(",").map(x=>x.trim())),allowSandbox,Date.now(),userId);
- const result=await db.rpc("rezlee_apply_store_sync",{p_user:userId,p_lease:lease,p_expiry:subscription?.expiresAt??null,p_product:subscription?.productId??null});
+ const billing=parseStoreBilling(data,new Set(storeProductIds()),allowSandbox,Date.now(),userId);
+ const result=await db.rpc("rezlee_apply_store_billing_sync",{p_user:userId,p_lease:lease,p_expiry:subscription?.expiresAt??null,p_product:subscription?.productId??null,p_billing:billing});
  if(result.error)throw Error("Could not save purchase status. Restore purchases to check again.");
  }finally{await db.from("rezlee_store_sync").update({lease_id:null,lease_until:null}).eq("user_id",userId).eq("lease_id",lease);}
 }

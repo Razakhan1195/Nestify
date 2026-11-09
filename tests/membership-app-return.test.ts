@@ -3,6 +3,7 @@ import test from "node:test";
 import fs from "node:fs";
 import vm from "node:vm";
 import ts from "typescript";
+import {storeBillingPresentation} from "../apps/mobile/src/lib/store-billing-presentation";
 
 function deferred() { let resolve!: () => void; const promise = new Promise<void>(r => { resolve = r; }); return {promise, resolve}; }
 const flush = () => new Promise<void>(resolve => setImmediate(resolve));
@@ -12,6 +13,7 @@ function fixture() {
  const payload = {enabled:true,purchasesAvailable:true,membership:{plan:"pro",source:"store",proWelcomeSeen:true}};
  const jsx = (type: unknown, props: {label?:string;onPress?:()=>void}) => { if(props?.label&&props.onPress)buttons.set(props.label,props.onPress);return {type,props}; };
  const modules: Record<string, unknown> = {
+  "@/lib/store-billing-presentation": {storeBillingPresentation},
   "react/jsx-runtime": {jsx,jsxs:jsx},
   "react": {useCallback:(fn:unknown)=>fn,useMemo:(fn:()=>unknown)=>fn(),useRef:(current:unknown)=>({current}),useState:(value:unknown)=>[typeof value==="function"?value():value,()=>{}],useEffect:(fn:()=>unknown)=>{const end=fn();if(typeof end==="function")cleanup.push(end as ()=>void);}},
   "expo-router": {useRouter:()=>({}),useFocusEffect:(fn:()=>()=>void)=>cleanup.push(fn())},
