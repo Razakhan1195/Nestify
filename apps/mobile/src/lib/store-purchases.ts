@@ -1,5 +1,6 @@
 import {Linking,Platform} from "react-native";
 import Constants from "expo-constants";
+import {File,Paths} from "expo-file-system";
 import {supabase} from "./supabase";
 import {eligibleStorePlan} from "./store-product-policy";
 import {purchasePlan,androidPlanOption,type StorePurchasePlan} from "./store-trial-policy";
@@ -31,7 +32,13 @@ export function availablePlans(userId:string,approvedProducts:readonly string[]=
  let eligibility:Record<string,{status:number}>={};
  if(Platform.OS==="ios")try{eligibility=await purchases.checkTrialOrIntroductoryPriceEligibility(packages.map(p=>p.product.identifier));}catch{/* Unknown eligibility uses neutral purchase wording. */}
  await checkUser(userId);
- return packages.map(p=>purchasePlan(p,Platform.OS,approvedProducts,eligibility[p.product.identifier]?.status)).filter((p):p is StorePurchasePlan=>p!==null);
+ const plans=packages.map(p=>purchasePlan(p,Platform.OS,approvedProducts,eligibility[p.product.identifier]?.status)).filter((p):p is StorePurchasePlan=>p!==null);
+ if(!plans.length){
+  const diagnostic=JSON.stringify({offering:offerings.current?.identifier??null,products:packages.map(p=>({packageType:p.packageType,identifier:p.product.identifier,currency:p.product.currencyCode,price:p.product.price,period:p.product.subscriptionPeriod,approved:approvedProducts.includes(p.product.identifier)}))});
+  console.warn("REZLEE_STORE_PRODUCTS",diagnostic);
+  try{new File(Paths.cache,"rezlee-store-products.json").write(diagnostic);}catch{/* Diagnostics must never interrupt checkout. */}
+ }
+ return plans;
  }).finally(()=>{if(planReads.get(key)===pending)planReads.delete(key)});
  planReads.set(key,pending);return pending;
 }
