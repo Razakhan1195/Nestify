@@ -8,6 +8,8 @@ function fixture({platform="ios",nativeFails=false,urlFails=false,user="qa",chan
  const purchases={configure:()=>calls.push("configure"),showManageSubscriptions:async()=>{calls.push("native");if(changeDuringNative)current="other";if(nativeFails)throw Error("native unavailable");}};
  const module={exports:{}};
  const requireMock=name=>{
+  if(name==="expo-file-system")return {File:class {},Paths:{document:{}}};
+  if(name==="./store-trial-policy")return {purchasePlan:()=>{throw Error("Unexpected plan read")},androidPlanOption:()=>{throw Error("Unexpected purchase")}};
   if(name==="react-native")return {Platform:{OS:platform},Linking:{openURL:async url=>{calls.push(url);if(urlFails)throw Error("store unavailable");}}};
   if(name==="expo-constants")return {__esModule:true,default:{appOwnership:"standalone"}};
   if(name==="./supabase")return {supabase:{auth:{getSession:async()=>({data:{session:{user:{id:current}}}})}}};
