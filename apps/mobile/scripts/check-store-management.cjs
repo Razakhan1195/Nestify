@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-require-imports, @next/next/no-assign-module-variable */
 const assert=require("node:assert/strict");
 const fs=require("node:fs"),path=require("node:path"),vm=require("node:vm"),ts=require("typescript");
 const source=fs.readFileSync(path.join(__dirname,"../src/lib/store-purchases.ts"),"utf8");

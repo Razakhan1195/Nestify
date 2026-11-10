@@ -1,6 +1,5 @@
 import { useTheme } from "@/theme/useTheme";
 import { readGiftInvitation } from "@/lib/gift-invitation";
-import { hasSeenQuickGuide } from "@/lib/quick-guide";
 import {readIncomingGroupInvite} from "@/lib/expense-group-invites";
 import { readIncomingPhoneInvite } from "@/lib/phone-invites";
 import { readDeletionReceipt } from "@/lib/account-deletion";
@@ -63,9 +62,7 @@ function AccountEntry({ userId, email }: { userId?: string; email?: string }) {
         // The tab entry owns the authenticated home/setup decision. Performing
         // it here as well adds a second sequential network gate on every launch.
         // Durable deletion/invitation recovery still takes precedence above.
-        const seen = await hasSeenQuickGuide(userId).catch(() => true);
-        if (!active || account.switching.current) return;
-        setDestination(seen ? "/(tabs)/home" : "/quick-guide");
+        setDestination("/(tabs)/home");
       } catch (loadError) {
         if (active && !account.switching.current) setError(loadError instanceof ApiError || loadError instanceof EntryRecoveryError
           ? loadError.message : "We could not load your Rezlee setup. Check your connection and try again.");
@@ -97,3 +94,4 @@ function LoadingScreen() {
     <RezleeLoading />
   </View>;
 }
+

@@ -8,8 +8,7 @@ import { QuietAction } from "@/components/Brief";
 import { homeScreen, careScreen, billsScreen, vaultScreen } from "@/lib/screen-state";
 import { useTabScrollTop } from "@/lib/use-tab-scroll-top";
 import {useIsFocused} from "expo-router/react-navigation";
-import {shouldOpenStartingTask} from "@/lib/welcome-flow";
-import { FounderWelcome } from "@/components/FounderWelcome";
+import { EmptyHomeActions } from "@/components/EmptyHomeActions";
 import { useAuth } from "@/auth/AuthProvider";
 import { useAccountSwitch } from "@/auth/useAccountSwitch";
 import { HomeBrief } from "@/components/HomeBrief";
@@ -42,7 +41,6 @@ export default function HomeScreen() {
 
   const router = useRouter();
   const focused=useIsFocused();
-  const [welcomeUser,setWelcomeUser]=useState<string|null>(null);
   const { session } = useAuth();
   const { width } = useWindowDimensions();
   const { begin } = useLocalSearchParams<{ begin?: string }>();
@@ -172,12 +170,12 @@ export default function HomeScreen() {
   }
   useEffect(() => {
     if (!begin) { beginHandled.current = null; return; }
-    if (!shouldOpenStartingTask(focused,session?.user.id,welcomeUser)) return;
+    if (!focused || !session?.user.id) return;
     if (!isStartingGoal(begin) || !payload || payload.needsOnboarding || payload.accessRole !== "owner" || beginHandled.current === begin) return;
     beginHandled.current = begin;
     router.setParams({ begin: "" });
     router.push(startingContent[begin].route as never);
-  }, [begin, payload, router,focused,session?.user.id,welcomeUser]);
+  }, [begin, payload, router,focused,session?.user.id]);
   function startTask(goal: StartingGoal) {
     if (!payload || payload.needsOnboarding || payload.accessRole !== "owner") return;
     router.push(startingContent[goal].route as never);
@@ -200,16 +198,17 @@ export default function HomeScreen() {
   const remaining = orderStartingGoals(taskStates && !error ? remainingHomeTasks(taskStates) : [], preferredGoal);
   const upcoming = home ? homeUpcomingItems(home) : [];
   const providerActivity = utilityData?.providerActivity.filter(item => !home?.attentionItems.slice(0, 2).some(attention => attention.sourceType === "provider" && attention.providerId === item.providerId)) ?? [];
+  const emptyHome = owner && home.dashboardState === "EMPTY" && !home.hasMeaningfulHouseholdData && !home.providerHealth.totalCount && !home.availability?.missing.length && !error && !taskReadError && !insightError;
   return <SafeAreaView edges={["left", "right"]} style={{ flex: 1, backgroundColor: "transparent" }}>
-    {payload && !payload.needsOnboarding ? <FounderWelcome onReady={setWelcomeUser} /> : null}
     <ScrollView ref={scroll} contentInsetAdjustmentBehavior="never" automaticallyAdjustContentInsets={false}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => void load(true)} tintColor={colors.primary} />}
       contentContainerStyle={{ padding: layout.screenHorizontal, paddingHorizontal: width < 360 ? 16 : layout.screenHorizontal, paddingTop: layout.screenTop, paddingBottom: 32, gap: layout.sectionGap }}>
-      <View style={{gap:16}}>
+      {!emptyHome ? <View style={{gap:16}}>
         <HomeGreeting household={home ? home.home.nickname || "Your household" : undefined} canInvite={owner} />
-      </View>
+      </View> : null}
       {!home ? <>{busy ? <ActivityIndicator accessibilityLabel="Loading your home" color={colors.primary} /> : <View style={{gap:12}}><ReadNotice message={account.error ?? error?.message ?? "Home could not be loaded. Try again."} busy={busy || account.busy} onRetry={() => void recoverHome()} />{sessionRejected ? <QuietAction label="Sign in again" disabled={busy || account.busy} onPress={() => void account.switchAccount()} /> : null}</View>}</> : <>
         {error || home.availability?.missing.length ? <ReadNotice message={error ? (error.status === 0 ? "Connection unavailable. Showing the last loaded information." : "Updates could not be loaded. Showing the last loaded information.") : "Some information is unavailable. Your household summary may be incomplete."} busy={busy} onRetry={() => void load()} /> : null}
+        {emptyHome ? <EmptyHomeActions onBill={() => startTask("bills")} onRecord={() => startTask("records")} onReminder={() => startTask("care")} onSplit={() => router.push("/shared/edit")} /> : <>
         <HomeBrief home={home} accounts={billAccounts} failed={Boolean(error)||taskReadError||insightError} loading={busy && !summaryLoaded && (!bills || !carePayload)} updating={busy && summaryLoaded} careDueCount={careDueCount} providerBusy={providerActivity.some(item=>item.state==="syncing")} startingGoal={preferredGoal ?? remaining[0] ?? "bills"} />
         {owner ? <HomeQuickActions onBill={() => startTask("bills")} onRecord={() => startTask("records")} onReminder={() => startTask("care")} onSplit={() => router.push("/shared/edit")} /> : null}
         {owner ? <HomeUtilityProgress accountsLoaded={summaryLoaded} key={"utility-progress:" + home.home.id} hasAccounts={Boolean(utilityData?.utilityInsights.length) && !insightError} onComplete={refreshImportedBills} /> : null}
@@ -232,7 +231,6 @@ export default function HomeScreen() {
         </HomeSection> : null}
         {owner && insightError ? <ReadNotice message={utilityData ? "Couldn’t check for newer bills. Showing previously loaded records." : "Your bill information couldn’t be loaded."} busy={busy} onRetry={() => void load()} /> : null}
         {owner && utilityData ? <HomeBillBrief bills={utilityData} accounts={billAccounts} fresh={billDataFresh} showChange={false} /> : null}
-        <HomeSharedExpenses key={home.home.id + home.accessRole} homeId={home.home.id} />
         {taskReadError ? <ReadNotice message="Some records or care tasks couldn’t be checked. Previously loaded items may be out of date." busy={busy} onRetry={() => void load()} /> : null}
         {owner && itemCount>0 ? <RecallWatchSummary key={"recall-watch:" + home.home.id} itemCount={itemCount} onlyActionable/>:null}
         {owner && recentRecords.length ? <HomeSection><SectionHeading title="Recently saved" />
@@ -240,8 +238,11 @@ export default function HomeScreen() {
         </HomeSection> : null}
         {owner && busy && !taskStates ? <ActivityIndicator accessibilityLabel="Checking your saved bills, records and care tasks" color={colors.primary} /> : null}
         {owner ? <HomeHelp hasBills={insightError || busy || !utilityData ? null : Boolean(utilityData.bills.length || utilityData.utilityInsights.length)} /> : null}
+        </>}
+        <HomeSharedExpenses key={home.home.id + home.accessRole} homeId={home.home.id} hideEmpty={emptyHome} />
       </>}
     </ScrollView>
     <CareFeedback/>
   </SafeAreaView>;
 }
+

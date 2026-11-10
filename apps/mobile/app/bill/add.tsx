@@ -1,3 +1,4 @@
+import { JourneyHeading, JourneyDisclosure } from "@/components/JourneyUI";
 import { useTheme } from "@/theme/useTheme";
 import { FormScrollView } from "@/components/FormScrollView";
 import {EmailImportEntry,useEmailImport} from "@/components/EmailImportEntry";
@@ -94,7 +95,7 @@ function ChoiceCard({
       }}
       style={({ pressed }) => ({ opacity: pressed ? 0.88 : 1 })}
     >
-      <View style={{ paddingVertical: 18, borderBottomWidth: 1, borderColor: colors.border, flexDirection: "row", alignItems: "center", gap: 14 }}>
+      <View style={{ padding: 18, borderWidth: 1, borderRadius: 20, backgroundColor: colors.surfaceRaised, borderColor: colors.border, flexDirection: "row", alignItems: "center", gap: 14 }}>
         <View accessible={false} style={{ width: 42, height: 46, borderRadius: 14, backgroundColor: colors.surfaceSubtle, alignItems: "center", justifyContent: "center" }}><Feather name={icon} size={20} color={colors.primary} /></View>
         <View style={{ flex: 1, gap: 5 }}>
           <Text style={[typography.section, { color: colors.foreground }]}>{title}</Text>
@@ -107,7 +108,7 @@ function ChoiceCard({
 }
 
 export default function AddBillScreen() {
-  const { colors, premium } = useTheme();
+  const { colors } = useTheme();
 
   const router = useRouter();
   const emailImport=useEmailImport();
@@ -125,6 +126,7 @@ export default function AddBillScreen() {
     record_kind: recordKind === "historical" ? "historical" : "current",
     account_number: typeof accountName === "string" ? accountName : "",
   };
+  const [moreWays, setMoreWays] = useState(false);
   const [mode, setMode] = useState<Mode>(recordKind === "historical" ? "manual" : "choose");
   const [fields, setFields] = useState<Fields>(fallbackFields);
   const [error, setError] = useState<string | null>(null);
@@ -273,7 +275,7 @@ export default function AddBillScreen() {
 
   return (
     <SafeAreaView edges={["left","right","bottom"]} style={{ flex: 1, backgroundColor: colors.background }}>
-      <ScreenNavigation title="Add bill" fallback="/(tabs)/bills" close={mode==="choose"} disabled={isSaving||isScanning} backLabel={mode==="choose"?"Close add bill":"Back to ways to add"} onBack={()=>mode==="choose"?safeBack(router,"/(tabs)/bills"):setMode("choose")}/>
+      <ScreenNavigation title="Add a bill" fallback="/(tabs)/bills" close={mode==="choose"} disabled={isSaving||isScanning} backLabel={mode==="choose"?"Close add bill":"Back to ways to add"} onBack={()=>mode==="choose"?safeBack(router,"/(tabs)/bills"):setMode("choose")}/>
       <View
         
         style={{ flex: 1 }}
@@ -290,55 +292,21 @@ export default function AddBillScreen() {
         >
           {mode === "choose" ? (
             <>
-              <View style={{ gap: 18 }}>
-                <Text style={[typography.label, { color: colors.mutedForeground }]}>START WITH WHAT YOU HAVE</Text>
-                <Text accessibilityRole="header" style={[editorialType, { fontSize: 34, lineHeight: 41, color: colors.foreground }]}>
-                  {fallbackProviderName ? `A clearer look at ${fallbackProviderName}.` : "One bill. A clearer picture."}
-                </Text>
-                <Text style={[typography.body, { color: colors.mutedForeground }]}>Keep the original, review the charges and find your next useful step. No provider connection needed.</Text>
-                <View style={{ padding: 22, gap: 18, borderRadius: 24, backgroundColor: premium.ink }}>
-                  <View style={{ flexDirection: "row", gap: 12, alignItems: "center" }}><Feather accessible={false} name="file-text" size={26} color={premium.apricot} /><Text style={[typography.title, { color: premium.onInk, flex: 1 }]}>Start with a statement</Text></View>
-                  <Text style={[typography.body, { color: premium.onInkMuted }]}>Choose a photo or PDF. Review what Rezlee reads before saving the details and original together.</Text>
-                  <Pressable accessibilityRole="button" onPress={() => router.push("/bill/import")} style={({ pressed }) => ({ minHeight: 50, padding: 15, borderRadius: 15, flexDirection: "row", alignItems: "center", gap: 12, backgroundColor: premium.onInk, opacity: pressed ? 0.8 : 1 })}><Text style={[typography.body, { flex: 1, fontWeight: "600", color: premium.ink }]}>Upload a statement</Text><Feather name="arrow-right" size={18} color={premium.ink} /></Pressable>
-                  <Text style={[typography.caption, { color: premium.onInkMuted }]}>Review details → Save original → Understand charges</Text>
-                </View>
-                <Text accessibilityRole="header" style={[typography.section, { color: colors.foreground }]}>Other ways to add a bill</Text>
-              </View>
-
+              <JourneyHeading title="How would you like to add it?" />
               <View style={{ gap: spacing.md }}>
-                {!fallbackProviderName ? (
-                  <ChoiceCard
-                    icon="link-2"
-                    title="Connect a provider"
-                    body="Find your company or municipality. We’ll explain the recommended connection and access before you sign in."
-                    badge="OPTIONAL CONNECTION"
-                    onPress={() => router.push("/provider/connect")}
-                  />
-                ) : null}
-                <ChoiceCard
-                  icon="camera"
-                  title="Track a bill’s due date"
-                  body="Scan the amount and due date to track a payment. For an original and charge history, use Upload a statement above."
-                  badge="PAYMENT REMINDER"
-                  onPress={startScan}
-                />
-                <EmailImportEntry destination={emailImport}/>
-                <ChoiceCard icon="camera" title="Scan a receipt" body="Keep a purchase receipt in Vault. Read its details, review and save the original." onPress={() => router.push({pathname:"/vault-record",params:{kind:"receipt"}})} />
-                <ChoiceCard
-                  icon="edit-3"
-                  title={dirty ? "Resume your entry" : "Add manually"}
-                  body="Add a bill to track, or a past statement to compare over time. No connection needed."
-                  onPress={() => {
-                    if (!dirty) {
-                      setFields(fallbackFields);
-                      setScanSource(null);
-                      setShowMoreDetails(false);
-                    }
-                    setMode("manual");
-                  }}
-                />
+                <ChoiceCard icon="upload" title="Upload a statement" body="Choose a PDF or photo." onPress={() => router.push("/bill/import")} />
+                {!fallbackProviderName ? <ChoiceCard icon="link-2" title="Connect a provider" body="Import bills from a supported account." onPress={() => router.push("/provider/connect")} /> : null}
+                <ChoiceCard icon="edit-3" title={dirty ? "Resume your entry" : "Enter details"} body="Add the amount and dates yourself." onPress={() => {
+                  if (!dirty) { setFields(fallbackFields); setScanSource(null); setShowMoreDetails(false); }
+                  setMode("manual");
+                }} />
               </View>
-
+              <Text style={[typography.meta, { color: colors.mutedForeground }]}>You’ll review the details before saving.</Text>
+              <JourneyDisclosure label="More ways to add" open={moreWays} onToggle={() => setMoreWays(!moreWays)}>
+                <ChoiceCard icon="camera" title="Track a bill’s due date" body="Scan the amount and due date for a payment reminder. To keep the original, upload a statement." onPress={startScan} />
+                <EmailImportEntry destination={emailImport} />
+                <ChoiceCard icon="camera" title="Scan a receipt" body="Keep a purchase receipt in Vault. Review its details and save the original." onPress={() => router.push({pathname:"/vault-record",params:{kind:"receipt"}})} />
+              </JourneyDisclosure>
             </>
           ) : null}
           {mode === "scan" ? (
@@ -515,4 +483,5 @@ export default function AddBillScreen() {
     </SafeAreaView>
   );
 }
+
 

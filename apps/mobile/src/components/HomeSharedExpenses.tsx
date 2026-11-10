@@ -11,7 +11,7 @@ import { sharedLedgerStage } from "@/lib/shared-ledger-presentation";
 import { sharedMoney } from "@/lib/shared-expense-math";
 import { homeTile, typography } from "@/theme/tokens";
 
-export function HomeSharedExpenses({ homeId }: { homeId: string }) {
+export function HomeSharedExpenses({ homeId, hideEmpty = false }: { homeId: string; hideEmpty?: boolean }) {
   const { colors } = useTheme();
 
   const router = useRouter(), request = useRef(0);
@@ -34,6 +34,7 @@ export function HomeSharedExpenses({ homeId }: { homeId: string }) {
   const owe = data.balances.filter(pair => pair.from === self).reduce((sum, pair) => sum + pair.cents, 0);
   const owed = data.balances.filter(pair => pair.to === self).reduce((sum, pair) => sum + pair.cents, 0);
   const pending = data.people.filter(person => person.state === "invited").length;
+  if (hideEmpty && stage === "start" && !pending && !failed) return null;
   if(stage === "start") return <View style={{gap:10}}>
     <HomeFeatureTile title="Shared expenses" detail="Split rent, groceries or bills. Know who paid and who owes what." action="Start sharing costs" artwork="shared" backgroundColor={colors.billSurface} onPress={()=>router.push("/shared")}/>
     {pending?<Text style={[typography.meta,{color:colors.mutedForeground}]}>{pending} {pending===1?"invitation":"invitations"} awaiting acceptance. Shares don’t grant household access.</Text>:null}

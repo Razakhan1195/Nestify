@@ -7,11 +7,10 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useAuth } from "@/auth/AuthProvider";
 import { useAccountSwitch } from "@/auth/useAccountSwitch";
 import { SetupAccount } from "@/components/SetupAccount";
-import { setupDrafts } from "@/lib/onboarding-draft";
-import { shouldResumeSetup } from "@/lib/onboarding-draft-core";
 import { TabHeader } from "@/components/WorkspaceUI";
 import { ReadNotice } from "@/components/Brief";
 import { fetchOnboarding } from "@/lib/onboarding-data";
+import { startHome } from "@/lib/home-entry";
 import { ApiError } from "@/lib/api";
 import { emitTabPress } from "@/lib/tab-events";
 
@@ -29,19 +28,19 @@ export default function TabsLayout() {
     if (!session || account.busy) return;
     let active = true;
     const userId = session.user.id;
-    // One current server check gates the tabs and unfinished setup. Local draft
-    // retrieval overlaps that check; no household permissions are cached.
-    void Promise.all([
-      fetchOnboarding(userId),
-      setupDrafts.read(userId).catch(() => null),
-    ]).then(([payload, draft]) => {
+    // Existing households and expense-only members keep their current destination.
+    void fetchOnboarding(userId).then(payload => {
+      if (!active || account.switching.current) return null;
+      return !payload.home && !payload.expenseGroupsAvailable ? startHome(userId) : payload;
+    }).then(payload => {
+      if (!payload) return;
       if (!active || account.switching.current) return;
       if (payload.home && !["owner", "member"].includes(payload.accessRole ?? "")) {
         throw new Error("Household role unavailable");
       }
       setAccess({ user: userId, role: payload.accessRole === "member" ? "member" : "owner",
         groupOnly: !payload.home && payload.expenseGroupsAvailable === true,
-        needsSetup: !payload.home || shouldResumeSetup(draft, payload.home.id, payload.accessRole) });
+        needsSetup: !payload.home });
       setFailed(false);
     }).catch(error => { if (active && !account.switching.current) {
       setFailed(true);
@@ -76,4 +75,5 @@ export default function TabsLayout() {
   </Tabs>
   </View>;
 }
+
 

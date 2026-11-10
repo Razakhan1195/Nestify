@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-require-imports */
 const assert = require("node:assert/strict");
 const fs = require("node:fs"), ts = require("typescript"), vm = require("node:vm"), path = require("node:path");
 const filename = path.join(__dirname, "../src/lib/store-purchase-error.ts");

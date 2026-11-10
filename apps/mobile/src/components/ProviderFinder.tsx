@@ -1,8 +1,11 @@
+import { ProvincePicker } from "./ProvincePicker";
+import { useAuth } from "@/auth/AuthProvider";
+import { apiPatch } from "@/lib/api";
 import { useTheme } from "@/theme/useTheme";
 import { JourneyHeading } from "@/components/JourneyUI";
 import { Feather } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { ActivityIndicator, Keyboard, Pressable, Text, TextInput, View } from "react-native";
 import { Button } from "./Button";
 import { QuietAction } from "./Brief";
@@ -14,6 +17,15 @@ const provinces:Record<string,string>={ON:"Ontario",BC:"British Columbia",AB:"Al
 export function ProviderFinder() {
   const { colors , mode: useThemeMode } = useTheme();
 
+ const { session } = useAuth();
+ const userId = session?.user.id;
+ const identity = useRef(userId);
+ useEffect(() => { identity.current = userId; }, [userId]);
+ const alive = useRef(true);
+ useEffect(() => { alive.current = true; return () => { alive.current = false; }; }, []);
+ const [chooseProvince, setChooseProvince] = useState(false), [provinceInput, setProvinceInput] = useState("");
+ const [savingProvince, setSavingProvince] = useState(false), [provinceError, setProvinceError] = useState("");
+ const provinceLock = useRef(false);
  const router=useRouter(),[entries,setEntries]=useState<ProviderDirectoryEntry[]>([]),[province,setProvince]=useState<string|null>(null);
  const [query,setQuery]=useState(""),[service,setService]=useState<ProviderServiceFilter>("All");
  const [selected,setSelected]=useState<ProviderDirectoryEntry|null>(null),[loading,setLoading]=useState(true),[failed,setFailed]=useState(false),[attempt,setAttempt]=useState(0);
@@ -21,7 +33,7 @@ export function ProviderFinder() {
  useEffect(()=>{let active=true;fetchProviderConnections().then(payload=>{
   if(!active)return;if(payload.needsOnboarding){router.replace("/onboarding" as never);return;}
   if(!payload.directory)throw Error("Directory unavailable");setEntries(payload.directory);setProvince(payload.province??null);
- }).catch(()=>{if(active)setFailed(true);}).finally(()=>{if(active)setLoading(false);});return()=>{active=false;};},[attempt,router]);
+ }).catch(()=>{if(active)setFailed(true);}).finally(()=>{if(active)setLoading(false);});return()=>{active=false;};},[attempt,router,userId]);
  const allMatches=useMemo(()=>findDirectoryEntries(entries,query,service),[entries,query,service]);
  const matches=useMemo(()=>providerFinderResults(entries,query,service,browseAll),[entries,query,service,browseAll]);
  const availableCount=allMatches.filter(p=>p.method!=="coming_soon").length;
@@ -31,6 +43,24 @@ export function ProviderFinder() {
   else if(entry.method==="deck"&&entry.registryProviderId)router.push({pathname:"/provider/deck",params:{registryProviderId:entry.registryProviderId}});
   else setSelected(entry);
  }
+ async function saveProvince() {
+  if (!provinceInput || !userId || provinceLock.current) return;
+  const accountId = userId;
+  provinceLock.current = true; setSavingProvince(true); setProvinceError("");
+  try {
+   await apiPatch("/api/mobile/v1/onboarding/province", { province: provinceInput }, { expectedUserId: accountId });
+   if (!alive.current || identity.current !== accountId) return;
+   setProvince(provinceInput); setChooseProvince(false); setLoading(true); setFailed(false); setQuery(""); setService("All"); setAttempt(v => v + 1);
+  } catch { if (alive.current && identity.current === accountId) setProvinceError("Your province couldn’t be saved. Try again."); }
+  finally { provinceLock.current = false; if (alive.current && identity.current === accountId) setSavingProvince(false); }
+ }
+ if (!loading && !failed && (!province || chooseProvince)) return <View style={{ gap: 28 }}>
+  <JourneyHeading title="Choose your province" detail="We use this to show providers available in your area." />
+  <ProvincePicker value={provinceInput} onChange={value => { setProvinceInput(value); setProvinceError(""); }} disabled={savingProvince} error={provinceError || undefined} />
+  <Text style={[typography.meta, { color: colors.mutedForeground }]}>You can change this later.</Text>
+  <Button label={savingProvince ? "Saving…" : "See providers"} disabled={!provinceInput || savingProvince} onPress={() => void saveProvince()} />
+  {province ? <QuietAction label="Cancel" disabled={savingProvince} onPress={() => setChooseProvince(false)} /> : null}
+ </View>;
  if(selected)return <Surface tone="raised" style={{gap:spacing.md}}>
   <Text accessibilityRole="header" style={[typography.title,{color:colors.foreground}]}>{selected.name}</Text>
   <Text style={[typography.meta,{color:colors.mutedForeground}]}>{selected.category} · Connection coming soon</Text>
@@ -40,6 +70,7 @@ export function ProviderFinder() {
  </Surface>;
  return <View style={{gap:20}}>
   <JourneyHeading title="Who’s your bill from?" detail="Search the company on your bill—for example, your phone, internet or electricity provider. A connection can bring in available statements; uploading a bill is always an option."/>
+  {province ? <QuietAction label={(provinces[province] ?? province) + " · Change province"} onPress={() => { setProvinceInput(provinces[province] ?? province); setChooseProvince(true); }} /> : null}
   <View style={{flexDirection:"row",alignItems:"center",gap:8,borderWidth:1,borderColor:colors.borderStrong,borderRadius:16,paddingHorizontal:14,backgroundColor:colors.surfaceRaised}}>
    <Feather name="search" size={20} color={colors.mutedForeground}/>
    <TextInput keyboardAppearance={useThemeMode} selectionColor={colors.primary} accessibilityLabel="Search providers across Canada" value={query} onChangeText={value=>{setQuery(value);setLimit(12);}} placeholder="Company or municipality" placeholderTextColor={colors.mutedForeground} autoCorrect={false} returnKeyType="search" onSubmitEditing={Keyboard.dismiss} style={[typography.body,{flex:1,minHeight:54,color:colors.foreground}]}/>
@@ -93,3 +124,4 @@ export function ProviderFinder() {
   </Surface>
  </View>;
 }
+
