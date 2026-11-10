@@ -9,7 +9,7 @@ const stubs={
  'react-native-safe-area-context':"export {View as SafeAreaView} from 'react-native';",
  'react-native':"import React from 'react';import {Text as BaseText,StyleSheet} from 'react-native-web';export * from 'react-native-web';export const Text=props=>{const s=StyleSheet.flatten(props.style)||{},f=window.__scale||1;return <BaseText {...props} style={[props.style,{fontSize:(s.fontSize||14)*f,lineHeight:(s.lineHeight||(s.fontSize||14)*1.4)*f}]}/>};",
  '@expo/vector-icons':"import React from 'react';import * as icons from 'lucide-react';export const Feather=({name,size=20,color})=>{const key=name.split('-').map(x=>x[0].toUpperCase()+x.slice(1)).join('');const Icon=icons[key]||icons.Circle;return <Icon aria-hidden='true' size={size} color={color} strokeWidth={1.6}/>;};",
- 'expo-haptics':"export const impactAsync=async()=>{};export const ImpactFeedbackStyle={Light:'Light'};",
+ 'expo-haptics':"export const notificationAsync=async()=>{};export const NotificationFeedbackType={Success:'Success'};export const impactAsync=async()=>{};export const ImpactFeedbackStyle={Light:'Light'};",
  'expo-document-picker':"export const getDocumentAsync=async()=>({canceled:true});",
  'expo-image-picker':"export const requestCameraPermissionsAsync=async()=>({granted:false});export const launchCameraAsync=async()=>({canceled:true});",
  '@/theme/useTheme':"import {lightColors,darkColors,lightPremium,darkPremium} from '@/theme/tokens';export const useTheme=()=>({colors:window.__dark?darkColors:lightColors,premium:window.__dark?darkPremium:lightPremium,mode:window.__dark?'dark':'light'});",
@@ -21,7 +21,7 @@ const stubs={
  '@/components/SafeAreaModal':"export {Modal as SafeAreaModal} from 'react-native';",
  './Brief':"import React from 'react';import{Pressable,Text}from'react-native';import{useTheme}from'@/theme/useTheme';export const QuietAction=({label,onPress,disabled})=><Pressable accessibilityRole='button' disabled={disabled} onPress={onPress} style={{minHeight:44,justifyContent:'center'}}><Text style={{color:useTheme().colors.primary}}>{label}</Text></Pressable>;",
  '@/auth/AuthProvider':"export const useAuth=()=>({session:{user:{id:'synthetic-owner'}}});",
- '@/lib/provider-data':"export const fetchProviderConnections=async()=>({directory:[{id:'fixture',name:'Example provider',category:'Electricity',method:'green_button',provinces:['ON']}],province:window.__province});",
+ '@/lib/provider-data':"export const fetchProviderConnections=async()=>({directory:[{id:'fixture',name:'Example provider',category:'Electricity',method:'green_button',aliases:[],provinces:['ON']}],province:window.__province});",
  '@/lib/api':"export class ApiError extends Error{};export const apiPatch=async(path,body,options)=>{window.__writes.push({path,body,options});if(window.__saveFail)throw Error('offline');window.__province=body.province;return{}};",
  '@/lib/prepare-attachment':"export const prepareAttachment=async x=>x;",
  '@/lib/collection-navigation':"export const savedBillDestination=()=>'/bills';",
@@ -35,7 +35,7 @@ const server=require('node:http').createServer((req,res)=>{if(req.url==='/screen
 await new Promise(r=>server.listen(0,'127.0.0.1',r));const browser=await chromium.launch({headless:true,executablePath:'/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'}),checks=[];
 try{
 for(const width of [320,390,430])for(const scale of [1,1.6])for(const dark of [false,true]){
- const page=await browser.newPage({viewport:{width,height:844}}),errors=[];page.on('pageerror',e=>errors.push(e.message));
+ const page=await browser.newPage({viewport:{width,height:844}}),errors=[];page.on('pageerror',e=>{errors.push(e.message);console.error('BROWSER',e.message)});
  await page.addInitScript(({scale,dark})=>{window.__scale=scale;window.__dark=dark;window.__writes=[];window.__routes=[];window.__province=null;},{scale,dark});
  await page.goto('http://127.0.0.1:'+server.address().port);await page.getByText('Your home, in one place.',{exact:true}).waitFor();
  for(const label of ['Save a record','Create a reminder','Split an expense'])await page.getByRole('button',{name:label,exact:true}).click();
